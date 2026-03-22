@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package convergeplane.v1;
+
+option go_package = "github.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1";
+
+import "google/protobuf/any.proto";
+import "google/protobuf/timestamp.proto";
+
+message AtomicOperation {
+  string id = 1;
+  string resource_id = 2;
+  string operation_type = 3;
+  OperationContext context = 4;
+  AtomicOperation next_operation = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message OperationContext {
+  map<string, string> metadata = 1;
+  google.protobuf.Any payload = 2;
+}
+
+message AtomicOperationResult {
+  OperationStatus status = 1;
+  AtomicOperation next_operation = 2;
+  string message = 3;
+}
+
+enum OperationStatus {
+  OPERATION_STATUS_UNSPECIFIED = 0;
+  OPERATION_STATUS_CONTINUE = 1;
+  OPERATION_STATUS_COMPLETED = 2;
+  OPERATION_STATUS_FAILED = 3;
+  OPERATION_STATUS_ROLLBACK = 4;
+}

@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package convergeplane.v1;
+
+option go_package = "github.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1";
+
+import "google/protobuf/duration.proto";
+
+message PolicySet {
+  ConcurrencyPolicy concurrency = 1;
+  FailurePolicy failure = 2;
+  MaintenanceWindowPolicy maintenance_window = 3;
+  UpgradePolicy upgrade = 4;
+}
+
+message ConcurrencyPolicy {
+  int32 max_concurrent_operations = 1;
+}
+
+message FailurePolicy {
+  bool enable_rollback = 1;
+  RetryPolicy retry = 2;
+}
+
+message RetryPolicy {
+  int32 max_retries = 1;
+  google.protobuf.Duration initial_backoff = 2;
+  google.protobuf.Duration max_backoff = 3;
+  double backoff_multiplier = 4;
+}
+
+message MaintenanceWindowPolicy {
+  repeated MaintenanceWindow windows = 1;
+}
+
+message MaintenanceWindow {
+  string cron_expression = 1;
+  google.protobuf.Duration duration = 2;
+}
+
+message UpgradePolicy {
+  bool auto_pause = 1;
+  google.protobuf.Duration bake_time = 2;
+}

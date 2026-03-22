@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+package convergeplane.v1;
+
+option go_package = "github.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1";
+
+import "convergeplane/v1/tenant.proto";
+import "convergeplane/v1/policy.proto";
+import "convergeplane/v1/operation.proto";
+
+service ControlPlaneService {
+  // Tenant Group management
+  rpc CreateTenantGroup(CreateTenantGroupRequest) returns (CreateTenantGroupResponse);
+  rpc GetTenantGroup(GetTenantGroupRequest) returns (GetTenantGroupResponse);
+
+  // Tenant management
+  rpc CreateTenant(CreateTenantRequest) returns (CreateTenantResponse);
+  rpc GetTenant(GetTenantRequest) returns (GetTenantResponse);
+
+  // Resource operations
+  rpc RegisterResource(RegisterResourceRequest) returns (RegisterResourceResponse);
+  rpc GetResource(GetResourceRequest) returns (GetResourceResponse);
+
+  // Operation lifecycle
+  rpc SubmitOperation(SubmitOperationRequest) returns (SubmitOperationResponse);
+  rpc GetOperationStatus(GetOperationStatusRequest) returns (GetOperationStatusResponse);
+}
+
+message CreateTenantGroupRequest {
+  string name = 1;
+  PolicySet policies = 2;
+}
+
+message CreateTenantGroupResponse {
+  TenantGroup tenant_group = 1;
+}
+
+message GetTenantGroupRequest {
+  string id = 1;
+}
+
+message GetTenantGroupResponse {
+  TenantGroup tenant_group = 1;
+}
+
+message CreateTenantRequest {
+  string tenant_group_id = 1;
+  string name = 2;
+  PolicySet policy_overrides = 3;
+}
+
+message CreateTenantResponse {
+  Tenant tenant = 1;
+}
+
+message GetTenantRequest {
+  string id = 1;
+}
+
+message GetTenantResponse {
+  Tenant tenant = 1;
+}
+
+message RegisterResourceRequest {
+  string tenant_id = 1;
+}
+
+message RegisterResourceResponse {
+  Resource resource = 1;
+}
+
+message GetResourceRequest {
+  string id = 1;
+}
+
+message GetResourceResponse {
+  Resource resource = 1;
+}
+
+message SubmitOperationRequest {
+  AtomicOperation operation = 1;
+}
+
+message SubmitOperationResponse {
+  string operation_id = 1;
+}
+
+message GetOperationStatusRequest {
+  string operation_id = 1;
+}
+
+message GetOperationStatusResponse {
+  AtomicOperationResult result = 1;
+}
