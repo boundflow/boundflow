@@ -5,49 +5,46 @@ package convergeplane.v1;
 option go_package = "github.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1";
 
 import "google/protobuf/struct.proto";
-import "convergeplane/v1/tenant.proto";
-import "convergeplane/v1/operation.proto";
+import "convergeplane/v1/resource.proto";
 
-// ResourceCallbackService is implemented by the customer SDK.
-// The ConvergePlane service calls into this to execute customer-defined
-// resource lifecycle logic.
-service ResourceCallbackService {
+// ResourceLifecycleService is the customer-facing API for requesting
+// resource lifecycle actions. The platform internally translates these
+// into operations and schedules them via workers.
+service ResourceLifecycleService {
   rpc CreateResource(CreateResourceRequest) returns (CreateResourceResponse);
-  rpc ReconcileResourceEntryOperation(ReconcileResourceEntryOperationRequest) returns (ReconcileResourceEntryOperationResponse);
+  rpc ReconcileResource(ReconcileResourceRequest) returns (ReconcileResourceResponse);
   rpc DeleteResource(DeleteResourceRequest) returns (DeleteResourceResponse);
   rpc GetResourceHealth(GetResourceHealthRequest) returns (GetResourceHealthResponse);
 }
 
 message CreateResourceRequest {
-  Resource resource = 1;
-  OperationContext context = 2;
+  string resource_id = 1;
+  google.protobuf.Struct initial_state = 2;
 }
 
 message CreateResourceResponse {
-  AtomicOperationResult result = 1;
-}
-
-message ReconcileResourceEntryOperationRequest {
   Resource resource = 1;
-  OperationContext context = 2;
 }
 
-message ReconcileResourceEntryOperationResponse {
-  google.protobuf.Struct current_state = 1;
+message ReconcileResourceRequest {
+  string resource_id = 1;
   google.protobuf.Struct goal_state = 2;
 }
 
+message ReconcileResourceResponse {
+  string request_id = 1;
+}
+
 message DeleteResourceRequest {
-  Resource resource = 1;
-  OperationContext context = 2;
+  string resource_id = 1;
 }
 
 message DeleteResourceResponse {
-  AtomicOperationResult result = 1;
+  string request_id = 1;
 }
 
 message GetResourceHealthRequest {
-  Resource resource = 1;
+  string resource_id = 1;
   google.protobuf.Struct expected_state = 2;
 }
 

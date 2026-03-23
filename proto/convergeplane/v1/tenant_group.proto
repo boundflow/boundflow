@@ -5,14 +5,13 @@ package convergeplane.v1;
 option go_package = "github.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1";
 
 import "google/protobuf/timestamp.proto";
-import "convergeplane/v1/resource.proto";
+import "convergeplane/v1/tenant.proto";
 import "convergeplane/v1/policy.proto";
 
-message Tenant {
+message TenantGroup {
   string id = 1;
   string name = 2;
-  string tenant_group_id = 3;
-  repeated Resource resources = 4;
-  PolicySet policy_overrides = 5;
-  google.protobuf.Timestamp created_at = 6;
+  repeated Tenant tenants = 3;
+  PolicySet policies = 4;
+  google.protobuf.Timestamp created_at = 5;
 }

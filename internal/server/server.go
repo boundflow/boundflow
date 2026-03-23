@@ -18,8 +18,9 @@ type Server struct {
 func New(cfg *config.Config) *Server {
 	grpcServer := grpc.NewServer()
 
-	handler := NewControlPlaneHandler()
-	convergeplanev1.RegisterControlPlaneServiceServer(grpcServer, handler)
+	convergeplanev1.RegisterRegistrationServiceServer(grpcServer, NewRegistrationHandler())
+	convergeplanev1.RegisterResourceLifecycleServiceServer(grpcServer, NewResourceLifecycleHandler())
+	convergeplanev1.RegisterWorkerServiceServer(grpcServer, NewWorkerHandler())
 
 	return &Server{
 		grpcServer: grpcServer,

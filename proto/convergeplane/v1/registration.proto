@@ -4,31 +4,25 @@ package convergeplane.v1;
 
 option go_package = "github.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1";
 
+import "convergeplane/v1/tenant_group.proto";
 import "convergeplane/v1/tenant.proto";
-import "convergeplane/v1/policy.proto";
-import "convergeplane/v1/operation.proto";
+import "convergeplane/v1/resource.proto";
 
-service ControlPlaneService {
-  // Tenant Group management
+// RegistrationService handles setup and configuration of tenant groups,
+// tenants, resources, and policies.
+service RegistrationService {
   rpc CreateTenantGroup(CreateTenantGroupRequest) returns (CreateTenantGroupResponse);
   rpc GetTenantGroup(GetTenantGroupRequest) returns (GetTenantGroupResponse);
 
-  // Tenant management
   rpc CreateTenant(CreateTenantRequest) returns (CreateTenantResponse);
   rpc GetTenant(GetTenantRequest) returns (GetTenantResponse);
 
-  // Resource operations
   rpc RegisterResource(RegisterResourceRequest) returns (RegisterResourceResponse);
   rpc GetResource(GetResourceRequest) returns (GetResourceResponse);
-
-  // Operation lifecycle
-  rpc SubmitOperation(SubmitOperationRequest) returns (SubmitOperationResponse);
-  rpc GetOperationStatus(GetOperationStatusRequest) returns (GetOperationStatusResponse);
 }
 
 message CreateTenantGroupRequest {
-  string name = 1;
-  PolicySet policies = 2;
+  TenantGroup tenant_group = 1;
 }
 
 message CreateTenantGroupResponse {
@@ -44,9 +38,7 @@ message GetTenantGroupResponse {
 }
 
 message CreateTenantRequest {
-  string tenant_group_id = 1;
-  string name = 2;
-  PolicySet policy_overrides = 3;
+  Tenant tenant = 1;
 }
 
 message CreateTenantResponse {
@@ -62,7 +54,7 @@ message GetTenantResponse {
 }
 
 message RegisterResourceRequest {
-  string tenant_id = 1;
+  Resource resource = 1;
 }
 
 message RegisterResourceResponse {
@@ -75,20 +67,4 @@ message GetResourceRequest {
 
 message GetResourceResponse {
   Resource resource = 1;
-}
-
-message SubmitOperationRequest {
-  AtomicOperation operation = 1;
-}
-
-message SubmitOperationResponse {
-  string operation_id = 1;
-}
-
-message GetOperationStatusRequest {
-  string operation_id = 1;
-}
-
-message GetOperationStatusResponse {
-  AtomicOperationResult result = 1;
 }

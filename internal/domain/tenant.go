@@ -18,13 +18,3 @@ type Tenant struct {
 	PolicyOverrides *PolicySet
 	CreatedAt       time.Time
 }
-
-type Resource struct {
-	ID           string
-	TenantID     string
-	CurrentState ResourceState
-	GoalState    ResourceState
-
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-}

@@ -9,7 +9,6 @@ package convergeplanev1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	structpb "google.golang.org/protobuf/types/known/structpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -22,82 +21,6 @@ const (
 	// Verify that runtime/protoimpl is sufficiently up-to-date.
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
-
-type TenantGroup struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Tenants       []*Tenant              `protobuf:"bytes,3,rep,name=tenants,proto3" json:"tenants,omitempty"`
-	Policies      *PolicySet             `protobuf:"bytes,4,opt,name=policies,proto3" json:"policies,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *TenantGroup) Reset() {
-	*x = TenantGroup{}
-	mi := &file_convergeplane_v1_tenant_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *TenantGroup) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*TenantGroup) ProtoMessage() {}
-
-func (x *TenantGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_tenant_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use TenantGroup.ProtoReflect.Descriptor instead.
-func (*TenantGroup) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_tenant_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *TenantGroup) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *TenantGroup) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *TenantGroup) GetTenants() []*Tenant {
-	if x != nil {
-		return x.Tenants
-	}
-	return nil
-}
-
-func (x *TenantGroup) GetPolicies() *PolicySet {
-	if x != nil {
-		return x.Policies
-	}
-	return nil
-}
-
-func (x *TenantGroup) GetCreatedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.CreatedAt
-	}
-	return nil
-}
 
 type Tenant struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
@@ -113,7 +36,7 @@ type Tenant struct {
 
 func (x *Tenant) Reset() {
 	*x = Tenant{}
-	mi := &file_convergeplane_v1_tenant_proto_msgTypes[1]
+	mi := &file_convergeplane_v1_tenant_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -125,7 +48,7 @@ func (x *Tenant) String() string {
 func (*Tenant) ProtoMessage() {}
 
 func (x *Tenant) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_tenant_proto_msgTypes[1]
+	mi := &file_convergeplane_v1_tenant_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -138,7 +61,7 @@ func (x *Tenant) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Tenant.ProtoReflect.Descriptor instead.
 func (*Tenant) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_tenant_proto_rawDescGZIP(), []int{1}
+	return file_convergeplane_v1_tenant_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Tenant) GetId() string {
@@ -183,102 +106,11 @@ func (x *Tenant) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-type Resource struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	TenantId      string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	CurrentState  *structpb.Struct       `protobuf:"bytes,3,opt,name=current_state,json=currentState,proto3" json:"current_state,omitempty"`
-	GoalState     *structpb.Struct       `protobuf:"bytes,4,opt,name=goal_state,json=goalState,proto3" json:"goal_state,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Resource) Reset() {
-	*x = Resource{}
-	mi := &file_convergeplane_v1_tenant_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Resource) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Resource) ProtoMessage() {}
-
-func (x *Resource) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_tenant_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Resource.ProtoReflect.Descriptor instead.
-func (*Resource) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_tenant_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *Resource) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *Resource) GetTenantId() string {
-	if x != nil {
-		return x.TenantId
-	}
-	return ""
-}
-
-func (x *Resource) GetCurrentState() *structpb.Struct {
-	if x != nil {
-		return x.CurrentState
-	}
-	return nil
-}
-
-func (x *Resource) GetGoalState() *structpb.Struct {
-	if x != nil {
-		return x.GoalState
-	}
-	return nil
-}
-
-func (x *Resource) GetCreatedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.CreatedAt
-	}
-	return nil
-}
-
-func (x *Resource) GetUpdatedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.UpdatedAt
-	}
-	return nil
-}
-
 var File_convergeplane_v1_tenant_proto protoreflect.FileDescriptor
 
 const file_convergeplane_v1_tenant_proto_rawDesc = "" +
 	"\n" +
-	"\x1dconvergeplane/v1/tenant.proto\x12\x10convergeplane.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1dconvergeplane/v1/policy.proto\"\xd9\x01\n" +
-	"\vTenantGroup\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x122\n" +
-	"\atenants\x18\x03 \x03(\v2\x18.convergeplane.v1.TenantR\atenants\x127\n" +
-	"\bpolicies\x18\x04 \x01(\v2\x1b.convergeplane.v1.PolicySetR\bpolicies\x129\n" +
-	"\n" +
-	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\x91\x02\n" +
+	"\x1dconvergeplane/v1/tenant.proto\x12\x10convergeplane.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1fconvergeplane/v1/resource.proto\x1a\x1dconvergeplane/v1/policy.proto\"\x91\x02\n" +
 	"\x06Tenant\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12&\n" +
@@ -286,17 +118,7 @@ const file_convergeplane_v1_tenant_proto_rawDesc = "" +
 	"\tresources\x18\x04 \x03(\v2\x1a.convergeplane.v1.ResourceR\tresources\x12F\n" +
 	"\x10policy_overrides\x18\x05 \x01(\v2\x1b.convergeplane.v1.PolicySetR\x0fpolicyOverrides\x129\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xa3\x02\n" +
-	"\bResource\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
-	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12<\n" +
-	"\rcurrent_state\x18\x03 \x01(\v2\x17.google.protobuf.StructR\fcurrentState\x126\n" +
-	"\n" +
-	"goal_state\x18\x04 \x01(\v2\x17.google.protobuf.StructR\tgoalState\x129\n" +
-	"\n" +
-	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
-	"\n" +
-	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtBMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAtBMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
 
 var (
 	file_convergeplane_v1_tenant_proto_rawDescOnce sync.Once
@@ -310,31 +132,22 @@ func file_convergeplane_v1_tenant_proto_rawDescGZIP() []byte {
 	return file_convergeplane_v1_tenant_proto_rawDescData
 }
 
-var file_convergeplane_v1_tenant_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_convergeplane_v1_tenant_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_convergeplane_v1_tenant_proto_goTypes = []any{
-	(*TenantGroup)(nil),           // 0: convergeplane.v1.TenantGroup
-	(*Tenant)(nil),                // 1: convergeplane.v1.Tenant
-	(*Resource)(nil),              // 2: convergeplane.v1.Resource
-	(*PolicySet)(nil),             // 3: convergeplane.v1.PolicySet
-	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),       // 5: google.protobuf.Struct
+	(*Tenant)(nil),                // 0: convergeplane.v1.Tenant
+	(*Resource)(nil),              // 1: convergeplane.v1.Resource
+	(*PolicySet)(nil),             // 2: convergeplane.v1.PolicySet
+	(*timestamppb.Timestamp)(nil), // 3: google.protobuf.Timestamp
 }
 var file_convergeplane_v1_tenant_proto_depIdxs = []int32{
-	1,  // 0: convergeplane.v1.TenantGroup.tenants:type_name -> convergeplane.v1.Tenant
-	3,  // 1: convergeplane.v1.TenantGroup.policies:type_name -> convergeplane.v1.PolicySet
-	4,  // 2: convergeplane.v1.TenantGroup.created_at:type_name -> google.protobuf.Timestamp
-	2,  // 3: convergeplane.v1.Tenant.resources:type_name -> convergeplane.v1.Resource
-	3,  // 4: convergeplane.v1.Tenant.policy_overrides:type_name -> convergeplane.v1.PolicySet
-	4,  // 5: convergeplane.v1.Tenant.created_at:type_name -> google.protobuf.Timestamp
-	5,  // 6: convergeplane.v1.Resource.current_state:type_name -> google.protobuf.Struct
-	5,  // 7: convergeplane.v1.Resource.goal_state:type_name -> google.protobuf.Struct
-	4,  // 8: convergeplane.v1.Resource.created_at:type_name -> google.protobuf.Timestamp
-	4,  // 9: convergeplane.v1.Resource.updated_at:type_name -> google.protobuf.Timestamp
-	10, // [10:10] is the sub-list for method output_type
-	10, // [10:10] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	1, // 0: convergeplane.v1.Tenant.resources:type_name -> convergeplane.v1.Resource
+	2, // 1: convergeplane.v1.Tenant.policy_overrides:type_name -> convergeplane.v1.PolicySet
+	3, // 2: convergeplane.v1.Tenant.created_at:type_name -> google.protobuf.Timestamp
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_convergeplane_v1_tenant_proto_init() }
@@ -342,6 +155,7 @@ func file_convergeplane_v1_tenant_proto_init() {
 	if File_convergeplane_v1_tenant_proto != nil {
 		return
 	}
+	file_convergeplane_v1_resource_proto_init()
 	file_convergeplane_v1_policy_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -349,7 +163,7 @@ func file_convergeplane_v1_tenant_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_convergeplane_v1_tenant_proto_rawDesc), len(file_convergeplane_v1_tenant_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   1,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

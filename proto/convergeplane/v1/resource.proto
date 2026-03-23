@@ -4,15 +4,15 @@ package convergeplane.v1;
 
 option go_package = "github.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1";
 
+import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
-import "convergeplane/v1/resource.proto";
-import "convergeplane/v1/policy.proto";
 
-message Tenant {
+message Resource {
   string id = 1;
-  string name = 2;
-  string tenant_group_id = 3;
-  repeated Resource resources = 4;
-  PolicySet policy_overrides = 5;
+  string tenant_id = 2;
+  string resource_type = 3;
+  google.protobuf.Struct current_state = 4;
+  google.protobuf.Struct goal_state = 5;
   google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
 }
