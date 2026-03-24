@@ -92,3 +92,11 @@ func (r *ResourceRepo) Update(ctx context.Context, resource *domain.Resource) er
 	}
 	return nil
 }
+
+func (r *ResourceRepo) Delete(ctx context.Context, id string) error {
+	_, err := r.pool.Exec(ctx, `DELETE FROM resources WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete resource: %w", err)
+	}
+	return nil
+}

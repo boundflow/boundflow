@@ -53,3 +53,11 @@ func (r *TenantGroupRepo) Get(ctx context.Context, id string) (*domain.TenantGro
 
 	return &group, nil
 }
+
+func (r *TenantGroupRepo) Delete(ctx context.Context, id string) error {
+	_, err := r.pool.Exec(ctx, `DELETE FROM tenant_groups WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete tenant group: %w", err)
+	}
+	return nil
+}

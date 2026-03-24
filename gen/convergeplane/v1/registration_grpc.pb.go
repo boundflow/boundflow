@@ -19,12 +19,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	RegistrationService_CreateTenantGroup_FullMethodName = "/convergeplane.v1.RegistrationService/CreateTenantGroup"
-	RegistrationService_GetTenantGroup_FullMethodName    = "/convergeplane.v1.RegistrationService/GetTenantGroup"
-	RegistrationService_CreateTenant_FullMethodName      = "/convergeplane.v1.RegistrationService/CreateTenant"
-	RegistrationService_GetTenant_FullMethodName         = "/convergeplane.v1.RegistrationService/GetTenant"
-	RegistrationService_RegisterResource_FullMethodName  = "/convergeplane.v1.RegistrationService/RegisterResource"
-	RegistrationService_GetResource_FullMethodName       = "/convergeplane.v1.RegistrationService/GetResource"
+	RegistrationService_CreateTenantGroup_FullMethodName  = "/convergeplane.v1.RegistrationService/CreateTenantGroup"
+	RegistrationService_GetTenantGroup_FullMethodName     = "/convergeplane.v1.RegistrationService/GetTenantGroup"
+	RegistrationService_DeleteTenantGroup_FullMethodName  = "/convergeplane.v1.RegistrationService/DeleteTenantGroup"
+	RegistrationService_CreateTenant_FullMethodName       = "/convergeplane.v1.RegistrationService/CreateTenant"
+	RegistrationService_GetTenant_FullMethodName          = "/convergeplane.v1.RegistrationService/GetTenant"
+	RegistrationService_DeleteTenant_FullMethodName       = "/convergeplane.v1.RegistrationService/DeleteTenant"
+	RegistrationService_RegisterResource_FullMethodName   = "/convergeplane.v1.RegistrationService/RegisterResource"
+	RegistrationService_GetResource_FullMethodName        = "/convergeplane.v1.RegistrationService/GetResource"
+	RegistrationService_UnregisterResource_FullMethodName = "/convergeplane.v1.RegistrationService/UnregisterResource"
 )
 
 // RegistrationServiceClient is the client API for RegistrationService service.
@@ -36,10 +39,13 @@ const (
 type RegistrationServiceClient interface {
 	CreateTenantGroup(ctx context.Context, in *CreateTenantGroupRequest, opts ...grpc.CallOption) (*CreateTenantGroupResponse, error)
 	GetTenantGroup(ctx context.Context, in *GetTenantGroupRequest, opts ...grpc.CallOption) (*GetTenantGroupResponse, error)
+	DeleteTenantGroup(ctx context.Context, in *DeleteTenantGroupRequest, opts ...grpc.CallOption) (*DeleteTenantGroupResponse, error)
 	CreateTenant(ctx context.Context, in *CreateTenantRequest, opts ...grpc.CallOption) (*CreateTenantResponse, error)
 	GetTenant(ctx context.Context, in *GetTenantRequest, opts ...grpc.CallOption) (*GetTenantResponse, error)
+	DeleteTenant(ctx context.Context, in *DeleteTenantRequest, opts ...grpc.CallOption) (*DeleteTenantResponse, error)
 	RegisterResource(ctx context.Context, in *RegisterResourceRequest, opts ...grpc.CallOption) (*RegisterResourceResponse, error)
 	GetResource(ctx context.Context, in *GetResourceRequest, opts ...grpc.CallOption) (*GetResourceResponse, error)
+	UnregisterResource(ctx context.Context, in *UnregisterResourceRequest, opts ...grpc.CallOption) (*UnregisterResourceResponse, error)
 }
 
 type registrationServiceClient struct {
@@ -70,6 +76,16 @@ func (c *registrationServiceClient) GetTenantGroup(ctx context.Context, in *GetT
 	return out, nil
 }
 
+func (c *registrationServiceClient) DeleteTenantGroup(ctx context.Context, in *DeleteTenantGroupRequest, opts ...grpc.CallOption) (*DeleteTenantGroupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteTenantGroupResponse)
+	err := c.cc.Invoke(ctx, RegistrationService_DeleteTenantGroup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *registrationServiceClient) CreateTenant(ctx context.Context, in *CreateTenantRequest, opts ...grpc.CallOption) (*CreateTenantResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateTenantResponse)
@@ -84,6 +100,16 @@ func (c *registrationServiceClient) GetTenant(ctx context.Context, in *GetTenant
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetTenantResponse)
 	err := c.cc.Invoke(ctx, RegistrationService_GetTenant_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *registrationServiceClient) DeleteTenant(ctx context.Context, in *DeleteTenantRequest, opts ...grpc.CallOption) (*DeleteTenantResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteTenantResponse)
+	err := c.cc.Invoke(ctx, RegistrationService_DeleteTenant_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -110,6 +136,16 @@ func (c *registrationServiceClient) GetResource(ctx context.Context, in *GetReso
 	return out, nil
 }
 
+func (c *registrationServiceClient) UnregisterResource(ctx context.Context, in *UnregisterResourceRequest, opts ...grpc.CallOption) (*UnregisterResourceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UnregisterResourceResponse)
+	err := c.cc.Invoke(ctx, RegistrationService_UnregisterResource_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RegistrationServiceServer is the server API for RegistrationService service.
 // All implementations must embed UnimplementedRegistrationServiceServer
 // for forward compatibility.
@@ -119,10 +155,13 @@ func (c *registrationServiceClient) GetResource(ctx context.Context, in *GetReso
 type RegistrationServiceServer interface {
 	CreateTenantGroup(context.Context, *CreateTenantGroupRequest) (*CreateTenantGroupResponse, error)
 	GetTenantGroup(context.Context, *GetTenantGroupRequest) (*GetTenantGroupResponse, error)
+	DeleteTenantGroup(context.Context, *DeleteTenantGroupRequest) (*DeleteTenantGroupResponse, error)
 	CreateTenant(context.Context, *CreateTenantRequest) (*CreateTenantResponse, error)
 	GetTenant(context.Context, *GetTenantRequest) (*GetTenantResponse, error)
+	DeleteTenant(context.Context, *DeleteTenantRequest) (*DeleteTenantResponse, error)
 	RegisterResource(context.Context, *RegisterResourceRequest) (*RegisterResourceResponse, error)
 	GetResource(context.Context, *GetResourceRequest) (*GetResourceResponse, error)
+	UnregisterResource(context.Context, *UnregisterResourceRequest) (*UnregisterResourceResponse, error)
 	mustEmbedUnimplementedRegistrationServiceServer()
 }
 
@@ -139,17 +178,26 @@ func (UnimplementedRegistrationServiceServer) CreateTenantGroup(context.Context,
 func (UnimplementedRegistrationServiceServer) GetTenantGroup(context.Context, *GetTenantGroupRequest) (*GetTenantGroupResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetTenantGroup not implemented")
 }
+func (UnimplementedRegistrationServiceServer) DeleteTenantGroup(context.Context, *DeleteTenantGroupRequest) (*DeleteTenantGroupResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteTenantGroup not implemented")
+}
 func (UnimplementedRegistrationServiceServer) CreateTenant(context.Context, *CreateTenantRequest) (*CreateTenantResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateTenant not implemented")
 }
 func (UnimplementedRegistrationServiceServer) GetTenant(context.Context, *GetTenantRequest) (*GetTenantResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetTenant not implemented")
 }
+func (UnimplementedRegistrationServiceServer) DeleteTenant(context.Context, *DeleteTenantRequest) (*DeleteTenantResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteTenant not implemented")
+}
 func (UnimplementedRegistrationServiceServer) RegisterResource(context.Context, *RegisterResourceRequest) (*RegisterResourceResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RegisterResource not implemented")
 }
 func (UnimplementedRegistrationServiceServer) GetResource(context.Context, *GetResourceRequest) (*GetResourceResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetResource not implemented")
+}
+func (UnimplementedRegistrationServiceServer) UnregisterResource(context.Context, *UnregisterResourceRequest) (*UnregisterResourceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UnregisterResource not implemented")
 }
 func (UnimplementedRegistrationServiceServer) mustEmbedUnimplementedRegistrationServiceServer() {}
 func (UnimplementedRegistrationServiceServer) testEmbeddedByValue()                             {}
@@ -208,6 +256,24 @@ func _RegistrationService_GetTenantGroup_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _RegistrationService_DeleteTenantGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteTenantGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RegistrationServiceServer).DeleteTenantGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RegistrationService_DeleteTenantGroup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RegistrationServiceServer).DeleteTenantGroup(ctx, req.(*DeleteTenantGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _RegistrationService_CreateTenant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateTenantRequest)
 	if err := dec(in); err != nil {
@@ -240,6 +306,24 @@ func _RegistrationService_GetTenant_Handler(srv interface{}, ctx context.Context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(RegistrationServiceServer).GetTenant(ctx, req.(*GetTenantRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RegistrationService_DeleteTenant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteTenantRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RegistrationServiceServer).DeleteTenant(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RegistrationService_DeleteTenant_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RegistrationServiceServer).DeleteTenant(ctx, req.(*DeleteTenantRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -280,6 +364,24 @@ func _RegistrationService_GetResource_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _RegistrationService_UnregisterResource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnregisterResourceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RegistrationServiceServer).UnregisterResource(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RegistrationService_UnregisterResource_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RegistrationServiceServer).UnregisterResource(ctx, req.(*UnregisterResourceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // RegistrationService_ServiceDesc is the grpc.ServiceDesc for RegistrationService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -296,6 +398,10 @@ var RegistrationService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _RegistrationService_GetTenantGroup_Handler,
 		},
 		{
+			MethodName: "DeleteTenantGroup",
+			Handler:    _RegistrationService_DeleteTenantGroup_Handler,
+		},
+		{
 			MethodName: "CreateTenant",
 			Handler:    _RegistrationService_CreateTenant_Handler,
 		},
@@ -304,12 +410,20 @@ var RegistrationService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _RegistrationService_GetTenant_Handler,
 		},
 		{
+			MethodName: "DeleteTenant",
+			Handler:    _RegistrationService_DeleteTenant_Handler,
+		},
+		{
 			MethodName: "RegisterResource",
 			Handler:    _RegistrationService_RegisterResource_Handler,
 		},
 		{
 			MethodName: "GetResource",
 			Handler:    _RegistrationService_GetResource_Handler,
+		},
+		{
+			MethodName: "UnregisterResource",
+			Handler:    _RegistrationService_UnregisterResource_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

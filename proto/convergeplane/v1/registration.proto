@@ -13,12 +13,15 @@ import "convergeplane/v1/resource.proto";
 service RegistrationService {
   rpc CreateTenantGroup(CreateTenantGroupRequest) returns (CreateTenantGroupResponse);
   rpc GetTenantGroup(GetTenantGroupRequest) returns (GetTenantGroupResponse);
+  rpc DeleteTenantGroup(DeleteTenantGroupRequest) returns (DeleteTenantGroupResponse);
 
   rpc CreateTenant(CreateTenantRequest) returns (CreateTenantResponse);
   rpc GetTenant(GetTenantRequest) returns (GetTenantResponse);
+  rpc DeleteTenant(DeleteTenantRequest) returns (DeleteTenantResponse);
 
   rpc RegisterResource(RegisterResourceRequest) returns (RegisterResourceResponse);
   rpc GetResource(GetResourceRequest) returns (GetResourceResponse);
+  rpc UnregisterResource(UnregisterResourceRequest) returns (UnregisterResourceResponse);
 }
 
 message CreateTenantGroupRequest {
@@ -68,3 +71,21 @@ message GetResourceRequest {
 message GetResourceResponse {
   Resource resource = 1;
 }
+
+message DeleteTenantGroupRequest {
+  string id = 1;
+}
+
+message DeleteTenantGroupResponse {}
+
+message DeleteTenantRequest {
+  string id = 1;
+}
+
+message DeleteTenantResponse {}
+
+message UnregisterResourceRequest {
+  string id = 1;
+}
+
+message UnregisterResourceResponse {}
