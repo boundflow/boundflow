@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package convergeplane.v1;
+
+option go_package = "github.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1";
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+// ResourceInstance is an actual instance of a registered resource,
+// tied to a specific tenant. Managed via the ResourceLifecycleService.
+message ResourceInstance {
+  string id = 1;
+  string resource_id = 2;
+  string tenant_id = 3;
+  google.protobuf.Struct current_state = 4;
+  google.protobuf.Struct goal_state = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}

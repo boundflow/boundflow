@@ -1,4 +1,4 @@
-.PHONY: proto build run test clean lint
+.PHONY: proto build run test clean lint mocks
 
 PROTO_DIR := proto
 GEN_DIR := gen
@@ -17,6 +17,9 @@ test:
 
 clean:
 	rm -rf bin/
+
+mocks:
+	mockgen -source=internal/storage/repository.go -destination=internal/storage/mocks/repository.go -package=mocks
 
 lint:
 	buf lint

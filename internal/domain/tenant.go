@@ -13,8 +13,7 @@ type TenantGroup struct {
 type Tenant struct {
 	ID              string
 	Name            string
-	TenantGroupID   string
-	Resources       []*Resource
+	TenantGroupID   string // defaults to "default" if unset
 	PolicyOverrides *PolicySet
 	CreatedAt       time.Time
 }

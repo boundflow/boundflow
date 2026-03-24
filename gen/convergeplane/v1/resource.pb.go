@@ -9,7 +9,6 @@ package convergeplanev1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	structpb "google.golang.org/protobuf/types/known/structpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -23,15 +22,14 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Resource is a resource definition registered via the RegistrationService.
+// It defines a type of resource and its configuration. Actual instances
+// of this resource tied to tenants are managed via the ResourceLifecycleService.
 type Resource struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	TenantId      string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	ResourceType  string                 `protobuf:"bytes,3,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
-	CurrentState  *structpb.Struct       `protobuf:"bytes,4,opt,name=current_state,json=currentState,proto3" json:"current_state,omitempty"`
-	GoalState     *structpb.Struct       `protobuf:"bytes,5,opt,name=goal_state,json=goalState,proto3" json:"goal_state,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	ResourceType  string                 `protobuf:"bytes,2,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -73,32 +71,11 @@ func (x *Resource) GetId() string {
 	return ""
 }
 
-func (x *Resource) GetTenantId() string {
-	if x != nil {
-		return x.TenantId
-	}
-	return ""
-}
-
 func (x *Resource) GetResourceType() string {
 	if x != nil {
 		return x.ResourceType
 	}
 	return ""
-}
-
-func (x *Resource) GetCurrentState() *structpb.Struct {
-	if x != nil {
-		return x.CurrentState
-	}
-	return nil
-}
-
-func (x *Resource) GetGoalState() *structpb.Struct {
-	if x != nil {
-		return x.GoalState
-	}
-	return nil
 }
 
 func (x *Resource) GetCreatedAt() *timestamppb.Timestamp {
@@ -108,29 +85,16 @@ func (x *Resource) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *Resource) GetUpdatedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.UpdatedAt
-	}
-	return nil
-}
-
 var File_convergeplane_v1_resource_proto protoreflect.FileDescriptor
 
 const file_convergeplane_v1_resource_proto_rawDesc = "" +
 	"\n" +
-	"\x1fconvergeplane/v1/resource.proto\x12\x10convergeplane.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc8\x02\n" +
+	"\x1fconvergeplane/v1/resource.proto\x12\x10convergeplane.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"z\n" +
 	"\bResource\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
-	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12#\n" +
-	"\rresource_type\x18\x03 \x01(\tR\fresourceType\x12<\n" +
-	"\rcurrent_state\x18\x04 \x01(\v2\x17.google.protobuf.StructR\fcurrentState\x126\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
+	"\rresource_type\x18\x02 \x01(\tR\fresourceType\x129\n" +
 	"\n" +
-	"goal_state\x18\x05 \x01(\v2\x17.google.protobuf.StructR\tgoalState\x129\n" +
-	"\n" +
-	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
-	"\n" +
-	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtBMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
+	"created_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAtBMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
 
 var (
 	file_convergeplane_v1_resource_proto_rawDescOnce sync.Once
@@ -147,19 +111,15 @@ func file_convergeplane_v1_resource_proto_rawDescGZIP() []byte {
 var file_convergeplane_v1_resource_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_convergeplane_v1_resource_proto_goTypes = []any{
 	(*Resource)(nil),              // 0: convergeplane.v1.Resource
-	(*structpb.Struct)(nil),       // 1: google.protobuf.Struct
-	(*timestamppb.Timestamp)(nil), // 2: google.protobuf.Timestamp
+	(*timestamppb.Timestamp)(nil), // 1: google.protobuf.Timestamp
 }
 var file_convergeplane_v1_resource_proto_depIdxs = []int32{
-	1, // 0: convergeplane.v1.Resource.current_state:type_name -> google.protobuf.Struct
-	1, // 1: convergeplane.v1.Resource.goal_state:type_name -> google.protobuf.Struct
-	2, // 2: convergeplane.v1.Resource.created_at:type_name -> google.protobuf.Timestamp
-	2, // 3: convergeplane.v1.Resource.updated_at:type_name -> google.protobuf.Timestamp
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	1, // 0: convergeplane.v1.Resource.created_at:type_name -> google.protobuf.Timestamp
+	1, // [1:1] is the sub-list for method output_type
+	1, // [1:1] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_convergeplane_v1_resource_proto_init() }

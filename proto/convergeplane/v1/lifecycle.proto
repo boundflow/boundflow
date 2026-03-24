@@ -5,7 +5,7 @@ package convergeplane.v1;
 option go_package = "github.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1";
 
 import "google/protobuf/struct.proto";
-import "convergeplane/v1/resource.proto";
+import "convergeplane/v1/resource_instance.proto";
 
 // ResourceLifecycleService is the customer-facing API for requesting
 // resource lifecycle actions. The platform internally translates these
@@ -19,15 +19,16 @@ service ResourceLifecycleService {
 
 message CreateResourceRequest {
   string resource_id = 1;
-  google.protobuf.Struct initial_state = 2;
+  string tenant_id = 2;
+  google.protobuf.Struct initial_state = 3;
 }
 
 message CreateResourceResponse {
-  Resource resource = 1;
+  ResourceInstance resource_instance = 1;
 }
 
 message ReconcileResourceRequest {
-  string resource_id = 1;
+  string resource_instance_id = 1;
   google.protobuf.Struct goal_state = 2;
 }
 
@@ -36,7 +37,7 @@ message ReconcileResourceResponse {
 }
 
 message DeleteResourceRequest {
-  string resource_id = 1;
+  string resource_instance_id = 1;
 }
 
 message DeleteResourceResponse {
@@ -44,7 +45,7 @@ message DeleteResourceResponse {
 }
 
 message GetResourceHealthRequest {
-  string resource_id = 1;
+  string resource_instance_id = 1;
   google.protobuf.Struct expected_state = 2;
 }
 

@@ -25,7 +25,8 @@ const (
 type CreateResourceRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ResourceId    string                 `protobuf:"bytes,1,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
-	InitialState  *structpb.Struct       `protobuf:"bytes,2,opt,name=initial_state,json=initialState,proto3" json:"initial_state,omitempty"`
+	TenantId      string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	InitialState  *structpb.Struct       `protobuf:"bytes,3,opt,name=initial_state,json=initialState,proto3" json:"initial_state,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -67,6 +68,13 @@ func (x *CreateResourceRequest) GetResourceId() string {
 	return ""
 }
 
+func (x *CreateResourceRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
 func (x *CreateResourceRequest) GetInitialState() *structpb.Struct {
 	if x != nil {
 		return x.InitialState
@@ -75,10 +83,10 @@ func (x *CreateResourceRequest) GetInitialState() *structpb.Struct {
 }
 
 type CreateResourceResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Resource      *Resource              `protobuf:"bytes,1,opt,name=resource,proto3" json:"resource,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	ResourceInstance *ResourceInstance      `protobuf:"bytes,1,opt,name=resource_instance,json=resourceInstance,proto3" json:"resource_instance,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *CreateResourceResponse) Reset() {
@@ -111,19 +119,19 @@ func (*CreateResourceResponse) Descriptor() ([]byte, []int) {
 	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *CreateResourceResponse) GetResource() *Resource {
+func (x *CreateResourceResponse) GetResourceInstance() *ResourceInstance {
 	if x != nil {
-		return x.Resource
+		return x.ResourceInstance
 	}
 	return nil
 }
 
 type ReconcileResourceRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ResourceId    string                 `protobuf:"bytes,1,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
-	GoalState     *structpb.Struct       `protobuf:"bytes,2,opt,name=goal_state,json=goalState,proto3" json:"goal_state,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	ResourceInstanceId string                 `protobuf:"bytes,1,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
+	GoalState          *structpb.Struct       `protobuf:"bytes,2,opt,name=goal_state,json=goalState,proto3" json:"goal_state,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *ReconcileResourceRequest) Reset() {
@@ -156,9 +164,9 @@ func (*ReconcileResourceRequest) Descriptor() ([]byte, []int) {
 	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *ReconcileResourceRequest) GetResourceId() string {
+func (x *ReconcileResourceRequest) GetResourceInstanceId() string {
 	if x != nil {
-		return x.ResourceId
+		return x.ResourceInstanceId
 	}
 	return ""
 }
@@ -215,10 +223,10 @@ func (x *ReconcileResourceResponse) GetRequestId() string {
 }
 
 type DeleteResourceRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ResourceId    string                 `protobuf:"bytes,1,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	ResourceInstanceId string                 `protobuf:"bytes,1,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *DeleteResourceRequest) Reset() {
@@ -251,9 +259,9 @@ func (*DeleteResourceRequest) Descriptor() ([]byte, []int) {
 	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *DeleteResourceRequest) GetResourceId() string {
+func (x *DeleteResourceRequest) GetResourceInstanceId() string {
 	if x != nil {
-		return x.ResourceId
+		return x.ResourceInstanceId
 	}
 	return ""
 }
@@ -303,11 +311,11 @@ func (x *DeleteResourceResponse) GetRequestId() string {
 }
 
 type GetResourceHealthRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ResourceId    string                 `protobuf:"bytes,1,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
-	ExpectedState *structpb.Struct       `protobuf:"bytes,2,opt,name=expected_state,json=expectedState,proto3" json:"expected_state,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	ResourceInstanceId string                 `protobuf:"bytes,1,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
+	ExpectedState      *structpb.Struct       `protobuf:"bytes,2,opt,name=expected_state,json=expectedState,proto3" json:"expected_state,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *GetResourceHealthRequest) Reset() {
@@ -340,9 +348,9 @@ func (*GetResourceHealthRequest) Descriptor() ([]byte, []int) {
 	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *GetResourceHealthRequest) GetResourceId() string {
+func (x *GetResourceHealthRequest) GetResourceInstanceId() string {
 	if x != nil {
-		return x.ResourceId
+		return x.ResourceInstanceId
 	}
 	return ""
 }
@@ -410,30 +418,28 @@ var File_convergeplane_v1_lifecycle_proto protoreflect.FileDescriptor
 
 const file_convergeplane_v1_lifecycle_proto_rawDesc = "" +
 	"\n" +
-	" convergeplane/v1/lifecycle.proto\x12\x10convergeplane.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fconvergeplane/v1/resource.proto\"v\n" +
+	" convergeplane/v1/lifecycle.proto\x12\x10convergeplane.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a(convergeplane/v1/resource_instance.proto\"\x93\x01\n" +
 	"\x15CreateResourceRequest\x12\x1f\n" +
 	"\vresource_id\x18\x01 \x01(\tR\n" +
-	"resourceId\x12<\n" +
-	"\rinitial_state\x18\x02 \x01(\v2\x17.google.protobuf.StructR\finitialState\"P\n" +
-	"\x16CreateResourceResponse\x126\n" +
-	"\bresource\x18\x01 \x01(\v2\x1a.convergeplane.v1.ResourceR\bresource\"s\n" +
-	"\x18ReconcileResourceRequest\x12\x1f\n" +
-	"\vresource_id\x18\x01 \x01(\tR\n" +
-	"resourceId\x126\n" +
+	"resourceId\x12\x1b\n" +
+	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12<\n" +
+	"\rinitial_state\x18\x03 \x01(\v2\x17.google.protobuf.StructR\finitialState\"i\n" +
+	"\x16CreateResourceResponse\x12O\n" +
+	"\x11resource_instance\x18\x01 \x01(\v2\".convergeplane.v1.ResourceInstanceR\x10resourceInstance\"\x84\x01\n" +
+	"\x18ReconcileResourceRequest\x120\n" +
+	"\x14resource_instance_id\x18\x01 \x01(\tR\x12resourceInstanceId\x126\n" +
 	"\n" +
 	"goal_state\x18\x02 \x01(\v2\x17.google.protobuf.StructR\tgoalState\":\n" +
 	"\x19ReconcileResourceResponse\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x01 \x01(\tR\trequestId\"8\n" +
-	"\x15DeleteResourceRequest\x12\x1f\n" +
-	"\vresource_id\x18\x01 \x01(\tR\n" +
-	"resourceId\"7\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\"I\n" +
+	"\x15DeleteResourceRequest\x120\n" +
+	"\x14resource_instance_id\x18\x01 \x01(\tR\x12resourceInstanceId\"7\n" +
 	"\x16DeleteResourceResponse\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x01 \x01(\tR\trequestId\"{\n" +
-	"\x18GetResourceHealthRequest\x12\x1f\n" +
-	"\vresource_id\x18\x01 \x01(\tR\n" +
-	"resourceId\x12>\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\"\x8c\x01\n" +
+	"\x18GetResourceHealthRequest\x120\n" +
+	"\x14resource_instance_id\x18\x01 \x01(\tR\x12resourceInstanceId\x12>\n" +
 	"\x0eexpected_state\x18\x02 \x01(\v2\x17.google.protobuf.StructR\rexpectedState\"O\n" +
 	"\x19GetResourceHealthResponse\x12\x18\n" +
 	"\ahealthy\x18\x01 \x01(\bR\ahealthy\x12\x18\n" +
@@ -467,11 +473,11 @@ var file_convergeplane_v1_lifecycle_proto_goTypes = []any{
 	(*GetResourceHealthRequest)(nil),  // 6: convergeplane.v1.GetResourceHealthRequest
 	(*GetResourceHealthResponse)(nil), // 7: convergeplane.v1.GetResourceHealthResponse
 	(*structpb.Struct)(nil),           // 8: google.protobuf.Struct
-	(*Resource)(nil),                  // 9: convergeplane.v1.Resource
+	(*ResourceInstance)(nil),          // 9: convergeplane.v1.ResourceInstance
 }
 var file_convergeplane_v1_lifecycle_proto_depIdxs = []int32{
 	8, // 0: convergeplane.v1.CreateResourceRequest.initial_state:type_name -> google.protobuf.Struct
-	9, // 1: convergeplane.v1.CreateResourceResponse.resource:type_name -> convergeplane.v1.Resource
+	9, // 1: convergeplane.v1.CreateResourceResponse.resource_instance:type_name -> convergeplane.v1.ResourceInstance
 	8, // 2: convergeplane.v1.ReconcileResourceRequest.goal_state:type_name -> google.protobuf.Struct
 	8, // 3: convergeplane.v1.GetResourceHealthRequest.expected_state:type_name -> google.protobuf.Struct
 	0, // 4: convergeplane.v1.ResourceLifecycleService.CreateResource:input_type -> convergeplane.v1.CreateResourceRequest
@@ -494,7 +500,7 @@ func file_convergeplane_v1_lifecycle_proto_init() {
 	if File_convergeplane_v1_lifecycle_proto != nil {
 		return
 	}
-	file_convergeplane_v1_resource_proto_init()
+	file_convergeplane_v1_resource_instance_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

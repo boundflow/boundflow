@@ -4,15 +4,13 @@ package convergeplane.v1;
 
 option go_package = "github.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1";
 
-import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 
+// Resource is a resource definition registered via the RegistrationService.
+// It defines a type of resource and its configuration. Actual instances
+// of this resource tied to tenants are managed via the ResourceLifecycleService.
 message Resource {
   string id = 1;
-  string tenant_id = 2;
-  string resource_type = 3;
-  google.protobuf.Struct current_state = 4;
-  google.protobuf.Struct goal_state = 5;
-  google.protobuf.Timestamp created_at = 6;
-  google.protobuf.Timestamp updated_at = 7;
+  string resource_type = 2;
+  google.protobuf.Timestamp created_at = 3;
 }

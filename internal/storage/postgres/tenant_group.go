@@ -30,7 +30,7 @@ func (r *TenantGroupRepo) Create(ctx context.Context, group *domain.TenantGroup)
 		group.ID, group.Name, policies, group.CreatedAt,
 	)
 	if err != nil {
-		return fmt.Errorf("insert tenant group: %w", err)
+		return handleError(err, "tenant group")
 	}
 	return nil
 }
@@ -44,7 +44,7 @@ func (r *TenantGroupRepo) Get(ctx context.Context, id string) (*domain.TenantGro
 		 FROM tenant_groups WHERE id = $1`, id,
 	).Scan(&group.ID, &group.Name, &policiesJSON, &group.CreatedAt)
 	if err != nil {
-		return nil, fmt.Errorf("get tenant group: %w", err)
+		return nil, handleError(err, "tenant group")
 	}
 
 	if err := json.Unmarshal(policiesJSON, &group.Policies); err != nil {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"os/signal"
@@ -8,12 +9,27 @@ import (
 
 	"github.com/convergeplane/convergeplane/internal/config"
 	"github.com/convergeplane/convergeplane/internal/server"
+	"github.com/convergeplane/convergeplane/internal/service"
+	"github.com/convergeplane/convergeplane/internal/storage/postgres"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
 	cfg := config.Load()
 
-	srv := server.New(cfg)
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	if err != nil {
+		log.Fatalf("unable to connect to database: %v", err)
+	}
+	defer pool.Close()
+
+	tenantGroupRepo := postgres.NewTenantGroupRepo(pool)
+	tenantRepo := postgres.NewTenantRepo(pool)
+
+	regSvc := service.NewRegistrationService(tenantGroupRepo, tenantRepo)
+
+	srv := server.New(cfg, regSvc)
 
 	errCh := make(chan error, 1)
 	go func() {

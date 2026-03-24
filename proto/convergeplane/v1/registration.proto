@@ -6,10 +6,9 @@ option go_package = "github.com/convergeplane/convergeplane/gen/convergeplane/v1
 
 import "convergeplane/v1/tenant_group.proto";
 import "convergeplane/v1/tenant.proto";
-import "convergeplane/v1/resource.proto";
 
 // RegistrationService handles setup and configuration of tenant groups,
-// tenants, resources, and policies.
+// tenants, and policies.
 service RegistrationService {
   rpc CreateTenantGroup(CreateTenantGroupRequest) returns (CreateTenantGroupResponse);
   rpc GetTenantGroup(GetTenantGroupRequest) returns (GetTenantGroupResponse);
@@ -18,10 +17,6 @@ service RegistrationService {
   rpc CreateTenant(CreateTenantRequest) returns (CreateTenantResponse);
   rpc GetTenant(GetTenantRequest) returns (GetTenantResponse);
   rpc DeleteTenant(DeleteTenantRequest) returns (DeleteTenantResponse);
-
-  rpc RegisterResource(RegisterResourceRequest) returns (RegisterResourceResponse);
-  rpc GetResource(GetResourceRequest) returns (GetResourceResponse);
-  rpc UnregisterResource(UnregisterResourceRequest) returns (UnregisterResourceResponse);
 }
 
 message CreateTenantGroupRequest {
@@ -56,22 +51,6 @@ message GetTenantResponse {
   Tenant tenant = 1;
 }
 
-message RegisterResourceRequest {
-  Resource resource = 1;
-}
-
-message RegisterResourceResponse {
-  Resource resource = 1;
-}
-
-message GetResourceRequest {
-  string id = 1;
-}
-
-message GetResourceResponse {
-  Resource resource = 1;
-}
-
 message DeleteTenantGroupRequest {
   string id = 1;
 }
@@ -83,9 +62,3 @@ message DeleteTenantRequest {
 }
 
 message DeleteTenantResponse {}
-
-message UnregisterResourceRequest {
-  string id = 1;
-}
-
-message UnregisterResourceResponse {}

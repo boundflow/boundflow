@@ -34,22 +34,21 @@ func (r *TenantRepo) Create(ctx context.Context, tenant *domain.Tenant) error {
 		tenant.ID, tenant.TenantGroupID, tenant.Name, overridesJSON, tenant.CreatedAt,
 	)
 	if err != nil {
-		return fmt.Errorf("insert tenant: %w", err)
+		return handleError(err, "tenant")
 	}
 	return nil
 }
 
-func (r *TenantRepo) Get(ctx context.Context, tenantGroupID, id string) (*domain.Tenant, error) {
+func (r *TenantRepo) Get(ctx context.Context, id string) (*domain.Tenant, error) {
 	var tenant domain.Tenant
 	var overridesJSON []byte
 
 	err := r.pool.QueryRow(ctx,
 		`SELECT id, tenant_group_id, name, policy_overrides, created_at
-		 FROM tenants WHERE tenant_group_id = $1 AND id = $2`,
-		tenantGroupID, id,
+		 FROM tenants WHERE id = $1`, id,
 	).Scan(&tenant.ID, &tenant.TenantGroupID, &tenant.Name, &overridesJSON, &tenant.CreatedAt)
 	if err != nil {
-		return nil, fmt.Errorf("get tenant: %w", err)
+		return nil, handleError(err, "tenant")
 	}
 
 	if overridesJSON != nil {
