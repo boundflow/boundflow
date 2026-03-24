@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS resources;
+DROP TABLE IF EXISTS tenants;
+DROP TABLE IF EXISTS tenant_groups;

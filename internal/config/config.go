@@ -6,14 +6,16 @@ import (
 )
 
 type Config struct {
-	GRPCPort int
-	LogLevel string
+	GRPCPort    int
+	LogLevel    string
+	DatabaseURL string
 }
 
 func Load() *Config {
 	cfg := &Config{
-		GRPCPort: 50051,
-		LogLevel: "info",
+		GRPCPort:    50051,
+		LogLevel:    "info",
+		DatabaseURL: "postgres://localhost:5432/convergeplane?sslmode=disable",
 	}
 
 	if v := os.Getenv("CONVERGEPLANE_GRPC_PORT"); v != "" {
@@ -24,6 +26,10 @@ func Load() *Config {
 
 	if v := os.Getenv("CONVERGEPLANE_LOG_LEVEL"); v != "" {
 		cfg.LogLevel = v
+	}
+
+	if v := os.Getenv("CONVERGEPLANE_DATABASE_URL"); v != "" {
+		cfg.DatabaseURL = v
 	}
 
 	return cfg
