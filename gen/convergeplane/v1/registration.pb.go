@@ -373,182 +373,6 @@ func (x *GetTenantResponse) GetTenant() *Tenant {
 	return nil
 }
 
-type RegisterResourceRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Resource      *Resource              `protobuf:"bytes,1,opt,name=resource,proto3" json:"resource,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RegisterResourceRequest) Reset() {
-	*x = RegisterResourceRequest{}
-	mi := &file_convergeplane_v1_registration_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RegisterResourceRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RegisterResourceRequest) ProtoMessage() {}
-
-func (x *RegisterResourceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_registration_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RegisterResourceRequest.ProtoReflect.Descriptor instead.
-func (*RegisterResourceRequest) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_registration_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *RegisterResourceRequest) GetResource() *Resource {
-	if x != nil {
-		return x.Resource
-	}
-	return nil
-}
-
-type RegisterResourceResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Resource      *Resource              `protobuf:"bytes,1,opt,name=resource,proto3" json:"resource,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RegisterResourceResponse) Reset() {
-	*x = RegisterResourceResponse{}
-	mi := &file_convergeplane_v1_registration_proto_msgTypes[9]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RegisterResourceResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RegisterResourceResponse) ProtoMessage() {}
-
-func (x *RegisterResourceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_registration_proto_msgTypes[9]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RegisterResourceResponse.ProtoReflect.Descriptor instead.
-func (*RegisterResourceResponse) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_registration_proto_rawDescGZIP(), []int{9}
-}
-
-func (x *RegisterResourceResponse) GetResource() *Resource {
-	if x != nil {
-		return x.Resource
-	}
-	return nil
-}
-
-type GetResourceRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetResourceRequest) Reset() {
-	*x = GetResourceRequest{}
-	mi := &file_convergeplane_v1_registration_proto_msgTypes[10]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetResourceRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetResourceRequest) ProtoMessage() {}
-
-func (x *GetResourceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_registration_proto_msgTypes[10]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetResourceRequest.ProtoReflect.Descriptor instead.
-func (*GetResourceRequest) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_registration_proto_rawDescGZIP(), []int{10}
-}
-
-func (x *GetResourceRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-type GetResourceResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Resource      *Resource              `protobuf:"bytes,1,opt,name=resource,proto3" json:"resource,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetResourceResponse) Reset() {
-	*x = GetResourceResponse{}
-	mi := &file_convergeplane_v1_registration_proto_msgTypes[11]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetResourceResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetResourceResponse) ProtoMessage() {}
-
-func (x *GetResourceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_registration_proto_msgTypes[11]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetResourceResponse.ProtoReflect.Descriptor instead.
-func (*GetResourceResponse) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_registration_proto_rawDescGZIP(), []int{11}
-}
-
-func (x *GetResourceResponse) GetResource() *Resource {
-	if x != nil {
-		return x.Resource
-	}
-	return nil
-}
-
 type DeleteTenantGroupRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -558,7 +382,7 @@ type DeleteTenantGroupRequest struct {
 
 func (x *DeleteTenantGroupRequest) Reset() {
 	*x = DeleteTenantGroupRequest{}
-	mi := &file_convergeplane_v1_registration_proto_msgTypes[12]
+	mi := &file_convergeplane_v1_registration_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -570,7 +394,7 @@ func (x *DeleteTenantGroupRequest) String() string {
 func (*DeleteTenantGroupRequest) ProtoMessage() {}
 
 func (x *DeleteTenantGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_registration_proto_msgTypes[12]
+	mi := &file_convergeplane_v1_registration_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -583,7 +407,7 @@ func (x *DeleteTenantGroupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteTenantGroupRequest.ProtoReflect.Descriptor instead.
 func (*DeleteTenantGroupRequest) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_registration_proto_rawDescGZIP(), []int{12}
+	return file_convergeplane_v1_registration_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *DeleteTenantGroupRequest) GetId() string {
@@ -601,7 +425,7 @@ type DeleteTenantGroupResponse struct {
 
 func (x *DeleteTenantGroupResponse) Reset() {
 	*x = DeleteTenantGroupResponse{}
-	mi := &file_convergeplane_v1_registration_proto_msgTypes[13]
+	mi := &file_convergeplane_v1_registration_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -613,7 +437,7 @@ func (x *DeleteTenantGroupResponse) String() string {
 func (*DeleteTenantGroupResponse) ProtoMessage() {}
 
 func (x *DeleteTenantGroupResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_registration_proto_msgTypes[13]
+	mi := &file_convergeplane_v1_registration_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -626,7 +450,7 @@ func (x *DeleteTenantGroupResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteTenantGroupResponse.ProtoReflect.Descriptor instead.
 func (*DeleteTenantGroupResponse) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_registration_proto_rawDescGZIP(), []int{13}
+	return file_convergeplane_v1_registration_proto_rawDescGZIP(), []int{9}
 }
 
 type DeleteTenantRequest struct {
@@ -638,7 +462,7 @@ type DeleteTenantRequest struct {
 
 func (x *DeleteTenantRequest) Reset() {
 	*x = DeleteTenantRequest{}
-	mi := &file_convergeplane_v1_registration_proto_msgTypes[14]
+	mi := &file_convergeplane_v1_registration_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -650,7 +474,7 @@ func (x *DeleteTenantRequest) String() string {
 func (*DeleteTenantRequest) ProtoMessage() {}
 
 func (x *DeleteTenantRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_registration_proto_msgTypes[14]
+	mi := &file_convergeplane_v1_registration_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -663,7 +487,7 @@ func (x *DeleteTenantRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteTenantRequest.ProtoReflect.Descriptor instead.
 func (*DeleteTenantRequest) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_registration_proto_rawDescGZIP(), []int{14}
+	return file_convergeplane_v1_registration_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *DeleteTenantRequest) GetId() string {
@@ -681,7 +505,7 @@ type DeleteTenantResponse struct {
 
 func (x *DeleteTenantResponse) Reset() {
 	*x = DeleteTenantResponse{}
-	mi := &file_convergeplane_v1_registration_proto_msgTypes[15]
+	mi := &file_convergeplane_v1_registration_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -693,7 +517,7 @@ func (x *DeleteTenantResponse) String() string {
 func (*DeleteTenantResponse) ProtoMessage() {}
 
 func (x *DeleteTenantResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_registration_proto_msgTypes[15]
+	mi := &file_convergeplane_v1_registration_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -706,94 +530,14 @@ func (x *DeleteTenantResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteTenantResponse.ProtoReflect.Descriptor instead.
 func (*DeleteTenantResponse) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_registration_proto_rawDescGZIP(), []int{15}
-}
-
-type UnregisterResourceRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UnregisterResourceRequest) Reset() {
-	*x = UnregisterResourceRequest{}
-	mi := &file_convergeplane_v1_registration_proto_msgTypes[16]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UnregisterResourceRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UnregisterResourceRequest) ProtoMessage() {}
-
-func (x *UnregisterResourceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_registration_proto_msgTypes[16]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UnregisterResourceRequest.ProtoReflect.Descriptor instead.
-func (*UnregisterResourceRequest) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_registration_proto_rawDescGZIP(), []int{16}
-}
-
-func (x *UnregisterResourceRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-type UnregisterResourceResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UnregisterResourceResponse) Reset() {
-	*x = UnregisterResourceResponse{}
-	mi := &file_convergeplane_v1_registration_proto_msgTypes[17]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UnregisterResourceResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UnregisterResourceResponse) ProtoMessage() {}
-
-func (x *UnregisterResourceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_registration_proto_msgTypes[17]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UnregisterResourceResponse.ProtoReflect.Descriptor instead.
-func (*UnregisterResourceResponse) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_registration_proto_rawDescGZIP(), []int{17}
+	return file_convergeplane_v1_registration_proto_rawDescGZIP(), []int{11}
 }
 
 var File_convergeplane_v1_registration_proto protoreflect.FileDescriptor
 
 const file_convergeplane_v1_registration_proto_rawDesc = "" +
 	"\n" +
-	"#convergeplane/v1/registration.proto\x12\x10convergeplane.v1\x1a#convergeplane/v1/tenant_group.proto\x1a\x1dconvergeplane/v1/tenant.proto\x1a\x1fconvergeplane/v1/resource.proto\"\\\n" +
+	"#convergeplane/v1/registration.proto\x12\x10convergeplane.v1\x1a#convergeplane/v1/tenant_group.proto\x1a\x1dconvergeplane/v1/tenant.proto\"\\\n" +
 	"\x18CreateTenantGroupRequest\x12@\n" +
 	"\ftenant_group\x18\x01 \x01(\v2\x1d.convergeplane.v1.TenantGroupR\vtenantGroup\"]\n" +
 	"\x19CreateTenantGroupResponse\x12@\n" +
@@ -809,34 +553,20 @@ const file_convergeplane_v1_registration_proto_rawDesc = "" +
 	"\x10GetTenantRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"E\n" +
 	"\x11GetTenantResponse\x120\n" +
-	"\x06tenant\x18\x01 \x01(\v2\x18.convergeplane.v1.TenantR\x06tenant\"Q\n" +
-	"\x17RegisterResourceRequest\x126\n" +
-	"\bresource\x18\x01 \x01(\v2\x1a.convergeplane.v1.ResourceR\bresource\"R\n" +
-	"\x18RegisterResourceResponse\x126\n" +
-	"\bresource\x18\x01 \x01(\v2\x1a.convergeplane.v1.ResourceR\bresource\"$\n" +
-	"\x12GetResourceRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"M\n" +
-	"\x13GetResourceResponse\x126\n" +
-	"\bresource\x18\x01 \x01(\v2\x1a.convergeplane.v1.ResourceR\bresource\"*\n" +
+	"\x06tenant\x18\x01 \x01(\v2\x18.convergeplane.v1.TenantR\x06tenant\"*\n" +
 	"\x18DeleteTenantGroupRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x1b\n" +
 	"\x19DeleteTenantGroupResponse\"%\n" +
 	"\x13DeleteTenantRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x16\n" +
-	"\x14DeleteTenantResponse\"+\n" +
-	"\x19UnregisterResourceRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\x1c\n" +
-	"\x1aUnregisterResourceResponse2\xa2\a\n" +
+	"\x14DeleteTenantResponse2\xea\x04\n" +
 	"\x13RegistrationService\x12l\n" +
 	"\x11CreateTenantGroup\x12*.convergeplane.v1.CreateTenantGroupRequest\x1a+.convergeplane.v1.CreateTenantGroupResponse\x12c\n" +
 	"\x0eGetTenantGroup\x12'.convergeplane.v1.GetTenantGroupRequest\x1a(.convergeplane.v1.GetTenantGroupResponse\x12l\n" +
 	"\x11DeleteTenantGroup\x12*.convergeplane.v1.DeleteTenantGroupRequest\x1a+.convergeplane.v1.DeleteTenantGroupResponse\x12]\n" +
 	"\fCreateTenant\x12%.convergeplane.v1.CreateTenantRequest\x1a&.convergeplane.v1.CreateTenantResponse\x12T\n" +
 	"\tGetTenant\x12\".convergeplane.v1.GetTenantRequest\x1a#.convergeplane.v1.GetTenantResponse\x12]\n" +
-	"\fDeleteTenant\x12%.convergeplane.v1.DeleteTenantRequest\x1a&.convergeplane.v1.DeleteTenantResponse\x12i\n" +
-	"\x10RegisterResource\x12).convergeplane.v1.RegisterResourceRequest\x1a*.convergeplane.v1.RegisterResourceResponse\x12Z\n" +
-	"\vGetResource\x12$.convergeplane.v1.GetResourceRequest\x1a%.convergeplane.v1.GetResourceResponse\x12o\n" +
-	"\x12UnregisterResource\x12+.convergeplane.v1.UnregisterResourceRequest\x1a,.convergeplane.v1.UnregisterResourceResponseBMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
+	"\fDeleteTenant\x12%.convergeplane.v1.DeleteTenantRequest\x1a&.convergeplane.v1.DeleteTenantResponseBMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
 
 var (
 	file_convergeplane_v1_registration_proto_rawDescOnce sync.Once
@@ -850,63 +580,47 @@ func file_convergeplane_v1_registration_proto_rawDescGZIP() []byte {
 	return file_convergeplane_v1_registration_proto_rawDescData
 }
 
-var file_convergeplane_v1_registration_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_convergeplane_v1_registration_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_convergeplane_v1_registration_proto_goTypes = []any{
-	(*CreateTenantGroupRequest)(nil),   // 0: convergeplane.v1.CreateTenantGroupRequest
-	(*CreateTenantGroupResponse)(nil),  // 1: convergeplane.v1.CreateTenantGroupResponse
-	(*GetTenantGroupRequest)(nil),      // 2: convergeplane.v1.GetTenantGroupRequest
-	(*GetTenantGroupResponse)(nil),     // 3: convergeplane.v1.GetTenantGroupResponse
-	(*CreateTenantRequest)(nil),        // 4: convergeplane.v1.CreateTenantRequest
-	(*CreateTenantResponse)(nil),       // 5: convergeplane.v1.CreateTenantResponse
-	(*GetTenantRequest)(nil),           // 6: convergeplane.v1.GetTenantRequest
-	(*GetTenantResponse)(nil),          // 7: convergeplane.v1.GetTenantResponse
-	(*RegisterResourceRequest)(nil),    // 8: convergeplane.v1.RegisterResourceRequest
-	(*RegisterResourceResponse)(nil),   // 9: convergeplane.v1.RegisterResourceResponse
-	(*GetResourceRequest)(nil),         // 10: convergeplane.v1.GetResourceRequest
-	(*GetResourceResponse)(nil),        // 11: convergeplane.v1.GetResourceResponse
-	(*DeleteTenantGroupRequest)(nil),   // 12: convergeplane.v1.DeleteTenantGroupRequest
-	(*DeleteTenantGroupResponse)(nil),  // 13: convergeplane.v1.DeleteTenantGroupResponse
-	(*DeleteTenantRequest)(nil),        // 14: convergeplane.v1.DeleteTenantRequest
-	(*DeleteTenantResponse)(nil),       // 15: convergeplane.v1.DeleteTenantResponse
-	(*UnregisterResourceRequest)(nil),  // 16: convergeplane.v1.UnregisterResourceRequest
-	(*UnregisterResourceResponse)(nil), // 17: convergeplane.v1.UnregisterResourceResponse
-	(*TenantGroup)(nil),                // 18: convergeplane.v1.TenantGroup
-	(*Tenant)(nil),                     // 19: convergeplane.v1.Tenant
-	(*Resource)(nil),                   // 20: convergeplane.v1.Resource
+	(*CreateTenantGroupRequest)(nil),  // 0: convergeplane.v1.CreateTenantGroupRequest
+	(*CreateTenantGroupResponse)(nil), // 1: convergeplane.v1.CreateTenantGroupResponse
+	(*GetTenantGroupRequest)(nil),     // 2: convergeplane.v1.GetTenantGroupRequest
+	(*GetTenantGroupResponse)(nil),    // 3: convergeplane.v1.GetTenantGroupResponse
+	(*CreateTenantRequest)(nil),       // 4: convergeplane.v1.CreateTenantRequest
+	(*CreateTenantResponse)(nil),      // 5: convergeplane.v1.CreateTenantResponse
+	(*GetTenantRequest)(nil),          // 6: convergeplane.v1.GetTenantRequest
+	(*GetTenantResponse)(nil),         // 7: convergeplane.v1.GetTenantResponse
+	(*DeleteTenantGroupRequest)(nil),  // 8: convergeplane.v1.DeleteTenantGroupRequest
+	(*DeleteTenantGroupResponse)(nil), // 9: convergeplane.v1.DeleteTenantGroupResponse
+	(*DeleteTenantRequest)(nil),       // 10: convergeplane.v1.DeleteTenantRequest
+	(*DeleteTenantResponse)(nil),      // 11: convergeplane.v1.DeleteTenantResponse
+	(*TenantGroup)(nil),               // 12: convergeplane.v1.TenantGroup
+	(*Tenant)(nil),                    // 13: convergeplane.v1.Tenant
 }
 var file_convergeplane_v1_registration_proto_depIdxs = []int32{
-	18, // 0: convergeplane.v1.CreateTenantGroupRequest.tenant_group:type_name -> convergeplane.v1.TenantGroup
-	18, // 1: convergeplane.v1.CreateTenantGroupResponse.tenant_group:type_name -> convergeplane.v1.TenantGroup
-	18, // 2: convergeplane.v1.GetTenantGroupResponse.tenant_group:type_name -> convergeplane.v1.TenantGroup
-	19, // 3: convergeplane.v1.CreateTenantRequest.tenant:type_name -> convergeplane.v1.Tenant
-	19, // 4: convergeplane.v1.CreateTenantResponse.tenant:type_name -> convergeplane.v1.Tenant
-	19, // 5: convergeplane.v1.GetTenantResponse.tenant:type_name -> convergeplane.v1.Tenant
-	20, // 6: convergeplane.v1.RegisterResourceRequest.resource:type_name -> convergeplane.v1.Resource
-	20, // 7: convergeplane.v1.RegisterResourceResponse.resource:type_name -> convergeplane.v1.Resource
-	20, // 8: convergeplane.v1.GetResourceResponse.resource:type_name -> convergeplane.v1.Resource
-	0,  // 9: convergeplane.v1.RegistrationService.CreateTenantGroup:input_type -> convergeplane.v1.CreateTenantGroupRequest
-	2,  // 10: convergeplane.v1.RegistrationService.GetTenantGroup:input_type -> convergeplane.v1.GetTenantGroupRequest
-	12, // 11: convergeplane.v1.RegistrationService.DeleteTenantGroup:input_type -> convergeplane.v1.DeleteTenantGroupRequest
-	4,  // 12: convergeplane.v1.RegistrationService.CreateTenant:input_type -> convergeplane.v1.CreateTenantRequest
-	6,  // 13: convergeplane.v1.RegistrationService.GetTenant:input_type -> convergeplane.v1.GetTenantRequest
-	14, // 14: convergeplane.v1.RegistrationService.DeleteTenant:input_type -> convergeplane.v1.DeleteTenantRequest
-	8,  // 15: convergeplane.v1.RegistrationService.RegisterResource:input_type -> convergeplane.v1.RegisterResourceRequest
-	10, // 16: convergeplane.v1.RegistrationService.GetResource:input_type -> convergeplane.v1.GetResourceRequest
-	16, // 17: convergeplane.v1.RegistrationService.UnregisterResource:input_type -> convergeplane.v1.UnregisterResourceRequest
-	1,  // 18: convergeplane.v1.RegistrationService.CreateTenantGroup:output_type -> convergeplane.v1.CreateTenantGroupResponse
-	3,  // 19: convergeplane.v1.RegistrationService.GetTenantGroup:output_type -> convergeplane.v1.GetTenantGroupResponse
-	13, // 20: convergeplane.v1.RegistrationService.DeleteTenantGroup:output_type -> convergeplane.v1.DeleteTenantGroupResponse
-	5,  // 21: convergeplane.v1.RegistrationService.CreateTenant:output_type -> convergeplane.v1.CreateTenantResponse
-	7,  // 22: convergeplane.v1.RegistrationService.GetTenant:output_type -> convergeplane.v1.GetTenantResponse
-	15, // 23: convergeplane.v1.RegistrationService.DeleteTenant:output_type -> convergeplane.v1.DeleteTenantResponse
-	9,  // 24: convergeplane.v1.RegistrationService.RegisterResource:output_type -> convergeplane.v1.RegisterResourceResponse
-	11, // 25: convergeplane.v1.RegistrationService.GetResource:output_type -> convergeplane.v1.GetResourceResponse
-	17, // 26: convergeplane.v1.RegistrationService.UnregisterResource:output_type -> convergeplane.v1.UnregisterResourceResponse
-	18, // [18:27] is the sub-list for method output_type
-	9,  // [9:18] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	12, // 0: convergeplane.v1.CreateTenantGroupRequest.tenant_group:type_name -> convergeplane.v1.TenantGroup
+	12, // 1: convergeplane.v1.CreateTenantGroupResponse.tenant_group:type_name -> convergeplane.v1.TenantGroup
+	12, // 2: convergeplane.v1.GetTenantGroupResponse.tenant_group:type_name -> convergeplane.v1.TenantGroup
+	13, // 3: convergeplane.v1.CreateTenantRequest.tenant:type_name -> convergeplane.v1.Tenant
+	13, // 4: convergeplane.v1.CreateTenantResponse.tenant:type_name -> convergeplane.v1.Tenant
+	13, // 5: convergeplane.v1.GetTenantResponse.tenant:type_name -> convergeplane.v1.Tenant
+	0,  // 6: convergeplane.v1.RegistrationService.CreateTenantGroup:input_type -> convergeplane.v1.CreateTenantGroupRequest
+	2,  // 7: convergeplane.v1.RegistrationService.GetTenantGroup:input_type -> convergeplane.v1.GetTenantGroupRequest
+	8,  // 8: convergeplane.v1.RegistrationService.DeleteTenantGroup:input_type -> convergeplane.v1.DeleteTenantGroupRequest
+	4,  // 9: convergeplane.v1.RegistrationService.CreateTenant:input_type -> convergeplane.v1.CreateTenantRequest
+	6,  // 10: convergeplane.v1.RegistrationService.GetTenant:input_type -> convergeplane.v1.GetTenantRequest
+	10, // 11: convergeplane.v1.RegistrationService.DeleteTenant:input_type -> convergeplane.v1.DeleteTenantRequest
+	1,  // 12: convergeplane.v1.RegistrationService.CreateTenantGroup:output_type -> convergeplane.v1.CreateTenantGroupResponse
+	3,  // 13: convergeplane.v1.RegistrationService.GetTenantGroup:output_type -> convergeplane.v1.GetTenantGroupResponse
+	9,  // 14: convergeplane.v1.RegistrationService.DeleteTenantGroup:output_type -> convergeplane.v1.DeleteTenantGroupResponse
+	5,  // 15: convergeplane.v1.RegistrationService.CreateTenant:output_type -> convergeplane.v1.CreateTenantResponse
+	7,  // 16: convergeplane.v1.RegistrationService.GetTenant:output_type -> convergeplane.v1.GetTenantResponse
+	11, // 17: convergeplane.v1.RegistrationService.DeleteTenant:output_type -> convergeplane.v1.DeleteTenantResponse
+	12, // [12:18] is the sub-list for method output_type
+	6,  // [6:12] is the sub-list for method input_type
+	6,  // [6:6] is the sub-list for extension type_name
+	6,  // [6:6] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_convergeplane_v1_registration_proto_init() }
@@ -916,14 +630,13 @@ func file_convergeplane_v1_registration_proto_init() {
 	}
 	file_convergeplane_v1_tenant_group_proto_init()
 	file_convergeplane_v1_tenant_proto_init()
-	file_convergeplane_v1_resource_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_convergeplane_v1_registration_proto_rawDesc), len(file_convergeplane_v1_registration_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   18,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -24,9 +24,10 @@ const (
 
 type CreateResourceRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ResourceId    string                 `protobuf:"bytes,1,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
-	TenantId      string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	InitialState  *structpb.Struct       `protobuf:"bytes,3,opt,name=initial_state,json=initialState,proto3" json:"initial_state,omitempty"`
+	CorrelationId string                 `protobuf:"bytes,1,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	ResourceType  string                 `protobuf:"bytes,2,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
+	TenantId      string                 `protobuf:"bytes,3,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	InitialState  *structpb.Struct       `protobuf:"bytes,4,opt,name=initial_state,json=initialState,proto3" json:"initial_state,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -61,9 +62,16 @@ func (*CreateResourceRequest) Descriptor() ([]byte, []int) {
 	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *CreateResourceRequest) GetResourceId() string {
+func (x *CreateResourceRequest) GetCorrelationId() string {
 	if x != nil {
-		return x.ResourceId
+		return x.CorrelationId
+	}
+	return ""
+}
+
+func (x *CreateResourceRequest) GetResourceType() string {
+	if x != nil {
+		return x.ResourceType
 	}
 	return ""
 }
@@ -128,8 +136,9 @@ func (x *CreateResourceResponse) GetResourceInstance() *ResourceInstance {
 
 type ReconcileResourceRequest struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
-	ResourceInstanceId string                 `protobuf:"bytes,1,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
-	GoalState          *structpb.Struct       `protobuf:"bytes,2,opt,name=goal_state,json=goalState,proto3" json:"goal_state,omitempty"`
+	CorrelationId      string                 `protobuf:"bytes,1,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	ResourceInstanceId string                 `protobuf:"bytes,2,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
+	GoalState          *structpb.Struct       `protobuf:"bytes,3,opt,name=goal_state,json=goalState,proto3" json:"goal_state,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -162,6 +171,13 @@ func (x *ReconcileResourceRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use ReconcileResourceRequest.ProtoReflect.Descriptor instead.
 func (*ReconcileResourceRequest) Descriptor() ([]byte, []int) {
 	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ReconcileResourceRequest) GetCorrelationId() string {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return ""
 }
 
 func (x *ReconcileResourceRequest) GetResourceInstanceId() string {
@@ -224,7 +240,8 @@ func (x *ReconcileResourceResponse) GetRequestId() string {
 
 type DeleteResourceRequest struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
-	ResourceInstanceId string                 `protobuf:"bytes,1,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
+	CorrelationId      string                 `protobuf:"bytes,1,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	ResourceInstanceId string                 `protobuf:"bytes,2,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -257,6 +274,13 @@ func (x *DeleteResourceRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use DeleteResourceRequest.ProtoReflect.Descriptor instead.
 func (*DeleteResourceRequest) Descriptor() ([]byte, []int) {
 	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *DeleteResourceRequest) GetCorrelationId() string {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return ""
 }
 
 func (x *DeleteResourceRequest) GetResourceInstanceId() string {
@@ -312,8 +336,9 @@ func (x *DeleteResourceResponse) GetRequestId() string {
 
 type GetResourceHealthRequest struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
-	ResourceInstanceId string                 `protobuf:"bytes,1,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
-	ExpectedState      *structpb.Struct       `protobuf:"bytes,2,opt,name=expected_state,json=expectedState,proto3" json:"expected_state,omitempty"`
+	CorrelationId      string                 `protobuf:"bytes,1,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	ResourceInstanceId string                 `protobuf:"bytes,2,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
+	ExpectedState      *structpb.Struct       `protobuf:"bytes,3,opt,name=expected_state,json=expectedState,proto3" json:"expected_state,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -346,6 +371,13 @@ func (x *GetResourceHealthRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use GetResourceHealthRequest.ProtoReflect.Descriptor instead.
 func (*GetResourceHealthRequest) Descriptor() ([]byte, []int) {
 	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *GetResourceHealthRequest) GetCorrelationId() string {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return ""
 }
 
 func (x *GetResourceHealthRequest) GetResourceInstanceId() string {
@@ -418,29 +450,32 @@ var File_convergeplane_v1_lifecycle_proto protoreflect.FileDescriptor
 
 const file_convergeplane_v1_lifecycle_proto_rawDesc = "" +
 	"\n" +
-	" convergeplane/v1/lifecycle.proto\x12\x10convergeplane.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a(convergeplane/v1/resource_instance.proto\"\x93\x01\n" +
-	"\x15CreateResourceRequest\x12\x1f\n" +
-	"\vresource_id\x18\x01 \x01(\tR\n" +
-	"resourceId\x12\x1b\n" +
-	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12<\n" +
-	"\rinitial_state\x18\x03 \x01(\v2\x17.google.protobuf.StructR\finitialState\"i\n" +
+	" convergeplane/v1/lifecycle.proto\x12\x10convergeplane.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a(convergeplane/v1/resource_instance.proto\"\xbe\x01\n" +
+	"\x15CreateResourceRequest\x12%\n" +
+	"\x0ecorrelation_id\x18\x01 \x01(\tR\rcorrelationId\x12#\n" +
+	"\rresource_type\x18\x02 \x01(\tR\fresourceType\x12\x1b\n" +
+	"\ttenant_id\x18\x03 \x01(\tR\btenantId\x12<\n" +
+	"\rinitial_state\x18\x04 \x01(\v2\x17.google.protobuf.StructR\finitialState\"i\n" +
 	"\x16CreateResourceResponse\x12O\n" +
-	"\x11resource_instance\x18\x01 \x01(\v2\".convergeplane.v1.ResourceInstanceR\x10resourceInstance\"\x84\x01\n" +
-	"\x18ReconcileResourceRequest\x120\n" +
-	"\x14resource_instance_id\x18\x01 \x01(\tR\x12resourceInstanceId\x126\n" +
+	"\x11resource_instance\x18\x01 \x01(\v2\".convergeplane.v1.ResourceInstanceR\x10resourceInstance\"\xab\x01\n" +
+	"\x18ReconcileResourceRequest\x12%\n" +
+	"\x0ecorrelation_id\x18\x01 \x01(\tR\rcorrelationId\x120\n" +
+	"\x14resource_instance_id\x18\x02 \x01(\tR\x12resourceInstanceId\x126\n" +
 	"\n" +
-	"goal_state\x18\x02 \x01(\v2\x17.google.protobuf.StructR\tgoalState\":\n" +
+	"goal_state\x18\x03 \x01(\v2\x17.google.protobuf.StructR\tgoalState\":\n" +
 	"\x19ReconcileResourceResponse\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x01 \x01(\tR\trequestId\"I\n" +
-	"\x15DeleteResourceRequest\x120\n" +
-	"\x14resource_instance_id\x18\x01 \x01(\tR\x12resourceInstanceId\"7\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\"p\n" +
+	"\x15DeleteResourceRequest\x12%\n" +
+	"\x0ecorrelation_id\x18\x01 \x01(\tR\rcorrelationId\x120\n" +
+	"\x14resource_instance_id\x18\x02 \x01(\tR\x12resourceInstanceId\"7\n" +
 	"\x16DeleteResourceResponse\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x01 \x01(\tR\trequestId\"\x8c\x01\n" +
-	"\x18GetResourceHealthRequest\x120\n" +
-	"\x14resource_instance_id\x18\x01 \x01(\tR\x12resourceInstanceId\x12>\n" +
-	"\x0eexpected_state\x18\x02 \x01(\v2\x17.google.protobuf.StructR\rexpectedState\"O\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\"\xb3\x01\n" +
+	"\x18GetResourceHealthRequest\x12%\n" +
+	"\x0ecorrelation_id\x18\x01 \x01(\tR\rcorrelationId\x120\n" +
+	"\x14resource_instance_id\x18\x02 \x01(\tR\x12resourceInstanceId\x12>\n" +
+	"\x0eexpected_state\x18\x03 \x01(\v2\x17.google.protobuf.StructR\rexpectedState\"O\n" +
 	"\x19GetResourceHealthResponse\x12\x18\n" +
 	"\ahealthy\x18\x01 \x01(\bR\ahealthy\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage2\xc0\x03\n" +

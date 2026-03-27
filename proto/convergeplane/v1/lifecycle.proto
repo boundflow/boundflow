@@ -18,9 +18,10 @@ service ResourceLifecycleService {
 }
 
 message CreateResourceRequest {
-  string resource_id = 1;
-  string tenant_id = 2;
-  google.protobuf.Struct initial_state = 3;
+  string correlation_id = 1;
+  string resource_type = 2;
+  string tenant_id = 3;
+  google.protobuf.Struct initial_state = 4;
 }
 
 message CreateResourceResponse {
@@ -28,8 +29,9 @@ message CreateResourceResponse {
 }
 
 message ReconcileResourceRequest {
-  string resource_instance_id = 1;
-  google.protobuf.Struct goal_state = 2;
+  string correlation_id = 1;
+  string resource_instance_id = 2;
+  google.protobuf.Struct goal_state = 3;
 }
 
 message ReconcileResourceResponse {
@@ -37,7 +39,8 @@ message ReconcileResourceResponse {
 }
 
 message DeleteResourceRequest {
-  string resource_instance_id = 1;
+  string correlation_id = 1;
+  string resource_instance_id = 2;
 }
 
 message DeleteResourceResponse {
@@ -45,8 +48,9 @@ message DeleteResourceResponse {
 }
 
 message GetResourceHealthRequest {
-  string resource_instance_id = 1;
-  google.protobuf.Struct expected_state = 2;
+  string correlation_id = 1;
+  string resource_instance_id = 2;
+  google.protobuf.Struct expected_state = 3;
 }
 
 message GetResourceHealthResponse {
