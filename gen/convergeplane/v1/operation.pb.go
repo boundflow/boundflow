@@ -27,27 +27,24 @@ type OperationStatus int32
 
 const (
 	OperationStatus_OPERATION_STATUS_UNSPECIFIED OperationStatus = 0
-	OperationStatus_OPERATION_STATUS_CONTINUE    OperationStatus = 1
+	OperationStatus_OPERATION_STATUS_IN_PROGRESS OperationStatus = 1
 	OperationStatus_OPERATION_STATUS_COMPLETED   OperationStatus = 2
 	OperationStatus_OPERATION_STATUS_FAILED      OperationStatus = 3
-	OperationStatus_OPERATION_STATUS_ROLLBACK    OperationStatus = 4
 )
 
 // Enum value maps for OperationStatus.
 var (
 	OperationStatus_name = map[int32]string{
 		0: "OPERATION_STATUS_UNSPECIFIED",
-		1: "OPERATION_STATUS_CONTINUE",
+		1: "OPERATION_STATUS_IN_PROGRESS",
 		2: "OPERATION_STATUS_COMPLETED",
 		3: "OPERATION_STATUS_FAILED",
-		4: "OPERATION_STATUS_ROLLBACK",
 	}
 	OperationStatus_value = map[string]int32{
 		"OPERATION_STATUS_UNSPECIFIED": 0,
-		"OPERATION_STATUS_CONTINUE":    1,
+		"OPERATION_STATUS_IN_PROGRESS": 1,
 		"OPERATION_STATUS_COMPLETED":   2,
 		"OPERATION_STATUS_FAILED":      3,
-		"OPERATION_STATUS_ROLLBACK":    4,
 	}
 )
 
@@ -84,8 +81,7 @@ type AtomicOperation struct {
 	ResourceId    string                 `protobuf:"bytes,2,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
 	OperationType string                 `protobuf:"bytes,3,opt,name=operation_type,json=operationType,proto3" json:"operation_type,omitempty"`
 	Context       *OperationContext      `protobuf:"bytes,4,opt,name=context,proto3" json:"context,omitempty"`
-	NextOperation *AtomicOperation       `protobuf:"bytes,5,opt,name=next_operation,json=nextOperation,proto3" json:"next_operation,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -144,13 +140,6 @@ func (x *AtomicOperation) GetOperationType() string {
 func (x *AtomicOperation) GetContext() *OperationContext {
 	if x != nil {
 		return x.Context
-	}
-	return nil
-}
-
-func (x *AtomicOperation) GetNextOperation() *AtomicOperation {
-	if x != nil {
-		return x.NextOperation
 	}
 	return nil
 }
@@ -217,8 +206,8 @@ func (x *OperationContext) GetPayload() *anypb.Any {
 type AtomicOperationResult struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Status        OperationStatus        `protobuf:"varint,1,opt,name=status,proto3,enum=convergeplane.v1.OperationStatus" json:"status,omitempty"`
-	NextOperation *AtomicOperation       `protobuf:"bytes,2,opt,name=next_operation,json=nextOperation,proto3" json:"next_operation,omitempty"`
-	Message       string                 `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	NextOperation *AtomicOperation       `protobuf:"bytes,3,opt,name=next_operation,json=nextOperation,proto3" json:"next_operation,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -260,13 +249,6 @@ func (x *AtomicOperationResult) GetStatus() OperationStatus {
 	return OperationStatus_OPERATION_STATUS_UNSPECIFIED
 }
 
-func (x *AtomicOperationResult) GetNextOperation() *AtomicOperation {
-	if x != nil {
-		return x.NextOperation
-	}
-	return nil
-}
-
 func (x *AtomicOperationResult) GetMessage() string {
 	if x != nil {
 		return x.Message
@@ -274,20 +256,26 @@ func (x *AtomicOperationResult) GetMessage() string {
 	return ""
 }
 
+func (x *AtomicOperationResult) GetNextOperation() *AtomicOperation {
+	if x != nil {
+		return x.NextOperation
+	}
+	return nil
+}
+
 var File_convergeplane_v1_operation_proto protoreflect.FileDescriptor
 
 const file_convergeplane_v1_operation_proto_rawDesc = "" +
 	"\n" +
-	" convergeplane/v1/operation.proto\x12\x10convergeplane.v1\x1a\x19google/protobuf/any.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xac\x02\n" +
+	" convergeplane/v1/operation.proto\x12\x10convergeplane.v1\x1a\x19google/protobuf/any.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe2\x01\n" +
 	"\x0fAtomicOperation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vresource_id\x18\x02 \x01(\tR\n" +
 	"resourceId\x12%\n" +
 	"\x0eoperation_type\x18\x03 \x01(\tR\roperationType\x12<\n" +
-	"\acontext\x18\x04 \x01(\v2\".convergeplane.v1.OperationContextR\acontext\x12H\n" +
-	"\x0enext_operation\x18\x05 \x01(\v2!.convergeplane.v1.AtomicOperationR\rnextOperation\x129\n" +
+	"\acontext\x18\x04 \x01(\v2\".convergeplane.v1.OperationContextR\acontext\x129\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xcd\x01\n" +
+	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xcd\x01\n" +
 	"\x10OperationContext\x12L\n" +
 	"\bmetadata\x18\x01 \x03(\v20.convergeplane.v1.OperationContext.MetadataEntryR\bmetadata\x12.\n" +
 	"\apayload\x18\x02 \x01(\v2\x14.google.protobuf.AnyR\apayload\x1a;\n" +
@@ -295,15 +283,14 @@ const file_convergeplane_v1_operation_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xb6\x01\n" +
 	"\x15AtomicOperationResult\x129\n" +
-	"\x06status\x18\x01 \x01(\x0e2!.convergeplane.v1.OperationStatusR\x06status\x12H\n" +
-	"\x0enext_operation\x18\x02 \x01(\v2!.convergeplane.v1.AtomicOperationR\rnextOperation\x12\x18\n" +
-	"\amessage\x18\x03 \x01(\tR\amessage*\xae\x01\n" +
+	"\x06status\x18\x01 \x01(\x0e2!.convergeplane.v1.OperationStatusR\x06status\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12H\n" +
+	"\x0enext_operation\x18\x03 \x01(\v2!.convergeplane.v1.AtomicOperationR\rnextOperation*\x92\x01\n" +
 	"\x0fOperationStatus\x12 \n" +
-	"\x1cOPERATION_STATUS_UNSPECIFIED\x10\x00\x12\x1d\n" +
-	"\x19OPERATION_STATUS_CONTINUE\x10\x01\x12\x1e\n" +
+	"\x1cOPERATION_STATUS_UNSPECIFIED\x10\x00\x12 \n" +
+	"\x1cOPERATION_STATUS_IN_PROGRESS\x10\x01\x12\x1e\n" +
 	"\x1aOPERATION_STATUS_COMPLETED\x10\x02\x12\x1b\n" +
-	"\x17OPERATION_STATUS_FAILED\x10\x03\x12\x1d\n" +
-	"\x19OPERATION_STATUS_ROLLBACK\x10\x04BMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
+	"\x17OPERATION_STATUS_FAILED\x10\x03BMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
 
 var (
 	file_convergeplane_v1_operation_proto_rawDescOnce sync.Once
@@ -330,17 +317,16 @@ var file_convergeplane_v1_operation_proto_goTypes = []any{
 }
 var file_convergeplane_v1_operation_proto_depIdxs = []int32{
 	2, // 0: convergeplane.v1.AtomicOperation.context:type_name -> convergeplane.v1.OperationContext
-	1, // 1: convergeplane.v1.AtomicOperation.next_operation:type_name -> convergeplane.v1.AtomicOperation
-	5, // 2: convergeplane.v1.AtomicOperation.created_at:type_name -> google.protobuf.Timestamp
-	4, // 3: convergeplane.v1.OperationContext.metadata:type_name -> convergeplane.v1.OperationContext.MetadataEntry
-	6, // 4: convergeplane.v1.OperationContext.payload:type_name -> google.protobuf.Any
-	0, // 5: convergeplane.v1.AtomicOperationResult.status:type_name -> convergeplane.v1.OperationStatus
-	1, // 6: convergeplane.v1.AtomicOperationResult.next_operation:type_name -> convergeplane.v1.AtomicOperation
-	7, // [7:7] is the sub-list for method output_type
-	7, // [7:7] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	5, // 1: convergeplane.v1.AtomicOperation.created_at:type_name -> google.protobuf.Timestamp
+	4, // 2: convergeplane.v1.OperationContext.metadata:type_name -> convergeplane.v1.OperationContext.MetadataEntry
+	6, // 3: convergeplane.v1.OperationContext.payload:type_name -> google.protobuf.Any
+	0, // 4: convergeplane.v1.AtomicOperationResult.status:type_name -> convergeplane.v1.OperationStatus
+	1, // 5: convergeplane.v1.AtomicOperationResult.next_operation:type_name -> convergeplane.v1.AtomicOperation
+	6, // [6:6] is the sub-list for method output_type
+	6, // [6:6] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_convergeplane_v1_operation_proto_init() }

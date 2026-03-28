@@ -19,23 +19,20 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	WorkerService_RegisterHandler_FullMethodName   = "/convergeplane.v1.WorkerService/RegisterHandler"
-	WorkerService_PollForWork_FullMethodName       = "/convergeplane.v1.WorkerService/PollForWork"
-	WorkerService_CompleteOperation_FullMethodName = "/convergeplane.v1.WorkerService/CompleteOperation"
+	WorkerService_LaunchOperation_FullMethodName    = "/convergeplane.v1.WorkerService/LaunchOperation"
+	WorkerService_GetOperationStatus_FullMethodName = "/convergeplane.v1.WorkerService/GetOperationStatus"
 )
 
 // WorkerServiceClient is the client API for WorkerService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// WorkerService is the internal API that worker instances connect to.
-// Workers register handlers for resource types and callback types,
-// poll for scheduled operations, execute customer-defined logic,
-// and report results back.
+// WorkerService is implemented by the worker (customer SDK).
+// The worker connects as a gRPC client, but the service initiates
+// all calls — launching operations and checking their status.
 type WorkerServiceClient interface {
-	RegisterHandler(ctx context.Context, in *RegisterHandlerRequest, opts ...grpc.CallOption) (*RegisterHandlerResponse, error)
-	PollForWork(ctx context.Context, in *PollForWorkRequest, opts ...grpc.CallOption) (*PollForWorkResponse, error)
-	CompleteOperation(ctx context.Context, in *CompleteOperationRequest, opts ...grpc.CallOption) (*CompleteOperationResponse, error)
+	LaunchOperation(ctx context.Context, in *LaunchOperationRequest, opts ...grpc.CallOption) (*LaunchOperationResponse, error)
+	GetOperationStatus(ctx context.Context, in *GetOperationStatusRequest, opts ...grpc.CallOption) (*GetOperationStatusResponse, error)
 }
 
 type workerServiceClient struct {
@@ -46,30 +43,20 @@ func NewWorkerServiceClient(cc grpc.ClientConnInterface) WorkerServiceClient {
 	return &workerServiceClient{cc}
 }
 
-func (c *workerServiceClient) RegisterHandler(ctx context.Context, in *RegisterHandlerRequest, opts ...grpc.CallOption) (*RegisterHandlerResponse, error) {
+func (c *workerServiceClient) LaunchOperation(ctx context.Context, in *LaunchOperationRequest, opts ...grpc.CallOption) (*LaunchOperationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RegisterHandlerResponse)
-	err := c.cc.Invoke(ctx, WorkerService_RegisterHandler_FullMethodName, in, out, cOpts...)
+	out := new(LaunchOperationResponse)
+	err := c.cc.Invoke(ctx, WorkerService_LaunchOperation_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *workerServiceClient) PollForWork(ctx context.Context, in *PollForWorkRequest, opts ...grpc.CallOption) (*PollForWorkResponse, error) {
+func (c *workerServiceClient) GetOperationStatus(ctx context.Context, in *GetOperationStatusRequest, opts ...grpc.CallOption) (*GetOperationStatusResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PollForWorkResponse)
-	err := c.cc.Invoke(ctx, WorkerService_PollForWork_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *workerServiceClient) CompleteOperation(ctx context.Context, in *CompleteOperationRequest, opts ...grpc.CallOption) (*CompleteOperationResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CompleteOperationResponse)
-	err := c.cc.Invoke(ctx, WorkerService_CompleteOperation_FullMethodName, in, out, cOpts...)
+	out := new(GetOperationStatusResponse)
+	err := c.cc.Invoke(ctx, WorkerService_GetOperationStatus_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -80,14 +67,12 @@ func (c *workerServiceClient) CompleteOperation(ctx context.Context, in *Complet
 // All implementations must embed UnimplementedWorkerServiceServer
 // for forward compatibility.
 //
-// WorkerService is the internal API that worker instances connect to.
-// Workers register handlers for resource types and callback types,
-// poll for scheduled operations, execute customer-defined logic,
-// and report results back.
+// WorkerService is implemented by the worker (customer SDK).
+// The worker connects as a gRPC client, but the service initiates
+// all calls — launching operations and checking their status.
 type WorkerServiceServer interface {
-	RegisterHandler(context.Context, *RegisterHandlerRequest) (*RegisterHandlerResponse, error)
-	PollForWork(context.Context, *PollForWorkRequest) (*PollForWorkResponse, error)
-	CompleteOperation(context.Context, *CompleteOperationRequest) (*CompleteOperationResponse, error)
+	LaunchOperation(context.Context, *LaunchOperationRequest) (*LaunchOperationResponse, error)
+	GetOperationStatus(context.Context, *GetOperationStatusRequest) (*GetOperationStatusResponse, error)
 	mustEmbedUnimplementedWorkerServiceServer()
 }
 
@@ -98,14 +83,11 @@ type WorkerServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedWorkerServiceServer struct{}
 
-func (UnimplementedWorkerServiceServer) RegisterHandler(context.Context, *RegisterHandlerRequest) (*RegisterHandlerResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method RegisterHandler not implemented")
+func (UnimplementedWorkerServiceServer) LaunchOperation(context.Context, *LaunchOperationRequest) (*LaunchOperationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method LaunchOperation not implemented")
 }
-func (UnimplementedWorkerServiceServer) PollForWork(context.Context, *PollForWorkRequest) (*PollForWorkResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method PollForWork not implemented")
-}
-func (UnimplementedWorkerServiceServer) CompleteOperation(context.Context, *CompleteOperationRequest) (*CompleteOperationResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method CompleteOperation not implemented")
+func (UnimplementedWorkerServiceServer) GetOperationStatus(context.Context, *GetOperationStatusRequest) (*GetOperationStatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetOperationStatus not implemented")
 }
 func (UnimplementedWorkerServiceServer) mustEmbedUnimplementedWorkerServiceServer() {}
 func (UnimplementedWorkerServiceServer) testEmbeddedByValue()                       {}
@@ -128,56 +110,38 @@ func RegisterWorkerServiceServer(s grpc.ServiceRegistrar, srv WorkerServiceServe
 	s.RegisterService(&WorkerService_ServiceDesc, srv)
 }
 
-func _WorkerService_RegisterHandler_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RegisterHandlerRequest)
+func _WorkerService_LaunchOperation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LaunchOperationRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(WorkerServiceServer).RegisterHandler(ctx, in)
+		return srv.(WorkerServiceServer).LaunchOperation(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: WorkerService_RegisterHandler_FullMethodName,
+		FullMethod: WorkerService_LaunchOperation_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerServiceServer).RegisterHandler(ctx, req.(*RegisterHandlerRequest))
+		return srv.(WorkerServiceServer).LaunchOperation(ctx, req.(*LaunchOperationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WorkerService_PollForWork_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PollForWorkRequest)
+func _WorkerService_GetOperationStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOperationStatusRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(WorkerServiceServer).PollForWork(ctx, in)
+		return srv.(WorkerServiceServer).GetOperationStatus(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: WorkerService_PollForWork_FullMethodName,
+		FullMethod: WorkerService_GetOperationStatus_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerServiceServer).PollForWork(ctx, req.(*PollForWorkRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _WorkerService_CompleteOperation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CompleteOperationRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(WorkerServiceServer).CompleteOperation(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: WorkerService_CompleteOperation_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerServiceServer).CompleteOperation(ctx, req.(*CompleteOperationRequest))
+		return srv.(WorkerServiceServer).GetOperationStatus(ctx, req.(*GetOperationStatusRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -190,16 +154,12 @@ var WorkerService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*WorkerServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "RegisterHandler",
-			Handler:    _WorkerService_RegisterHandler_Handler,
+			MethodName: "LaunchOperation",
+			Handler:    _WorkerService_LaunchOperation_Handler,
 		},
 		{
-			MethodName: "PollForWork",
-			Handler:    _WorkerService_PollForWork_Handler,
-		},
-		{
-			MethodName: "CompleteOperation",
-			Handler:    _WorkerService_CompleteOperation_Handler,
+			MethodName: "GetOperationStatus",
+			Handler:    _WorkerService_GetOperationStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

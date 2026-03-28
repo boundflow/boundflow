@@ -6,44 +6,28 @@ option go_package = "github.com/convergeplane/convergeplane/gen/convergeplane/v1
 
 import "convergeplane/v1/operation.proto";
 
-// WorkerService is the internal API that worker instances connect to.
-// Workers register handlers for resource types and callback types,
-// poll for scheduled operations, execute customer-defined logic,
-// and report results back.
+// WorkerService is implemented by the worker (customer SDK).
+// The worker connects as a gRPC client, but the service initiates
+// all calls — launching operations and checking their status.
 service WorkerService {
-  rpc RegisterHandler(RegisterHandlerRequest) returns (RegisterHandlerResponse);
-  rpc PollForWork(PollForWorkRequest) returns (PollForWorkResponse);
-  rpc CompleteOperation(CompleteOperationRequest) returns (CompleteOperationResponse);
+  rpc LaunchOperation(LaunchOperationRequest) returns (LaunchOperationResponse);
+  rpc GetOperationStatus(GetOperationStatusRequest) returns (GetOperationStatusResponse);
 }
 
-message RegisterHandlerRequest {
-  string worker_id = 1;
-  string resource_type = 2;
-  CallbackType callback_type = 3;
-}
-
-message RegisterHandlerResponse {}
-
-enum CallbackType {
-  CALLBACK_TYPE_UNSPECIFIED = 0;
-  CALLBACK_TYPE_CREATE = 1;
-  CALLBACK_TYPE_RECONCILE = 2;
-  CALLBACK_TYPE_DELETE = 3;
-  CALLBACK_TYPE_HEALTH = 4;
-}
-
-message PollForWorkRequest {
-  string worker_id = 1;
-}
-
-message PollForWorkResponse {
+message LaunchOperationRequest {
   AtomicOperation operation = 1;
 }
 
-message CompleteOperationRequest {
-  string worker_id = 1;
+message LaunchOperationResponse {
+  bool success = 1;
   string operation_id = 2;
-  AtomicOperationResult result = 3;
+  string message = 3;
 }
 
-message CompleteOperationResponse {}
+message GetOperationStatusRequest {
+  string operation_id = 1;
+}
+
+message GetOperationStatusResponse {
+  AtomicOperationResult result = 1;
+}

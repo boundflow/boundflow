@@ -12,8 +12,7 @@ message AtomicOperation {
   string resource_id = 2;
   string operation_type = 3;
   OperationContext context = 4;
-  AtomicOperation next_operation = 5;
-  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp created_at = 5;
 }
 
 message OperationContext {
@@ -23,14 +22,13 @@ message OperationContext {
 
 message AtomicOperationResult {
   OperationStatus status = 1;
-  AtomicOperation next_operation = 2;
-  string message = 3;
+  string message = 2;
+  AtomicOperation next_operation = 3;
 }
 
 enum OperationStatus {
   OPERATION_STATUS_UNSPECIFIED = 0;
-  OPERATION_STATUS_CONTINUE = 1;
+  OPERATION_STATUS_IN_PROGRESS = 1;
   OPERATION_STATUS_COMPLETED = 2;
   OPERATION_STATUS_FAILED = 3;
-  OPERATION_STATUS_ROLLBACK = 4;
 }

@@ -21,223 +21,28 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type CallbackType int32
-
-const (
-	CallbackType_CALLBACK_TYPE_UNSPECIFIED CallbackType = 0
-	CallbackType_CALLBACK_TYPE_CREATE      CallbackType = 1
-	CallbackType_CALLBACK_TYPE_RECONCILE   CallbackType = 2
-	CallbackType_CALLBACK_TYPE_DELETE      CallbackType = 3
-	CallbackType_CALLBACK_TYPE_HEALTH      CallbackType = 4
-)
-
-// Enum value maps for CallbackType.
-var (
-	CallbackType_name = map[int32]string{
-		0: "CALLBACK_TYPE_UNSPECIFIED",
-		1: "CALLBACK_TYPE_CREATE",
-		2: "CALLBACK_TYPE_RECONCILE",
-		3: "CALLBACK_TYPE_DELETE",
-		4: "CALLBACK_TYPE_HEALTH",
-	}
-	CallbackType_value = map[string]int32{
-		"CALLBACK_TYPE_UNSPECIFIED": 0,
-		"CALLBACK_TYPE_CREATE":      1,
-		"CALLBACK_TYPE_RECONCILE":   2,
-		"CALLBACK_TYPE_DELETE":      3,
-		"CALLBACK_TYPE_HEALTH":      4,
-	}
-)
-
-func (x CallbackType) Enum() *CallbackType {
-	p := new(CallbackType)
-	*p = x
-	return p
-}
-
-func (x CallbackType) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (CallbackType) Descriptor() protoreflect.EnumDescriptor {
-	return file_convergeplane_v1_worker_proto_enumTypes[0].Descriptor()
-}
-
-func (CallbackType) Type() protoreflect.EnumType {
-	return &file_convergeplane_v1_worker_proto_enumTypes[0]
-}
-
-func (x CallbackType) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use CallbackType.Descriptor instead.
-func (CallbackType) EnumDescriptor() ([]byte, []int) {
-	return file_convergeplane_v1_worker_proto_rawDescGZIP(), []int{0}
-}
-
-type RegisterHandlerRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	WorkerId      string                 `protobuf:"bytes,1,opt,name=worker_id,json=workerId,proto3" json:"worker_id,omitempty"`
-	ResourceType  string                 `protobuf:"bytes,2,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
-	CallbackType  CallbackType           `protobuf:"varint,3,opt,name=callback_type,json=callbackType,proto3,enum=convergeplane.v1.CallbackType" json:"callback_type,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RegisterHandlerRequest) Reset() {
-	*x = RegisterHandlerRequest{}
-	mi := &file_convergeplane_v1_worker_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RegisterHandlerRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RegisterHandlerRequest) ProtoMessage() {}
-
-func (x *RegisterHandlerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_worker_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RegisterHandlerRequest.ProtoReflect.Descriptor instead.
-func (*RegisterHandlerRequest) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_worker_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *RegisterHandlerRequest) GetWorkerId() string {
-	if x != nil {
-		return x.WorkerId
-	}
-	return ""
-}
-
-func (x *RegisterHandlerRequest) GetResourceType() string {
-	if x != nil {
-		return x.ResourceType
-	}
-	return ""
-}
-
-func (x *RegisterHandlerRequest) GetCallbackType() CallbackType {
-	if x != nil {
-		return x.CallbackType
-	}
-	return CallbackType_CALLBACK_TYPE_UNSPECIFIED
-}
-
-type RegisterHandlerResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RegisterHandlerResponse) Reset() {
-	*x = RegisterHandlerResponse{}
-	mi := &file_convergeplane_v1_worker_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RegisterHandlerResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RegisterHandlerResponse) ProtoMessage() {}
-
-func (x *RegisterHandlerResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_worker_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RegisterHandlerResponse.ProtoReflect.Descriptor instead.
-func (*RegisterHandlerResponse) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_worker_proto_rawDescGZIP(), []int{1}
-}
-
-type PollForWorkRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	WorkerId      string                 `protobuf:"bytes,1,opt,name=worker_id,json=workerId,proto3" json:"worker_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *PollForWorkRequest) Reset() {
-	*x = PollForWorkRequest{}
-	mi := &file_convergeplane_v1_worker_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PollForWorkRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PollForWorkRequest) ProtoMessage() {}
-
-func (x *PollForWorkRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_worker_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PollForWorkRequest.ProtoReflect.Descriptor instead.
-func (*PollForWorkRequest) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_worker_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *PollForWorkRequest) GetWorkerId() string {
-	if x != nil {
-		return x.WorkerId
-	}
-	return ""
-}
-
-type PollForWorkResponse struct {
+type LaunchOperationRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Operation     *AtomicOperation       `protobuf:"bytes,1,opt,name=operation,proto3" json:"operation,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *PollForWorkResponse) Reset() {
-	*x = PollForWorkResponse{}
-	mi := &file_convergeplane_v1_worker_proto_msgTypes[3]
+func (x *LaunchOperationRequest) Reset() {
+	*x = LaunchOperationRequest{}
+	mi := &file_convergeplane_v1_worker_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *PollForWorkResponse) String() string {
+func (x *LaunchOperationRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*PollForWorkResponse) ProtoMessage() {}
+func (*LaunchOperationRequest) ProtoMessage() {}
 
-func (x *PollForWorkResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_worker_proto_msgTypes[3]
+func (x *LaunchOperationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_worker_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -248,42 +53,42 @@ func (x *PollForWorkResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PollForWorkResponse.ProtoReflect.Descriptor instead.
-func (*PollForWorkResponse) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_worker_proto_rawDescGZIP(), []int{3}
+// Deprecated: Use LaunchOperationRequest.ProtoReflect.Descriptor instead.
+func (*LaunchOperationRequest) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_worker_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *PollForWorkResponse) GetOperation() *AtomicOperation {
+func (x *LaunchOperationRequest) GetOperation() *AtomicOperation {
 	if x != nil {
 		return x.Operation
 	}
 	return nil
 }
 
-type CompleteOperationRequest struct {
+type LaunchOperationResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	WorkerId      string                 `protobuf:"bytes,1,opt,name=worker_id,json=workerId,proto3" json:"worker_id,omitempty"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
 	OperationId   string                 `protobuf:"bytes,2,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
-	Result        *AtomicOperationResult `protobuf:"bytes,3,opt,name=result,proto3" json:"result,omitempty"`
+	Message       string                 `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *CompleteOperationRequest) Reset() {
-	*x = CompleteOperationRequest{}
-	mi := &file_convergeplane_v1_worker_proto_msgTypes[4]
+func (x *LaunchOperationResponse) Reset() {
+	*x = LaunchOperationResponse{}
+	mi := &file_convergeplane_v1_worker_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CompleteOperationRequest) String() string {
+func (x *LaunchOperationResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CompleteOperationRequest) ProtoMessage() {}
+func (*LaunchOperationResponse) ProtoMessage() {}
 
-func (x *CompleteOperationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_worker_proto_msgTypes[4]
+func (x *LaunchOperationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_worker_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -294,53 +99,54 @@ func (x *CompleteOperationRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CompleteOperationRequest.ProtoReflect.Descriptor instead.
-func (*CompleteOperationRequest) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_worker_proto_rawDescGZIP(), []int{4}
+// Deprecated: Use LaunchOperationResponse.ProtoReflect.Descriptor instead.
+func (*LaunchOperationResponse) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_worker_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *CompleteOperationRequest) GetWorkerId() string {
+func (x *LaunchOperationResponse) GetSuccess() bool {
 	if x != nil {
-		return x.WorkerId
+		return x.Success
 	}
-	return ""
+	return false
 }
 
-func (x *CompleteOperationRequest) GetOperationId() string {
+func (x *LaunchOperationResponse) GetOperationId() string {
 	if x != nil {
 		return x.OperationId
 	}
 	return ""
 }
 
-func (x *CompleteOperationRequest) GetResult() *AtomicOperationResult {
+func (x *LaunchOperationResponse) GetMessage() string {
 	if x != nil {
-		return x.Result
+		return x.Message
 	}
-	return nil
+	return ""
 }
 
-type CompleteOperationResponse struct {
+type GetOperationStatusRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	OperationId   string                 `protobuf:"bytes,1,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *CompleteOperationResponse) Reset() {
-	*x = CompleteOperationResponse{}
-	mi := &file_convergeplane_v1_worker_proto_msgTypes[5]
+func (x *GetOperationStatusRequest) Reset() {
+	*x = GetOperationStatusRequest{}
+	mi := &file_convergeplane_v1_worker_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CompleteOperationResponse) String() string {
+func (x *GetOperationStatusRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CompleteOperationResponse) ProtoMessage() {}
+func (*GetOperationStatusRequest) ProtoMessage() {}
 
-func (x *CompleteOperationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_worker_proto_msgTypes[5]
+func (x *GetOperationStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_worker_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -351,40 +157,80 @@ func (x *CompleteOperationResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CompleteOperationResponse.ProtoReflect.Descriptor instead.
-func (*CompleteOperationResponse) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_worker_proto_rawDescGZIP(), []int{5}
+// Deprecated: Use GetOperationStatusRequest.ProtoReflect.Descriptor instead.
+func (*GetOperationStatusRequest) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_worker_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *GetOperationStatusRequest) GetOperationId() string {
+	if x != nil {
+		return x.OperationId
+	}
+	return ""
+}
+
+type GetOperationStatusResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Result        *AtomicOperationResult `protobuf:"bytes,1,opt,name=result,proto3" json:"result,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetOperationStatusResponse) Reset() {
+	*x = GetOperationStatusResponse{}
+	mi := &file_convergeplane_v1_worker_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetOperationStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOperationStatusResponse) ProtoMessage() {}
+
+func (x *GetOperationStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_worker_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetOperationStatusResponse.ProtoReflect.Descriptor instead.
+func (*GetOperationStatusResponse) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_worker_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *GetOperationStatusResponse) GetResult() *AtomicOperationResult {
+	if x != nil {
+		return x.Result
+	}
+	return nil
 }
 
 var File_convergeplane_v1_worker_proto protoreflect.FileDescriptor
 
 const file_convergeplane_v1_worker_proto_rawDesc = "" +
 	"\n" +
-	"\x1dconvergeplane/v1/worker.proto\x12\x10convergeplane.v1\x1a convergeplane/v1/operation.proto\"\x9f\x01\n" +
-	"\x16RegisterHandlerRequest\x12\x1b\n" +
-	"\tworker_id\x18\x01 \x01(\tR\bworkerId\x12#\n" +
-	"\rresource_type\x18\x02 \x01(\tR\fresourceType\x12C\n" +
-	"\rcallback_type\x18\x03 \x01(\x0e2\x1e.convergeplane.v1.CallbackTypeR\fcallbackType\"\x19\n" +
-	"\x17RegisterHandlerResponse\"1\n" +
-	"\x12PollForWorkRequest\x12\x1b\n" +
-	"\tworker_id\x18\x01 \x01(\tR\bworkerId\"V\n" +
-	"\x13PollForWorkResponse\x12?\n" +
-	"\toperation\x18\x01 \x01(\v2!.convergeplane.v1.AtomicOperationR\toperation\"\x9b\x01\n" +
-	"\x18CompleteOperationRequest\x12\x1b\n" +
-	"\tworker_id\x18\x01 \x01(\tR\bworkerId\x12!\n" +
-	"\foperation_id\x18\x02 \x01(\tR\voperationId\x12?\n" +
-	"\x06result\x18\x03 \x01(\v2'.convergeplane.v1.AtomicOperationResultR\x06result\"\x1b\n" +
-	"\x19CompleteOperationResponse*\x98\x01\n" +
-	"\fCallbackType\x12\x1d\n" +
-	"\x19CALLBACK_TYPE_UNSPECIFIED\x10\x00\x12\x18\n" +
-	"\x14CALLBACK_TYPE_CREATE\x10\x01\x12\x1b\n" +
-	"\x17CALLBACK_TYPE_RECONCILE\x10\x02\x12\x18\n" +
-	"\x14CALLBACK_TYPE_DELETE\x10\x03\x12\x18\n" +
-	"\x14CALLBACK_TYPE_HEALTH\x10\x042\xc1\x02\n" +
+	"\x1dconvergeplane/v1/worker.proto\x12\x10convergeplane.v1\x1a convergeplane/v1/operation.proto\"Y\n" +
+	"\x16LaunchOperationRequest\x12?\n" +
+	"\toperation\x18\x01 \x01(\v2!.convergeplane.v1.AtomicOperationR\toperation\"p\n" +
+	"\x17LaunchOperationResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12!\n" +
+	"\foperation_id\x18\x02 \x01(\tR\voperationId\x12\x18\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\">\n" +
+	"\x19GetOperationStatusRequest\x12!\n" +
+	"\foperation_id\x18\x01 \x01(\tR\voperationId\"]\n" +
+	"\x1aGetOperationStatusResponse\x12?\n" +
+	"\x06result\x18\x01 \x01(\v2'.convergeplane.v1.AtomicOperationResultR\x06result2\xe8\x01\n" +
 	"\rWorkerService\x12f\n" +
-	"\x0fRegisterHandler\x12(.convergeplane.v1.RegisterHandlerRequest\x1a).convergeplane.v1.RegisterHandlerResponse\x12Z\n" +
-	"\vPollForWork\x12$.convergeplane.v1.PollForWorkRequest\x1a%.convergeplane.v1.PollForWorkResponse\x12l\n" +
-	"\x11CompleteOperation\x12*.convergeplane.v1.CompleteOperationRequest\x1a+.convergeplane.v1.CompleteOperationResponseBMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
+	"\x0fLaunchOperation\x12(.convergeplane.v1.LaunchOperationRequest\x1a).convergeplane.v1.LaunchOperationResponse\x12o\n" +
+	"\x12GetOperationStatus\x12+.convergeplane.v1.GetOperationStatusRequest\x1a,.convergeplane.v1.GetOperationStatusResponseBMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
 
 var (
 	file_convergeplane_v1_worker_proto_rawDescOnce sync.Once
@@ -398,34 +244,27 @@ func file_convergeplane_v1_worker_proto_rawDescGZIP() []byte {
 	return file_convergeplane_v1_worker_proto_rawDescData
 }
 
-var file_convergeplane_v1_worker_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_convergeplane_v1_worker_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_convergeplane_v1_worker_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_convergeplane_v1_worker_proto_goTypes = []any{
-	(CallbackType)(0),                 // 0: convergeplane.v1.CallbackType
-	(*RegisterHandlerRequest)(nil),    // 1: convergeplane.v1.RegisterHandlerRequest
-	(*RegisterHandlerResponse)(nil),   // 2: convergeplane.v1.RegisterHandlerResponse
-	(*PollForWorkRequest)(nil),        // 3: convergeplane.v1.PollForWorkRequest
-	(*PollForWorkResponse)(nil),       // 4: convergeplane.v1.PollForWorkResponse
-	(*CompleteOperationRequest)(nil),  // 5: convergeplane.v1.CompleteOperationRequest
-	(*CompleteOperationResponse)(nil), // 6: convergeplane.v1.CompleteOperationResponse
-	(*AtomicOperation)(nil),           // 7: convergeplane.v1.AtomicOperation
-	(*AtomicOperationResult)(nil),     // 8: convergeplane.v1.AtomicOperationResult
+	(*LaunchOperationRequest)(nil),     // 0: convergeplane.v1.LaunchOperationRequest
+	(*LaunchOperationResponse)(nil),    // 1: convergeplane.v1.LaunchOperationResponse
+	(*GetOperationStatusRequest)(nil),  // 2: convergeplane.v1.GetOperationStatusRequest
+	(*GetOperationStatusResponse)(nil), // 3: convergeplane.v1.GetOperationStatusResponse
+	(*AtomicOperation)(nil),            // 4: convergeplane.v1.AtomicOperation
+	(*AtomicOperationResult)(nil),      // 5: convergeplane.v1.AtomicOperationResult
 }
 var file_convergeplane_v1_worker_proto_depIdxs = []int32{
-	0, // 0: convergeplane.v1.RegisterHandlerRequest.callback_type:type_name -> convergeplane.v1.CallbackType
-	7, // 1: convergeplane.v1.PollForWorkResponse.operation:type_name -> convergeplane.v1.AtomicOperation
-	8, // 2: convergeplane.v1.CompleteOperationRequest.result:type_name -> convergeplane.v1.AtomicOperationResult
-	1, // 3: convergeplane.v1.WorkerService.RegisterHandler:input_type -> convergeplane.v1.RegisterHandlerRequest
-	3, // 4: convergeplane.v1.WorkerService.PollForWork:input_type -> convergeplane.v1.PollForWorkRequest
-	5, // 5: convergeplane.v1.WorkerService.CompleteOperation:input_type -> convergeplane.v1.CompleteOperationRequest
-	2, // 6: convergeplane.v1.WorkerService.RegisterHandler:output_type -> convergeplane.v1.RegisterHandlerResponse
-	4, // 7: convergeplane.v1.WorkerService.PollForWork:output_type -> convergeplane.v1.PollForWorkResponse
-	6, // 8: convergeplane.v1.WorkerService.CompleteOperation:output_type -> convergeplane.v1.CompleteOperationResponse
-	6, // [6:9] is the sub-list for method output_type
-	3, // [3:6] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	4, // 0: convergeplane.v1.LaunchOperationRequest.operation:type_name -> convergeplane.v1.AtomicOperation
+	5, // 1: convergeplane.v1.GetOperationStatusResponse.result:type_name -> convergeplane.v1.AtomicOperationResult
+	0, // 2: convergeplane.v1.WorkerService.LaunchOperation:input_type -> convergeplane.v1.LaunchOperationRequest
+	2, // 3: convergeplane.v1.WorkerService.GetOperationStatus:input_type -> convergeplane.v1.GetOperationStatusRequest
+	1, // 4: convergeplane.v1.WorkerService.LaunchOperation:output_type -> convergeplane.v1.LaunchOperationResponse
+	3, // 5: convergeplane.v1.WorkerService.GetOperationStatus:output_type -> convergeplane.v1.GetOperationStatusResponse
+	4, // [4:6] is the sub-list for method output_type
+	2, // [2:4] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_convergeplane_v1_worker_proto_init() }
@@ -439,14 +278,13 @@ func file_convergeplane_v1_worker_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_convergeplane_v1_worker_proto_rawDesc), len(file_convergeplane_v1_worker_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   6,
+			NumEnums:      0,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_convergeplane_v1_worker_proto_goTypes,
 		DependencyIndexes: file_convergeplane_v1_worker_proto_depIdxs,
-		EnumInfos:         file_convergeplane_v1_worker_proto_enumTypes,
 		MessageInfos:      file_convergeplane_v1_worker_proto_msgTypes,
 	}.Build()
 	File_convergeplane_v1_worker_proto = out.File
