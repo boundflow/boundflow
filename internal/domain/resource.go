@@ -2,14 +2,26 @@ package domain
 
 import "time"
 
-// ResourceInstance is an actual instance of a resource tied to a tenant,
-// managed via the ResourceLifecycleService.
+type LifecycleState string
+
+const (
+	LifecycleStateCreating    LifecycleState = "creating"
+	LifecycleStateActive      LifecycleState = "active"
+	LifecycleStateReconciling LifecycleState = "reconciling"
+	LifecycleStateDeleting    LifecycleState = "deleting"
+	LifecycleStateDeleted     LifecycleState = "deleted"
+	LifecycleStateFailed      LifecycleState = "failed"
+)
+
 type ResourceInstance struct {
-	ID           string
-	ResourceType string
-	TenantID     string
-	CurrentState ResourceState
-	GoalState    ResourceState
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID                     string
+	TenantID               string
+	ResourceType           string
+	CurrentConfigState     ResourceState
+	ConfigGoalState        ResourceState
+	LifecycleState         LifecycleState
+	SchedulerPartitionID   string
+	Locked                 bool
+	LastCompletedRequestAt *time.Time
+	CreatedAt              time.Time
 }
