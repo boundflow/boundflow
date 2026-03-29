@@ -17,11 +17,11 @@ type Server struct {
 	cfg        *config.Config
 }
 
-func New(cfg *config.Config, regSvc *service.RegistrationService) *Server {
+func New(cfg *config.Config, regSvc *service.RegistrationService, lifecycleSvc *service.LifecycleService) *Server {
 	grpcServer := grpc.NewServer()
 
 	convergeplanev1.RegisterRegistrationServiceServer(grpcServer, handlers.NewRegistrationHandler(regSvc))
-	convergeplanev1.RegisterResourceLifecycleServiceServer(grpcServer, handlers.NewResourceLifecycleHandler())
+	convergeplanev1.RegisterResourceLifecycleServiceServer(grpcServer, handlers.NewResourceLifecycleHandler(lifecycleSvc))
 	convergeplanev1.RegisterWorkerServiceServer(grpcServer, handlers.NewWorkerHandler())
 
 	return &Server{

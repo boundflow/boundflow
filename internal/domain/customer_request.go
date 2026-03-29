@@ -13,12 +13,21 @@ const (
 	CustomerRequestStatusSuperceded  CustomerRequestStatus = "superceded"
 )
 
+type CustomerRequestType string
+
+const (
+	CustomerRequestTypeCreate      CustomerRequestType = "create"
+	CustomerRequestTypeReconcile   CustomerRequestType = "reconcile"
+	CustomerRequestTypeDelete      CustomerRequestType = "delete"
+	CusomterRequestTypeHealthCheck CustomerRequestType = "healthcheck"
+)
+
 type CustomerRequest struct {
 	ID                  string
 	ResourceInstanceID  string
 	SupercededRequestID string
 	Status              CustomerRequestStatus
-	RequestType         string
+	RequestType         CustomerRequestType
 	RequestInfo         map[string]any
 	CreatedAt           time.Time
 }

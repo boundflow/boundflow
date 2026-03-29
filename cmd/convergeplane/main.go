@@ -26,10 +26,13 @@ func main() {
 
 	tenantGroupRepo := postgres.NewTenantGroupRepo(pool)
 	tenantRepo := postgres.NewTenantRepo(pool)
+	resourceInstanceRepo := postgres.NewResourceInstanceRepo(pool)
+	customerRequestRepo := postgres.NewCustomerRequestRepo(pool)
 
 	regSvc := service.NewRegistrationService(tenantGroupRepo, tenantRepo)
+	lifecycleSvc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo)
 
-	srv := server.New(cfg, regSvc)
+	srv := server.New(cfg, regSvc, lifecycleSvc)
 
 	errCh := make(chan error, 1)
 	go func() {

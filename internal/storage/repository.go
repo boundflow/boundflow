@@ -24,7 +24,8 @@ type ResourceInstanceRepository interface {
 	Get(ctx context.Context, id string) (*domain.ResourceInstance, error)
 	UpdateLifecycleState(ctx context.Context, id string, state domain.LifecycleState) error
 	UpdateConfigState(ctx context.Context, id string, currentState, goalState domain.ResourceState) error
-	UpdateLocked(ctx context.Context, id string, locked bool) error
+	// IncrementVersion atomically increments the version and returns the new value.
+	IncrementVersion(ctx context.Context, id string) (newVersion int64, err error)
 	UpdateSchedulerPartition(ctx context.Context, id string, partitionID string) error
 	UpdateLastCompletedRequestAt(ctx context.Context, id string, t time.Time) error
 }

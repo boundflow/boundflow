@@ -31,12 +31,12 @@ func (r *ResourceInstanceRepo) Create(ctx context.Context, instance *domain.Reso
 	}
 
 	_, err = r.pool.Exec(ctx,
-		`INSERT INTO resource_instances (id, tenant_id, resource_type, current_config_state, config_goal_state, lifecycle_state, scheduler_partition_id, locked, last_completed_request_at, created_at)
+		`INSERT INTO resource_instances (id, tenant_id, resource_type, current_config_state, config_goal_state, lifecycle_state, scheduler_partition_id, version, last_completed_request_at, created_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 		instance.ID, instance.TenantID, instance.ResourceType,
 		currentState, goalState,
 		instance.LifecycleState, instance.SchedulerPartitionID,
-		instance.Locked, instance.LastCompletedRequestAt, instance.CreatedAt,
+		instance.Version, instance.LastCompletedRequestAt, instance.CreatedAt,
 	)
 	if err != nil {
 		return handleError(err, "resource instance")
@@ -49,13 +49,13 @@ func (r *ResourceInstanceRepo) Get(ctx context.Context, id string) (*domain.Reso
 	var currentStateJSON, goalStateJSON []byte
 
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, tenant_id, resource_type, current_config_state, config_goal_state, lifecycle_state, scheduler_partition_id, locked, last_completed_request_at, created_at
+		`SELECT id, tenant_id, resource_type, current_config_state, config_goal_state, lifecycle_state, scheduler_partition_id, version, last_completed_request_at, created_at
 		 FROM resource_instances WHERE id = $1`, id,
 	).Scan(
 		&instance.ID, &instance.TenantID, &instance.ResourceType,
 		&currentStateJSON, &goalStateJSON,
 		&instance.LifecycleState, &instance.SchedulerPartitionID,
-		&instance.Locked, &instance.LastCompletedRequestAt, &instance.CreatedAt,
+		&instance.Version, &instance.LastCompletedRequestAt, &instance.CreatedAt,
 	)
 	if err != nil {
 		return nil, handleError(err, "resource instance")
@@ -103,15 +103,16 @@ func (r *ResourceInstanceRepo) UpdateConfigState(ctx context.Context, id string,
 	return nil
 }
 
-func (r *ResourceInstanceRepo) UpdateLocked(ctx context.Context, id string, locked bool) error {
-	_, err := r.pool.Exec(ctx,
-		`UPDATE resource_instances SET locked = $1 WHERE id = $2`,
-		locked, id,
-	)
+func (r *ResourceInstanceRepo) IncrementVersion(ctx context.Context, id string) (int64, error) {
+	var newVersion int64
+	err := r.pool.QueryRow(ctx,
+		`UPDATE resource_instances SET version = version + 1 WHERE id = $1 RETURNING version`,
+		id,
+	).Scan(&newVersion)
 	if err != nil {
-		return fmt.Errorf("update locked: %w", err)
+		return 0, fmt.Errorf("increment version: %w", err)
 	}
-	return nil
+	return newVersion, nil
 }
 
 func (r *ResourceInstanceRepo) UpdateSchedulerPartition(ctx context.Context, id string, partitionID string) error {
