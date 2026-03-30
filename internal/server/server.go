@@ -6,7 +6,7 @@ import (
 	"net"
 
 	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
-	"github.com/convergeplane/convergeplane/internal/config"
+	config "github.com/convergeplane/convergeplane/internal/config"
 	"github.com/convergeplane/convergeplane/internal/server/handlers"
 	"github.com/convergeplane/convergeplane/internal/service"
 	"google.golang.org/grpc"
@@ -14,10 +14,10 @@ import (
 
 type Server struct {
 	grpcServer *grpc.Server
-	cfg        *config.Config
+	cfg        *config.ServerConfig
 }
 
-func New(cfg *config.Config, regSvc *service.RegistrationService, lifecycleSvc *service.LifecycleService) *Server {
+func New(cfg *config.ServerConfig, regSvc *service.RegistrationService, lifecycleSvc *service.LifecycleService) *Server {
 	grpcServer := grpc.NewServer()
 
 	convergeplanev1.RegisterRegistrationServiceServer(grpcServer, handlers.NewRegistrationHandler(regSvc))
