@@ -338,7 +338,6 @@ type GetResourceHealthRequest struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	CorrelationId      string                 `protobuf:"bytes,1,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
 	ResourceInstanceId string                 `protobuf:"bytes,2,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
-	ExpectedState      *structpb.Struct       `protobuf:"bytes,3,opt,name=expected_state,json=expectedState,proto3" json:"expected_state,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -385,13 +384,6 @@ func (x *GetResourceHealthRequest) GetResourceInstanceId() string {
 		return x.ResourceInstanceId
 	}
 	return ""
-}
-
-func (x *GetResourceHealthRequest) GetExpectedState() *structpb.Struct {
-	if x != nil {
-		return x.ExpectedState
-	}
-	return nil
 }
 
 type GetResourceHealthResponse struct {
@@ -471,11 +463,10 @@ const file_convergeplane_v1_lifecycle_proto_rawDesc = "" +
 	"\x14resource_instance_id\x18\x02 \x01(\tR\x12resourceInstanceId\"7\n" +
 	"\x16DeleteResourceResponse\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x01 \x01(\tR\trequestId\"\xb3\x01\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\"s\n" +
 	"\x18GetResourceHealthRequest\x12%\n" +
 	"\x0ecorrelation_id\x18\x01 \x01(\tR\rcorrelationId\x120\n" +
-	"\x14resource_instance_id\x18\x02 \x01(\tR\x12resourceInstanceId\x12>\n" +
-	"\x0eexpected_state\x18\x03 \x01(\v2\x17.google.protobuf.StructR\rexpectedState\"O\n" +
+	"\x14resource_instance_id\x18\x02 \x01(\tR\x12resourceInstanceId\"O\n" +
 	"\x19GetResourceHealthResponse\x12\x18\n" +
 	"\ahealthy\x18\x01 \x01(\bR\ahealthy\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage2\xc0\x03\n" +
@@ -514,20 +505,19 @@ var file_convergeplane_v1_lifecycle_proto_depIdxs = []int32{
 	8, // 0: convergeplane.v1.CreateResourceRequest.initial_state:type_name -> google.protobuf.Struct
 	9, // 1: convergeplane.v1.CreateResourceResponse.resource_instance:type_name -> convergeplane.v1.ResourceInstance
 	8, // 2: convergeplane.v1.ReconcileResourceRequest.goal_state:type_name -> google.protobuf.Struct
-	8, // 3: convergeplane.v1.GetResourceHealthRequest.expected_state:type_name -> google.protobuf.Struct
-	0, // 4: convergeplane.v1.ResourceLifecycleService.CreateResource:input_type -> convergeplane.v1.CreateResourceRequest
-	2, // 5: convergeplane.v1.ResourceLifecycleService.ReconcileResource:input_type -> convergeplane.v1.ReconcileResourceRequest
-	4, // 6: convergeplane.v1.ResourceLifecycleService.DeleteResource:input_type -> convergeplane.v1.DeleteResourceRequest
-	6, // 7: convergeplane.v1.ResourceLifecycleService.GetResourceHealth:input_type -> convergeplane.v1.GetResourceHealthRequest
-	1, // 8: convergeplane.v1.ResourceLifecycleService.CreateResource:output_type -> convergeplane.v1.CreateResourceResponse
-	3, // 9: convergeplane.v1.ResourceLifecycleService.ReconcileResource:output_type -> convergeplane.v1.ReconcileResourceResponse
-	5, // 10: convergeplane.v1.ResourceLifecycleService.DeleteResource:output_type -> convergeplane.v1.DeleteResourceResponse
-	7, // 11: convergeplane.v1.ResourceLifecycleService.GetResourceHealth:output_type -> convergeplane.v1.GetResourceHealthResponse
-	8, // [8:12] is the sub-list for method output_type
-	4, // [4:8] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	0, // 3: convergeplane.v1.ResourceLifecycleService.CreateResource:input_type -> convergeplane.v1.CreateResourceRequest
+	2, // 4: convergeplane.v1.ResourceLifecycleService.ReconcileResource:input_type -> convergeplane.v1.ReconcileResourceRequest
+	4, // 5: convergeplane.v1.ResourceLifecycleService.DeleteResource:input_type -> convergeplane.v1.DeleteResourceRequest
+	6, // 6: convergeplane.v1.ResourceLifecycleService.GetResourceHealth:input_type -> convergeplane.v1.GetResourceHealthRequest
+	1, // 7: convergeplane.v1.ResourceLifecycleService.CreateResource:output_type -> convergeplane.v1.CreateResourceResponse
+	3, // 8: convergeplane.v1.ResourceLifecycleService.ReconcileResource:output_type -> convergeplane.v1.ReconcileResourceResponse
+	5, // 9: convergeplane.v1.ResourceLifecycleService.DeleteResource:output_type -> convergeplane.v1.DeleteResourceResponse
+	7, // 10: convergeplane.v1.ResourceLifecycleService.GetResourceHealth:output_type -> convergeplane.v1.GetResourceHealthResponse
+	7, // [7:11] is the sub-list for method output_type
+	3, // [3:7] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_convergeplane_v1_lifecycle_proto_init() }

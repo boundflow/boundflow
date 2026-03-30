@@ -52,17 +52,14 @@ func (h *ResourceLifecycleHandler) ReconcileResource(ctx context.Context, req *c
 
 	goalState := convert.ResourceStateFromProto(req.GoalState)
 
-	requestID, err := h.svc.ReconcileResource(ctx, req.CorrelationId, req.ResourceInstanceId, goalState)
-	if err != nil {
+	if err := h.svc.ReconcileResource(ctx, req.CorrelationId, req.ResourceInstanceId, goalState); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Errorf(codes.NotFound, "resource instance not found")
 		}
 		return nil, status.Errorf(codes.Internal, "reconcile resource: %v", err)
 	}
 
-	return &convergeplanev1.ReconcileResourceResponse{
-		RequestId: requestID,
-	}, nil
+	return &convergeplanev1.ReconcileResourceResponse{}, nil
 }
 
 func (h *ResourceLifecycleHandler) DeleteResource(ctx context.Context, req *convergeplanev1.DeleteResourceRequest) (*convergeplanev1.DeleteResourceResponse, error) {
@@ -70,17 +67,14 @@ func (h *ResourceLifecycleHandler) DeleteResource(ctx context.Context, req *conv
 		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
 	}
 
-	requestID, err := h.svc.DeleteResource(ctx, req.CorrelationId, req.ResourceInstanceId)
-	if err != nil {
+	if err := h.svc.DeleteResource(ctx, req.CorrelationId, req.ResourceInstanceId); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Errorf(codes.NotFound, "resource instance not found")
 		}
 		return nil, status.Errorf(codes.Internal, "delete resource: %v", err)
 	}
 
-	return &convergeplanev1.DeleteResourceResponse{
-		RequestId: requestID,
-	}, nil
+	return &convergeplanev1.DeleteResourceResponse{}, nil
 }
 
 func (h *ResourceLifecycleHandler) GetResourceHealth(ctx context.Context, req *convergeplanev1.GetResourceHealthRequest) (*convergeplanev1.GetResourceHealthResponse, error) {
@@ -88,9 +82,7 @@ func (h *ResourceLifecycleHandler) GetResourceHealth(ctx context.Context, req *c
 		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
 	}
 
-	expectedState := convert.ResourceStateFromProto(req.ExpectedState)
-
-	healthy, message, err := h.svc.GetResourceHealth(ctx, req.CorrelationId, req.ResourceInstanceId, expectedState)
+	healthy, message, err := h.svc.GetResourceHealth(ctx, req.CorrelationId, req.ResourceInstanceId)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Errorf(codes.NotFound, "resource instance not found")

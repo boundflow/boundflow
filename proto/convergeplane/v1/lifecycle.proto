@@ -50,7 +50,6 @@ message DeleteResourceResponse {
 message GetResourceHealthRequest {
   string correlation_id = 1;
   string resource_instance_id = 2;
-  google.protobuf.Struct expected_state = 3;
 }
 
 message GetResourceHealthResponse {

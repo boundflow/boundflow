@@ -103,6 +103,23 @@ func (r *ResourceInstanceRepo) UpdateConfigState(ctx context.Context, id string,
 	return nil
 }
 
+func (r *ResourceInstanceRepo) UpdateGoalStateAndIncrementVersion(ctx context.Context, id string, goalState domain.ResourceState) (int64, error) {
+	goalJSON, err := json.Marshal(goalState)
+	if err != nil {
+		return 0, fmt.Errorf("marshal goal state: %w", err)
+	}
+
+	var newVersion int64
+	err = r.pool.QueryRow(ctx,
+		`UPDATE resource_instances SET config_goal_state = $1, version = version + 1 WHERE id = $2 RETURNING version`,
+		goalJSON, id,
+	).Scan(&newVersion)
+	if err != nil {
+		return 0, handleError(err, "resource instance")
+	}
+	return newVersion, nil
+}
+
 func (r *ResourceInstanceRepo) IncrementVersion(ctx context.Context, id string) (int64, error) {
 	var newVersion int64
 	err := r.pool.QueryRow(ctx,

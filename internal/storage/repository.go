@@ -24,6 +24,8 @@ type ResourceInstanceRepository interface {
 	Get(ctx context.Context, id string) (*domain.ResourceInstance, error)
 	UpdateLifecycleState(ctx context.Context, id string, state domain.LifecycleState) error
 	UpdateConfigState(ctx context.Context, id string, currentState, goalState domain.ResourceState) error
+	// UpdateGoalStateAndIncrementVersion atomically sets the goal state and bumps the version, returning the new version.
+	UpdateGoalStateAndIncrementVersion(ctx context.Context, id string, goalState domain.ResourceState) (newVersion int64, err error)
 	// IncrementVersion atomically increments the version and returns the new value.
 	IncrementVersion(ctx context.Context, id string) (newVersion int64, err error)
 	UpdateSchedulerPartition(ctx context.Context, id string, partitionID string) error

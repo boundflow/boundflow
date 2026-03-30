@@ -28,6 +28,9 @@ type CustomerRequest struct {
 	SupercededRequestID string
 	Status              CustomerRequestStatus
 	RequestType         CustomerRequestType
-	RequestInfo         map[string]any
+	RequestInfo            map[string]any
+	CurrentConfigSnapshot  ResourceState
+	GoalConfigSnapshot     ResourceState
+	Version                int64
 	CreatedAt           time.Time
 }

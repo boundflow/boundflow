@@ -8,12 +8,14 @@ CREATE TYPE customer_request_status AS ENUM (
 );
 
 CREATE TABLE customer_requests (
-    id                    TEXT NOT NULL,
+    id                    TEXT NOT NULL PRIMARY KEY,
     resource_instance_id  TEXT NOT NULL REFERENCES resource_instances(id),
     superceded_request_id TEXT,
-    status                customer_request_status NOT NULL DEFAULT 'pending',
+    status                customer_request_status NOT NULL,
     request_type          TEXT NOT NULL,
     request_info          JSONB NOT NULL DEFAULT '{}',
-    created_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
-    PRIMARY KEY (resource_instance_id, id)
+    current_config_snapshot JSONB NOT NULL DEFAULT '{}',
+    goal_config_snapshot    JSONB NOT NULL DEFAULT '{}',
+    version               BIGINT NOT NULL,
+    created_at            TIMESTAMPTZ NOT NULL DEFAULT now()
 );
