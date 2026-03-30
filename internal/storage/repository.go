@@ -23,6 +23,7 @@ type ResourceInstanceRepository interface {
 	Create(ctx context.Context, instance *domain.ResourceInstance) error
 	Get(ctx context.Context, id string) (*domain.ResourceInstance, error)
 	UpdateLifecycleState(ctx context.Context, id string, state domain.LifecycleState) error
+	UpdateLifecycleStateAndIncrementVersion(ctx context.Context, id string, state domain.LifecycleState) (newVersion int64, err error)
 	UpdateConfigState(ctx context.Context, id string, currentState, goalState domain.ResourceState) error
 	// UpdateGoalStateAndIncrementVersion atomically sets the goal state and bumps the version, returning the new version.
 	UpdateGoalStateAndIncrementVersion(ctx context.Context, id string, goalState domain.ResourceState) (newVersion int64, err error)

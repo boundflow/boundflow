@@ -14,7 +14,7 @@ service ResourceLifecycleService {
   rpc CreateResource(CreateResourceRequest) returns (CreateResourceResponse);
   rpc ReconcileResource(ReconcileResourceRequest) returns (ReconcileResourceResponse);
   rpc DeleteResource(DeleteResourceRequest) returns (DeleteResourceResponse);
-  rpc GetResourceHealth(GetResourceHealthRequest) returns (GetResourceHealthResponse);
+  rpc GetResourceState(GetResourceStateRequest) returns (GetResourceStateResponse);
 }
 
 message CreateResourceRequest {
@@ -47,12 +47,12 @@ message DeleteResourceResponse {
   string request_id = 1;
 }
 
-message GetResourceHealthRequest {
-  string correlation_id = 1;
-  string resource_instance_id = 2;
+message GetResourceStateRequest {
+  string resource_instance_id = 1;
 }
 
-message GetResourceHealthResponse {
-  bool healthy = 1;
-  string message = 2;
+message GetResourceStateResponse {
+  google.protobuf.Struct current_config_state = 1;
+  google.protobuf.Struct goal_config_state = 2;
+  string lifecycle_state = 3;
 }

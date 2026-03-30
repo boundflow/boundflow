@@ -77,21 +77,22 @@ func (h *ResourceLifecycleHandler) DeleteResource(ctx context.Context, req *conv
 	return &convergeplanev1.DeleteResourceResponse{}, nil
 }
 
-func (h *ResourceLifecycleHandler) GetResourceHealth(ctx context.Context, req *convergeplanev1.GetResourceHealthRequest) (*convergeplanev1.GetResourceHealthResponse, error) {
+func (h *ResourceLifecycleHandler) GetResourceState(ctx context.Context, req *convergeplanev1.GetResourceStateRequest) (*convergeplanev1.GetResourceStateResponse, error) {
 	if req.ResourceInstanceId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
 	}
 
-	healthy, message, err := h.svc.GetResourceHealth(ctx, req.CorrelationId, req.ResourceInstanceId)
+	instance, err := h.svc.GetResourceState(ctx, req.ResourceInstanceId)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Errorf(codes.NotFound, "resource instance not found")
 		}
-		return nil, status.Errorf(codes.Internal, "get resource health: %v", err)
+		return nil, status.Errorf(codes.Internal, "get resource state: %v", err)
 	}
 
-	return &convergeplanev1.GetResourceHealthResponse{
-		Healthy: healthy,
-		Message: message,
+	return &convergeplanev1.GetResourceStateResponse{
+		CurrentConfigState: convert.ResourceStateToProto(instance.CurrentConfigState),
+		GoalConfigState:    convert.ResourceStateToProto(instance.ConfigGoalState),
+		LifecycleState:     string(instance.LifecycleState),
 	}, nil
 }

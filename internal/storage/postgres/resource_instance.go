@@ -82,6 +82,18 @@ func (r *ResourceInstanceRepo) UpdateLifecycleState(ctx context.Context, id stri
 	return nil
 }
 
+func (r *ResourceInstanceRepo) UpdateLifecycleStateAndIncrementVersion(ctx context.Context, id string, state domain.LifecycleState) (int64, error) {
+	var newVersion int64
+	err := r.pool.QueryRow(ctx,
+		`UPDATE resource_instances SET lifecycle_state = $1, version = version + 1 WHERE id = $2 RETURNING version`,
+		state, id,
+	).Scan(&newVersion)
+	if err != nil {
+		return 0, handleError(err, "resource instance")
+	}
+	return newVersion, nil
+}
+
 func (r *ResourceInstanceRepo) UpdateConfigState(ctx context.Context, id string, currentState, goalState domain.ResourceState) error {
 	currentJSON, err := json.Marshal(currentState)
 	if err != nil {

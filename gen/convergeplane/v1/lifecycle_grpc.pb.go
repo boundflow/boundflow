@@ -22,7 +22,7 @@ const (
 	ResourceLifecycleService_CreateResource_FullMethodName    = "/convergeplane.v1.ResourceLifecycleService/CreateResource"
 	ResourceLifecycleService_ReconcileResource_FullMethodName = "/convergeplane.v1.ResourceLifecycleService/ReconcileResource"
 	ResourceLifecycleService_DeleteResource_FullMethodName    = "/convergeplane.v1.ResourceLifecycleService/DeleteResource"
-	ResourceLifecycleService_GetResourceHealth_FullMethodName = "/convergeplane.v1.ResourceLifecycleService/GetResourceHealth"
+	ResourceLifecycleService_GetResourceState_FullMethodName  = "/convergeplane.v1.ResourceLifecycleService/GetResourceState"
 )
 
 // ResourceLifecycleServiceClient is the client API for ResourceLifecycleService service.
@@ -36,7 +36,7 @@ type ResourceLifecycleServiceClient interface {
 	CreateResource(ctx context.Context, in *CreateResourceRequest, opts ...grpc.CallOption) (*CreateResourceResponse, error)
 	ReconcileResource(ctx context.Context, in *ReconcileResourceRequest, opts ...grpc.CallOption) (*ReconcileResourceResponse, error)
 	DeleteResource(ctx context.Context, in *DeleteResourceRequest, opts ...grpc.CallOption) (*DeleteResourceResponse, error)
-	GetResourceHealth(ctx context.Context, in *GetResourceHealthRequest, opts ...grpc.CallOption) (*GetResourceHealthResponse, error)
+	GetResourceState(ctx context.Context, in *GetResourceStateRequest, opts ...grpc.CallOption) (*GetResourceStateResponse, error)
 }
 
 type resourceLifecycleServiceClient struct {
@@ -77,10 +77,10 @@ func (c *resourceLifecycleServiceClient) DeleteResource(ctx context.Context, in 
 	return out, nil
 }
 
-func (c *resourceLifecycleServiceClient) GetResourceHealth(ctx context.Context, in *GetResourceHealthRequest, opts ...grpc.CallOption) (*GetResourceHealthResponse, error) {
+func (c *resourceLifecycleServiceClient) GetResourceState(ctx context.Context, in *GetResourceStateRequest, opts ...grpc.CallOption) (*GetResourceStateResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetResourceHealthResponse)
-	err := c.cc.Invoke(ctx, ResourceLifecycleService_GetResourceHealth_FullMethodName, in, out, cOpts...)
+	out := new(GetResourceStateResponse)
+	err := c.cc.Invoke(ctx, ResourceLifecycleService_GetResourceState_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ type ResourceLifecycleServiceServer interface {
 	CreateResource(context.Context, *CreateResourceRequest) (*CreateResourceResponse, error)
 	ReconcileResource(context.Context, *ReconcileResourceRequest) (*ReconcileResourceResponse, error)
 	DeleteResource(context.Context, *DeleteResourceRequest) (*DeleteResourceResponse, error)
-	GetResourceHealth(context.Context, *GetResourceHealthRequest) (*GetResourceHealthResponse, error)
+	GetResourceState(context.Context, *GetResourceStateRequest) (*GetResourceStateResponse, error)
 	mustEmbedUnimplementedResourceLifecycleServiceServer()
 }
 
@@ -118,8 +118,8 @@ func (UnimplementedResourceLifecycleServiceServer) ReconcileResource(context.Con
 func (UnimplementedResourceLifecycleServiceServer) DeleteResource(context.Context, *DeleteResourceRequest) (*DeleteResourceResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteResource not implemented")
 }
-func (UnimplementedResourceLifecycleServiceServer) GetResourceHealth(context.Context, *GetResourceHealthRequest) (*GetResourceHealthResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetResourceHealth not implemented")
+func (UnimplementedResourceLifecycleServiceServer) GetResourceState(context.Context, *GetResourceStateRequest) (*GetResourceStateResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetResourceState not implemented")
 }
 func (UnimplementedResourceLifecycleServiceServer) mustEmbedUnimplementedResourceLifecycleServiceServer() {
 }
@@ -197,20 +197,20 @@ func _ResourceLifecycleService_DeleteResource_Handler(srv interface{}, ctx conte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ResourceLifecycleService_GetResourceHealth_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetResourceHealthRequest)
+func _ResourceLifecycleService_GetResourceState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetResourceStateRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ResourceLifecycleServiceServer).GetResourceHealth(ctx, in)
+		return srv.(ResourceLifecycleServiceServer).GetResourceState(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ResourceLifecycleService_GetResourceHealth_FullMethodName,
+		FullMethod: ResourceLifecycleService_GetResourceState_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ResourceLifecycleServiceServer).GetResourceHealth(ctx, req.(*GetResourceHealthRequest))
+		return srv.(ResourceLifecycleServiceServer).GetResourceState(ctx, req.(*GetResourceStateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -235,8 +235,8 @@ var ResourceLifecycleService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ResourceLifecycleService_DeleteResource_Handler,
 		},
 		{
-			MethodName: "GetResourceHealth",
-			Handler:    _ResourceLifecycleService_GetResourceHealth_Handler,
+			MethodName: "GetResourceState",
+			Handler:    _ResourceLifecycleService_GetResourceState_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

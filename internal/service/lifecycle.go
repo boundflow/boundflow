@@ -44,7 +44,7 @@ func (s *LifecycleService) CreateResource(ctx context.Context, correlationID, re
 	}
 
 	requestInfo := map[string]any{
-		"correlationId":          correlationID,
+		"correlationId": correlationID,
 	}
 
 	// create customer request in customer requests table
@@ -75,7 +75,7 @@ func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID,
 	}
 
 	requestInfo := map[string]any{
-		"correlationId":       correlationID,
+		"correlationId": correlationID,
 	}
 
 	// create customer request in customer requests table
@@ -99,12 +99,14 @@ func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID,
 func (s *LifecycleService) DeleteResource(ctx context.Context, correlationID, resourceInstanceID string) error {
 	// Put the resource in a "soft deleted state" (any operation post deletion should just fail out)
 
-	if err := s.resourceInstances.UpdateLifecycleState(ctx, resourceInstanceID, domain.LifecycleStateDeleted); err != nil {
+	ver, err := s.resourceInstances.UpdateLifecycleStateAndIncrementVersion(ctx, resourceInstanceID, domain.LifecycleStateDeleting)
+
+	if err != nil {
 		return fmt.Errorf("Soft deleted resource: %w", err)
 	}
 
 	requestInfo := map[string]any{
-		"correlationId":       correlationID,
+		"correlationId": correlationID,
 	}
 
 	// create customer request in customer requests table
@@ -114,7 +116,7 @@ func (s *LifecycleService) DeleteResource(ctx context.Context, correlationID, re
 		Status:             domain.CustomerRequestStatusUnscheduled,
 		RequestType:        domain.CustomerRequestTypeDelete,
 		RequestInfo:        requestInfo,
-		Version:            -1,
+		Version:            ver,
 	}
 
 	if err := s.customerRequests.Create(ctx, &request); err != nil {
@@ -124,15 +126,7 @@ func (s *LifecycleService) DeleteResource(ctx context.Context, correlationID, re
 	return nil
 }
 
-func (s *LifecycleService) GetResourceHealth(ctx context.Context, correlationID, resourceInstanceID string) (bool, string, error) {
-	
-	if err := s.resourceInstances.(ctx, resourceInstanceID, domain.LifecycleStateDeleted); err != nil {
-		return fmt.Errorf("Soft deleted resource: %w", err)
-	}
+func (s *LifecycleService) GetResourceState(ctx context.Context, resourceInstanceID string) (*domain.ResourceInstance, error) {
 
-	requestInfo := map[string]any{
-		"correlationId":       correlationID,
-	}
-
-	return false, "", nil
+	return s.resourceInstances.Get(ctx, resourceInstanceID)
 }

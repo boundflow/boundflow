@@ -334,28 +334,27 @@ func (x *DeleteResourceResponse) GetRequestId() string {
 	return ""
 }
 
-type GetResourceHealthRequest struct {
+type GetResourceStateRequest struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
-	CorrelationId      string                 `protobuf:"bytes,1,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
-	ResourceInstanceId string                 `protobuf:"bytes,2,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
+	ResourceInstanceId string                 `protobuf:"bytes,1,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
 
-func (x *GetResourceHealthRequest) Reset() {
-	*x = GetResourceHealthRequest{}
+func (x *GetResourceStateRequest) Reset() {
+	*x = GetResourceStateRequest{}
 	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetResourceHealthRequest) String() string {
+func (x *GetResourceStateRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetResourceHealthRequest) ProtoMessage() {}
+func (*GetResourceStateRequest) ProtoMessage() {}
 
-func (x *GetResourceHealthRequest) ProtoReflect() protoreflect.Message {
+func (x *GetResourceStateRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -367,47 +366,41 @@ func (x *GetResourceHealthRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetResourceHealthRequest.ProtoReflect.Descriptor instead.
-func (*GetResourceHealthRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetResourceStateRequest.ProtoReflect.Descriptor instead.
+func (*GetResourceStateRequest) Descriptor() ([]byte, []int) {
 	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *GetResourceHealthRequest) GetCorrelationId() string {
-	if x != nil {
-		return x.CorrelationId
-	}
-	return ""
-}
-
-func (x *GetResourceHealthRequest) GetResourceInstanceId() string {
+func (x *GetResourceStateRequest) GetResourceInstanceId() string {
 	if x != nil {
 		return x.ResourceInstanceId
 	}
 	return ""
 }
 
-type GetResourceHealthResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Healthy       bool                   `protobuf:"varint,1,opt,name=healthy,proto3" json:"healthy,omitempty"`
-	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+type GetResourceStateResponse struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	CurrentConfigState *structpb.Struct       `protobuf:"bytes,1,opt,name=current_config_state,json=currentConfigState,proto3" json:"current_config_state,omitempty"`
+	GoalConfigState    *structpb.Struct       `protobuf:"bytes,2,opt,name=goal_config_state,json=goalConfigState,proto3" json:"goal_config_state,omitempty"`
+	LifecycleState     string                 `protobuf:"bytes,3,opt,name=lifecycle_state,json=lifecycleState,proto3" json:"lifecycle_state,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
-func (x *GetResourceHealthResponse) Reset() {
-	*x = GetResourceHealthResponse{}
+func (x *GetResourceStateResponse) Reset() {
+	*x = GetResourceStateResponse{}
 	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetResourceHealthResponse) String() string {
+func (x *GetResourceStateResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetResourceHealthResponse) ProtoMessage() {}
+func (*GetResourceStateResponse) ProtoMessage() {}
 
-func (x *GetResourceHealthResponse) ProtoReflect() protoreflect.Message {
+func (x *GetResourceStateResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -419,21 +412,28 @@ func (x *GetResourceHealthResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetResourceHealthResponse.ProtoReflect.Descriptor instead.
-func (*GetResourceHealthResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetResourceStateResponse.ProtoReflect.Descriptor instead.
+func (*GetResourceStateResponse) Descriptor() ([]byte, []int) {
 	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{7}
 }
 
-func (x *GetResourceHealthResponse) GetHealthy() bool {
+func (x *GetResourceStateResponse) GetCurrentConfigState() *structpb.Struct {
 	if x != nil {
-		return x.Healthy
+		return x.CurrentConfigState
 	}
-	return false
+	return nil
 }
 
-func (x *GetResourceHealthResponse) GetMessage() string {
+func (x *GetResourceStateResponse) GetGoalConfigState() *structpb.Struct {
 	if x != nil {
-		return x.Message
+		return x.GoalConfigState
+	}
+	return nil
+}
+
+func (x *GetResourceStateResponse) GetLifecycleState() string {
+	if x != nil {
+		return x.LifecycleState
 	}
 	return ""
 }
@@ -463,18 +463,18 @@ const file_convergeplane_v1_lifecycle_proto_rawDesc = "" +
 	"\x14resource_instance_id\x18\x02 \x01(\tR\x12resourceInstanceId\"7\n" +
 	"\x16DeleteResourceResponse\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x01 \x01(\tR\trequestId\"s\n" +
-	"\x18GetResourceHealthRequest\x12%\n" +
-	"\x0ecorrelation_id\x18\x01 \x01(\tR\rcorrelationId\x120\n" +
-	"\x14resource_instance_id\x18\x02 \x01(\tR\x12resourceInstanceId\"O\n" +
-	"\x19GetResourceHealthResponse\x12\x18\n" +
-	"\ahealthy\x18\x01 \x01(\bR\ahealthy\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage2\xc0\x03\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\"K\n" +
+	"\x17GetResourceStateRequest\x120\n" +
+	"\x14resource_instance_id\x18\x01 \x01(\tR\x12resourceInstanceId\"\xd3\x01\n" +
+	"\x18GetResourceStateResponse\x12I\n" +
+	"\x14current_config_state\x18\x01 \x01(\v2\x17.google.protobuf.StructR\x12currentConfigState\x12C\n" +
+	"\x11goal_config_state\x18\x02 \x01(\v2\x17.google.protobuf.StructR\x0fgoalConfigState\x12'\n" +
+	"\x0flifecycle_state\x18\x03 \x01(\tR\x0elifecycleState2\xbd\x03\n" +
 	"\x18ResourceLifecycleService\x12c\n" +
 	"\x0eCreateResource\x12'.convergeplane.v1.CreateResourceRequest\x1a(.convergeplane.v1.CreateResourceResponse\x12l\n" +
 	"\x11ReconcileResource\x12*.convergeplane.v1.ReconcileResourceRequest\x1a+.convergeplane.v1.ReconcileResourceResponse\x12c\n" +
-	"\x0eDeleteResource\x12'.convergeplane.v1.DeleteResourceRequest\x1a(.convergeplane.v1.DeleteResourceResponse\x12l\n" +
-	"\x11GetResourceHealth\x12*.convergeplane.v1.GetResourceHealthRequest\x1a+.convergeplane.v1.GetResourceHealthResponseBMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
+	"\x0eDeleteResource\x12'.convergeplane.v1.DeleteResourceRequest\x1a(.convergeplane.v1.DeleteResourceResponse\x12i\n" +
+	"\x10GetResourceState\x12).convergeplane.v1.GetResourceStateRequest\x1a*.convergeplane.v1.GetResourceStateResponseBMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
 
 var (
 	file_convergeplane_v1_lifecycle_proto_rawDescOnce sync.Once
@@ -496,8 +496,8 @@ var file_convergeplane_v1_lifecycle_proto_goTypes = []any{
 	(*ReconcileResourceResponse)(nil), // 3: convergeplane.v1.ReconcileResourceResponse
 	(*DeleteResourceRequest)(nil),     // 4: convergeplane.v1.DeleteResourceRequest
 	(*DeleteResourceResponse)(nil),    // 5: convergeplane.v1.DeleteResourceResponse
-	(*GetResourceHealthRequest)(nil),  // 6: convergeplane.v1.GetResourceHealthRequest
-	(*GetResourceHealthResponse)(nil), // 7: convergeplane.v1.GetResourceHealthResponse
+	(*GetResourceStateRequest)(nil),   // 6: convergeplane.v1.GetResourceStateRequest
+	(*GetResourceStateResponse)(nil),  // 7: convergeplane.v1.GetResourceStateResponse
 	(*structpb.Struct)(nil),           // 8: google.protobuf.Struct
 	(*ResourceInstance)(nil),          // 9: convergeplane.v1.ResourceInstance
 }
@@ -505,19 +505,21 @@ var file_convergeplane_v1_lifecycle_proto_depIdxs = []int32{
 	8, // 0: convergeplane.v1.CreateResourceRequest.initial_state:type_name -> google.protobuf.Struct
 	9, // 1: convergeplane.v1.CreateResourceResponse.resource_instance:type_name -> convergeplane.v1.ResourceInstance
 	8, // 2: convergeplane.v1.ReconcileResourceRequest.goal_state:type_name -> google.protobuf.Struct
-	0, // 3: convergeplane.v1.ResourceLifecycleService.CreateResource:input_type -> convergeplane.v1.CreateResourceRequest
-	2, // 4: convergeplane.v1.ResourceLifecycleService.ReconcileResource:input_type -> convergeplane.v1.ReconcileResourceRequest
-	4, // 5: convergeplane.v1.ResourceLifecycleService.DeleteResource:input_type -> convergeplane.v1.DeleteResourceRequest
-	6, // 6: convergeplane.v1.ResourceLifecycleService.GetResourceHealth:input_type -> convergeplane.v1.GetResourceHealthRequest
-	1, // 7: convergeplane.v1.ResourceLifecycleService.CreateResource:output_type -> convergeplane.v1.CreateResourceResponse
-	3, // 8: convergeplane.v1.ResourceLifecycleService.ReconcileResource:output_type -> convergeplane.v1.ReconcileResourceResponse
-	5, // 9: convergeplane.v1.ResourceLifecycleService.DeleteResource:output_type -> convergeplane.v1.DeleteResourceResponse
-	7, // 10: convergeplane.v1.ResourceLifecycleService.GetResourceHealth:output_type -> convergeplane.v1.GetResourceHealthResponse
-	7, // [7:11] is the sub-list for method output_type
-	3, // [3:7] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	8, // 3: convergeplane.v1.GetResourceStateResponse.current_config_state:type_name -> google.protobuf.Struct
+	8, // 4: convergeplane.v1.GetResourceStateResponse.goal_config_state:type_name -> google.protobuf.Struct
+	0, // 5: convergeplane.v1.ResourceLifecycleService.CreateResource:input_type -> convergeplane.v1.CreateResourceRequest
+	2, // 6: convergeplane.v1.ResourceLifecycleService.ReconcileResource:input_type -> convergeplane.v1.ReconcileResourceRequest
+	4, // 7: convergeplane.v1.ResourceLifecycleService.DeleteResource:input_type -> convergeplane.v1.DeleteResourceRequest
+	6, // 8: convergeplane.v1.ResourceLifecycleService.GetResourceState:input_type -> convergeplane.v1.GetResourceStateRequest
+	1, // 9: convergeplane.v1.ResourceLifecycleService.CreateResource:output_type -> convergeplane.v1.CreateResourceResponse
+	3, // 10: convergeplane.v1.ResourceLifecycleService.ReconcileResource:output_type -> convergeplane.v1.ReconcileResourceResponse
+	5, // 11: convergeplane.v1.ResourceLifecycleService.DeleteResource:output_type -> convergeplane.v1.DeleteResourceResponse
+	7, // 12: convergeplane.v1.ResourceLifecycleService.GetResourceState:output_type -> convergeplane.v1.GetResourceStateResponse
+	9, // [9:13] is the sub-list for method output_type
+	5, // [5:9] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_convergeplane_v1_lifecycle_proto_init() }
