@@ -23,10 +23,13 @@ type ResourceInstanceRepository interface {
 	Create(ctx context.Context, instance *domain.ResourceInstance) error
 	Get(ctx context.Context, id string) (*domain.ResourceInstance, error)
 	UpdateLifecycleState(ctx context.Context, id string, state domain.LifecycleState) error
-	UpdateLifecycleStateAndIncrementVersion(ctx context.Context, id string, state domain.LifecycleState) (newVersion int64, err error)
+	// UpdateLifecycleStateAndIncrementVersion atomically sets the lifecycle state and bumps the version.
+	// Optionally pass lifecycle states that should cause the call to fail with ErrInvalidLifecycleState.
+	UpdateLifecycleStateAndIncrementVersion(ctx context.Context, id string, state domain.LifecycleState, invalidStates ...domain.LifecycleState) (newVersion int64, err error)
 	UpdateConfigState(ctx context.Context, id string, currentState, goalState domain.ResourceState) error
-	// UpdateGoalStateAndIncrementVersion atomically sets the goal state and bumps the version, returning the new version.
-	UpdateGoalStateAndIncrementVersion(ctx context.Context, id string, goalState domain.ResourceState) (newVersion int64, err error)
+	// UpdateGoalStateAndIncrementVersion atomically sets the goal state and bumps the version.
+	// Optionally pass lifecycle states that should cause the call to fail with ErrInvalidLifecycleState.
+	UpdateGoalStateAndIncrementVersion(ctx context.Context, id string, goalState domain.ResourceState, invalidStates ...domain.LifecycleState) (newVersion int64, err error)
 	// IncrementVersion atomically increments the version and returns the new value.
 	IncrementVersion(ctx context.Context, id string) (newVersion int64, err error)
 	UpdateSchedulerPartition(ctx context.Context, id string, partitionID string) error

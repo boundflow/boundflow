@@ -235,18 +235,23 @@ func (mr *MockResourceInstanceRepositoryMockRecorder) UpdateConfigState(ctx, id,
 }
 
 // UpdateGoalStateAndIncrementVersion mocks base method.
-func (m *MockResourceInstanceRepository) UpdateGoalStateAndIncrementVersion(ctx context.Context, id string, goalState domain.ResourceState) (int64, error) {
+func (m *MockResourceInstanceRepository) UpdateGoalStateAndIncrementVersion(ctx context.Context, id string, goalState domain.ResourceState, invalidStates ...domain.LifecycleState) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateGoalStateAndIncrementVersion", ctx, id, goalState)
+	varargs := []any{ctx, id, goalState}
+	for _, a := range invalidStates {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateGoalStateAndIncrementVersion", varargs...)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UpdateGoalStateAndIncrementVersion indicates an expected call of UpdateGoalStateAndIncrementVersion.
-func (mr *MockResourceInstanceRepositoryMockRecorder) UpdateGoalStateAndIncrementVersion(ctx, id, goalState any) *gomock.Call {
+func (mr *MockResourceInstanceRepositoryMockRecorder) UpdateGoalStateAndIncrementVersion(ctx, id, goalState any, invalidStates ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateGoalStateAndIncrementVersion", reflect.TypeOf((*MockResourceInstanceRepository)(nil).UpdateGoalStateAndIncrementVersion), ctx, id, goalState)
+	varargs := append([]any{ctx, id, goalState}, invalidStates...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateGoalStateAndIncrementVersion", reflect.TypeOf((*MockResourceInstanceRepository)(nil).UpdateGoalStateAndIncrementVersion), varargs...)
 }
 
 // UpdateLastCompletedRequestAt mocks base method.
@@ -278,18 +283,23 @@ func (mr *MockResourceInstanceRepositoryMockRecorder) UpdateLifecycleState(ctx, 
 }
 
 // UpdateLifecycleStateAndIncrementVersion mocks base method.
-func (m *MockResourceInstanceRepository) UpdateLifecycleStateAndIncrementVersion(ctx context.Context, id string, state domain.LifecycleState) (int64, error) {
+func (m *MockResourceInstanceRepository) UpdateLifecycleStateAndIncrementVersion(ctx context.Context, id string, state domain.LifecycleState, invalidStates ...domain.LifecycleState) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateLifecycleStateAndIncrementVersion", ctx, id, state)
+	varargs := []any{ctx, id, state}
+	for _, a := range invalidStates {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateLifecycleStateAndIncrementVersion", varargs...)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UpdateLifecycleStateAndIncrementVersion indicates an expected call of UpdateLifecycleStateAndIncrementVersion.
-func (mr *MockResourceInstanceRepositoryMockRecorder) UpdateLifecycleStateAndIncrementVersion(ctx, id, state any) *gomock.Call {
+func (mr *MockResourceInstanceRepositoryMockRecorder) UpdateLifecycleStateAndIncrementVersion(ctx, id, state any, invalidStates ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateLifecycleStateAndIncrementVersion", reflect.TypeOf((*MockResourceInstanceRepository)(nil).UpdateLifecycleStateAndIncrementVersion), ctx, id, state)
+	varargs := append([]any{ctx, id, state}, invalidStates...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateLifecycleStateAndIncrementVersion", reflect.TypeOf((*MockResourceInstanceRepository)(nil).UpdateLifecycleStateAndIncrementVersion), varargs...)
 }
 
 // UpdateSchedulerPartition mocks base method.

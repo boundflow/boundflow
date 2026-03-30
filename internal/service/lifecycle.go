@@ -68,7 +68,8 @@ func (s *LifecycleService) CreateResource(ctx context.Context, correlationID, re
 func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID, resourceInstanceID string, goalState domain.ResourceState) error {
 	// Update goal state in resource instance table
 
-	ver, err := s.resourceInstances.UpdateGoalStateAndIncrementVersion(ctx, resourceInstanceID, goalState)
+	ver, err := s.resourceInstances.UpdateGoalStateAndIncrementVersion(ctx, resourceInstanceID, goalState,
+		domain.LifecycleStateDeleting, domain.LifecycleStateDeleted)
 
 	if err != nil {
 		return fmt.Errorf("reconcile resource: %w", err)
@@ -99,7 +100,8 @@ func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID,
 func (s *LifecycleService) DeleteResource(ctx context.Context, correlationID, resourceInstanceID string) error {
 	// Put the resource in a "soft deleted state" (any operation post deletion should just fail out)
 
-	ver, err := s.resourceInstances.UpdateLifecycleStateAndIncrementVersion(ctx, resourceInstanceID, domain.LifecycleStateDeleting)
+	ver, err := s.resourceInstances.UpdateLifecycleStateAndIncrementVersion(ctx, resourceInstanceID,
+		domain.LifecycleStateDeleting, domain.LifecycleStateDeleted)
 
 	if err != nil {
 		return fmt.Errorf("Soft deleted resource: %w", err)

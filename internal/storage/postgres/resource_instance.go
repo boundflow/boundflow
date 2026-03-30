@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/convergeplane/convergeplane/internal/domain"
+	"github.com/convergeplane/convergeplane/internal/storage"
 )
 
 type ResourceInstanceRepo struct {
@@ -82,16 +83,34 @@ func (r *ResourceInstanceRepo) UpdateLifecycleState(ctx context.Context, id stri
 	return nil
 }
 
-func (r *ResourceInstanceRepo) UpdateLifecycleStateAndIncrementVersion(ctx context.Context, id string, state domain.LifecycleState) (int64, error) {
-	var newVersion int64
+func (r *ResourceInstanceRepo) UpdateLifecycleStateAndIncrementVersion(ctx context.Context, id string, state domain.LifecycleState, invalidStates ...domain.LifecycleState) (int64, error) {
+	invalid := make([]string, len(invalidStates))
+	for i, s := range invalidStates {
+		invalid[i] = string(s)
+	}
+
+	var currentLifecycleState domain.LifecycleState
+	var newVersion *int64
 	err := r.pool.QueryRow(ctx,
-		`UPDATE resource_instances SET lifecycle_state = $1, version = version + 1 WHERE id = $2 RETURNING version`,
-		state, id,
-	).Scan(&newVersion)
+		`WITH current AS (
+		   SELECT lifecycle_state FROM resource_instances WHERE id = $1
+		 ), updated AS (
+		   UPDATE resource_instances
+		   SET lifecycle_state = $2, version = version + 1
+		   WHERE id = $1 AND NOT (lifecycle_state = ANY($3::lifecycle_state[]))
+		   RETURNING version
+		 )
+		 SELECT current.lifecycle_state, updated.version
+		 FROM current LEFT JOIN updated ON true`,
+		id, state, invalid,
+	).Scan(&currentLifecycleState, &newVersion)
 	if err != nil {
 		return 0, handleError(err, "resource instance")
 	}
-	return newVersion, nil
+	if newVersion == nil {
+		return 0, fmt.Errorf("%w: resource is %s", storage.ErrInvalidLifecycleState, currentLifecycleState)
+	}
+	return *newVersion, nil
 }
 
 func (r *ResourceInstanceRepo) UpdateConfigState(ctx context.Context, id string, currentState, goalState domain.ResourceState) error {
@@ -115,21 +134,39 @@ func (r *ResourceInstanceRepo) UpdateConfigState(ctx context.Context, id string,
 	return nil
 }
 
-func (r *ResourceInstanceRepo) UpdateGoalStateAndIncrementVersion(ctx context.Context, id string, goalState domain.ResourceState) (int64, error) {
+func (r *ResourceInstanceRepo) UpdateGoalStateAndIncrementVersion(ctx context.Context, id string, goalState domain.ResourceState, invalidStates ...domain.LifecycleState) (int64, error) {
 	goalJSON, err := json.Marshal(goalState)
 	if err != nil {
 		return 0, fmt.Errorf("marshal goal state: %w", err)
 	}
 
-	var newVersion int64
+	invalid := make([]string, len(invalidStates))
+	for i, s := range invalidStates {
+		invalid[i] = string(s)
+	}
+
+	var currentLifecycleState domain.LifecycleState
+	var newVersion *int64
 	err = r.pool.QueryRow(ctx,
-		`UPDATE resource_instances SET config_goal_state = $1, version = version + 1 WHERE id = $2 RETURNING version`,
-		goalJSON, id,
-	).Scan(&newVersion)
+		`WITH current AS (
+		   SELECT lifecycle_state FROM resource_instances WHERE id = $1
+		 ), updated AS (
+		   UPDATE resource_instances
+		   SET config_goal_state = $2, version = version + 1
+		   WHERE id = $1 AND NOT (lifecycle_state = ANY($3::lifecycle_state[]))
+		   RETURNING version
+		 )
+		 SELECT current.lifecycle_state, updated.version
+		 FROM current LEFT JOIN updated ON true`,
+		id, goalJSON, invalid,
+	).Scan(&currentLifecycleState, &newVersion)
 	if err != nil {
 		return 0, handleError(err, "resource instance")
 	}
-	return newVersion, nil
+	if newVersion == nil {
+		return 0, fmt.Errorf("%w: resource is %s", storage.ErrInvalidLifecycleState, currentLifecycleState)
+	}
+	return *newVersion, nil
 }
 
 func (r *ResourceInstanceRepo) IncrementVersion(ctx context.Context, id string) (int64, error) {

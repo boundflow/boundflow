@@ -82,7 +82,8 @@ func TestReconcileResource(t *testing.T) {
 	goalState := domain.ResourceState{"sku": "premium"}
 
 	resourceInstanceRepo.EXPECT().
-		UpdateGoalStateAndIncrementVersion(gomock.Any(), "instance-1", goalState).
+		UpdateGoalStateAndIncrementVersion(gomock.Any(), "instance-1", goalState,
+			domain.LifecycleStateDeleting, domain.LifecycleStateDeleted).
 		Return(int64(2), nil)
 
 	customerRequestRepo.EXPECT().
@@ -112,7 +113,8 @@ func TestDeleteResource(t *testing.T) {
 	svc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo)
 
 	resourceInstanceRepo.EXPECT().
-		UpdateLifecycleStateAndIncrementVersion(gomock.Any(), "instance-1", domain.LifecycleStateDeleting).
+		UpdateLifecycleStateAndIncrementVersion(gomock.Any(), "instance-1", domain.LifecycleStateDeleting,
+			domain.LifecycleStateDeleted).
 		Return(int64(3), nil)
 
 	customerRequestRepo.EXPECT().

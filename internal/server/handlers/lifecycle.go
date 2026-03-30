@@ -56,6 +56,9 @@ func (h *ResourceLifecycleHandler) ReconcileResource(ctx context.Context, req *c
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Errorf(codes.NotFound, "resource instance not found")
 		}
+		if errors.Is(err, storage.ErrInvalidLifecycleState) {
+			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
+		}
 		return nil, status.Errorf(codes.Internal, "reconcile resource: %v", err)
 	}
 
@@ -70,6 +73,9 @@ func (h *ResourceLifecycleHandler) DeleteResource(ctx context.Context, req *conv
 	if err := h.svc.DeleteResource(ctx, req.CorrelationId, req.ResourceInstanceId); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Errorf(codes.NotFound, "resource instance not found")
+		}
+		if errors.Is(err, storage.ErrInvalidLifecycleState) {
+			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
 		}
 		return nil, status.Errorf(codes.Internal, "delete resource: %v", err)
 	}
