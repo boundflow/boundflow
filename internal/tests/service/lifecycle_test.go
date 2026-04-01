@@ -37,8 +37,8 @@ func TestCreateResource(t *testing.T) {
 			if r.CurrentConfigState != nil {
 				t.Error("expected current_config_state to be nil on create")
 			}
-			if r.Version != 0 {
-				t.Errorf("expected version 0, got %d", r.Version)
+			if r.TargetVersion != 1 {
+				t.Errorf("expected target_version 1, got %d", r.TargetVersion)
 			}
 			return nil
 		})
@@ -58,8 +58,8 @@ func TestCreateResource(t *testing.T) {
 			if r.GoalConfigSnapshot["sku"] != "standard" {
 				t.Errorf("expected goal snapshot sku=standard, got %v", r.GoalConfigSnapshot["sku"])
 			}
-			if r.Version != 0 {
-				t.Errorf("expected version 0 to match resource instance, got %d", r.Version)
+			if r.Version != 1 {
+				t.Errorf("expected version 1 to match resource instance target version, got %d", r.Version)
 			}
 			return nil
 		})
