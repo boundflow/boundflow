@@ -13,15 +13,18 @@ import (
 type LifecycleService struct {
 	resourceInstances storage.ResourceInstanceRepository
 	customerRequests  storage.CustomerRequestRepository
+	scheduler         storage.SchedulerRepository
 }
 
 func NewLifecycleService(
 	resourceInstances storage.ResourceInstanceRepository,
 	customerRequests storage.CustomerRequestRepository,
+	scheduler storage.SchedulerRepository,
 ) *LifecycleService {
 	return &LifecycleService{
 		resourceInstances: resourceInstances,
 		customerRequests:  customerRequests,
+		scheduler:         scheduler,
 	}
 }
 
@@ -63,6 +66,12 @@ func (s *LifecycleService) CreateResource(ctx context.Context, correlationID, re
 		return nil, fmt.Errorf("create customer request: %w", err)
 	}
 
+	_, _, written, err := s.scheduler.UpsertJobAndSchedule(ctx, request.ID)
+
+	if err == nil && written {
+		s.scheduler.SupercedeOlderRequests(ctx, resourceInstance.ID, request.Version)
+	}
+
 	return &resourceInstance, nil
 }
 
@@ -95,6 +104,12 @@ func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID,
 		return fmt.Errorf("reconcile customer request: %w", err)
 	}
 
+	_, _, written, err := s.scheduler.UpsertJobAndSchedule(ctx, request.ID)
+
+	if err == nil && written {
+		s.scheduler.SupercedeOlderRequests(ctx, resourceInstanceID, request.Version)
+	}
+
 	return nil
 }
 
@@ -124,6 +139,12 @@ func (s *LifecycleService) DeleteResource(ctx context.Context, correlationID, re
 
 	if err := s.customerRequests.Create(ctx, &request); err != nil {
 		return fmt.Errorf("delete customer request: %w", err)
+	}
+
+	_, _, written, err := s.scheduler.UpsertJobAndSchedule(ctx, request.ID)
+
+	if err == nil && written {
+		s.scheduler.SupercedeOlderRequests(ctx, resourceInstanceID, request.Version)
 	}
 
 	return nil

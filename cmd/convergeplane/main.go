@@ -49,9 +49,10 @@ func runServer(sigCh <-chan os.Signal) {
 	tenantRepo := postgres.NewTenantRepo(pool)
 	resourceInstanceRepo := postgres.NewResourceInstanceRepo(pool)
 	customerRequestRepo := postgres.NewCustomerRequestRepo(pool)
+	schedulerRepo := postgres.NewSchedulerRepo(pool)
 
 	regSvc := service.NewRegistrationService(tenantGroupRepo, tenantRepo)
-	lifecycleSvc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo)
+	lifecycleSvc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, schedulerRepo)
 
 	srv := server.New(cfg, regSvc, lifecycleSvc)
 
