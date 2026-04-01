@@ -15,7 +15,8 @@ CREATE TABLE resource_instances (
     config_goal_state        JSONB NOT NULL DEFAULT '{}',
     lifecycle_state          lifecycle_state NOT NULL,
     scheduler_partition_id   TEXT,
-    version                  BIGINT NOT NULL DEFAULT 0,
+    target_version           BIGINT NOT NULL DEFAULT 0,
+    current_version          BIGINT NOT NULL DEFAULT 0,
     last_completed_request_at TIMESTAMPTZ,
     created_at               TIMESTAMPTZ NOT NULL DEFAULT now()
 );
