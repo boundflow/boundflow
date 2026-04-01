@@ -32,12 +32,13 @@ func (r *ResourceInstanceRepo) Create(ctx context.Context, instance *domain.Reso
 	}
 
 	_, err = r.pool.Exec(ctx,
-		`INSERT INTO resource_instances (id, tenant_id, resource_type, current_config_state, config_goal_state, lifecycle_state, scheduler_partition_id, version, last_completed_request_at, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+		`INSERT INTO resource_instances (id, tenant_id, resource_type, current_config_state, config_goal_state, lifecycle_state, scheduler_partition_id, target_version, current_version, last_completed_request_at, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
 		instance.ID, instance.TenantID, instance.ResourceType,
 		currentState, goalState,
 		instance.LifecycleState, instance.SchedulerPartitionID,
-		instance.Version, instance.LastCompletedRequestAt, instance.CreatedAt,
+		instance.TargetVersion, instance.CurrentVersion,
+		instance.LastCompletedRequestAt, instance.CreatedAt,
 	)
 	if err != nil {
 		return handleError(err, "resource instance")
@@ -50,13 +51,14 @@ func (r *ResourceInstanceRepo) Get(ctx context.Context, id string) (*domain.Reso
 	var currentStateJSON, goalStateJSON []byte
 
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, tenant_id, resource_type, current_config_state, config_goal_state, lifecycle_state, scheduler_partition_id, version, last_completed_request_at, created_at
+		`SELECT id, tenant_id, resource_type, current_config_state, config_goal_state, lifecycle_state, scheduler_partition_id, target_version, current_version, last_completed_request_at, created_at
 		 FROM resource_instances WHERE id = $1`, id,
 	).Scan(
 		&instance.ID, &instance.TenantID, &instance.ResourceType,
 		&currentStateJSON, &goalStateJSON,
 		&instance.LifecycleState, &instance.SchedulerPartitionID,
-		&instance.Version, &instance.LastCompletedRequestAt, &instance.CreatedAt,
+		&instance.TargetVersion, &instance.CurrentVersion,
+		&instance.LastCompletedRequestAt, &instance.CreatedAt,
 	)
 	if err != nil {
 		return nil, handleError(err, "resource instance")
@@ -96,11 +98,11 @@ func (r *ResourceInstanceRepo) UpdateLifecycleStateAndIncrementVersion(ctx conte
 		   SELECT lifecycle_state FROM resource_instances WHERE id = $1
 		 ), updated AS (
 		   UPDATE resource_instances
-		   SET lifecycle_state = $2, version = version + 1
+		   SET lifecycle_state = $2, target_version = target_version + 1
 		   WHERE id = $1 AND NOT (lifecycle_state = ANY($3::lifecycle_state[]))
-		   RETURNING version
+		   RETURNING target_version
 		 )
-		 SELECT current.lifecycle_state, updated.version
+		 SELECT current.lifecycle_state, updated.target_version
 		 FROM current LEFT JOIN updated ON true`,
 		id, state, invalid,
 	).Scan(&currentLifecycleState, &newVersion)
@@ -152,11 +154,11 @@ func (r *ResourceInstanceRepo) UpdateGoalStateAndIncrementVersion(ctx context.Co
 		   SELECT lifecycle_state FROM resource_instances WHERE id = $1
 		 ), updated AS (
 		   UPDATE resource_instances
-		   SET config_goal_state = $2, version = version + 1
+		   SET config_goal_state = $2, target_version = target_version + 1
 		   WHERE id = $1 AND NOT (lifecycle_state = ANY($3::lifecycle_state[]))
-		   RETURNING version
+		   RETURNING target_version
 		 )
-		 SELECT current.lifecycle_state, updated.version
+		 SELECT current.lifecycle_state, updated.target_version
 		 FROM current LEFT JOIN updated ON true`,
 		id, goalJSON, invalid,
 	).Scan(&currentLifecycleState, &newVersion)
@@ -169,16 +171,27 @@ func (r *ResourceInstanceRepo) UpdateGoalStateAndIncrementVersion(ctx context.Co
 	return *newVersion, nil
 }
 
-func (r *ResourceInstanceRepo) IncrementVersion(ctx context.Context, id string) (int64, error) {
+func (r *ResourceInstanceRepo) IncrementTargetVersion(ctx context.Context, id string) (int64, error) {
 	var newVersion int64
 	err := r.pool.QueryRow(ctx,
-		`UPDATE resource_instances SET version = version + 1 WHERE id = $1 RETURNING version`,
+		`UPDATE resource_instances SET target_version = target_version + 1 WHERE id = $1 RETURNING target_version`,
 		id,
 	).Scan(&newVersion)
 	if err != nil {
-		return 0, fmt.Errorf("increment version: %w", err)
+		return 0, fmt.Errorf("increment target version: %w", err)
 	}
 	return newVersion, nil
+}
+
+func (r *ResourceInstanceRepo) UpdateCurrentVersion(ctx context.Context, id string, version int64) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE resource_instances SET current_version = $1 WHERE id = $2`,
+		version, id,
+	)
+	if err != nil {
+		return fmt.Errorf("update current version: %w", err)
+	}
+	return nil
 }
 
 func (r *ResourceInstanceRepo) UpdateSchedulerPartition(ctx context.Context, id string, partitionID string) error {

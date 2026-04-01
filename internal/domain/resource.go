@@ -21,7 +21,8 @@ type ResourceInstance struct {
 	ConfigGoalState        ResourceState
 	LifecycleState         LifecycleState
 	SchedulerPartitionID   string
-	Version                int64
+	TargetVersion          int64
+	CurrentVersion         int64
 	LastCompletedRequestAt *time.Time
 	CreatedAt              time.Time
 }

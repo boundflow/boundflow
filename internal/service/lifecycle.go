@@ -35,8 +35,9 @@ func (s *LifecycleService) CreateResource(ctx context.Context, correlationID, re
 		CurrentConfigState:   nil,
 		ConfigGoalState:      initialState,
 		LifecycleState:       domain.LifecycleStateCreating,
-		SchedulerPartitionID: "", // no scheduler partitioning for v1
-		Version:              0,  // it needs to be implicit that if the resource instance is in creating state other requests fail out
+		SchedulerPartitionID: "", // TODO: ADD THIS EVEN FOR v1
+		TargetVersion:        1,
+		CurrentVersion:       0,
 	}
 
 	if err := s.resourceInstances.Create(ctx, &resourceInstance); err != nil {
@@ -54,7 +55,7 @@ func (s *LifecycleService) CreateResource(ctx context.Context, correlationID, re
 		Status:             domain.CustomerRequestStatusUnscheduled,
 		RequestType:        domain.CustomerRequestTypeCreate,
 		RequestInfo:        requestInfo,
-		Version:            resourceInstance.Version,
+		Version:            resourceInstance.TargetVersion,
 		GoalConfigSnapshot: initialState,
 	}
 

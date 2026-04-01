@@ -25,7 +25,6 @@ const (
 type CustomerRequest struct {
 	ID                  string
 	ResourceInstanceID  string
-	SupercededRequestID string
 	Status              CustomerRequestStatus
 	RequestType         CustomerRequestType
 	RequestInfo            map[string]any

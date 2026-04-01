@@ -35,9 +35,9 @@ func (r *CustomerRequestRepo) Create(ctx context.Context, req *domain.CustomerRe
 	}
 
 	_, err = r.pool.Exec(ctx,
-		`INSERT INTO customer_requests (id, resource_instance_id, superceded_request_id, status, request_type, request_info, current_config_snapshot, goal_config_snapshot, version, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-		req.ID, req.ResourceInstanceID, nilIfEmpty(req.SupercededRequestID),
+		`INSERT INTO customer_requests (id, resource_instance_id, status, request_type, request_info, current_config_snapshot, goal_config_snapshot, version, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		req.ID, req.ResourceInstanceID,
 		req.Status, req.RequestType, requestInfo, currentSnapshot, goalSnapshot, req.Version, req.CreatedAt,
 	)
 	if err != nil {
@@ -49,22 +49,17 @@ func (r *CustomerRequestRepo) Create(ctx context.Context, req *domain.CustomerRe
 func (r *CustomerRequestRepo) Get(ctx context.Context, resourceInstanceID, id string) (*domain.CustomerRequest, error) {
 	var req domain.CustomerRequest
 	var requestInfoJSON, currentSnapshotJSON, goalSnapshotJSON []byte
-	var supercededID *string
 
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, resource_instance_id, superceded_request_id, status, request_type, request_info, current_config_snapshot, goal_config_snapshot, version, created_at
+		`SELECT id, resource_instance_id, status, request_type, request_info, current_config_snapshot, goal_config_snapshot, version, created_at
 		 FROM customer_requests WHERE resource_instance_id = $1 AND id = $2`,
 		resourceInstanceID, id,
 	).Scan(
-		&req.ID, &req.ResourceInstanceID, &supercededID,
+		&req.ID, &req.ResourceInstanceID,
 		&req.Status, &req.RequestType, &requestInfoJSON, &currentSnapshotJSON, &goalSnapshotJSON, &req.Version, &req.CreatedAt,
 	)
 	if err != nil {
 		return nil, handleError(err, "customer request")
-	}
-
-	if supercededID != nil {
-		req.SupercededRequestID = *supercededID
 	}
 
 	if err := json.Unmarshal(requestInfoJSON, &req.RequestInfo); err != nil {
@@ -91,20 +86,3 @@ func (r *CustomerRequestRepo) UpdateStatus(ctx context.Context, resourceInstance
 	return nil
 }
 
-func (r *CustomerRequestRepo) UpdateSupercededBy(ctx context.Context, resourceInstanceID, id string, supercededRequestID string) error {
-	_, err := r.pool.Exec(ctx,
-		`UPDATE customer_requests SET superceded_request_id = $1, status = $2 WHERE resource_instance_id = $3 AND id = $4`,
-		supercededRequestID, domain.CustomerRequestStatusSuperceded, resourceInstanceID, id,
-	)
-	if err != nil {
-		return fmt.Errorf("update superceded request: %w", err)
-	}
-	return nil
-}
-
-func nilIfEmpty(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
-}

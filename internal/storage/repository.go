@@ -23,22 +23,50 @@ type ResourceInstanceRepository interface {
 	Create(ctx context.Context, instance *domain.ResourceInstance) error
 	Get(ctx context.Context, id string) (*domain.ResourceInstance, error)
 	UpdateLifecycleState(ctx context.Context, id string, state domain.LifecycleState) error
-	// UpdateLifecycleStateAndIncrementVersion atomically sets the lifecycle state and bumps the version.
+	// UpdateLifecycleStateAndIncrementVersion atomically sets the lifecycle state and bumps the target version.
 	// Optionally pass lifecycle states that should cause the call to fail with ErrInvalidLifecycleState.
-	UpdateLifecycleStateAndIncrementVersion(ctx context.Context, id string, state domain.LifecycleState, invalidStates ...domain.LifecycleState) (newVersion int64, err error)
+	UpdateLifecycleStateAndIncrementVersion(ctx context.Context, id string, state domain.LifecycleState, invalidStates ...domain.LifecycleState) (newTargetVersion int64, err error)
 	UpdateConfigState(ctx context.Context, id string, currentState, goalState domain.ResourceState) error
-	// UpdateGoalStateAndIncrementVersion atomically sets the goal state and bumps the version.
+	// UpdateGoalStateAndIncrementVersion atomically sets the goal state and bumps the target version.
 	// Optionally pass lifecycle states that should cause the call to fail with ErrInvalidLifecycleState.
-	UpdateGoalStateAndIncrementVersion(ctx context.Context, id string, goalState domain.ResourceState, invalidStates ...domain.LifecycleState) (newVersion int64, err error)
-	// IncrementVersion atomically increments the version and returns the new value.
-	IncrementVersion(ctx context.Context, id string) (newVersion int64, err error)
+	UpdateGoalStateAndIncrementVersion(ctx context.Context, id string, goalState domain.ResourceState, invalidStates ...domain.LifecycleState) (newTargetVersion int64, err error)
+	// IncrementTargetVersion atomically increments the target version and returns the new value.
+	IncrementTargetVersion(ctx context.Context, id string) (newVersion int64, err error)
+	// UpdateCurrentVersion sets the current version to match the completed target version.
+	UpdateCurrentVersion(ctx context.Context, id string, version int64) error
 	UpdateSchedulerPartition(ctx context.Context, id string, partitionID string) error
 	UpdateLastCompletedRequestAt(ctx context.Context, id string, t time.Time) error
+}
+
+type SchedulerPartitionRepository interface {
+	// AcquireAvailable atomically claims any partition with no owner or an expired lease.
+	// Returns nil partition (and nil error) if none are available.
+	AcquireAvailable(ctx context.Context, ownerID string, leaseDuration time.Duration) (*domain.SchedulerPartition, error)
+	// Renew extends the lease on a partition owned by ownerID or with an expired/unset lease.
+	// Returns false if the partition could not be renewed (owned by someone else with a valid lease).
+	Renew(ctx context.Context, partitionID string, ownerID string, leaseDuration time.Duration) (bool, error)
+	// Release clears the owner on a partition, only if currently owned by ownerID.
+	Release(ctx context.Context, partitionID string, ownerID string) error
+}
+
+// SchedulerRepository owns the scheduling queries run each tick per partition.
+type SchedulerRepository interface {
+	// GetTopUnscheduledRequests returns the IDs of the highest-version unscheduled customer
+	// request for each resource instance belonging to the given partition.
+	GetTopUnscheduledRequests(ctx context.Context, partitionID string) ([]string, error)
+	// UpsertJobAndSchedule writes or overwrites the job for a resource only if the incoming
+	// request has a strictly higher version than what's currently in the jobs table.
+	// If the write happens it also atomically marks the customer request as scheduled.
+	// Returns the resource instance ID and version written, and written=true, if the job was
+	// written. Returns written=false if the existing job had an equal or higher version.
+	UpsertJobAndSchedule(ctx context.Context, requestID string) (resourceInstanceID string, version int64, written bool, err error)
+	// SupercedeOlderRequests marks all unscheduled or scheduled requests for the given resource
+	// whose version is strictly less than version as superceded.
+	SupercedeOlderRequests(ctx context.Context, resourceInstanceID string, version int64) error
 }
 
 type CustomerRequestRepository interface {
 	Create(ctx context.Context, req *domain.CustomerRequest) error
 	Get(ctx context.Context, resourceInstanceID, id string) (*domain.CustomerRequest, error)
 	UpdateStatus(ctx context.Context, resourceInstanceID, id string, status domain.CustomerRequestStatus) error
-	UpdateSupercededBy(ctx context.Context, resourceInstanceID, id string, supercededRequestID string) error
 }

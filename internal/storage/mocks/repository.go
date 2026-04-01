@@ -205,19 +205,19 @@ func (mr *MockResourceInstanceRepositoryMockRecorder) Get(ctx, id any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockResourceInstanceRepository)(nil).Get), ctx, id)
 }
 
-// IncrementVersion mocks base method.
-func (m *MockResourceInstanceRepository) IncrementVersion(ctx context.Context, id string) (int64, error) {
+// IncrementTargetVersion mocks base method.
+func (m *MockResourceInstanceRepository) IncrementTargetVersion(ctx context.Context, id string) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IncrementVersion", ctx, id)
+	ret := m.ctrl.Call(m, "IncrementTargetVersion", ctx, id)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// IncrementVersion indicates an expected call of IncrementVersion.
-func (mr *MockResourceInstanceRepositoryMockRecorder) IncrementVersion(ctx, id any) *gomock.Call {
+// IncrementTargetVersion indicates an expected call of IncrementTargetVersion.
+func (mr *MockResourceInstanceRepositoryMockRecorder) IncrementTargetVersion(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IncrementVersion", reflect.TypeOf((*MockResourceInstanceRepository)(nil).IncrementVersion), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IncrementTargetVersion", reflect.TypeOf((*MockResourceInstanceRepository)(nil).IncrementTargetVersion), ctx, id)
 }
 
 // UpdateConfigState mocks base method.
@@ -232,6 +232,20 @@ func (m *MockResourceInstanceRepository) UpdateConfigState(ctx context.Context, 
 func (mr *MockResourceInstanceRepositoryMockRecorder) UpdateConfigState(ctx, id, currentState, goalState any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateConfigState", reflect.TypeOf((*MockResourceInstanceRepository)(nil).UpdateConfigState), ctx, id, currentState, goalState)
+}
+
+// UpdateCurrentVersion mocks base method.
+func (m *MockResourceInstanceRepository) UpdateCurrentVersion(ctx context.Context, id string, version int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateCurrentVersion", ctx, id, version)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateCurrentVersion indicates an expected call of UpdateCurrentVersion.
+func (mr *MockResourceInstanceRepositoryMockRecorder) UpdateCurrentVersion(ctx, id, version any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCurrentVersion", reflect.TypeOf((*MockResourceInstanceRepository)(nil).UpdateCurrentVersion), ctx, id, version)
 }
 
 // UpdateGoalStateAndIncrementVersion mocks base method.
@@ -316,6 +330,144 @@ func (mr *MockResourceInstanceRepositoryMockRecorder) UpdateSchedulerPartition(c
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateSchedulerPartition", reflect.TypeOf((*MockResourceInstanceRepository)(nil).UpdateSchedulerPartition), ctx, id, partitionID)
 }
 
+// MockSchedulerPartitionRepository is a mock of SchedulerPartitionRepository interface.
+type MockSchedulerPartitionRepository struct {
+	ctrl     *gomock.Controller
+	recorder *MockSchedulerPartitionRepositoryMockRecorder
+	isgomock struct{}
+}
+
+// MockSchedulerPartitionRepositoryMockRecorder is the mock recorder for MockSchedulerPartitionRepository.
+type MockSchedulerPartitionRepositoryMockRecorder struct {
+	mock *MockSchedulerPartitionRepository
+}
+
+// NewMockSchedulerPartitionRepository creates a new mock instance.
+func NewMockSchedulerPartitionRepository(ctrl *gomock.Controller) *MockSchedulerPartitionRepository {
+	mock := &MockSchedulerPartitionRepository{ctrl: ctrl}
+	mock.recorder = &MockSchedulerPartitionRepositoryMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockSchedulerPartitionRepository) EXPECT() *MockSchedulerPartitionRepositoryMockRecorder {
+	return m.recorder
+}
+
+// AcquireAvailable mocks base method.
+func (m *MockSchedulerPartitionRepository) AcquireAvailable(ctx context.Context, ownerID string, leaseDuration time.Duration) (*domain.SchedulerPartition, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AcquireAvailable", ctx, ownerID, leaseDuration)
+	ret0, _ := ret[0].(*domain.SchedulerPartition)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AcquireAvailable indicates an expected call of AcquireAvailable.
+func (mr *MockSchedulerPartitionRepositoryMockRecorder) AcquireAvailable(ctx, ownerID, leaseDuration any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AcquireAvailable", reflect.TypeOf((*MockSchedulerPartitionRepository)(nil).AcquireAvailable), ctx, ownerID, leaseDuration)
+}
+
+// Release mocks base method.
+func (m *MockSchedulerPartitionRepository) Release(ctx context.Context, partitionID, ownerID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Release", ctx, partitionID, ownerID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Release indicates an expected call of Release.
+func (mr *MockSchedulerPartitionRepositoryMockRecorder) Release(ctx, partitionID, ownerID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Release", reflect.TypeOf((*MockSchedulerPartitionRepository)(nil).Release), ctx, partitionID, ownerID)
+}
+
+// Renew mocks base method.
+func (m *MockSchedulerPartitionRepository) Renew(ctx context.Context, partitionID, ownerID string, leaseDuration time.Duration) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Renew", ctx, partitionID, ownerID, leaseDuration)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Renew indicates an expected call of Renew.
+func (mr *MockSchedulerPartitionRepositoryMockRecorder) Renew(ctx, partitionID, ownerID, leaseDuration any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Renew", reflect.TypeOf((*MockSchedulerPartitionRepository)(nil).Renew), ctx, partitionID, ownerID, leaseDuration)
+}
+
+// MockSchedulerRepository is a mock of SchedulerRepository interface.
+type MockSchedulerRepository struct {
+	ctrl     *gomock.Controller
+	recorder *MockSchedulerRepositoryMockRecorder
+	isgomock struct{}
+}
+
+// MockSchedulerRepositoryMockRecorder is the mock recorder for MockSchedulerRepository.
+type MockSchedulerRepositoryMockRecorder struct {
+	mock *MockSchedulerRepository
+}
+
+// NewMockSchedulerRepository creates a new mock instance.
+func NewMockSchedulerRepository(ctrl *gomock.Controller) *MockSchedulerRepository {
+	mock := &MockSchedulerRepository{ctrl: ctrl}
+	mock.recorder = &MockSchedulerRepositoryMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockSchedulerRepository) EXPECT() *MockSchedulerRepositoryMockRecorder {
+	return m.recorder
+}
+
+// GetTopUnscheduledRequests mocks base method.
+func (m *MockSchedulerRepository) GetTopUnscheduledRequests(ctx context.Context, partitionID string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTopUnscheduledRequests", ctx, partitionID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTopUnscheduledRequests indicates an expected call of GetTopUnscheduledRequests.
+func (mr *MockSchedulerRepositoryMockRecorder) GetTopUnscheduledRequests(ctx, partitionID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTopUnscheduledRequests", reflect.TypeOf((*MockSchedulerRepository)(nil).GetTopUnscheduledRequests), ctx, partitionID)
+}
+
+// SupercedeOlderRequests mocks base method.
+func (m *MockSchedulerRepository) SupercedeOlderRequests(ctx context.Context, resourceInstanceID string, version int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SupercedeOlderRequests", ctx, resourceInstanceID, version)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SupercedeOlderRequests indicates an expected call of SupercedeOlderRequests.
+func (mr *MockSchedulerRepositoryMockRecorder) SupercedeOlderRequests(ctx, resourceInstanceID, version any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SupercedeOlderRequests", reflect.TypeOf((*MockSchedulerRepository)(nil).SupercedeOlderRequests), ctx, resourceInstanceID, version)
+}
+
+// UpsertJobAndSchedule mocks base method.
+func (m *MockSchedulerRepository) UpsertJobAndSchedule(ctx context.Context, requestID string) (string, int64, bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpsertJobAndSchedule", ctx, requestID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(int64)
+	ret2, _ := ret[2].(bool)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
+}
+
+// UpsertJobAndSchedule indicates an expected call of UpsertJobAndSchedule.
+func (mr *MockSchedulerRepositoryMockRecorder) UpsertJobAndSchedule(ctx, requestID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertJobAndSchedule", reflect.TypeOf((*MockSchedulerRepository)(nil).UpsertJobAndSchedule), ctx, requestID)
+}
+
 // MockCustomerRequestRepository is a mock of CustomerRequestRepository interface.
 type MockCustomerRequestRepository struct {
 	ctrl     *gomock.Controller
@@ -381,18 +533,4 @@ func (m *MockCustomerRequestRepository) UpdateStatus(ctx context.Context, resour
 func (mr *MockCustomerRequestRepositoryMockRecorder) UpdateStatus(ctx, resourceInstanceID, id, status any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatus", reflect.TypeOf((*MockCustomerRequestRepository)(nil).UpdateStatus), ctx, resourceInstanceID, id, status)
-}
-
-// UpdateSupercededBy mocks base method.
-func (m *MockCustomerRequestRepository) UpdateSupercededBy(ctx context.Context, resourceInstanceID, id, supercededRequestID string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateSupercededBy", ctx, resourceInstanceID, id, supercededRequestID)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// UpdateSupercededBy indicates an expected call of UpdateSupercededBy.
-func (mr *MockCustomerRequestRepositoryMockRecorder) UpdateSupercededBy(ctx, resourceInstanceID, id, supercededRequestID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateSupercededBy", reflect.TypeOf((*MockCustomerRequestRepository)(nil).UpdateSupercededBy), ctx, resourceInstanceID, id, supercededRequestID)
 }
