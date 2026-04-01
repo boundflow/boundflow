@@ -1,6 +1,13 @@
 package scheduler
 
 import (
+	"context"
+	"fmt"
+	"log/slog"
+	"sync"
+	"time"
+
+	"github.com/convergeplane/convergeplane/internal/domain"
 	"github.com/convergeplane/convergeplane/internal/storage"
 )
 
@@ -8,6 +15,10 @@ type Scheduler struct {
 	id         string
 	interval   int
 	partitions storage.SchedulerPartitionRepository
+	scheduler  storage.SchedulerRepository
+	requests   storage.CustomerRequestRepository
+	resource   storage.ResourceInstanceRepository
+	log        *slog.Logger
 }
 
 // Functions of the scheduler:
@@ -15,36 +26,229 @@ type Scheduler struct {
 // 2. Schedules unscheduled requests onto the job queue (picking priority by version number)
 // 3. Checks for completed jobs, and updates current config state of the resource and lifecycle state, then deletes the job
 
-func New(id string, interval int, parts storage.SchedulerPartitionRepository) *Scheduler {
+func New(id string, interval int, parts storage.SchedulerPartitionRepository, scheduler storage.SchedulerRepository, requests storage.CustomerRequestRepository, resource storage.ResourceInstanceRepository, log *slog.Logger) *Scheduler {
 	return &Scheduler{
 		id:         id,
 		interval:   interval,
 		partitions: parts,
+		scheduler:  scheduler,
+		requests:   requests,
+		resource:   resource,
+		log:        log.With("component", "scheduler", "scheduler_id", id),
 	}
 }
 
-/*func (s *Scheduler) Run(ctx context.Context) error {
+func (s *Scheduler) Run(ctx context.Context) error {
+	s.log.Info("scheduler starting", "interval_seconds", s.interval)
 
-	ticker := time.NewTicker(time.Duration(s.interval))
-	leaseTime := time.Duration(s.interval) * time.Second + (2 * time.Second) // give a two second buffer
+	ticker := time.NewTicker(time.Duration(s.interval) * time.Second)
+	leaseTime := time.Duration(s.interval)*time.Second + (2 * time.Second)
 
 	for {
-		partition,err := s.partitions.AcquireAvailable(ctx, s.id, leaseTime)
-		if partition != nil && err == nil {
-			ticker.Reset(time.Duration(s.interval))
+		partition, err := s.partitions.AcquireAvailable(ctx, s.id, leaseTime)
+		if err != nil {
+			s.log.Error("failed to acquire partition", "error", err)
+		} else if partition != nil {
+			s.log.Info("partition acquired", "partition_id", partition.ID)
+			ticker.Reset(time.Duration(s.interval) * time.Second)
+
+		partitionLoop:
 			for {
 				select {
 				case <-ctx.Done():
+					s.log.Info("context cancelled, releasing partition", "partition_id", partition.ID)
 					s.partitions.Release(ctx, partition.ID, s.id)
+					return nil
 				case <-ticker.C:
+					s.log.Debug("tick", "partition_id", partition.ID)
 
+					var wg sync.WaitGroup
+					wg.Add(2)
+					go func() {
+						defer wg.Done()
+						s.failJobs(ctx, partition.ID)
+					}()
+					go func() {
+						defer wg.Done()
+						s.completeJobs(ctx, partition.ID)
+					}()
+					wg.Wait()
+					s.scheduleJobs(ctx, partition.ID)
+
+					renewed, err := s.partitions.Renew(ctx, partition.ID, s.id, leaseTime)
+					if err != nil {
+						s.log.Error("error renewing partition lease, releasing", "partition_id", partition.ID, "error", err)
+						break partitionLoop
+					}
+					if !renewed {
+						s.log.Warn("partition lease not renewed, another scheduler may have taken it", "partition_id", partition.ID)
+						break partitionLoop
+					}
+					s.log.Debug("partition lease renewed", "partition_id", partition.ID)
+					ticker.Reset(time.Duration(s.interval) * time.Second)
 				}
 			}
+		} else {
+			s.log.Debug("no partition available, retrying in 10s")
 		}
 
+		time.Sleep(time.Second * 10)
+	}
+}
+
+func (s *Scheduler) failJobs(ctx context.Context, partitionID string) error {
+	reqs, err := s.scheduler.GetFailedJobRequestIDs(ctx, partitionID)
+	if err != nil {
+		s.log.Error("failed to get failed job request IDs", "partition_id", partitionID, "error", err)
+		return fmt.Errorf("get failed jobs error: %w", err)
 	}
 
-	return nil
-}*/
+	if len(reqs) == 0 {
+		return nil
+	}
 
-//func (s *Scheduler) scheduleJobs(ctx context.Context, partitionId int, )
+	s.log.Info("processing failed jobs", "partition_id", partitionID, "count", len(reqs))
+
+	var wg sync.WaitGroup
+	for _, req := range reqs {
+		wg.Add(1)
+		go func(req string) {
+			defer wg.Done()
+			if _, err := s.FailRequest(ctx, req); err != nil {
+				s.log.Error("failed to process failed request", "request_id", req, "error", err)
+			}
+		}(req)
+	}
+	wg.Wait()
+	return nil
+}
+
+func (s *Scheduler) FailRequest(ctx context.Context, req string) (bool, error) {
+	s.log.Debug("marking request as failed", "request_id", req)
+
+	request, err := s.requests.FailRequest(ctx, req)
+	if err != nil {
+		return false, fmt.Errorf("error failing request %s: %w", req, err)
+	}
+
+	applied, err := s.resource.ApplyCompletedJob(ctx, request.ResourceInstanceID, request.GoalConfigSnapshot, domain.LifecycleStateFailed, request.Version)
+	if err != nil {
+		s.log.Error("failed to apply failed job to resource", "request_id", req, "resource_id", request.ResourceInstanceID, "error", err)
+		return false, err
+	}
+	if applied {
+		s.log.Info("request failed, resource updated", "request_id", req, "resource_id", request.ResourceInstanceID, "version", request.Version)
+	} else {
+		s.log.Warn("request failed but resource version check skipped update (newer version already applied)", "request_id", req, "resource_id", request.ResourceInstanceID, "version", request.Version)
+	}
+	return applied, nil
+}
+
+func (s *Scheduler) completeJobs(ctx context.Context, partitionID string) error {
+	reqs, err := s.scheduler.GetCompletedJobRequestIDs(ctx, partitionID)
+	if err != nil {
+		s.log.Error("failed to get completed job request IDs", "partition_id", partitionID, "error", err)
+		return fmt.Errorf("get completed jobs error: %w", err)
+	}
+
+	if len(reqs) == 0 {
+		return nil
+	}
+
+	s.log.Info("processing completed jobs", "partition_id", partitionID, "count", len(reqs))
+
+	var wg sync.WaitGroup
+	for _, req := range reqs {
+		wg.Add(1)
+		go func(req string) {
+			defer wg.Done()
+			if _, err := s.CompleteRequest(ctx, req); err != nil {
+				s.log.Error("failed to process completed request", "request_id", req, "error", err)
+			}
+		}(req)
+	}
+	wg.Wait()
+	return nil
+}
+
+func (s *Scheduler) CompleteRequest(ctx context.Context, req string) (bool, error) {
+	s.log.Debug("marking request as completed", "request_id", req)
+
+	request, err := s.requests.CompleteRequest(ctx, req)
+	if err != nil {
+		return false, fmt.Errorf("error completing request %s: %w", req, err)
+	}
+
+	var lifecycleState domain.LifecycleState
+	switch request.RequestType {
+	case domain.CustomerRequestTypeCreate:
+		lifecycleState = domain.LifecycleStateActive
+	case domain.CustomerRequestTypeReconcile:
+		lifecycleState = domain.LifecycleStateActive
+	case domain.CustomerRequestTypeDelete:
+		lifecycleState = domain.LifecycleStateDeleted
+	}
+
+	applied, err := s.resource.ApplyCompletedJob(ctx, request.ResourceInstanceID, request.GoalConfigSnapshot, lifecycleState, request.Version)
+	if err != nil {
+		s.log.Error("failed to apply completed job to resource", "request_id", req, "resource_id", request.ResourceInstanceID, "error", err)
+		return false, err
+	}
+	if applied {
+		s.log.Info("request completed, resource updated", "request_id", req, "resource_id", request.ResourceInstanceID, "request_type", request.RequestType, "lifecycle_state", lifecycleState, "version", request.Version)
+	} else {
+		s.log.Warn("request completed but resource version check skipped update (newer version already applied)", "request_id", req, "resource_id", request.ResourceInstanceID, "version", request.Version)
+	}
+	return applied, nil
+}
+
+func (s *Scheduler) scheduleJobs(ctx context.Context, partitionID string) error {
+	reqs, err := s.scheduler.GetTopUnscheduledRequests(ctx, partitionID)
+	if err != nil {
+		s.log.Error("failed to get unscheduled requests", "partition_id", partitionID, "error", err)
+		return fmt.Errorf("get unscheduled jobs error: %w", err)
+	}
+
+	if len(reqs) == 0 {
+		s.log.Debug("no unscheduled requests", "partition_id", partitionID)
+		return nil
+	}
+
+	s.log.Info("scheduling requests", "partition_id", partitionID, "count", len(reqs))
+
+	var wg sync.WaitGroup
+	for _, req := range reqs {
+		wg.Add(1)
+		go func(req string) {
+			defer wg.Done()
+			if err := s.ScheduleRequest(ctx, req); err != nil {
+				s.log.Error("failed to schedule request", "request_id", req, "error", err)
+			}
+		}(req)
+	}
+	wg.Wait()
+	return nil
+}
+
+func (s *Scheduler) ScheduleRequest(ctx context.Context, req string) error {
+	s.log.Debug("attempting to schedule request", "request_id", req)
+
+	resourceID, ver, written, err := s.scheduler.UpsertJobAndSchedule(ctx, req)
+	if err != nil {
+		return fmt.Errorf("error scheduling request %s: %w", req, err)
+	}
+
+	if !written {
+		s.log.Debug("request not scheduled, existing job has equal or higher version", "request_id", req)
+		return nil
+	}
+
+	s.log.Info("request scheduled", "request_id", req, "resource_id", resourceID, "version", ver)
+
+	if err := s.scheduler.SupercedeOlderRequests(ctx, resourceID, ver); err != nil {
+		return fmt.Errorf("error with supercede requests with request %s: %w", req, err)
+	}
+	s.log.Debug("older requests superceded", "resource_id", resourceID, "version", ver)
+
+	return nil
+}

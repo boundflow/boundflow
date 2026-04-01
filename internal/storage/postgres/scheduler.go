@@ -87,6 +87,73 @@ func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID stri
 	return resourceInstanceID, version, true, nil
 }
 
+func (r *SchedulerRepo) GetCompletedJobRequestIDs(ctx context.Context, partitionID string) ([]string, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT j.request_id
+		 FROM jobs j
+		 JOIN resource_instances ri ON j.resource_instance_id = ri.id
+		 WHERE ri.scheduler_partition_id = $1
+		   AND j.status = 'completed'`,
+		partitionID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get completed job request ids: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan request id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
+func (r *SchedulerRepo) GetFailedJobRequestIDs(ctx context.Context, partitionID string) ([]string, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT j.request_id
+		 FROM jobs j
+		 JOIN resource_instances ri ON j.resource_instance_id = ri.id
+		 WHERE ri.scheduler_partition_id = $1
+		   AND j.status = 'failed'`,
+		partitionID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get failed job request ids: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan request id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
+func (r *SchedulerRepo) ConsumeCompletedJob(ctx context.Context, resourceInstanceID string) (string, bool, error) {
+	var requestID string
+	err := r.pool.QueryRow(ctx,
+		`DELETE FROM jobs
+		 WHERE resource_instance_id = $1 AND status = 'completed'
+		 RETURNING request_id`,
+		resourceInstanceID,
+	).Scan(&requestID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", false, nil
+		}
+		return "", false, fmt.Errorf("consume completed job: %w", err)
+	}
+	return requestID, true, nil
+}
+
 func (r *SchedulerRepo) SupercedeOlderRequests(ctx context.Context, resourceInstanceID string, version int64) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE customer_requests

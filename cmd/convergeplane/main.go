@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/convergeplane/convergeplane/internal/config"
+	internalscheduler "github.com/convergeplane/convergeplane/internal/scheduler"
 	"github.com/convergeplane/convergeplane/internal/server"
 	"github.com/convergeplane/convergeplane/internal/service"
 	"github.com/convergeplane/convergeplane/internal/storage/postgres"
@@ -39,10 +41,27 @@ func main() {
 	}
 }
 
+func newLogger(level string) *slog.Logger {
+	var l slog.Level
+	switch level {
+	case "debug":
+		l = slog.LevelDebug
+	case "warn":
+		l = slog.LevelWarn
+	case "error":
+		l = slog.LevelError
+	default:
+		l = slog.LevelInfo
+	}
+	return slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: l}))
+}
+
 func runServer(sigCh <-chan os.Signal) {
 	cfg := config.LoadServer()
+	logger := newLogger(cfg.LogLevel)
+	logger.Info("starting server", "grpc_port", cfg.GRPCPort)
 
-	pool := mustConnectDB(cfg.DatabaseURL)
+	pool := mustConnectDB(cfg.DatabaseURL, logger)
 	defer pool.Close()
 
 	tenantGroupRepo := postgres.NewTenantGroupRepo(pool)
@@ -50,9 +69,12 @@ func runServer(sigCh <-chan os.Signal) {
 	resourceInstanceRepo := postgres.NewResourceInstanceRepo(pool)
 	customerRequestRepo := postgres.NewCustomerRequestRepo(pool)
 	schedulerRepo := postgres.NewSchedulerRepo(pool)
+	partitionRepo := postgres.NewSchedulerPartitionRepo(pool)
+
+	sched := internalscheduler.New("server", 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, logger)
 
 	regSvc := service.NewRegistrationService(tenantGroupRepo, tenantRepo)
-	lifecycleSvc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, schedulerRepo)
+	lifecycleSvc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, sched, logger)
 
 	srv := server.New(cfg, regSvc, lifecycleSvc)
 
@@ -61,35 +83,40 @@ func runServer(sigCh <-chan os.Signal) {
 
 	select {
 	case err := <-errCh:
-		log.Fatalf("server error: %v", err)
+		logger.Error("server error", "error", err)
+		os.Exit(1)
 	case sig := <-sigCh:
-		log.Printf("received signal %v, shutting down", sig)
+		logger.Info("received signal, shutting down", "signal", sig)
 		srv.Stop()
 	}
 }
 
 func runScheduler(sigCh <-chan os.Signal) {
 	cfg := config.LoadScheduler()
-	log.Printf("starting scheduler with %d partition(s)", cfg.NumPartitions)
+	logger := newLogger(cfg.LogLevel)
+	logger.Info("starting scheduler", "num_partitions", cfg.NumPartitions)
 
 	// TODO: implement scheduler
 	<-sigCh
-	log.Println("scheduler shutting down")
+	logger.Info("scheduler shutting down")
 }
 
 func runWorker(sigCh <-chan os.Signal) {
 	cfg := config.LoadWorker()
-	log.Printf("starting worker with %d worker(s)", cfg.NumWorkers)
+	logger := newLogger(cfg.LogLevel)
+	logger.Info("starting worker", "num_workers", cfg.NumWorkers)
 
 	// TODO: implement worker
 	<-sigCh
-	log.Println("worker shutting down")
+	logger.Info("worker shutting down")
 }
 
-func mustConnectDB(url string) *pgxpool.Pool {
+func mustConnectDB(url string, logger *slog.Logger) *pgxpool.Pool {
 	pool, err := pgxpool.New(context.Background(), url)
 	if err != nil {
-		log.Fatalf("unable to connect to database: %v", err)
+		logger.Error("unable to connect to database", "error", err)
+		os.Exit(1)
 	}
+	logger.Info("connected to database")
 	return pool
 }

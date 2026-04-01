@@ -75,6 +75,68 @@ func (r *CustomerRequestRepo) Get(ctx context.Context, resourceInstanceID, id st
 	return &req, nil
 }
 
+func (r *CustomerRequestRepo) CompleteRequest(ctx context.Context, id string) (*domain.CustomerRequest, error) {
+	var req domain.CustomerRequest
+	var requestInfoJSON, currentSnapshotJSON, goalSnapshotJSON []byte
+
+	err := r.pool.QueryRow(ctx,
+		`UPDATE customer_requests
+		 SET status = $1
+		 WHERE id = $2
+		 RETURNING id, resource_instance_id, status, request_type, request_info, current_config_snapshot, goal_config_snapshot, version, created_at`,
+		domain.CustomerRequestStatusCompleted, id,
+	).Scan(
+		&req.ID, &req.ResourceInstanceID,
+		&req.Status, &req.RequestType, &requestInfoJSON, &currentSnapshotJSON, &goalSnapshotJSON, &req.Version, &req.CreatedAt,
+	)
+	if err != nil {
+		return nil, handleError(err, "customer request")
+	}
+
+	if err := json.Unmarshal(requestInfoJSON, &req.RequestInfo); err != nil {
+		return nil, fmt.Errorf("unmarshal request info: %w", err)
+	}
+	if err := json.Unmarshal(currentSnapshotJSON, &req.CurrentConfigSnapshot); err != nil {
+		return nil, fmt.Errorf("unmarshal current config snapshot: %w", err)
+	}
+	if err := json.Unmarshal(goalSnapshotJSON, &req.GoalConfigSnapshot); err != nil {
+		return nil, fmt.Errorf("unmarshal goal config snapshot: %w", err)
+	}
+
+	return &req, nil
+}
+
+func (r *CustomerRequestRepo) FailRequest(ctx context.Context, id string) (*domain.CustomerRequest, error) {
+	var req domain.CustomerRequest
+	var requestInfoJSON, currentSnapshotJSON, goalSnapshotJSON []byte
+
+	err := r.pool.QueryRow(ctx,
+		`UPDATE customer_requests
+		 SET status = $1
+		 WHERE id = $2
+		 RETURNING id, resource_instance_id, status, request_type, request_info, current_config_snapshot, goal_config_snapshot, version, created_at`,
+		domain.CustomerRequestStatusFailed, id,
+	).Scan(
+		&req.ID, &req.ResourceInstanceID,
+		&req.Status, &req.RequestType, &requestInfoJSON, &currentSnapshotJSON, &goalSnapshotJSON, &req.Version, &req.CreatedAt,
+	)
+	if err != nil {
+		return nil, handleError(err, "customer request")
+	}
+
+	if err := json.Unmarshal(requestInfoJSON, &req.RequestInfo); err != nil {
+		return nil, fmt.Errorf("unmarshal request info: %w", err)
+	}
+	if err := json.Unmarshal(currentSnapshotJSON, &req.CurrentConfigSnapshot); err != nil {
+		return nil, fmt.Errorf("unmarshal current config snapshot: %w", err)
+	}
+	if err := json.Unmarshal(goalSnapshotJSON, &req.GoalConfigSnapshot); err != nil {
+		return nil, fmt.Errorf("unmarshal goal config snapshot: %w", err)
+	}
+
+	return &req, nil
+}
+
 func (r *CustomerRequestRepo) UpdateStatus(ctx context.Context, resourceInstanceID, id string, status domain.CustomerRequestStatus) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE customer_requests SET status = $1 WHERE resource_instance_id = $2 AND id = $3`,

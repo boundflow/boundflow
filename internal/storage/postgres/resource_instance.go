@@ -3,9 +3,11 @@ package postgres
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/convergeplane/convergeplane/internal/domain"
@@ -171,6 +173,41 @@ func (r *ResourceInstanceRepo) UpdateGoalStateAndIncrementVersion(ctx context.Co
 	return *newVersion, nil
 }
 
+func (r *ResourceInstanceRepo) ReconcileGoalStateAndIncrementVersion(ctx context.Context, id string, goalState domain.ResourceState, invalidStates ...domain.LifecycleState) (int64, error) {
+	goalJSON, err := json.Marshal(goalState)
+	if err != nil {
+		return 0, fmt.Errorf("marshal goal state: %w", err)
+	}
+
+	invalid := make([]string, len(invalidStates))
+	for i, s := range invalidStates {
+		invalid[i] = string(s)
+	}
+
+	var currentLifecycleState domain.LifecycleState
+	var newVersion *int64
+	err = r.pool.QueryRow(ctx,
+		`WITH current AS (
+		   SELECT lifecycle_state FROM resource_instances WHERE id = $1
+		 ), updated AS (
+		   UPDATE resource_instances
+		   SET lifecycle_state = $2, config_goal_state = $3, target_version = target_version + 1
+		   WHERE id = $1 AND NOT (lifecycle_state = ANY($4::lifecycle_state[]))
+		   RETURNING target_version
+		 )
+		 SELECT current.lifecycle_state, updated.target_version
+		 FROM current LEFT JOIN updated ON true`,
+		id, domain.LifecycleStateReconciling, goalJSON, invalid,
+	).Scan(&currentLifecycleState, &newVersion)
+	if err != nil {
+		return 0, handleError(err, "resource instance")
+	}
+	if newVersion == nil {
+		return 0, fmt.Errorf("%w: resource is %s", storage.ErrInvalidLifecycleState, currentLifecycleState)
+	}
+	return *newVersion, nil
+}
+
 func (r *ResourceInstanceRepo) IncrementTargetVersion(ctx context.Context, id string) (int64, error) {
 	var newVersion int64
 	err := r.pool.QueryRow(ctx,
@@ -181,6 +218,29 @@ func (r *ResourceInstanceRepo) IncrementTargetVersion(ctx context.Context, id st
 		return 0, fmt.Errorf("increment target version: %w", err)
 	}
 	return newVersion, nil
+}
+
+func (r *ResourceInstanceRepo) ApplyCompletedJob(ctx context.Context, id string, configState domain.ResourceState, lifecycleState domain.LifecycleState, version int64) (bool, error) {
+	configJSON, err := json.Marshal(configState)
+	if err != nil {
+		return false, fmt.Errorf("marshal config state: %w", err)
+	}
+
+	var updatedID string
+	err = r.pool.QueryRow(ctx,
+		`UPDATE resource_instances
+		 SET current_config_state = $2, lifecycle_state = $3, current_version = $4
+		 WHERE id = $1 AND current_version < $4
+		 RETURNING id`,
+		id, configJSON, lifecycleState, version,
+	).Scan(&updatedID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("apply completed job: %w", err)
+	}
+	return true, nil
 }
 
 func (r *ResourceInstanceRepo) UpdateCurrentVersion(ctx context.Context, id string, version int64) error {

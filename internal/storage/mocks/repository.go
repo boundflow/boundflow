@@ -176,6 +176,21 @@ func (m *MockResourceInstanceRepository) EXPECT() *MockResourceInstanceRepositor
 	return m.recorder
 }
 
+// ApplyCompletedJob mocks base method.
+func (m *MockResourceInstanceRepository) ApplyCompletedJob(ctx context.Context, id string, configState domain.ResourceState, lifecycleState domain.LifecycleState, version int64) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplyCompletedJob", ctx, id, configState, lifecycleState, version)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ApplyCompletedJob indicates an expected call of ApplyCompletedJob.
+func (mr *MockResourceInstanceRepositoryMockRecorder) ApplyCompletedJob(ctx, id, configState, lifecycleState, version any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyCompletedJob", reflect.TypeOf((*MockResourceInstanceRepository)(nil).ApplyCompletedJob), ctx, id, configState, lifecycleState, version)
+}
+
 // Create mocks base method.
 func (m *MockResourceInstanceRepository) Create(ctx context.Context, instance *domain.ResourceInstance) error {
 	m.ctrl.T.Helper()
@@ -218,6 +233,26 @@ func (m *MockResourceInstanceRepository) IncrementTargetVersion(ctx context.Cont
 func (mr *MockResourceInstanceRepositoryMockRecorder) IncrementTargetVersion(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IncrementTargetVersion", reflect.TypeOf((*MockResourceInstanceRepository)(nil).IncrementTargetVersion), ctx, id)
+}
+
+// ReconcileGoalStateAndIncrementVersion mocks base method.
+func (m *MockResourceInstanceRepository) ReconcileGoalStateAndIncrementVersion(ctx context.Context, id string, goalState domain.ResourceState, invalidStates ...domain.LifecycleState) (int64, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, id, goalState}
+	for _, a := range invalidStates {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ReconcileGoalStateAndIncrementVersion", varargs...)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReconcileGoalStateAndIncrementVersion indicates an expected call of ReconcileGoalStateAndIncrementVersion.
+func (mr *MockResourceInstanceRepositoryMockRecorder) ReconcileGoalStateAndIncrementVersion(ctx, id, goalState any, invalidStates ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, id, goalState}, invalidStates...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileGoalStateAndIncrementVersion", reflect.TypeOf((*MockResourceInstanceRepository)(nil).ReconcileGoalStateAndIncrementVersion), varargs...)
 }
 
 // UpdateConfigState mocks base method.
@@ -422,6 +457,52 @@ func (m *MockSchedulerRepository) EXPECT() *MockSchedulerRepositoryMockRecorder 
 	return m.recorder
 }
 
+// ConsumeCompletedJob mocks base method.
+func (m *MockSchedulerRepository) ConsumeCompletedJob(ctx context.Context, resourceInstanceID string) (string, bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ConsumeCompletedJob", ctx, resourceInstanceID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ConsumeCompletedJob indicates an expected call of ConsumeCompletedJob.
+func (mr *MockSchedulerRepositoryMockRecorder) ConsumeCompletedJob(ctx, resourceInstanceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConsumeCompletedJob", reflect.TypeOf((*MockSchedulerRepository)(nil).ConsumeCompletedJob), ctx, resourceInstanceID)
+}
+
+// GetCompletedJobRequestIDs mocks base method.
+func (m *MockSchedulerRepository) GetCompletedJobRequestIDs(ctx context.Context, partitionID string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCompletedJobRequestIDs", ctx, partitionID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCompletedJobRequestIDs indicates an expected call of GetCompletedJobRequestIDs.
+func (mr *MockSchedulerRepositoryMockRecorder) GetCompletedJobRequestIDs(ctx, partitionID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCompletedJobRequestIDs", reflect.TypeOf((*MockSchedulerRepository)(nil).GetCompletedJobRequestIDs), ctx, partitionID)
+}
+
+// GetFailedJobRequestIDs mocks base method.
+func (m *MockSchedulerRepository) GetFailedJobRequestIDs(ctx context.Context, partitionID string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetFailedJobRequestIDs", ctx, partitionID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetFailedJobRequestIDs indicates an expected call of GetFailedJobRequestIDs.
+func (mr *MockSchedulerRepositoryMockRecorder) GetFailedJobRequestIDs(ctx, partitionID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFailedJobRequestIDs", reflect.TypeOf((*MockSchedulerRepository)(nil).GetFailedJobRequestIDs), ctx, partitionID)
+}
+
 // GetTopUnscheduledRequests mocks base method.
 func (m *MockSchedulerRepository) GetTopUnscheduledRequests(ctx context.Context, partitionID string) ([]string, error) {
 	m.ctrl.T.Helper()
@@ -492,6 +573,21 @@ func (m *MockCustomerRequestRepository) EXPECT() *MockCustomerRequestRepositoryM
 	return m.recorder
 }
 
+// CompleteRequest mocks base method.
+func (m *MockCustomerRequestRepository) CompleteRequest(ctx context.Context, id string) (*domain.CustomerRequest, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CompleteRequest", ctx, id)
+	ret0, _ := ret[0].(*domain.CustomerRequest)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CompleteRequest indicates an expected call of CompleteRequest.
+func (mr *MockCustomerRequestRepositoryMockRecorder) CompleteRequest(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompleteRequest", reflect.TypeOf((*MockCustomerRequestRepository)(nil).CompleteRequest), ctx, id)
+}
+
 // Create mocks base method.
 func (m *MockCustomerRequestRepository) Create(ctx context.Context, req *domain.CustomerRequest) error {
 	m.ctrl.T.Helper()
@@ -504,6 +600,21 @@ func (m *MockCustomerRequestRepository) Create(ctx context.Context, req *domain.
 func (mr *MockCustomerRequestRepositoryMockRecorder) Create(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockCustomerRequestRepository)(nil).Create), ctx, req)
+}
+
+// FailRequest mocks base method.
+func (m *MockCustomerRequestRepository) FailRequest(ctx context.Context, id string) (*domain.CustomerRequest, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FailRequest", ctx, id)
+	ret0, _ := ret[0].(*domain.CustomerRequest)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FailRequest indicates an expected call of FailRequest.
+func (mr *MockCustomerRequestRepositoryMockRecorder) FailRequest(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailRequest", reflect.TypeOf((*MockCustomerRequestRepository)(nil).FailRequest), ctx, id)
 }
 
 // Get mocks base method.

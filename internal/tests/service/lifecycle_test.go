@@ -2,6 +2,8 @@ package service_test
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"testing"
 
 	"go.uber.org/mock/gomock"
@@ -11,12 +13,23 @@ import (
 	"github.com/convergeplane/convergeplane/internal/storage/mocks"
 )
 
+var discardLogger = slog.New(slog.NewTextHandler(io.Discard, nil))
+
+// mockRequestScheduler is a simple test double for service.RequestScheduler.
+type mockRequestScheduler struct {
+	scheduleErr error
+}
+
+func (m *mockRequestScheduler) ScheduleRequest(_ context.Context, _ string) error {
+	return m.scheduleErr
+}
+
 func TestCreateResource(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	resourceInstanceRepo := mocks.NewMockResourceInstanceRepository(ctrl)
 	customerRequestRepo := mocks.NewMockCustomerRequestRepository(ctrl)
-	schedulerRepo := mocks.NewMockSchedulerRepository(ctrl)
-	svc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, schedulerRepo)
+	sched := &mockRequestScheduler{}
+	svc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, sched, discardLogger)
 
 	initialState := domain.ResourceState{"sku": "standard"}
 
@@ -65,14 +78,6 @@ func TestCreateResource(t *testing.T) {
 			return nil
 		})
 
-	schedulerRepo.EXPECT().
-		UpsertJobAndSchedule(gomock.Any(), gomock.Any()).
-		Return("", int64(1), true, nil)
-
-	schedulerRepo.EXPECT().
-		SupercedeOlderRequests(gomock.Any(), gomock.Any(), int64(1)).
-		Return(nil)
-
 	instance, err := svc.CreateResource(context.Background(), "corr-1", "database", "tenant-1", initialState)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -86,13 +91,13 @@ func TestReconcileResource(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	resourceInstanceRepo := mocks.NewMockResourceInstanceRepository(ctrl)
 	customerRequestRepo := mocks.NewMockCustomerRequestRepository(ctrl)
-	schedulerRepo := mocks.NewMockSchedulerRepository(ctrl)
-	svc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, schedulerRepo)
+	sched := &mockRequestScheduler{}
+	svc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, sched, discardLogger)
 
 	goalState := domain.ResourceState{"sku": "premium"}
 
 	resourceInstanceRepo.EXPECT().
-		UpdateGoalStateAndIncrementVersion(gomock.Any(), "instance-1", goalState,
+		ReconcileGoalStateAndIncrementVersion(gomock.Any(), "instance-1", goalState,
 			domain.LifecycleStateDeleting, domain.LifecycleStateDeleted).
 		Return(int64(2), nil)
 
@@ -111,14 +116,6 @@ func TestReconcileResource(t *testing.T) {
 			return nil
 		})
 
-	schedulerRepo.EXPECT().
-		UpsertJobAndSchedule(gomock.Any(), gomock.Any()).
-		Return("instance-1", int64(2), true, nil)
-
-	schedulerRepo.EXPECT().
-		SupercedeOlderRequests(gomock.Any(), "instance-1", int64(2)).
-		Return(nil)
-
 	if err := svc.ReconcileResource(context.Background(), "corr-2", "instance-1", goalState); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -128,12 +125,12 @@ func TestDeleteResource(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	resourceInstanceRepo := mocks.NewMockResourceInstanceRepository(ctrl)
 	customerRequestRepo := mocks.NewMockCustomerRequestRepository(ctrl)
-	schedulerRepo := mocks.NewMockSchedulerRepository(ctrl)
-	svc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, schedulerRepo)
+	sched := &mockRequestScheduler{}
+	svc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, sched, discardLogger)
 
 	resourceInstanceRepo.EXPECT().
 		UpdateLifecycleStateAndIncrementVersion(gomock.Any(), "instance-1", domain.LifecycleStateDeleting,
-			domain.LifecycleStateDeleted).
+			domain.LifecycleStateDeleting, domain.LifecycleStateDeleted).
 		Return(int64(3), nil)
 
 	customerRequestRepo.EXPECT().
@@ -151,14 +148,6 @@ func TestDeleteResource(t *testing.T) {
 			return nil
 		})
 
-	schedulerRepo.EXPECT().
-		UpsertJobAndSchedule(gomock.Any(), gomock.Any()).
-		Return("instance-1", int64(3), true, nil)
-
-	schedulerRepo.EXPECT().
-		SupercedeOlderRequests(gomock.Any(), "instance-1", int64(3)).
-		Return(nil)
-
 	if err := svc.DeleteResource(context.Background(), "corr-3", "instance-1"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -168,8 +157,8 @@ func TestGetResourceState(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	resourceInstanceRepo := mocks.NewMockResourceInstanceRepository(ctrl)
 	customerRequestRepo := mocks.NewMockCustomerRequestRepository(ctrl)
-	schedulerRepo := mocks.NewMockSchedulerRepository(ctrl)
-	svc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, schedulerRepo)
+	sched := &mockRequestScheduler{}
+	svc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, sched, discardLogger)
 
 	expected := &domain.ResourceInstance{
 		ID:                 "instance-1",
