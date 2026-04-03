@@ -549,6 +549,117 @@ func (mr *MockSchedulerRepositoryMockRecorder) UpsertJobAndSchedule(ctx, request
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertJobAndSchedule", reflect.TypeOf((*MockSchedulerRepository)(nil).UpsertJobAndSchedule), ctx, requestID)
 }
 
+// MockJobRepository is a mock of JobRepository interface.
+type MockJobRepository struct {
+	ctrl     *gomock.Controller
+	recorder *MockJobRepositoryMockRecorder
+	isgomock struct{}
+}
+
+// MockJobRepositoryMockRecorder is the mock recorder for MockJobRepository.
+type MockJobRepositoryMockRecorder struct {
+	mock *MockJobRepository
+}
+
+// NewMockJobRepository creates a new mock instance.
+func NewMockJobRepository(ctrl *gomock.Controller) *MockJobRepository {
+	mock := &MockJobRepository{ctrl: ctrl}
+	mock.recorder = &MockJobRepositoryMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockJobRepository) EXPECT() *MockJobRepositoryMockRecorder {
+	return m.recorder
+}
+
+// AcquireJob mocks base method.
+func (m *MockJobRepository) AcquireJob(ctx context.Context, resourceInstanceID, ownerID string, leaseDuration time.Duration) (*domain.Job, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AcquireJob", ctx, resourceInstanceID, ownerID, leaseDuration)
+	ret0, _ := ret[0].(*domain.Job)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AcquireJob indicates an expected call of AcquireJob.
+func (mr *MockJobRepositoryMockRecorder) AcquireJob(ctx, resourceInstanceID, ownerID, leaseDuration any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AcquireJob", reflect.TypeOf((*MockJobRepository)(nil).AcquireJob), ctx, resourceInstanceID, ownerID, leaseDuration)
+}
+
+// GetAvailableJob mocks base method.
+func (m *MockJobRepository) GetAvailableJob(ctx context.Context) (*string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAvailableJob", ctx)
+	ret0, _ := ret[0].(*string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAvailableJob indicates an expected call of GetAvailableJob.
+func (mr *MockJobRepositoryMockRecorder) GetAvailableJob(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAvailableJob", reflect.TypeOf((*MockJobRepository)(nil).GetAvailableJob), ctx)
+}
+
+// ReleaseJob mocks base method.
+func (m *MockJobRepository) ReleaseJob(ctx context.Context, resourceInstanceID, ownerID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReleaseJob", ctx, resourceInstanceID, ownerID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ReleaseJob indicates an expected call of ReleaseJob.
+func (mr *MockJobRepositoryMockRecorder) ReleaseJob(ctx, resourceInstanceID, ownerID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleaseJob", reflect.TypeOf((*MockJobRepository)(nil).ReleaseJob), ctx, resourceInstanceID, ownerID)
+}
+
+// RenewJobLease mocks base method.
+func (m *MockJobRepository) RenewJobLease(ctx context.Context, resourceInstanceID, ownerID string, leaseDuration time.Duration) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RenewJobLease", ctx, resourceInstanceID, ownerID, leaseDuration)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RenewJobLease indicates an expected call of RenewJobLease.
+func (mr *MockJobRepositoryMockRecorder) RenewJobLease(ctx, resourceInstanceID, ownerID, leaseDuration any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RenewJobLease", reflect.TypeOf((*MockJobRepository)(nil).RenewJobLease), ctx, resourceInstanceID, ownerID, leaseDuration)
+}
+
+// UpdateJob mocks base method.
+func (m *MockJobRepository) UpdateJob(ctx context.Context, resourceInstanceID, ownerID string, status domain.JobStatus, currentAtomicOperation string, jobContext map[string]any) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateJob", ctx, resourceInstanceID, ownerID, status, currentAtomicOperation, jobContext)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateJob indicates an expected call of UpdateJob.
+func (mr *MockJobRepositoryMockRecorder) UpdateJob(ctx, resourceInstanceID, ownerID, status, currentAtomicOperation, jobContext any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateJob", reflect.TypeOf((*MockJobRepository)(nil).UpdateJob), ctx, resourceInstanceID, ownerID, status, currentAtomicOperation, jobContext)
+}
+
+// UpdateJobStatus mocks base method.
+func (m *MockJobRepository) UpdateJobStatus(ctx context.Context, resourceInstanceID, ownerID string, status domain.JobStatus) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateJobStatus", ctx, resourceInstanceID, ownerID, status)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateJobStatus indicates an expected call of UpdateJobStatus.
+func (mr *MockJobRepositoryMockRecorder) UpdateJobStatus(ctx, resourceInstanceID, ownerID, status any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateJobStatus", reflect.TypeOf((*MockJobRepository)(nil).UpdateJobStatus), ctx, resourceInstanceID, ownerID, status)
+}
+
 // MockCustomerRequestRepository is a mock of CustomerRequestRepository interface.
 type MockCustomerRequestRepository struct {
 	ctrl     *gomock.Controller

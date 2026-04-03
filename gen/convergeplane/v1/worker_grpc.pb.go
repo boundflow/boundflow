@@ -19,20 +19,20 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	WorkerService_LaunchOperation_FullMethodName    = "/convergeplane.v1.WorkerService/LaunchOperation"
-	WorkerService_GetOperationStatus_FullMethodName = "/convergeplane.v1.WorkerService/GetOperationStatus"
+	WorkerService_WorkerSession_FullMethodName = "/convergeplane.v1.WorkerService/WorkerSession"
 )
 
 // WorkerServiceClient is the client API for WorkerService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// WorkerService is implemented by the worker (customer SDK).
-// The worker connects as a gRPC client, but the service initiates
-// all calls — launching operations and checking their status.
+// WorkerService is implemented by the control plane server.
+// The worker (customer SDK) connects as a gRPC client and opens a
+// bidirectional stream. The server drives the session — sending
+// LaunchOperation and PollOperation commands — while the worker
+// responds with status updates.
 type WorkerServiceClient interface {
-	LaunchOperation(ctx context.Context, in *LaunchOperationRequest, opts ...grpc.CallOption) (*LaunchOperationResponse, error)
-	GetOperationStatus(ctx context.Context, in *GetOperationStatusRequest, opts ...grpc.CallOption) (*GetOperationStatusResponse, error)
+	WorkerSession(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[WorkerMessage, ServerCommand], error)
 }
 
 type workerServiceClient struct {
@@ -43,36 +43,30 @@ func NewWorkerServiceClient(cc grpc.ClientConnInterface) WorkerServiceClient {
 	return &workerServiceClient{cc}
 }
 
-func (c *workerServiceClient) LaunchOperation(ctx context.Context, in *LaunchOperationRequest, opts ...grpc.CallOption) (*LaunchOperationResponse, error) {
+func (c *workerServiceClient) WorkerSession(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[WorkerMessage, ServerCommand], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(LaunchOperationResponse)
-	err := c.cc.Invoke(ctx, WorkerService_LaunchOperation_FullMethodName, in, out, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &WorkerService_ServiceDesc.Streams[0], WorkerService_WorkerSession_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &grpc.GenericClientStream[WorkerMessage, ServerCommand]{ClientStream: stream}
+	return x, nil
 }
 
-func (c *workerServiceClient) GetOperationStatus(ctx context.Context, in *GetOperationStatusRequest, opts ...grpc.CallOption) (*GetOperationStatusResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetOperationStatusResponse)
-	err := c.cc.Invoke(ctx, WorkerService_GetOperationStatus_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type WorkerService_WorkerSessionClient = grpc.BidiStreamingClient[WorkerMessage, ServerCommand]
 
 // WorkerServiceServer is the server API for WorkerService service.
 // All implementations must embed UnimplementedWorkerServiceServer
 // for forward compatibility.
 //
-// WorkerService is implemented by the worker (customer SDK).
-// The worker connects as a gRPC client, but the service initiates
-// all calls — launching operations and checking their status.
+// WorkerService is implemented by the control plane server.
+// The worker (customer SDK) connects as a gRPC client and opens a
+// bidirectional stream. The server drives the session — sending
+// LaunchOperation and PollOperation commands — while the worker
+// responds with status updates.
 type WorkerServiceServer interface {
-	LaunchOperation(context.Context, *LaunchOperationRequest) (*LaunchOperationResponse, error)
-	GetOperationStatus(context.Context, *GetOperationStatusRequest) (*GetOperationStatusResponse, error)
+	WorkerSession(grpc.BidiStreamingServer[WorkerMessage, ServerCommand]) error
 	mustEmbedUnimplementedWorkerServiceServer()
 }
 
@@ -83,11 +77,8 @@ type WorkerServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedWorkerServiceServer struct{}
 
-func (UnimplementedWorkerServiceServer) LaunchOperation(context.Context, *LaunchOperationRequest) (*LaunchOperationResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method LaunchOperation not implemented")
-}
-func (UnimplementedWorkerServiceServer) GetOperationStatus(context.Context, *GetOperationStatusRequest) (*GetOperationStatusResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetOperationStatus not implemented")
+func (UnimplementedWorkerServiceServer) WorkerSession(grpc.BidiStreamingServer[WorkerMessage, ServerCommand]) error {
+	return status.Error(codes.Unimplemented, "method WorkerSession not implemented")
 }
 func (UnimplementedWorkerServiceServer) mustEmbedUnimplementedWorkerServiceServer() {}
 func (UnimplementedWorkerServiceServer) testEmbeddedByValue()                       {}
@@ -110,41 +101,12 @@ func RegisterWorkerServiceServer(s grpc.ServiceRegistrar, srv WorkerServiceServe
 	s.RegisterService(&WorkerService_ServiceDesc, srv)
 }
 
-func _WorkerService_LaunchOperation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(LaunchOperationRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(WorkerServiceServer).LaunchOperation(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: WorkerService_LaunchOperation_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerServiceServer).LaunchOperation(ctx, req.(*LaunchOperationRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+func _WorkerService_WorkerSession_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(WorkerServiceServer).WorkerSession(&grpc.GenericServerStream[WorkerMessage, ServerCommand]{ServerStream: stream})
 }
 
-func _WorkerService_GetOperationStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetOperationStatusRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(WorkerServiceServer).GetOperationStatus(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: WorkerService_GetOperationStatus_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerServiceServer).GetOperationStatus(ctx, req.(*GetOperationStatusRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type WorkerService_WorkerSessionServer = grpc.BidiStreamingServer[WorkerMessage, ServerCommand]
 
 // WorkerService_ServiceDesc is the grpc.ServiceDesc for WorkerService service.
 // It's only intended for direct use with grpc.RegisterService,
@@ -152,16 +114,14 @@ func _WorkerService_GetOperationStatus_Handler(srv interface{}, ctx context.Cont
 var WorkerService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "convergeplane.v1.WorkerService",
 	HandlerType: (*WorkerServiceServer)(nil),
-	Methods: []grpc.MethodDesc{
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "LaunchOperation",
-			Handler:    _WorkerService_LaunchOperation_Handler,
-		},
-		{
-			MethodName: "GetOperationStatus",
-			Handler:    _WorkerService_GetOperationStatus_Handler,
+			StreamName:    "WorkerSession",
+			Handler:       _WorkerService_WorkerSession_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "convergeplane/v1/worker.proto",
 }

@@ -30,6 +30,7 @@ const (
 	OperationStatus_OPERATION_STATUS_IN_PROGRESS OperationStatus = 1
 	OperationStatus_OPERATION_STATUS_COMPLETED   OperationStatus = 2
 	OperationStatus_OPERATION_STATUS_FAILED      OperationStatus = 3
+	OperationStatus_OPERATION_STATUS_CANCELLED   OperationStatus = 4
 )
 
 // Enum value maps for OperationStatus.
@@ -39,12 +40,14 @@ var (
 		1: "OPERATION_STATUS_IN_PROGRESS",
 		2: "OPERATION_STATUS_COMPLETED",
 		3: "OPERATION_STATUS_FAILED",
+		4: "OPERATION_STATUS_CANCELLED",
 	}
 	OperationStatus_value = map[string]int32{
 		"OPERATION_STATUS_UNSPECIFIED": 0,
 		"OPERATION_STATUS_IN_PROGRESS": 1,
 		"OPERATION_STATUS_COMPLETED":   2,
 		"OPERATION_STATUS_FAILED":      3,
+		"OPERATION_STATUS_CANCELLED":   4,
 	}
 )
 
@@ -285,12 +288,13 @@ const file_convergeplane_v1_operation_proto_rawDesc = "" +
 	"\x15AtomicOperationResult\x129\n" +
 	"\x06status\x18\x01 \x01(\x0e2!.convergeplane.v1.OperationStatusR\x06status\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12H\n" +
-	"\x0enext_operation\x18\x03 \x01(\v2!.convergeplane.v1.AtomicOperationR\rnextOperation*\x92\x01\n" +
+	"\x0enext_operation\x18\x03 \x01(\v2!.convergeplane.v1.AtomicOperationR\rnextOperation*\xb2\x01\n" +
 	"\x0fOperationStatus\x12 \n" +
 	"\x1cOPERATION_STATUS_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cOPERATION_STATUS_IN_PROGRESS\x10\x01\x12\x1e\n" +
 	"\x1aOPERATION_STATUS_COMPLETED\x10\x02\x12\x1b\n" +
-	"\x17OPERATION_STATUS_FAILED\x10\x03BMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
+	"\x17OPERATION_STATUS_FAILED\x10\x03\x12\x1e\n" +
+	"\x1aOPERATION_STATUS_CANCELLED\x10\x04BMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
 
 var (
 	file_convergeplane_v1_operation_proto_rawDescOnce sync.Once

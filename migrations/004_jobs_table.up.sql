@@ -1,6 +1,7 @@
 CREATE TYPE job_status AS ENUM (
     'pending',
     'running',
+    'awaiting_next',
     'completed',
     'failed'
 );

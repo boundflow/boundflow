@@ -83,6 +83,25 @@ type SchedulerRepository interface {
 	GetFailedJobRequestIDs(ctx context.Context, partitionID string) ([]string, error)
 }
 
+type JobRepository interface {
+	// GetAvailableJob returns the resource instance ID of one job with status
+	// pending or awaiting_next that has no owner or an expired lease.
+	// Returns nil (no error) if none are available.
+	GetAvailableJob(ctx context.Context) (resourceInstanceID *string, err error)
+	// AcquireJob attempts to claim the job for ownerID, returning the full Job
+	// if successful. Returns nil if the job no longer qualifies (taken by another worker).
+	AcquireJob(ctx context.Context, resourceInstanceID string, ownerID string, leaseDuration time.Duration) (*domain.Job, error)
+	// RenewJobLease extends the lease on a job owned by ownerID.
+	// Returns false if the lease could not be renewed.
+	RenewJobLease(ctx context.Context, resourceInstanceID string, ownerID string, leaseDuration time.Duration) (bool, error)
+	// UpdateJobStatus updates the status of a job only if ownerID is the current owner.
+	UpdateJobStatus(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus) error
+	// UpdateJob updates status, context, and current_atomic_operation only if ownerID is the current owner.
+	UpdateJob(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, jobContext map[string]any) error
+	// ReleaseJob clears the owner and lease on a job, only if currently owned by ownerID.
+	ReleaseJob(ctx context.Context, resourceInstanceID string, ownerID string) error
+}
+
 type CustomerRequestRepository interface {
 	Create(ctx context.Context, req *domain.CustomerRequest) error
 	Get(ctx context.Context, resourceInstanceID, id string) (*domain.CustomerRequest, error)
