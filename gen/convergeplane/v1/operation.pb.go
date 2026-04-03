@@ -9,7 +9,7 @@ package convergeplanev1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	anypb "google.golang.org/protobuf/types/known/anypb"
+	structpb "google.golang.org/protobuf/types/known/structpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -83,7 +83,7 @@ type AtomicOperation struct {
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	ResourceId    string                 `protobuf:"bytes,2,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
 	OperationType string                 `protobuf:"bytes,3,opt,name=operation_type,json=operationType,proto3" json:"operation_type,omitempty"`
-	Context       *OperationContext      `protobuf:"bytes,4,opt,name=context,proto3" json:"context,omitempty"`
+	Context       *structpb.Struct       `protobuf:"bytes,4,opt,name=context,proto3" json:"context,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -140,7 +140,7 @@ func (x *AtomicOperation) GetOperationType() string {
 	return ""
 }
 
-func (x *AtomicOperation) GetContext() *OperationContext {
+func (x *AtomicOperation) GetContext() *structpb.Struct {
 	if x != nil {
 		return x.Context
 	}
@@ -150,58 +150,6 @@ func (x *AtomicOperation) GetContext() *OperationContext {
 func (x *AtomicOperation) GetCreatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.CreatedAt
-	}
-	return nil
-}
-
-type OperationContext struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Metadata      map[string]string      `protobuf:"bytes,1,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Payload       *anypb.Any             `protobuf:"bytes,2,opt,name=payload,proto3" json:"payload,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *OperationContext) Reset() {
-	*x = OperationContext{}
-	mi := &file_convergeplane_v1_operation_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *OperationContext) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*OperationContext) ProtoMessage() {}
-
-func (x *OperationContext) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_operation_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use OperationContext.ProtoReflect.Descriptor instead.
-func (*OperationContext) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_operation_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *OperationContext) GetMetadata() map[string]string {
-	if x != nil {
-		return x.Metadata
-	}
-	return nil
-}
-
-func (x *OperationContext) GetPayload() *anypb.Any {
-	if x != nil {
-		return x.Payload
 	}
 	return nil
 }
@@ -217,7 +165,7 @@ type AtomicOperationResult struct {
 
 func (x *AtomicOperationResult) Reset() {
 	*x = AtomicOperationResult{}
-	mi := &file_convergeplane_v1_operation_proto_msgTypes[2]
+	mi := &file_convergeplane_v1_operation_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -229,7 +177,7 @@ func (x *AtomicOperationResult) String() string {
 func (*AtomicOperationResult) ProtoMessage() {}
 
 func (x *AtomicOperationResult) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_operation_proto_msgTypes[2]
+	mi := &file_convergeplane_v1_operation_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -242,7 +190,7 @@ func (x *AtomicOperationResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AtomicOperationResult.ProtoReflect.Descriptor instead.
 func (*AtomicOperationResult) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_operation_proto_rawDescGZIP(), []int{2}
+	return file_convergeplane_v1_operation_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *AtomicOperationResult) GetStatus() OperationStatus {
@@ -270,21 +218,15 @@ var File_convergeplane_v1_operation_proto protoreflect.FileDescriptor
 
 const file_convergeplane_v1_operation_proto_rawDesc = "" +
 	"\n" +
-	" convergeplane/v1/operation.proto\x12\x10convergeplane.v1\x1a\x19google/protobuf/any.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe2\x01\n" +
+	" convergeplane/v1/operation.proto\x12\x10convergeplane.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd7\x01\n" +
 	"\x0fAtomicOperation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vresource_id\x18\x02 \x01(\tR\n" +
 	"resourceId\x12%\n" +
-	"\x0eoperation_type\x18\x03 \x01(\tR\roperationType\x12<\n" +
-	"\acontext\x18\x04 \x01(\v2\".convergeplane.v1.OperationContextR\acontext\x129\n" +
+	"\x0eoperation_type\x18\x03 \x01(\tR\roperationType\x121\n" +
+	"\acontext\x18\x04 \x01(\v2\x17.google.protobuf.StructR\acontext\x129\n" +
 	"\n" +
-	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xcd\x01\n" +
-	"\x10OperationContext\x12L\n" +
-	"\bmetadata\x18\x01 \x03(\v20.convergeplane.v1.OperationContext.MetadataEntryR\bmetadata\x12.\n" +
-	"\apayload\x18\x02 \x01(\v2\x14.google.protobuf.AnyR\apayload\x1a;\n" +
-	"\rMetadataEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xb6\x01\n" +
+	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xb6\x01\n" +
 	"\x15AtomicOperationResult\x129\n" +
 	"\x06status\x18\x01 \x01(\x0e2!.convergeplane.v1.OperationStatusR\x06status\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12H\n" +
@@ -309,28 +251,24 @@ func file_convergeplane_v1_operation_proto_rawDescGZIP() []byte {
 }
 
 var file_convergeplane_v1_operation_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_convergeplane_v1_operation_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_convergeplane_v1_operation_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_convergeplane_v1_operation_proto_goTypes = []any{
 	(OperationStatus)(0),          // 0: convergeplane.v1.OperationStatus
 	(*AtomicOperation)(nil),       // 1: convergeplane.v1.AtomicOperation
-	(*OperationContext)(nil),      // 2: convergeplane.v1.OperationContext
-	(*AtomicOperationResult)(nil), // 3: convergeplane.v1.AtomicOperationResult
-	nil,                           // 4: convergeplane.v1.OperationContext.MetadataEntry
-	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
-	(*anypb.Any)(nil),             // 6: google.protobuf.Any
+	(*AtomicOperationResult)(nil), // 2: convergeplane.v1.AtomicOperationResult
+	(*structpb.Struct)(nil),       // 3: google.protobuf.Struct
+	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
 }
 var file_convergeplane_v1_operation_proto_depIdxs = []int32{
-	2, // 0: convergeplane.v1.AtomicOperation.context:type_name -> convergeplane.v1.OperationContext
-	5, // 1: convergeplane.v1.AtomicOperation.created_at:type_name -> google.protobuf.Timestamp
-	4, // 2: convergeplane.v1.OperationContext.metadata:type_name -> convergeplane.v1.OperationContext.MetadataEntry
-	6, // 3: convergeplane.v1.OperationContext.payload:type_name -> google.protobuf.Any
-	0, // 4: convergeplane.v1.AtomicOperationResult.status:type_name -> convergeplane.v1.OperationStatus
-	1, // 5: convergeplane.v1.AtomicOperationResult.next_operation:type_name -> convergeplane.v1.AtomicOperation
-	6, // [6:6] is the sub-list for method output_type
-	6, // [6:6] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	3, // 0: convergeplane.v1.AtomicOperation.context:type_name -> google.protobuf.Struct
+	4, // 1: convergeplane.v1.AtomicOperation.created_at:type_name -> google.protobuf.Timestamp
+	0, // 2: convergeplane.v1.AtomicOperationResult.status:type_name -> convergeplane.v1.OperationStatus
+	1, // 3: convergeplane.v1.AtomicOperationResult.next_operation:type_name -> convergeplane.v1.AtomicOperation
+	4, // [4:4] is the sub-list for method output_type
+	4, // [4:4] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_convergeplane_v1_operation_proto_init() }
@@ -344,7 +282,7 @@ func file_convergeplane_v1_operation_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_convergeplane_v1_operation_proto_rawDesc), len(file_convergeplane_v1_operation_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   4,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

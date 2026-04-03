@@ -4,20 +4,15 @@ package convergeplane.v1;
 
 option go_package = "github.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1";
 
-import "google/protobuf/any.proto";
+import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 
 message AtomicOperation {
   string id = 1;
   string resource_id = 2;
   string operation_type = 3;
-  OperationContext context = 4;
+  google.protobuf.Struct context = 4;
   google.protobuf.Timestamp created_at = 5;
-}
-
-message OperationContext {
-  map<string, string> metadata = 1;
-  google.protobuf.Any payload = 2;
 }
 
 message AtomicOperationResult {
