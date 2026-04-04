@@ -83,8 +83,9 @@ type AtomicOperation struct {
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	ResourceId    string                 `protobuf:"bytes,2,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
 	OperationType string                 `protobuf:"bytes,3,opt,name=operation_type,json=operationType,proto3" json:"operation_type,omitempty"`
-	Context       *structpb.Struct       `protobuf:"bytes,4,opt,name=context,proto3" json:"context,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Name          string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+	Context       *structpb.Struct       `protobuf:"bytes,5,opt,name=context,proto3" json:"context,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -136,6 +137,13 @@ func (x *AtomicOperation) GetResourceId() string {
 func (x *AtomicOperation) GetOperationType() string {
 	if x != nil {
 		return x.OperationType
+	}
+	return ""
+}
+
+func (x *AtomicOperation) GetName() string {
+	if x != nil {
+		return x.Name
 	}
 	return ""
 }
@@ -218,15 +226,16 @@ var File_convergeplane_v1_operation_proto protoreflect.FileDescriptor
 
 const file_convergeplane_v1_operation_proto_rawDesc = "" +
 	"\n" +
-	" convergeplane/v1/operation.proto\x12\x10convergeplane.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd7\x01\n" +
+	" convergeplane/v1/operation.proto\x12\x10convergeplane.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xeb\x01\n" +
 	"\x0fAtomicOperation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vresource_id\x18\x02 \x01(\tR\n" +
 	"resourceId\x12%\n" +
-	"\x0eoperation_type\x18\x03 \x01(\tR\roperationType\x121\n" +
-	"\acontext\x18\x04 \x01(\v2\x17.google.protobuf.StructR\acontext\x129\n" +
+	"\x0eoperation_type\x18\x03 \x01(\tR\roperationType\x12\x12\n" +
+	"\x04name\x18\x04 \x01(\tR\x04name\x121\n" +
+	"\acontext\x18\x05 \x01(\v2\x17.google.protobuf.StructR\acontext\x129\n" +
 	"\n" +
-	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xb6\x01\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xb6\x01\n" +
 	"\x15AtomicOperationResult\x129\n" +
 	"\x06status\x18\x01 \x01(\x0e2!.convergeplane.v1.OperationStatusR\x06status\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12H\n" +

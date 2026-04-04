@@ -11,8 +11,9 @@ message AtomicOperation {
   string id = 1;
   string resource_id = 2;
   string operation_type = 3;
-  google.protobuf.Struct context = 4;
-  google.protobuf.Timestamp created_at = 5;
+  string name = 4;
+  google.protobuf.Struct context = 5;
+  google.protobuf.Timestamp created_at = 6;
 }
 
 message AtomicOperationResult {
