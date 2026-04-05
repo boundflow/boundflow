@@ -14,6 +14,7 @@ import (
 
 type RequestScheduler interface {
 	CompleteRequest(ctx context.Context, req string) (bool, error)
+	FailRequest(ctx context.Context, req string) (bool, error)
 }
 
 type RpcWorker struct {
@@ -44,7 +45,7 @@ func NewRpcWorker(jobs storage.JobRepository, id string, jobTimeout int, schedul
 
 // The RpcWorker goes through the following state machine:
 //
-// ConnectedIdle => DONE
+// ConnectedIdle
 //
 //	-> LaunchOperation sent
 //	-> ConnectedBusy
@@ -64,7 +65,7 @@ func NewRpcWorker(jobs storage.JobRepository, id string, jobTimeout int, schedul
 //	-> Timeout exceeded
 //	-> CancelRequested
 //
-// CancelRequested => DONE
+// CancelRequested
 //
 //	-> Cancelled/Completed received
 //	-> ConnectedIdle
@@ -77,6 +78,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 
 	leaseExpired := make(chan bool)
 	recvStream := make(chan *convergeplanev1.WorkerMessage)
+	controlCodeCancelled := make(chan bool)
 
 	go func() {
 		for {
@@ -88,8 +90,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 		}
 	}()
 
-	cancelOperation := func(cancelLease chan bool, operationId string) error {
-		cancelLease <- true
+	cancelOperation := func(operationId string) error {
 		return stream.Send(&convergeplanev1.ServerCommand{
 			Payload: &convergeplanev1.ServerCommand_Cancel{
 				Cancel: &convergeplanev1.CancelOperation{
@@ -99,28 +100,39 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 		})
 	}
 
-	completeOperation := func(job *domain.Job, result *convergeplanev1.AtomicOperationResult) error {
-		// either complete the parent request if its the final one, or schedule the next operation
+	completeOperation := func(cancelLease chan bool, job *domain.Job, result *convergeplanev1.AtomicOperationResult) error {
+		ctx := context.Background() // request completion doesnt depend on stream context
+		defer func() { cancelLease <- true }()
 
-		// request completion doesnt depend on stream context
 		if result.NextOperation == nil {
-			err := s.jobs.UpdateJobStatus(context.Background(), job.ResourceInstanceID, s.id, domain.JobStatusCompleted); if err != nil {
+			updated, err := s.jobs.UpdateJobStatus(ctx, job.ResourceInstanceID, s.id, domain.JobStatusCompleted)
+			if err != nil {
 				return err
 			}
-			s.scheduler.CompleteRequest(context.Background(), job.RequestID) // Can fire and forget here since scheduler will deal with it later
+			if updated {
+				s.scheduler.CompleteRequest(ctx, job.RequestID)
+			}
+			return nil
 		}
-		else {
-			// mark the current request as open and give up the lease
-			
-			
+		_, err := s.jobs.UpdateJob(ctx, job.ResourceInstanceID, s.id, domain.JobStatusAwaitingNext,
+			result.NextOperation.Name, result.NextOperation.Context.AsMap())
 
-		}
-
+		// consider returning error for ownership failure, for now the return isnt used for anything
+		return err
 	}
 
-	failOperation := func() error {
-		// put the request into failed state
-		return errors.ErrUnsupported
+	failOperation := func(cancelLease chan bool, job *domain.Job) error {
+		// in the future maybe we have retry policies on the operation or something, but for now a fail is a request fail
+		ctx := context.Background()
+		defer func() { cancelLease <- true }()
+
+		updated, err := s.jobs.UpdateJobStatus(ctx, job.ResourceInstanceID, s.id, domain.JobStatusFailed)
+		if err == nil && updated {
+			s.scheduler.FailRequest(ctx, job.RequestID)
+		}
+
+		// consider returning error for ownership failure, for now the return isnt used for anything
+		return err
 	}
 
 	go func() error {
@@ -134,6 +146,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 		clientResponseTime := 3 * time.Second
 
 		defer close(cancelLease)
+		defer func() { controlCodeCancelled <- true }()
 
 		for {
 			switch state {
@@ -207,7 +220,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 										ResourceId:    job.ResourceInstanceID,
 										OperationType: job.JobType,
 										Context:       contextStruct,
-										Name:          "Entry_Operation"
+										Name:          job.CurrentAtomicOperation,
 									},
 								},
 							},
@@ -222,43 +235,76 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 				}
 				state = ConnectedWaiting
 
+			case ConnectedWaiting:
+				select {
+				case <-stream.Context().Done():
+					return nil
+				case <-time.After(clientResponseTime):
+					err := cancelOperation(currentJob.RequestID)
+					if err != nil {
+						return err
+					}
+					return nil
+				case ack := <-recvStream:
+					update, ok := ack.Payload.(*convergeplanev1.WorkerMessage_Update)
+					if !ok {
+						return errors.New("protocol error") // protocol error
+					}
+					if update.Update.OperationId != currentJob.RequestID {
+						return errors.New("wrong operation id from client")
+					}
+					if update.Update.Result.Status != convergeplanev1.OperationStatus_OPERATION_STATUS_IN_PROGRESS {
+						return errors.New("unexpected status from client")
+					}
+					updated, err := s.jobs.UpdateJobStatus(stream.Context(), currentJob.ResourceInstanceID, s.id, domain.JobStatusRunning)
+					if err != nil {
+						return err
+					}
+					if !updated {
+						return nil
+					}
+				}
+				state = ConnectedBusy
+
 			case ConnectedBusy:
 				ticker := time.NewTicker(time.Duration(s.defaultJobTimeout) * time.Second)
 
-			ConnectedLoop:
+			ConnectedBusyLoop:
 				for {
 					select {
 					case <-stream.Context().Done():
-						failOperation()
+						failOperation(cancelLease, currentJob)
 						return nil
 					case msg := <-recvStream:
 						update, ok := msg.Payload.(*convergeplanev1.WorkerMessage_Update)
 						if !ok {
+							failOperation(cancelLease, currentJob)
 							return errors.New("protocol error") // protocol error
 						}
 						if update.Update.OperationId != currentJob.RequestID {
+							failOperation(cancelLease, currentJob)
 							return errors.New("wrong operation id from client")
 						}
 						switch update.Update.Result.Status {
 						case convergeplanev1.OperationStatus_OPERATION_STATUS_COMPLETED:
-							completeOperation(currentJob, update.Update.Result)
+							completeOperation(cancelLease, currentJob, update.Update.Result)
 						case convergeplanev1.OperationStatus_OPERATION_STATUS_FAILED:
-							failOperation()
+							failOperation(cancelLease, currentJob)
 						case convergeplanev1.OperationStatus_OPERATION_STATUS_IN_PROGRESS:
-							continue ConnectedLoop
+							continue ConnectedBusyLoop
 						case convergeplanev1.OperationStatus_OPERATION_STATUS_CANCELLED: // This is unexpected
-							failOperation()
+							failOperation(cancelLease, currentJob)
 						}
 						state = ConnectedIdle
-						break ConnectedLoop
+						break ConnectedBusyLoop
 					case <-ticker.C:
-						err := cancelOperation(cancelLease, currentJob.RequestID)
+						err := cancelOperation(currentJob.RequestID)
 						if err != nil {
-							failOperation()
+							failOperation(cancelLease, currentJob)
 							return err
 						}
 						state = CancelRequested
-						break ConnectedLoop
+						break ConnectedBusyLoop
 					}
 				}
 
@@ -269,23 +315,26 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 				for {
 					select {
 					case <-stream.Context().Done():
-						failOperation()
+						failOperation(cancelLease, currentJob)
 						return nil
 					case <-ticker.C:
+						failOperation(cancelLease, currentJob)
 						return errors.New("cancel ack timed out")
 					case msg := <-recvStream:
 						ack, ok := msg.Payload.(*convergeplanev1.WorkerMessage_Update)
 						if !ok {
+							failOperation(cancelLease, currentJob)
 							return errors.New("protocol error")
 						} else if ack.Update.OperationId != currentJob.RequestID {
+							failOperation(cancelLease, currentJob)
 							return errors.New("wrong operation id")
 						}
 						switch ack.Update.Result.Status {
 						case convergeplanev1.OperationStatus_OPERATION_STATUS_COMPLETED:
-							completeOperation()
+							completeOperation(cancelLease, currentJob, ack.Update.Result)
 						case convergeplanev1.OperationStatus_OPERATION_STATUS_FAILED,
 							convergeplanev1.OperationStatus_OPERATION_STATUS_CANCELLED:
-							failOperation()
+							failOperation(cancelLease, currentJob)
 						case convergeplanev1.OperationStatus_OPERATION_STATUS_IN_PROGRESS:
 							continue
 						}
@@ -300,6 +349,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 	select {
 	case <-leaseExpired:
 	case <-stream.Context().Done():
+	case <-controlCodeCancelled:
 	}
 
 	return nil

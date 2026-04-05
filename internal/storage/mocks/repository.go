@@ -633,11 +633,12 @@ func (mr *MockJobRepositoryMockRecorder) RenewJobLease(ctx, resourceInstanceID, 
 }
 
 // UpdateJob mocks base method.
-func (m *MockJobRepository) UpdateJob(ctx context.Context, resourceInstanceID, ownerID string, status domain.JobStatus, currentAtomicOperation string, jobContext map[string]any) error {
+func (m *MockJobRepository) UpdateJob(ctx context.Context, resourceInstanceID, ownerID string, status domain.JobStatus, currentAtomicOperation string, jobContext map[string]any) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateJob", ctx, resourceInstanceID, ownerID, status, currentAtomicOperation, jobContext)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // UpdateJob indicates an expected call of UpdateJob.
@@ -647,11 +648,12 @@ func (mr *MockJobRepositoryMockRecorder) UpdateJob(ctx, resourceInstanceID, owne
 }
 
 // UpdateJobStatus mocks base method.
-func (m *MockJobRepository) UpdateJobStatus(ctx context.Context, resourceInstanceID, ownerID string, status domain.JobStatus) error {
+func (m *MockJobRepository) UpdateJobStatus(ctx context.Context, resourceInstanceID, ownerID string, status domain.JobStatus) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateJobStatus", ctx, resourceInstanceID, ownerID, status)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // UpdateJobStatus indicates an expected call of UpdateJobStatus.

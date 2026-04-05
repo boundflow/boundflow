@@ -82,16 +82,16 @@ func (r *JobRepo) RenewJobLease(ctx context.Context, resourceInstanceID string, 
 	return tag.RowsAffected() == 1, nil
 }
 
-func (r *JobRepo) UpdateJobStatus(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus) error {
-	_, err := r.pool.Exec(ctx,
+func (r *JobRepo) UpdateJobStatus(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus) (bool, error) {
+	tag, err := r.pool.Exec(ctx,
 		`UPDATE jobs SET status = $3
 		 WHERE resource_instance_id = $1 AND owner = $2`,
 		resourceInstanceID, ownerID, status,
 	)
 	if err != nil {
-		return fmt.Errorf("update job status: %w", err)
+		return false, fmt.Errorf("update job status: %w", err)
 	}
-	return nil
+	return tag.RowsAffected() == 1, nil
 }
 
 func (r *JobRepo) ReleaseJob(ctx context.Context, resourceInstanceID string, ownerID string) error {
@@ -107,20 +107,20 @@ func (r *JobRepo) ReleaseJob(ctx context.Context, resourceInstanceID string, own
 	return nil
 }
 
-func (r *JobRepo) UpdateJob(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, jobContext map[string]any) error {
+func (r *JobRepo) UpdateJob(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, jobContext map[string]any) (bool, error) {
 	contextJSON, err := json.Marshal(jobContext)
 	if err != nil {
-		return fmt.Errorf("marshal job context: %w", err)
+		return false, fmt.Errorf("marshal job context: %w", err)
 	}
 
-	_, err = r.pool.Exec(ctx,
+	tag, err := r.pool.Exec(ctx,
 		`UPDATE jobs
 		 SET status = $3, current_atomic_operation = $4, context = $5
 		 WHERE resource_instance_id = $1 AND owner = $2`,
 		resourceInstanceID, ownerID, status, currentAtomicOperation, contextJSON,
 	)
 	if err != nil {
-		return fmt.Errorf("update job: %w", err)
+		return false, fmt.Errorf("update job: %w", err)
 	}
-	return nil
+	return tag.RowsAffected() == 1, nil
 }

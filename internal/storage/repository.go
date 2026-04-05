@@ -95,9 +95,11 @@ type JobRepository interface {
 	// Returns false if the lease could not be renewed.
 	RenewJobLease(ctx context.Context, resourceInstanceID string, ownerID string, leaseDuration time.Duration) (bool, error)
 	// UpdateJobStatus updates the status of a job only if ownerID is the current owner.
-	UpdateJobStatus(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus) error
+	// Returns false if the ownership check failed (job taken by another worker or released).
+	UpdateJobStatus(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus) (bool, error)
 	// UpdateJob updates status, context, and current_atomic_operation only if ownerID is the current owner.
-	UpdateJob(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, jobContext map[string]any) error
+	// Returns false if the ownership check failed (job taken by another worker or released).
+	UpdateJob(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, jobContext map[string]any) (bool, error)
 	// ReleaseJob clears the owner and lease on a job, only if currently owned by ownerID.
 	ReleaseJob(ctx context.Context, resourceInstanceID string, ownerID string) error
 }
