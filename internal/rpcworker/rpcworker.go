@@ -195,6 +195,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 						// periodically re-up the lease
 						go func() {
 							ticker := time.NewTicker(leaseWake)
+							defer ticker.Stop()
 							for {
 								select {
 								case <-cancelLease:
@@ -317,6 +318,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 						break ConnectedBusyLoop
 					}
 				}
+				ticker.Stop()
 
 			case CancelRequested:
 				ticker := time.NewTicker(clientResponseTime)
@@ -351,6 +353,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 						break CancelLoop
 					}
 				}
+				ticker.Stop()
 				state = ConnectedIdle
 			}
 		}
