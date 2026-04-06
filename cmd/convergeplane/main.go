@@ -78,7 +78,7 @@ func runServer(sigCh <-chan os.Signal) {
 	regSvc := service.NewRegistrationService(tenantGroupRepo, tenantRepo)
 	lifecycleSvc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, sched, logger)
 
-	srv := server.New(cfg, regSvc, lifecycleSvc)
+	srv := server.New(cfg, regSvc, lifecycleSvc, cfg.Debug)
 
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.Start() }()

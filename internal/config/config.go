@@ -8,6 +8,7 @@ import (
 type BaseConfig struct {
 	LogLevel    string
 	DatabaseURL string
+	Debug       bool
 }
 
 type ServerConfig struct {
@@ -37,6 +38,9 @@ func loadBase() BaseConfig {
 	}
 	if v := os.Getenv("CONVERGEPLANE_DATABASE_URL"); v != "" {
 		base.DatabaseURL = v
+	}
+	if os.Getenv("CONVERGEPLANE_DEBUG") == "true" {
+		base.Debug = true
 	}
 	return base
 }

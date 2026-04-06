@@ -10,6 +10,7 @@ import (
 	"github.com/convergeplane/convergeplane/internal/server/handlers"
 	"github.com/convergeplane/convergeplane/internal/service"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 type WorkerServer struct {
@@ -43,11 +44,15 @@ type Server struct {
 	cfg        *config.ServerConfig
 }
 
-func New(cfg *config.ServerConfig, regSvc *service.RegistrationService, lifecycleSvc *service.LifecycleService) *Server {
+func New(cfg *config.ServerConfig, regSvc *service.RegistrationService, lifecycleSvc *service.LifecycleService, debug bool) *Server {
 	grpcServer := grpc.NewServer()
 
 	convergeplanev1.RegisterRegistrationServiceServer(grpcServer, handlers.NewRegistrationHandler(regSvc))
 	convergeplanev1.RegisterResourceLifecycleServiceServer(grpcServer, handlers.NewResourceLifecycleHandler(lifecycleSvc))
+
+	if debug {
+		reflection.Register(grpcServer)
+	}
 
 	return &Server{
 		grpcServer: grpcServer,
