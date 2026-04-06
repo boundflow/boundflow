@@ -22,7 +22,9 @@ type SchedulerConfig struct {
 
 type WorkerConfig struct {
 	BaseConfig
-	NumWorkers int
+	NumWorkers      int
+	WorkerGRPCPort  int
+	JobTimeoutSecs  int
 }
 
 func loadBase() BaseConfig {
@@ -67,12 +69,24 @@ func LoadScheduler() *SchedulerConfig {
 
 func LoadWorker() *WorkerConfig {
 	cfg := &WorkerConfig{
-		BaseConfig: loadBase(),
-		NumWorkers: 1,
+		BaseConfig:     loadBase(),
+		NumWorkers:     1,
+		WorkerGRPCPort: 50052,
+		JobTimeoutSecs: 300,
 	}
 	if v := os.Getenv("CONVERGEPLANE_NUM_WORKERS"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			cfg.NumWorkers = n
+		}
+	}
+	if v := os.Getenv("CONVERGEPLANE_WORKER_GRPC_PORT"); v != "" {
+		if port, err := strconv.Atoi(v); err == nil {
+			cfg.WorkerGRPCPort = port
+		}
+	}
+	if v := os.Getenv("CONVERGEPLANE_JOB_TIMEOUT_SECS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			cfg.JobTimeoutSecs = n
 		}
 	}
 	return cfg

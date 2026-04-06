@@ -74,6 +74,8 @@ func NewRpcWorker(jobs storage.JobRepository, id string, jobTimeout int, schedul
 //
 //	-> Stream disconnected
 //	-> Disconnected
+
+// TOOD: Make lease expiry reset the state to ConnectedIdle instead of closing the stream
 func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev1.WorkerMessage, convergeplanev1.ServerCommand]) error {
 
 	leaseExpired := make(chan bool)

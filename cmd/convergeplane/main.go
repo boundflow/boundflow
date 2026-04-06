@@ -9,9 +9,11 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/convergeplane/convergeplane/internal/config"
+	"github.com/convergeplane/convergeplane/internal/rpcworker"
 	internalscheduler "github.com/convergeplane/convergeplane/internal/scheduler"
 	"github.com/convergeplane/convergeplane/internal/server"
 	"github.com/convergeplane/convergeplane/internal/service"
@@ -96,19 +98,68 @@ func runScheduler(sigCh <-chan os.Signal) {
 	logger := newLogger(cfg.LogLevel)
 	logger.Info("starting scheduler", "num_partitions", cfg.NumPartitions)
 
-	// TODO: implement scheduler
-	<-sigCh
-	logger.Info("scheduler shutting down")
+	pool := mustConnectDB(cfg.DatabaseURL, logger)
+	defer pool.Close()
+
+	partitionRepo := postgres.NewSchedulerPartitionRepo(pool)
+	schedulerRepo := postgres.NewSchedulerRepo(pool)
+	customerRequestRepo := postgres.NewCustomerRequestRepo(pool)
+	resourceInstanceRepo := postgres.NewResourceInstanceRepo(pool)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	errCh := make(chan error, 1)
+	for i := range cfg.NumPartitions {
+		schedulerID := uuid.NewString()
+		sched := internalscheduler.New(schedulerID, 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, logger)
+		logger.Info("starting scheduler partition worker", "index", i, "scheduler_id", schedulerID)
+		go func() { errCh <- sched.Run(ctx) }()
+	}
+
+	select {
+	case err := <-errCh:
+		cancel()
+		logger.Error("scheduler error", "error", err)
+		os.Exit(1)
+	case sig := <-sigCh:
+		cancel()
+		logger.Info("received signal, shutting down", "signal", sig)
+	}
 }
 
 func runWorker(sigCh <-chan os.Signal) {
 	cfg := config.LoadWorker()
 	logger := newLogger(cfg.LogLevel)
-	logger.Info("starting worker", "num_workers", cfg.NumWorkers)
+	logger.Info("starting worker", "num_workers", cfg.NumWorkers, "grpc_port", cfg.WorkerGRPCPort)
 
-	// TODO: implement worker
-	<-sigCh
-	logger.Info("worker shutting down")
+	pool := mustConnectDB(cfg.DatabaseURL, logger)
+	defer pool.Close()
+
+	jobRepo := postgres.NewJobRepo(pool)
+	schedulerRepo := postgres.NewSchedulerRepo(pool)
+	customerRequestRepo := postgres.NewCustomerRequestRepo(pool)
+	resourceInstanceRepo := postgres.NewResourceInstanceRepo(pool)
+	// partitionRepo is passed to satisfy the scheduler constructor but the worker scheduler
+	// only calls CompleteRequest/FailRequest — the partition table is never queried.
+	partitionRepo := postgres.NewSchedulerPartitionRepo(pool)
+
+	workerID := uuid.NewString()
+	sched := internalscheduler.New(workerID, 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, logger)
+
+	worker := rpcworker.NewRpcWorker(jobRepo, workerID, cfg.JobTimeoutSecs, sched)
+	srv := server.NewWorkerServer(cfg, worker)
+
+	errCh := make(chan error, 1)
+	go func() { errCh <- srv.Start() }()
+
+	select {
+	case err := <-errCh:
+		logger.Error("worker server error", "error", err)
+		os.Exit(1)
+	case sig := <-sigCh:
+		logger.Info("received signal, shutting down", "signal", sig)
+		srv.Stop()
+	}
 }
 
 func mustConnectDB(url string, logger *slog.Logger) *pgxpool.Pool {
