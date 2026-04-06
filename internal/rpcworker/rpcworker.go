@@ -153,12 +153,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 		clientResponseTime := 3 * time.Second
 
 		defer close(cancelLease)
-		defer func() {
-			select {
-			case controlCodeCancelled <- true:
-			case <-stream.Context().Done():
-			}
-		}()
+		defer close(controlCodeCancelled)
 
 		for {
 			switch state {
@@ -205,10 +200,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 								case <-ticker.C:
 									renewed, err := s.jobs.RenewJobLease(stream.Context(), *resourceInstID, s.id, leaseTime)
 									if !renewed || err != nil {
-										select {
-										case leaseExpired <- true:
-										case <-stream.Context().Done():
-										}
+										close(leaseExpired)
 										return
 									}
 									ticker.Reset(leaseWake)
