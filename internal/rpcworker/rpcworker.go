@@ -86,7 +86,10 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 			if err != nil {
 				return
 			}
-			recvStream <- msg
+			select {
+			case recvStream <- msg:
+			case <-controlCodeCancelled:
+			}
 		}
 	}()
 
