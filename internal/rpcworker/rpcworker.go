@@ -193,7 +193,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 						}
 
 						// periodically re-up the lease
-						go func() {
+						go func(resourceInstID *string) {
 							ticker := time.NewTicker(leaseWake)
 							defer ticker.Stop()
 							for {
@@ -204,13 +204,16 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 								case <-ticker.C:
 									renewed, err := s.jobs.RenewJobLease(stream.Context(), *resourceInstID, s.id, leaseTime)
 									if !renewed || err != nil {
-										close(leaseExpired)
+										select {
+										case leaseExpired <- true:
+										case <-stream.Context().Done():
+										}
 										return
 									}
 									ticker.Reset(leaseWake)
 								}
 							}
-						}()
+						}(resourceInstID)
 
 						contextStruct, err := structpb.NewStruct(job.Context)
 						if err != nil {
