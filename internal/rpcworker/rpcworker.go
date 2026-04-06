@@ -100,9 +100,16 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 		})
 	}
 
+	cancelLeaseIfExists := func(cancelLease chan bool) {
+		select {
+		case cancelLease <- true:
+		case <-stream.Context().Done():
+		}
+	}
+
 	completeOperation := func(cancelLease chan bool, job *domain.Job, result *convergeplanev1.AtomicOperationResult) error {
 		ctx := context.Background() // request completion doesnt depend on stream context
-		defer func() { cancelLease <- true }()
+		defer cancelLeaseIfExists(cancelLease)
 
 		if result.NextOperation == nil {
 			updated, err := s.jobs.UpdateJobStatus(ctx, job.ResourceInstanceID, s.id, domain.JobStatusCompleted)
@@ -124,7 +131,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 	failOperation := func(cancelLease chan bool, job *domain.Job) error {
 		// in the future maybe we have retry policies on the operation or something, but for now a fail is a request fail
 		ctx := context.Background()
-		defer func() { cancelLease <- true }()
+		defer cancelLeaseIfExists(cancelLease)
 
 		updated, err := s.jobs.UpdateJobStatus(ctx, job.ResourceInstanceID, s.id, domain.JobStatusFailed)
 		if err == nil && updated {
@@ -203,7 +210,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 
 						contextStruct, err := structpb.NewStruct(job.Context)
 						if err != nil {
-							cancelLease <- true
+							cancelLeaseIfExists(cancelLease)
 							select {
 							case <-stream.Context().Done():
 								return nil
