@@ -5,7 +5,8 @@
 
 set -e
 
-DB_URL="postgres://arjunlama@localhost:5432/convergeplane?sslmode=disable"
+DB_USER="${USER}"
+DB_URL="postgres://${DB_USER}@localhost:5432/convergeplane?sslmode=disable"
 MIGRATIONS_DIR="./migrations"
 BIN="./bin/convergeplane"
 
@@ -21,6 +22,8 @@ if ! pg_isready -q; then
 fi
 
 echo "==> Setting up database..."
+psql -U "$DB_USER" postgres -c "DROP DATABASE IF EXISTS convergeplane;" 2>/dev/null || true
+psql -U "$DB_USER" postgres -c "CREATE DATABASE convergeplane;"
 migrate -path $MIGRATIONS_DIR -database "$DB_URL" up
 
 export CONVERGEPLANE_DATABASE_URL="$DB_URL"
@@ -49,7 +52,7 @@ cleanup() {
   kill $SERVER_PID $SCHEDULER_PID $WORKER_PID $CLIENT_PID 2>/dev/null
   wait 2>/dev/null
   echo "==> Tearing down database..."
-  migrate -path $MIGRATIONS_DIR -database "$DB_URL" drop -f
+  psql -U "$DB_USER" postgres -c "DROP DATABASE IF EXISTS convergeplane;" 2>/dev/null || true
   echo "==> Done."
 }
 trap cleanup SIGINT SIGTERM
