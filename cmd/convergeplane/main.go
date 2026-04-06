@@ -146,7 +146,7 @@ func runWorker(sigCh <-chan os.Signal) {
 	workerID := uuid.NewString()
 	sched := internalscheduler.New(workerID, 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, logger)
 
-	worker := rpcworker.NewRpcWorker(jobRepo, workerID, cfg.JobTimeoutSecs, sched)
+	worker := rpcworker.NewRpcWorker(jobRepo, workerID, cfg.JobTimeoutSecs, sched, logger)
 	srv := server.NewWorkerServer(cfg, worker)
 
 	errCh := make(chan error, 1)

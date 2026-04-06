@@ -2,6 +2,8 @@ package rpcworker_test
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -117,7 +119,8 @@ const (
 func newTestWorker(ctrl *gomock.Controller) (*rpcworker.RpcWorker, *mocks.MockJobRepository, *mockScheduler) {
 	jobRepo := mocks.NewMockJobRepository(ctrl)
 	sched := newMockScheduler()
-	return rpcworker.NewRpcWorker(jobRepo, testWorkerID, 60, sched), jobRepo, sched
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	return rpcworker.NewRpcWorker(jobRepo, testWorkerID, 60, sched, log), jobRepo, sched
 }
 
 func testJob() *domain.Job {
