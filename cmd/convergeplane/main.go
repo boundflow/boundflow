@@ -76,7 +76,7 @@ func runServer(sigCh <-chan os.Signal) {
 	sched := internalscheduler.New("server", 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, logger)
 
 	regSvc := service.NewRegistrationService(tenantGroupRepo, tenantRepo)
-	lifecycleSvc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, sched, logger)
+	lifecycleSvc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, sched, cfg.NumPartitions, logger)
 
 	srv := server.New(cfg, regSvc, lifecycleSvc, cfg.Debug)
 

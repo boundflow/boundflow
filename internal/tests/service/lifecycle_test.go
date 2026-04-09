@@ -29,7 +29,7 @@ func TestCreateResource(t *testing.T) {
 	resourceInstanceRepo := mocks.NewMockResourceInstanceRepository(ctrl)
 	customerRequestRepo := mocks.NewMockCustomerRequestRepository(ctrl)
 	sched := &mockRequestScheduler{}
-	svc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, sched, discardLogger)
+	svc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, sched, 10, discardLogger)
 
 	initialState := domain.ResourceState{"sku": "standard"}
 
@@ -92,7 +92,7 @@ func TestReconcileResource(t *testing.T) {
 	resourceInstanceRepo := mocks.NewMockResourceInstanceRepository(ctrl)
 	customerRequestRepo := mocks.NewMockCustomerRequestRepository(ctrl)
 	sched := &mockRequestScheduler{}
-	svc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, sched, discardLogger)
+	svc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, sched, 10, discardLogger)
 
 	goalState := domain.ResourceState{"sku": "premium"}
 
@@ -126,7 +126,7 @@ func TestDeleteResource(t *testing.T) {
 	resourceInstanceRepo := mocks.NewMockResourceInstanceRepository(ctrl)
 	customerRequestRepo := mocks.NewMockCustomerRequestRepository(ctrl)
 	sched := &mockRequestScheduler{}
-	svc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, sched, discardLogger)
+	svc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, sched, 10, discardLogger)
 
 	resourceInstanceRepo.EXPECT().
 		UpdateLifecycleStateAndIncrementVersion(gomock.Any(), "instance-1", domain.LifecycleStateDeleting,
@@ -158,7 +158,7 @@ func TestGetResourceState(t *testing.T) {
 	resourceInstanceRepo := mocks.NewMockResourceInstanceRepository(ctrl)
 	customerRequestRepo := mocks.NewMockCustomerRequestRepository(ctrl)
 	sched := &mockRequestScheduler{}
-	svc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, sched, discardLogger)
+	svc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, sched, 10, discardLogger)
 
 	expected := &domain.ResourceInstance{
 		ID:                 "instance-1",

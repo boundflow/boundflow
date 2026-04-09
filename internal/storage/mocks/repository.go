@@ -457,20 +457,19 @@ func (m *MockSchedulerRepository) EXPECT() *MockSchedulerRepositoryMockRecorder 
 	return m.recorder
 }
 
-// ConsumeCompletedJob mocks base method.
-func (m *MockSchedulerRepository) ConsumeCompletedJob(ctx context.Context, resourceInstanceID string) (string, bool, error) {
+// DeleteTerminalJob mocks base method.
+func (m *MockSchedulerRepository) DeleteTerminalJob(ctx context.Context, resourceInstanceID, requestID string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ConsumeCompletedJob", ctx, resourceInstanceID)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(bool)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret := m.ctrl.Call(m, "DeleteTerminalJob", ctx, resourceInstanceID, requestID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-// ConsumeCompletedJob indicates an expected call of ConsumeCompletedJob.
-func (mr *MockSchedulerRepositoryMockRecorder) ConsumeCompletedJob(ctx, resourceInstanceID any) *gomock.Call {
+// DeleteTerminalJob indicates an expected call of DeleteTerminalJob.
+func (mr *MockSchedulerRepositoryMockRecorder) DeleteTerminalJob(ctx, resourceInstanceID, requestID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConsumeCompletedJob", reflect.TypeOf((*MockSchedulerRepository)(nil).ConsumeCompletedJob), ctx, resourceInstanceID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTerminalJob", reflect.TypeOf((*MockSchedulerRepository)(nil).DeleteTerminalJob), ctx, resourceInstanceID, requestID)
 }
 
 // GetCompletedJobRequestIDs mocks base method.

@@ -3,7 +3,9 @@ package service
 import (
 	"context"
 	"fmt"
+	"hash/fnv"
 	"log/slog"
+	"strconv"
 
 	"github.com/google/uuid"
 
@@ -21,6 +23,7 @@ type LifecycleService struct {
 	resourceInstances storage.ResourceInstanceRepository
 	customerRequests  storage.CustomerRequestRepository
 	scheduler         RequestScheduler
+	numPartitions     int
 	log               *slog.Logger
 }
 
@@ -28,12 +31,14 @@ func NewLifecycleService(
 	resourceInstances storage.ResourceInstanceRepository,
 	customerRequests storage.CustomerRequestRepository,
 	scheduler RequestScheduler,
+	numPartitions int,
 	log *slog.Logger,
 ) *LifecycleService {
 	return &LifecycleService{
 		resourceInstances: resourceInstances,
 		customerRequests:  customerRequests,
 		scheduler:         scheduler,
+		numPartitions:     numPartitions,
 		log:               log.With("component", "lifecycle_service"),
 	}
 }
@@ -41,14 +46,15 @@ func NewLifecycleService(
 func (s *LifecycleService) CreateResource(ctx context.Context, correlationID, resourceType, tenantID string, initialState domain.ResourceState) (*domain.ResourceInstance, error) {
 	s.log.Info("creating resource", "correlation_id", correlationID, "resource_type", resourceType, "tenant_id", tenantID)
 
+	id := uuid.New().String()
 	resourceInstance := domain.ResourceInstance{
-		ID:                   uuid.New().String(),
+		ID:                   id,
 		TenantID:             tenantID,
 		ResourceType:         resourceType,
 		CurrentConfigState:   nil,
 		ConfigGoalState:      initialState,
 		LifecycleState:       domain.LifecycleStateCreating,
-		SchedulerPartitionID: "", // TODO: ADD THIS EVEN FOR v1
+		SchedulerPartitionID: partitionForID(id, s.numPartitions),
 		TargetVersion:        1,
 		CurrentVersion:       0,
 	}
@@ -161,4 +167,10 @@ func (s *LifecycleService) DeleteResource(ctx context.Context, correlationID, re
 func (s *LifecycleService) GetResourceState(ctx context.Context, resourceInstanceID string) (*domain.ResourceInstance, error) {
 	s.log.Debug("getting resource state", "resource_id", resourceInstanceID)
 	return s.resourceInstances.Get(ctx, resourceInstanceID)
+}
+
+func partitionForID(id string, numPartitions int) string {
+	h := fnv.New32a()
+	h.Write([]byte(id))
+	return strconv.Itoa(int(h.Sum32()) % numPartitions)
 }

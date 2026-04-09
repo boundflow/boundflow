@@ -6,9 +6,10 @@ import (
 )
 
 type BaseConfig struct {
-	LogLevel    string
-	DatabaseURL string
-	Debug       bool
+	LogLevel      string
+	DatabaseURL   string
+	Debug         bool
+	NumPartitions int
 }
 
 type ServerConfig struct {
@@ -18,7 +19,6 @@ type ServerConfig struct {
 
 type SchedulerConfig struct {
 	BaseConfig
-	NumPartitions int
 }
 
 type WorkerConfig struct {
@@ -42,6 +42,11 @@ func loadBase() BaseConfig {
 	if os.Getenv("CONVERGEPLANE_DEBUG") == "true" {
 		base.Debug = true
 	}
+	if v := os.Getenv("CONVERGEPLANE_NUM_PARTITIONS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			base.NumPartitions = n
+		}
+	}
 	return base
 }
 
@@ -59,16 +64,9 @@ func LoadServer() *ServerConfig {
 }
 
 func LoadScheduler() *SchedulerConfig {
-	cfg := &SchedulerConfig{
-		BaseConfig:    loadBase(),
-		NumPartitions: 1,
+	return &SchedulerConfig{
+		BaseConfig: loadBase(),
 	}
-	if v := os.Getenv("CONVERGEPLANE_NUM_PARTITIONS"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			cfg.NumPartitions = n
-		}
-	}
-	return cfg
 }
 
 func LoadWorker() *WorkerConfig {

@@ -56,12 +56,12 @@ func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID stri
 		 ),
 		 upserted AS (
 		     INSERT INTO jobs (resource_instance_id, request_id, version, current_atomic_operation, context, status, job_type)
-		     SELECT c.resource_instance_id, c.id, c.version, '', c.request_info, 'pending', c.request_type
+		     SELECT c.resource_instance_id, c.id, c.version, c.request_type || '_entry', c.request_info, 'pending', c.request_type
 		     FROM candidate c
 		     ON CONFLICT (resource_instance_id) DO UPDATE
 		         SET request_id               = EXCLUDED.request_id,
 		             version                  = EXCLUDED.version,
-		             current_atomic_operation = '',
+		             current_atomic_operation = EXCLUDED.current_atomic_operation,
 		             context                  = EXCLUDED.context,
 		             job_type                 = EXCLUDED.job_type,
 		             status                   = 'pending',
@@ -137,21 +137,18 @@ func (r *SchedulerRepo) GetFailedJobRequestIDs(ctx context.Context, partitionID 
 	return ids, rows.Err()
 }
 
-func (r *SchedulerRepo) ConsumeCompletedJob(ctx context.Context, resourceInstanceID string) (string, bool, error) {
-	var requestID string
-	err := r.pool.QueryRow(ctx,
+func (r *SchedulerRepo) DeleteTerminalJob(ctx context.Context, resourceInstanceID string, requestID string) (bool, error) {
+	tag, err := r.pool.Exec(ctx,
 		`DELETE FROM jobs
-		 WHERE resource_instance_id = $1 AND status = 'completed'
-		 RETURNING request_id`,
-		resourceInstanceID,
-	).Scan(&requestID)
+		 WHERE resource_instance_id = $1
+		   AND request_id = $2
+		   AND status IN ('completed', 'failed')`,
+		resourceInstanceID, requestID,
+	)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return "", false, nil
-		}
-		return "", false, fmt.Errorf("consume completed job: %w", err)
+		return false, fmt.Errorf("delete terminal job: %w", err)
 	}
-	return requestID, true, nil
+	return tag.RowsAffected() == 1, nil
 }
 
 func (r *SchedulerRepo) SupercedeOlderRequests(ctx context.Context, resourceInstanceID string, version int64) error {

@@ -141,6 +141,10 @@ func (s *Scheduler) FailRequest(ctx context.Context, req string) (bool, error) {
 	} else {
 		s.log.Warn("request failed but resource version check skipped update (newer version already applied)", "request_id", req, "resource_id", request.ResourceInstanceID, "version", request.Version)
 	}
+
+	if _, err := s.scheduler.DeleteTerminalJob(ctx, request.ResourceInstanceID, req); err != nil {
+		s.log.Error("failed to delete terminal job", "request_id", req, "resource_id", request.ResourceInstanceID, "error", err)
+	}
 	return applied, nil
 }
 
@@ -198,6 +202,10 @@ func (s *Scheduler) CompleteRequest(ctx context.Context, req string) (bool, erro
 		s.log.Info("request completed, resource updated", "request_id", req, "resource_id", request.ResourceInstanceID, "request_type", request.RequestType, "lifecycle_state", lifecycleState, "version", request.Version)
 	} else {
 		s.log.Warn("request completed but resource version check skipped update (newer version already applied)", "request_id", req, "resource_id", request.ResourceInstanceID, "version", request.Version)
+	}
+
+	if _, err := s.scheduler.DeleteTerminalJob(ctx, request.ResourceInstanceID, req); err != nil {
+		s.log.Error("failed to delete terminal job", "request_id", req, "resource_id", request.ResourceInstanceID, "error", err)
 	}
 	return applied, nil
 }

@@ -110,7 +110,14 @@ func runSession(client convergeplanev1.WorkerServiceClient, log *slog.Logger) er
 			}); err != nil {
 				return fmt.Errorf("send COMPLETED: %w", err)
 			}
-			log.Info("sent COMPLETED", "operation_id", op.GetId())
+			log.Info("sent COMPLETED, signalling ready for next job", "operation_id", op.GetId())
+			if err := stream.Send(&convergeplanev1.WorkerMessage{
+				Payload: &convergeplanev1.WorkerMessage_Ready{
+					Ready: &convergeplanev1.ReadyForWork{},
+				},
+			}); err != nil {
+				return fmt.Errorf("send ReadyForWork: %w", err)
+			}
 
 		case *convergeplanev1.ServerCommand_Cancel:
 			opID := p.Cancel.GetOperationId()
@@ -126,6 +133,13 @@ func runSession(client convergeplanev1.WorkerServiceClient, log *slog.Logger) er
 				},
 			}); err != nil {
 				return fmt.Errorf("send CANCELLED: %w", err)
+			}
+			if err := stream.Send(&convergeplanev1.WorkerMessage{
+				Payload: &convergeplanev1.WorkerMessage_Ready{
+					Ready: &convergeplanev1.ReadyForWork{},
+				},
+			}); err != nil {
+				return fmt.Errorf("send ReadyForWork after cancel: %w", err)
 			}
 		}
 	}

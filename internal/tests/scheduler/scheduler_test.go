@@ -98,7 +98,7 @@ func TestScheduleRequest_SupercedeError(t *testing.T) {
 
 func TestCompleteRequest_Create_TransitionsToActive(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, _, requests, resource := newTestScheduler(ctrl)
+	s, _, schedulerRepo, requests, resource := newTestScheduler(ctrl)
 
 	goalState := domain.ResourceState{"sku": "standard"}
 	requests.EXPECT().
@@ -115,6 +115,10 @@ func TestCompleteRequest_Create_TransitionsToActive(t *testing.T) {
 		ApplyCompletedJob(gomock.Any(), "resource-1", goalState, domain.LifecycleStateActive, int64(1)).
 		Return(true, nil)
 
+	schedulerRepo.EXPECT().
+		DeleteTerminalJob(gomock.Any(), "resource-1", "req-1").
+		Return(true, nil)
+
 	applied, err := s.CompleteRequest(context.Background(), "req-1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -126,7 +130,7 @@ func TestCompleteRequest_Create_TransitionsToActive(t *testing.T) {
 
 func TestCompleteRequest_Delete_TransitionsToDeleted(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, _, requests, resource := newTestScheduler(ctrl)
+	s, _, schedulerRepo, requests, resource := newTestScheduler(ctrl)
 
 	requests.EXPECT().
 		CompleteRequest(gomock.Any(), "req-1").
@@ -142,6 +146,10 @@ func TestCompleteRequest_Delete_TransitionsToDeleted(t *testing.T) {
 		ApplyCompletedJob(gomock.Any(), "resource-1", domain.ResourceState{}, domain.LifecycleStateDeleted, int64(2)).
 		Return(true, nil)
 
+	schedulerRepo.EXPECT().
+		DeleteTerminalJob(gomock.Any(), "resource-1", "req-1").
+		Return(true, nil)
+
 	applied, err := s.CompleteRequest(context.Background(), "req-1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -153,7 +161,7 @@ func TestCompleteRequest_Delete_TransitionsToDeleted(t *testing.T) {
 
 func TestCompleteRequest_VersionSkipped_ReturnsFalse(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, _, requests, resource := newTestScheduler(ctrl)
+	s, _, schedulerRepo, requests, resource := newTestScheduler(ctrl)
 
 	goalState := domain.ResourceState{"sku": "standard"}
 	requests.EXPECT().
@@ -169,6 +177,10 @@ func TestCompleteRequest_VersionSkipped_ReturnsFalse(t *testing.T) {
 	resource.EXPECT().
 		ApplyCompletedJob(gomock.Any(), "resource-1", goalState, domain.LifecycleStateActive, int64(1)).
 		Return(false, nil)
+
+	schedulerRepo.EXPECT().
+		DeleteTerminalJob(gomock.Any(), "resource-1", "req-1").
+		Return(true, nil)
 
 	applied, err := s.CompleteRequest(context.Background(), "req-1")
 	if err != nil {
@@ -196,7 +208,7 @@ func TestCompleteRequest_FailRequestError(t *testing.T) {
 
 func TestFailRequest_AppliesFailedState(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, _, requests, resource := newTestScheduler(ctrl)
+	s, _, schedulerRepo, requests, resource := newTestScheduler(ctrl)
 
 	goalState := domain.ResourceState{"sku": "standard"}
 	requests.EXPECT().
@@ -212,6 +224,10 @@ func TestFailRequest_AppliesFailedState(t *testing.T) {
 		ApplyCompletedJob(gomock.Any(), "resource-1", goalState, domain.LifecycleStateFailed, int64(2)).
 		Return(true, nil)
 
+	schedulerRepo.EXPECT().
+		DeleteTerminalJob(gomock.Any(), "resource-1", "req-1").
+		Return(true, nil)
+
 	applied, err := s.FailRequest(context.Background(), "req-1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -223,7 +239,7 @@ func TestFailRequest_AppliesFailedState(t *testing.T) {
 
 func TestFailRequest_VersionSkipped_ReturnsFalse(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, _, requests, resource := newTestScheduler(ctrl)
+	s, _, schedulerRepo, requests, resource := newTestScheduler(ctrl)
 
 	goalState := domain.ResourceState{}
 	requests.EXPECT().
@@ -238,6 +254,10 @@ func TestFailRequest_VersionSkipped_ReturnsFalse(t *testing.T) {
 	resource.EXPECT().
 		ApplyCompletedJob(gomock.Any(), "resource-1", goalState, domain.LifecycleStateFailed, int64(1)).
 		Return(false, nil)
+
+	schedulerRepo.EXPECT().
+		DeleteTerminalJob(gomock.Any(), "resource-1", "req-1").
+		Return(true, nil)
 
 	applied, err := s.FailRequest(context.Background(), "req-1")
 	if err != nil {

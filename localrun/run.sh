@@ -29,6 +29,7 @@ migrate -path $MIGRATIONS_DIR -database "$DB_URL" up
 export CONVERGEPLANE_DATABASE_URL="$DB_URL"
 export CONVERGEPLANE_LOG_LEVEL="debug"
 export CONVERGEPLANE_DEBUG="true"
+export CONVERGEPLANE_NUM_PARTITIONS="10"
 
 echo "==> Starting server (port 50051)..."
 $BIN -mode=server &

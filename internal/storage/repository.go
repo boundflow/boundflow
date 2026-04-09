@@ -71,10 +71,10 @@ type SchedulerRepository interface {
 	// SupercedeOlderRequests marks all unscheduled or scheduled requests for the given resource
 	// whose version is strictly less than version as superceded.
 	SupercedeOlderRequests(ctx context.Context, resourceInstanceID string, version int64) error
-	// ConsumeCompletedJob atomically deletes the job for the given resource if its status is
-	// completed, returning the request ID it was targeting.
-	// Returns found=false (no error) if no completed job exists for the resource.
-	ConsumeCompletedJob(ctx context.Context, resourceInstanceID string) (requestID string, found bool, err error)
+	// DeleteTerminalJob deletes the job for the given resource only if the request ID matches
+	// and the status is a terminal state (completed or failed).
+	// Returns false if no matching job was deleted.
+	DeleteTerminalJob(ctx context.Context, resourceInstanceID string, requestID string) (bool, error)
 	// GetCompletedJobRequestIDs returns the request IDs of all completed jobs for resources
 	// belonging to the given partition.
 	GetCompletedJobRequestIDs(ctx context.Context, partitionID string) ([]string, error)
