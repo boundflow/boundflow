@@ -23,6 +23,52 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type StepMode int32
+
+const (
+	StepMode_STEP_MODE_DETERMINISTIC StepMode = 0
+	StepMode_STEP_MODE_AGENT         StepMode = 1
+)
+
+// Enum value maps for StepMode.
+var (
+	StepMode_name = map[int32]string{
+		0: "STEP_MODE_DETERMINISTIC",
+		1: "STEP_MODE_AGENT",
+	}
+	StepMode_value = map[string]int32{
+		"STEP_MODE_DETERMINISTIC": 0,
+		"STEP_MODE_AGENT":         1,
+	}
+)
+
+func (x StepMode) Enum() *StepMode {
+	p := new(StepMode)
+	*p = x
+	return p
+}
+
+func (x StepMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (StepMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_convergeplane_v1_operation_proto_enumTypes[0].Descriptor()
+}
+
+func (StepMode) Type() protoreflect.EnumType {
+	return &file_convergeplane_v1_operation_proto_enumTypes[0]
+}
+
+func (x StepMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use StepMode.Descriptor instead.
+func (StepMode) EnumDescriptor() ([]byte, []int) {
+	return file_convergeplane_v1_operation_proto_rawDescGZIP(), []int{0}
+}
+
 type OperationStatus int32
 
 const (
@@ -62,11 +108,11 @@ func (x OperationStatus) String() string {
 }
 
 func (OperationStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_convergeplane_v1_operation_proto_enumTypes[0].Descriptor()
+	return file_convergeplane_v1_operation_proto_enumTypes[1].Descriptor()
 }
 
 func (OperationStatus) Type() protoreflect.EnumType {
-	return &file_convergeplane_v1_operation_proto_enumTypes[0]
+	return &file_convergeplane_v1_operation_proto_enumTypes[1]
 }
 
 func (x OperationStatus) Number() protoreflect.EnumNumber {
@@ -75,7 +121,7 @@ func (x OperationStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use OperationStatus.Descriptor instead.
 func (OperationStatus) EnumDescriptor() ([]byte, []int) {
-	return file_convergeplane_v1_operation_proto_rawDescGZIP(), []int{0}
+	return file_convergeplane_v1_operation_proto_rawDescGZIP(), []int{1}
 }
 
 type AtomicOperation struct {
@@ -86,6 +132,7 @@ type AtomicOperation struct {
 	Name          string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
 	Context       *structpb.Struct       `protobuf:"bytes,5,opt,name=context,proto3" json:"context,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Mode          StepMode               `protobuf:"varint,7,opt,name=mode,proto3,enum=convergeplane.v1.StepMode" json:"mode,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -162,6 +209,13 @@ func (x *AtomicOperation) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *AtomicOperation) GetMode() StepMode {
+	if x != nil {
+		return x.Mode
+	}
+	return StepMode_STEP_MODE_DETERMINISTIC
+}
+
 type AtomicOperationResult struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Status        OperationStatus        `protobuf:"varint,1,opt,name=status,proto3,enum=convergeplane.v1.OperationStatus" json:"status,omitempty"`
@@ -226,7 +280,7 @@ var File_convergeplane_v1_operation_proto protoreflect.FileDescriptor
 
 const file_convergeplane_v1_operation_proto_rawDesc = "" +
 	"\n" +
-	" convergeplane/v1/operation.proto\x12\x10convergeplane.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xeb\x01\n" +
+	" convergeplane/v1/operation.proto\x12\x10convergeplane.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x9b\x02\n" +
 	"\x0fAtomicOperation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vresource_id\x18\x02 \x01(\tR\n" +
@@ -235,11 +289,15 @@ const file_convergeplane_v1_operation_proto_rawDesc = "" +
 	"\x04name\x18\x04 \x01(\tR\x04name\x121\n" +
 	"\acontext\x18\x05 \x01(\v2\x17.google.protobuf.StructR\acontext\x129\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xb6\x01\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12.\n" +
+	"\x04mode\x18\a \x01(\x0e2\x1a.convergeplane.v1.StepModeR\x04mode\"\xb6\x01\n" +
 	"\x15AtomicOperationResult\x129\n" +
 	"\x06status\x18\x01 \x01(\x0e2!.convergeplane.v1.OperationStatusR\x06status\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12H\n" +
-	"\x0enext_operation\x18\x03 \x01(\v2!.convergeplane.v1.AtomicOperationR\rnextOperation*\xb2\x01\n" +
+	"\x0enext_operation\x18\x03 \x01(\v2!.convergeplane.v1.AtomicOperationR\rnextOperation*<\n" +
+	"\bStepMode\x12\x1b\n" +
+	"\x17STEP_MODE_DETERMINISTIC\x10\x00\x12\x13\n" +
+	"\x0fSTEP_MODE_AGENT\x10\x01*\xb2\x01\n" +
 	"\x0fOperationStatus\x12 \n" +
 	"\x1cOPERATION_STATUS_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cOPERATION_STATUS_IN_PROGRESS\x10\x01\x12\x1e\n" +
@@ -259,25 +317,27 @@ func file_convergeplane_v1_operation_proto_rawDescGZIP() []byte {
 	return file_convergeplane_v1_operation_proto_rawDescData
 }
 
-var file_convergeplane_v1_operation_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_convergeplane_v1_operation_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_convergeplane_v1_operation_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_convergeplane_v1_operation_proto_goTypes = []any{
-	(OperationStatus)(0),          // 0: convergeplane.v1.OperationStatus
-	(*AtomicOperation)(nil),       // 1: convergeplane.v1.AtomicOperation
-	(*AtomicOperationResult)(nil), // 2: convergeplane.v1.AtomicOperationResult
-	(*structpb.Struct)(nil),       // 3: google.protobuf.Struct
-	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
+	(StepMode)(0),                 // 0: convergeplane.v1.StepMode
+	(OperationStatus)(0),          // 1: convergeplane.v1.OperationStatus
+	(*AtomicOperation)(nil),       // 2: convergeplane.v1.AtomicOperation
+	(*AtomicOperationResult)(nil), // 3: convergeplane.v1.AtomicOperationResult
+	(*structpb.Struct)(nil),       // 4: google.protobuf.Struct
+	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
 }
 var file_convergeplane_v1_operation_proto_depIdxs = []int32{
-	3, // 0: convergeplane.v1.AtomicOperation.context:type_name -> google.protobuf.Struct
-	4, // 1: convergeplane.v1.AtomicOperation.created_at:type_name -> google.protobuf.Timestamp
-	0, // 2: convergeplane.v1.AtomicOperationResult.status:type_name -> convergeplane.v1.OperationStatus
-	1, // 3: convergeplane.v1.AtomicOperationResult.next_operation:type_name -> convergeplane.v1.AtomicOperation
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	4, // 0: convergeplane.v1.AtomicOperation.context:type_name -> google.protobuf.Struct
+	5, // 1: convergeplane.v1.AtomicOperation.created_at:type_name -> google.protobuf.Timestamp
+	0, // 2: convergeplane.v1.AtomicOperation.mode:type_name -> convergeplane.v1.StepMode
+	1, // 3: convergeplane.v1.AtomicOperationResult.status:type_name -> convergeplane.v1.OperationStatus
+	2, // 4: convergeplane.v1.AtomicOperationResult.next_operation:type_name -> convergeplane.v1.AtomicOperation
+	5, // [5:5] is the sub-list for method output_type
+	5, // [5:5] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_convergeplane_v1_operation_proto_init() }
@@ -290,7 +350,7 @@ func file_convergeplane_v1_operation_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_convergeplane_v1_operation_proto_rawDesc), len(file_convergeplane_v1_operation_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      2,
 			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,

@@ -12,6 +12,13 @@ const (
 	OperationStatusRollback
 )
 
+type StepMode int
+
+const (
+	StepModeDeterministic StepMode = iota
+	StepModeAgent
+)
+
 type AtomicOperation struct {
 	ID            string
 	ResourceID    string
@@ -19,6 +26,7 @@ type AtomicOperation struct {
 	Context       OperationContext
 	NextOperation *AtomicOperation
 	CreatedAt     time.Time
+	Mode          StepMode
 }
 
 type OperationContext struct {
