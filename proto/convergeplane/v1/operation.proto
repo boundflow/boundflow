@@ -7,11 +7,6 @@ option go_package = "github.com/convergeplane/convergeplane/gen/convergeplane/v1
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 
-enum StepMode {
-  STEP_MODE_DETERMINISTIC = 0;
-  STEP_MODE_AGENT = 1;
-}
-
 message AtomicOperation {
   string id = 1;
   string resource_id = 2;
@@ -19,7 +14,6 @@ message AtomicOperation {
   string name = 4;
   google.protobuf.Struct context = 5;
   google.protobuf.Timestamp created_at = 6;
-  StepMode mode = 7;
 }
 
 message AtomicOperationResult {

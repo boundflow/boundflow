@@ -10,7 +10,7 @@ import (
 	"github.com/anthropics/anthropic-sdk-go"
 )
 
-const submitResultTool = "submit_result"
+const SubmitResultTool = "submit_result"
 
 // AgentPolicy defines limits for an agent step execution.
 type AgentPolicy struct {
@@ -37,6 +37,8 @@ type AgentStepConfig struct {
 	Objective        string
 	AllowedCallbacks []AllowedCallback
 	Policy           AgentPolicy
+	// SystemPrompt is the system instruction given to the LLM. Required.
+	SystemPrompt string
 	// OutputSchema is a JSON Schema properties map describing the expected output structure.
 	// The LLM is given a submit_result tool with this schema and will call it naturally
 	// when done. If a policy limit is hit before it calls submit_result, one final forced
@@ -49,15 +51,50 @@ type AgentStepConfig struct {
 
 // StepResult is returned by Orchestrator.Run when the agent step completes.
 type StepResult struct {
-	// Output is the argument the model passed to submit_result, conforming to OutputSchema.
-	Output       map[string]any
 	LLMCallsUsed int
 	CostUSD      float64
 }
 
-// CallbackHandler is called by the orchestrator when the LLM invokes a callback.
-// It executes the callback and returns its output as a JSON-serialisable map.
+// CallbackHandler is called by the orchestrator when the LLM invokes a callback
+// (including submit_result). It executes the callback and returns its output as a
+// JSON-serialisable map. The caller can identify submit_result by checking
+// callbackName == SubmitResultTool.
 type CallbackHandler func(ctx context.Context, callbackName string, input map[string]any) (map[string]any, error)
+
+// CallbackExchange is sent by the CallbackHandler to the caller over a channel.
+// The caller dispatches the callback, then sends the result back on ResultCh.
+type CallbackExchange struct {
+	Name     string
+	Input    map[string]any
+	ResultCh chan CallbackExchangeResult
+}
+
+// CallbackExchangeResult is the caller's response to a CallbackExchange.
+type CallbackExchangeResult struct {
+	Output map[string]any
+	Error  error
+}
+
+// NewCallbackHandler returns a CallbackHandler driven by a channel. For each
+// callback the orchestrator invokes, a CallbackExchange is sent on ch. The
+// caller reads from ch, executes the callback, and sends the result back on
+// CallbackExchange.ResultCh.
+func NewCallbackHandler(ch chan<- CallbackExchange) CallbackHandler {
+	return func(ctx context.Context, name string, input map[string]any) (map[string]any, error) {
+		resultCh := make(chan CallbackExchangeResult, 1)
+		select {
+		case ch <- CallbackExchange{Name: name, Input: input, ResultCh: resultCh}:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+		select {
+		case r := <-resultCh:
+			return r.Output, r.Error
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+}
 
 // Orchestrator runs the agentic step loop against the Claude API.
 type Orchestrator struct {
@@ -75,8 +112,8 @@ func NewOrchestrator(client anthropic.Client, model string, log *slog.Logger) *O
 }
 
 // Run executes an agent step to completion. The model may call allowed callbacks freely
-// and calls submit_result when done. If a policy limit is hit before submit_result is
-// called, one final forced call is made to extract output.
+// and calls submit_result when done — both are delivered via onCallback. If a policy
+// limit is hit before submit_result is called, one final forced call is made.
 func (o *Orchestrator) Run(ctx context.Context, cfg AgentStepConfig, onCallback CallbackHandler) (*StepResult, error) {
 	tools := buildTools(cfg.AllowedCallbacks, cfg.OutputSchema)
 	messages := []anthropic.MessageParam{
@@ -97,12 +134,12 @@ func (o *Orchestrator) Run(ctx context.Context, cfg AgentStepConfig, onCallback 
 		params := anthropic.MessageNewParams{
 			Model:     anthropic.Model(o.model),
 			MaxTokens: 4096,
-			System:    []anthropic.TextBlockParam{{Text: buildSystemPrompt(cfg.AllowedCallbacks)}},
+			System:    []anthropic.TextBlockParam{{Text: cfg.SystemPrompt + "\n\nWhen you have completed your objective, call the submit_result tool with your findings."}},
 			Messages:  messages,
 			Tools:     tools,
 		}
 		if policyLimitReached {
-			params.ToolChoice = anthropic.ToolChoiceParamOfTool(submitResultTool)
+			params.ToolChoice = anthropic.ToolChoiceParamOfTool(SubmitResultTool)
 		}
 
 		resp, err := o.client.Messages.New(ctx, params)
@@ -114,7 +151,6 @@ func (o *Orchestrator) Run(ctx context.Context, cfg AgentStepConfig, onCallback 
 		result.CostUSD += estimateCost(resp.Usage)
 
 		if cfg.Policy.MaxCostUSD > 0 && result.CostUSD > cfg.Policy.MaxCostUSD && !policyLimitReached {
-			// Cost limit hit — next iteration will force submit_result.
 			o.log.Warn("cost limit reached, will force submit_result on next call",
 				"cost_usd", result.CostUSD, "limit", cfg.Policy.MaxCostUSD)
 		}
@@ -123,30 +159,12 @@ func (o *Orchestrator) Run(ctx context.Context, cfg AgentStepConfig, onCallback 
 
 		messages = append(messages, resp.ToParam())
 
-		// Check if the model called submit_result.
-		for _, block := range resp.Content {
-			if block.Type == "tool_use" && block.Name == submitResultTool {
-				var output map[string]any
-				if err := json.Unmarshal(block.Input, &output); err != nil {
-					return nil, fmt.Errorf("failed to parse submit_result input: %w", err)
-				}
-				result.Output = output
-				o.log.Info("agent step complete via submit_result",
-					"llm_calls", result.LLMCallsUsed, "cost_usd", result.CostUSD)
-				return result, nil
-			}
-		}
-
-		// Model finished without calling submit_result — force it next iteration
-		// (handles end_turn case where model forgot to call submit_result).
+		// Model finished without calling submit_result — force it next iteration.
 		if resp.StopReason == anthropic.StopReasonEndTurn {
 			o.log.Warn("model reached end_turn without calling submit_result, forcing")
-			// Add a nudge message and loop with forced tool choice.
 			messages = append(messages, anthropic.NewUserMessage(
 				anthropic.NewTextBlock("Please call submit_result with your findings."),
 			))
-			// Override policy limit flag to force on next iteration regardless.
-			// We achieve this by temporarily setting MaxLLMCalls to allow one more call.
 			cfg.Policy.MaxLLMCalls = result.LLMCallsUsed + 1
 			continue
 		}
@@ -155,10 +173,10 @@ func (o *Orchestrator) Run(ctx context.Context, cfg AgentStepConfig, onCallback 
 			return nil, fmt.Errorf("unexpected stop reason: %s", resp.StopReason)
 		}
 
-		// Dispatch each callback tool call.
+		// Dispatch all tool calls — submit_result and callbacks go through onCallback uniformly.
 		var toolResults []anthropic.ContentBlockParamUnion
 		for _, block := range resp.Content {
-			if block.Type != "tool_use" || block.Name == submitResultTool {
+			if block.Type != "tool_use" {
 				continue
 			}
 
@@ -170,6 +188,14 @@ func (o *Orchestrator) Run(ctx context.Context, cfg AgentStepConfig, onCallback 
 			}
 
 			cbOutput, err := onCallback(ctx, block.Name, input)
+			if block.Name == SubmitResultTool {
+				if err != nil {
+					return nil, fmt.Errorf("submit_result callback failed: %w", err)
+				}
+				o.log.Info("agent step complete via submit_result",
+					"llm_calls", result.LLMCallsUsed, "cost_usd", result.CostUSD)
+				return result, nil
+			}
 			if err != nil {
 				o.log.Warn("callback returned error, reporting to LLM", "callback", block.Name, "error", err)
 				toolResults = append(toolResults, anthropic.NewToolResultBlock(block.ID, fmt.Sprintf("error: %s", err), true))
@@ -191,7 +217,7 @@ func (o *Orchestrator) Run(ctx context.Context, cfg AgentStepConfig, onCallback 
 
 		// After dispatching callbacks, check cost limit for next iteration.
 		if cfg.Policy.MaxCostUSD > 0 && result.CostUSD > cfg.Policy.MaxCostUSD {
-			cfg.Policy.MaxLLMCalls = result.LLMCallsUsed // will trigger forced submit on next loop
+			cfg.Policy.MaxLLMCalls = result.LLMCallsUsed
 		}
 	}
 }
@@ -226,29 +252,13 @@ func buildTools(callbacks []AllowedCallback, outputSchema map[string]any) []anth
 		submitSchema = map[string]any{"type": "object"}
 	}
 	submitTool := anthropic.ToolParam{
-		Name:        submitResultTool,
+		Name:        SubmitResultTool,
 		Description: anthropic.String("Call this when you have completed your objective to submit your final result."),
 		InputSchema: anthropic.ToolInputSchemaParam{Properties: submitSchema},
 	}
 	tools = append(tools, anthropic.ToolUnionParam{OfTool: &submitTool})
 
 	return tools
-}
-
-func buildSystemPrompt(callbacks []AllowedCallback) string {
-	var b strings.Builder
-	b.WriteString("You are an autonomous agent executing a workflow step. " +
-		"Use the available callbacks to gather information and take actions. " +
-		"When you have completed your objective, call submit_result with your findings.\n\n")
-	b.WriteString("Available callbacks:\n")
-	for _, cb := range callbacks {
-		approval := ""
-		if cb.ApprovalRequired {
-			approval = " (approval required)"
-		}
-		fmt.Fprintf(&b, "- %s [%s]%s\n", cb.Name, cb.Mode, approval)
-	}
-	return b.String()
 }
 
 func buildUserContent(objective string, llmContext []map[string]any) string {
