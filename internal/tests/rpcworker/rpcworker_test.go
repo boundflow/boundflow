@@ -130,6 +130,7 @@ func testJob() *domain.Job {
 		CurrentAtomicOperation: "create",
 		JobType:                "create",
 		Context:                map[string]any{},
+		Policy:                 domain.JobPolicy{OperationTimeoutSeconds: 60},
 	}
 }
 
