@@ -20,6 +20,7 @@ type Job struct {
 	Context                map[string]any
 	Status                 JobStatus
 	JobType                string
+	ResourceType           string
 	Policy                 JobPolicy
 	Owner                  *string
 	LeaseExpiresAt         *time.Time

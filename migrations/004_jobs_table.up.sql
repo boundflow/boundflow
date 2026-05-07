@@ -14,6 +14,7 @@ CREATE TABLE jobs (
     context                 JSONB NOT NULL DEFAULT '{}',
     status                  job_status NOT NULL,
     job_type                TEXT NOT NULL,
+    resource_type           TEXT NOT NULL,
     timeout_seconds         INTEGER NOT NULL,
     owner                   TEXT,
     lease_expires_at        TIMESTAMPTZ,

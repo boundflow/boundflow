@@ -153,15 +153,13 @@ internal sealed class Orchestrator
             if (!string.IsNullOrEmpty(cb.Mode))
                 desc = $"{desc} [{cb.Mode}]";
 
-            var schema = cb.InputSchema ?? JsonNode.Parse("{\"type\":\"object\"}")!;
-            tools.Add(new Function(cb.Name, desc, schema));
+            tools.Add(new Function(cb.Name, desc, WrapSchema(cb.InputSchema)));
         }
 
-        var submitSchema = outputSchema ?? JsonNode.Parse("{\"type\":\"object\"}")!;
         tools.Add(new Function(
             SubmitResultTool,
             "Call this when you have completed your objective to submit your final result.",
-            submitSchema));
+            WrapSchema(outputSchema)));
 
         return tools;
     }
@@ -180,6 +178,10 @@ internal sealed class Orchestrator
 
         return sb.ToString();
     }
+
+    // Wraps a properties map into a full JSON Schema object as required by the Anthropic API.
+    private static JsonNode WrapSchema(JsonNode? properties) =>
+        JsonNode.Parse($"{{\"type\":\"object\",\"properties\":{properties?.ToJsonString() ?? "{}"}}}") !;
 
     private static decimal EstimateCost(Usage usage) =>
         usage.InputTokens / 1_000_000m * InputCostPer1M +

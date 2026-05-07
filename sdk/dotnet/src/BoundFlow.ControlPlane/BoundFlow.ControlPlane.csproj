@@ -5,13 +5,12 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
-    <RootNamespace>BoundFlow.SDK</RootNamespace>
-    <AssemblyName>BoundFlow.SDK</AssemblyName>
+    <RootNamespace>BoundFlow.ControlPlane</RootNamespace>
+    <AssemblyName>BoundFlow.ControlPlane</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\BoundFlow.Protos\BoundFlow.Protos.csproj" />
-    <PackageReference Include="Anthropic.SDK" Version="4.0.0" />
   </ItemGroup>
 
 </Project>

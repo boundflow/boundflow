@@ -1,8 +1,11 @@
 using System.Text.Json.Nodes;
 using BoundFlow.SDK;
 using BoundFlow.SDK.Llm;
+using BoundFlow.ControlPlane;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
+
+// dotnet run --project src/BoundFlow.TestApp
 
 // ── Config ────────────────────────────────────────────────────────────────────
 // Server must be running locally: ./bin/convergeplane -mode=server
@@ -11,7 +14,8 @@ using Microsoft.Extensions.Logging.Console;
 //
 // For deterministic-only tests (no agent steps) any string works as the API key.
 // For agent step tests set ANTHROPIC_API_KEY in your environment.
-var serverAddress = "http://localhost:50052";
+var workerAddress = "http://localhost:50052";
+var serverAddress = "http://localhost:50051";
 var llmApiKey = Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY") ?? "test-key";
 
 using var loggerFactory = LoggerFactory.Create(b => b.AddConsole().SetMinimumLevel(LogLevel.Debug));
@@ -19,56 +23,78 @@ using var loggerFactory = LoggerFactory.Create(b => b.AddConsole().SetMinimumLev
 var cts = new CancellationTokenSource();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-// ── Worker setup ──────────────────────────────────────────────────────────────
-var worker = new BoundFlowWorker(serverAddress, llmApiKey, loggerFactory)
+// ── Worker — handle the operations dispatched for this resource type ──────────
+var worker = new BoundFlowWorker(workerAddress, llmApiKey, loggerFactory)
 
-    // Simple deterministic step — just logs context and completes.
-    .Register("create_entry", async (ctx, ct) =>
+    .Register("database_agent", "create_entry", async (ctx, ct) =>
     {
-        Console.WriteLine($"[create_entry] context: {ctx.Context}");
-        await Task.Delay(500, ct); // simulate work
+        Console.WriteLine($"[database_agent/create_entry] context: {ctx.Context}");
+        await Task.Delay(500, ct);
+        return OperationResult.Next("analyse_entry", ctx.Context, 60);
+    })
+
+    .Register("database_agent", "reconcile_entry", async (ctx, ct) =>
+    {
+        Console.WriteLine($"[database_agent/reconcile_entry] context: {ctx.Context}");
+        await Task.Delay(500, ct);
         return OperationResult.Complete();
     })
 
-    // Multi-step: first step advances to a second step.
-    .Register("provision_entry", async (ctx, ct) =>
+    .Register("database_agent", "delete_entry", async (ctx, ct) =>
     {
-        Console.WriteLine($"[provision_entry] starting provisioning");
-        await Task.Delay(500, ct);
-        return OperationResult.Next(
-            "provision_verify",
-            JsonNode.Parse("{\"provisioned\": true}")!,
-            timeoutSeconds: 30);
-    })
-
-    .Register("provision_verify", async (ctx, ct) =>
-    {
-        var provisioned = ctx.Context?["provisioned"]?.GetValue<bool>() ?? false;
-        Console.WriteLine($"[provision_verify] provisioned={provisioned}");
+        Console.WriteLine($"[database_agent/delete_entry] context: {ctx.Context}");
         await Task.Delay(300, ct);
         return OperationResult.Complete();
     })
 
     // Agent step — requires a real ANTHROPIC_API_KEY.
-    // Uncomment and set the env var to test LLM functionality.
-    //
-    // .Register("analyse_entry", async (ctx, ct) =>
-    // {
-    //     var result = await ctx.RunAgentStepAsync(new AgentStepConfig(
-    //         Objective: "Summarise the context data in one sentence.",
-    //         SystemPrompt: "You are a concise data analyst.",
-    //         Policy: new AgentPolicy(MaxLlmCalls: 3),
-    //         OutputSchema: JsonNode.Parse("{\"summary\":{\"type\":\"string\"}}")
-    //     ), ct);
-    //
-    //     Console.WriteLine($"[analyse_entry] LLM result: {result.Output}");
-    //     return OperationResult.Complete();
-    // })
-    ;
+    .Register("database_agent", "analyse_entry", async (ctx, ct) =>
+    {
+        var boundFlowInfo = "BoundFlow is a tenant-aware control plane for safely scheduling, running, and auditing long-lived resource or agent workflows with policies, retries, state tracking, and customer-owned execution logic.";
+        ctx.AddLlmContext("This is information about a platform called boundflow", JsonValue.Create(boundFlowInfo));
+
+        var result = await ctx.RunAgentStepAsync(new AgentStepConfig(
+            Objective: "Summarise the context data in one sentence.",
+            SystemPrompt: "You are a concise data analyst.",
+            Policy: new AgentPolicy(MaxLlmCalls: 3),
+            OutputSchema: JsonNode.Parse("{\"summary\":{\"type\":\"string\"}}")
+        ), ct);
+
+        Console.WriteLine($"[database_agent/analyse_entry] LLM result: {result.Output}");
+        return OperationResult.Complete();
+    });
 
 Console.WriteLine("BoundFlow test worker running. Press Ctrl+C to stop.");
+Console.WriteLine($"  Worker : {workerAddress}");
 Console.WriteLine($"  Server : {serverAddress}");
 Console.WriteLine($"  LLM key: {(llmApiKey == "test-key" ? "none (deterministic only)" : "set")}");
 Console.WriteLine();
 
-await worker.RunAsync(cts.Token);
+var workerTask = worker.RunAsync(cts.Token);
+
+// ── Control plane — create the resource to trigger the workflow ───────────────
+var controlPlane = new ControlPlaneClient(serverAddress);
+var tenantGroup = await controlPlane.CreateTenantGroupAsync("test-group");
+var tenant = await controlPlane.CreateTenantAsync("test-tenant", tenantGroup.Id);
+var resource = await controlPlane.CreateResourceAsync(
+    resourceType: "database_agent",
+    tenantId: tenant.Id,
+    initialState: JsonNode.Parse("{\"sku\": \"standard\"}")!,
+    operationTimeoutSeconds: 30);
+
+ResourceState state;
+do
+{
+    await Task.Delay(500);
+    state = await controlPlane.GetResourceStateAsync(resource.Id);
+    Console.WriteLine($"Current resource state: {state.LifecycleState}");
+}
+while (state.LifecycleState == LifecycleState.Creating);
+if (state.LifecycleState != LifecycleState.Active)
+{
+    Console.WriteLine("Resource creation failure!");
+}
+
+Console.WriteLine($"lifecycle: {state.LifecycleState}");
+
+await workerTask;

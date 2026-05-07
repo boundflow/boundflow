@@ -266,6 +266,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 										Id:             job.RequestID,
 										ResourceId:     job.ResourceInstanceID,
 										OperationType:  job.JobType,
+										ResourceType:   job.ResourceType,
 										Context:        contextStruct,
 										Name:           job.CurrentAtomicOperation,
 										TimeoutSeconds: int32(job.Policy.OperationTimeoutSeconds),

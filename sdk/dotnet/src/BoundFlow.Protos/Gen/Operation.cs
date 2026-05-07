@@ -26,27 +26,28 @@ namespace Convergeplane.V1 {
           string.Concat(
             "CiBjb252ZXJnZXBsYW5lL3YxL29wZXJhdGlvbi5wcm90bxIQY29udmVyZ2Vw",
             "bGFuZS52MRocZ29vZ2xlL3Byb3RvYnVmL3N0cnVjdC5wcm90bxofZ29vZ2xl",
-            "L3Byb3RvYnVmL3RpbWVzdGFtcC5wcm90byKUAgoPQXRvbWljT3BlcmF0aW9u",
+            "L3Byb3RvYnVmL3RpbWVzdGFtcC5wcm90byK5AgoPQXRvbWljT3BlcmF0aW9u",
             "Eg4KAmlkGAEgASgJUgJpZBIfCgtyZXNvdXJjZV9pZBgCIAEoCVIKcmVzb3Vy",
             "Y2VJZBIlCg5vcGVyYXRpb25fdHlwZRgDIAEoCVINb3BlcmF0aW9uVHlwZRIS",
             "CgRuYW1lGAQgASgJUgRuYW1lEjEKB2NvbnRleHQYBSABKAsyFy5nb29nbGUu",
             "cHJvdG9idWYuU3RydWN0Ugdjb250ZXh0EjkKCmNyZWF0ZWRfYXQYBiABKAsy",
             "Gi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wUgljcmVhdGVkQXQSJwoPdGlt",
-            "ZW91dF9zZWNvbmRzGAcgASgFUg50aW1lb3V0U2Vjb25kcyK2AQoVQXRvbWlj",
-            "T3BlcmF0aW9uUmVzdWx0EjkKBnN0YXR1cxgBIAEoDjIhLmNvbnZlcmdlcGxh",
-            "bmUudjEuT3BlcmF0aW9uU3RhdHVzUgZzdGF0dXMSGAoHbWVzc2FnZRgCIAEo",
-            "CVIHbWVzc2FnZRJICg5uZXh0X29wZXJhdGlvbhgDIAEoCzIhLmNvbnZlcmdl",
-            "cGxhbmUudjEuQXRvbWljT3BlcmF0aW9uUg1uZXh0T3BlcmF0aW9uKrIBCg9P",
-            "cGVyYXRpb25TdGF0dXMSIAocT1BFUkFUSU9OX1NUQVRVU19VTlNQRUNJRklF",
-            "RBAAEiAKHE9QRVJBVElPTl9TVEFUVVNfSU5fUFJPR1JFU1MQARIeChpPUEVS",
-            "QVRJT05fU1RBVFVTX0NPTVBMRVRFRBACEhsKF09QRVJBVElPTl9TVEFUVVNf",
-            "RkFJTEVEEAMSHgoaT1BFUkFUSU9OX1NUQVRVU19DQU5DRUxMRUQQBEJNWktn",
-            "aXRodWIuY29tL2NvbnZlcmdlcGxhbmUvY29udmVyZ2VwbGFuZS9nZW4vY29u",
-            "dmVyZ2VwbGFuZS92MTtjb252ZXJnZXBsYW5ldjFiBnByb3RvMw=="));
+            "ZW91dF9zZWNvbmRzGAcgASgFUg50aW1lb3V0U2Vjb25kcxIjCg1yZXNvdXJj",
+            "ZV90eXBlGAggASgJUgxyZXNvdXJjZVR5cGUitgEKFUF0b21pY09wZXJhdGlv",
+            "blJlc3VsdBI5CgZzdGF0dXMYASABKA4yIS5jb252ZXJnZXBsYW5lLnYxLk9w",
+            "ZXJhdGlvblN0YXR1c1IGc3RhdHVzEhgKB21lc3NhZ2UYAiABKAlSB21lc3Nh",
+            "Z2USSAoObmV4dF9vcGVyYXRpb24YAyABKAsyIS5jb252ZXJnZXBsYW5lLnYx",
+            "LkF0b21pY09wZXJhdGlvblINbmV4dE9wZXJhdGlvbiqyAQoPT3BlcmF0aW9u",
+            "U3RhdHVzEiAKHE9QRVJBVElPTl9TVEFUVVNfVU5TUEVDSUZJRUQQABIgChxP",
+            "UEVSQVRJT05fU1RBVFVTX0lOX1BST0dSRVNTEAESHgoaT1BFUkFUSU9OX1NU",
+            "QVRVU19DT01QTEVURUQQAhIbChdPUEVSQVRJT05fU1RBVFVTX0ZBSUxFRBAD",
+            "Eh4KGk9QRVJBVElPTl9TVEFUVVNfQ0FOQ0VMTEVEEARCTVpLZ2l0aHViLmNv",
+            "bS9jb252ZXJnZXBsYW5lL2NvbnZlcmdlcGxhbmUvZ2VuL2NvbnZlcmdlcGxh",
+            "bmUvdjE7Y29udmVyZ2VwbGFuZXYxYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.StructReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Convergeplane.V1.OperationStatus), }, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.AtomicOperation), global::Convergeplane.V1.AtomicOperation.Parser, new[]{ "Id", "ResourceId", "OperationType", "Name", "Context", "CreatedAt", "TimeoutSeconds" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.AtomicOperation), global::Convergeplane.V1.AtomicOperation.Parser, new[]{ "Id", "ResourceId", "OperationType", "Name", "Context", "CreatedAt", "TimeoutSeconds", "ResourceType" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.AtomicOperationResult), global::Convergeplane.V1.AtomicOperationResult.Parser, new[]{ "Status", "Message", "NextOperation" }, null, null, null, null)
           }));
     }
@@ -107,6 +108,7 @@ namespace Convergeplane.V1 {
       context_ = other.context_ != null ? other.context_.Clone() : null;
       createdAt_ = other.createdAt_ != null ? other.createdAt_.Clone() : null;
       timeoutSeconds_ = other.timeoutSeconds_;
+      resourceType_ = other.resourceType_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -200,6 +202,18 @@ namespace Convergeplane.V1 {
       }
     }
 
+    /// <summary>Field number for the "resource_type" field.</summary>
+    public const int ResourceTypeFieldNumber = 8;
+    private string resourceType_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ResourceType {
+      get { return resourceType_; }
+      set {
+        resourceType_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -222,6 +236,7 @@ namespace Convergeplane.V1 {
       if (!object.Equals(Context, other.Context)) return false;
       if (!object.Equals(CreatedAt, other.CreatedAt)) return false;
       if (TimeoutSeconds != other.TimeoutSeconds) return false;
+      if (ResourceType != other.ResourceType) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -236,6 +251,7 @@ namespace Convergeplane.V1 {
       if (context_ != null) hash ^= Context.GetHashCode();
       if (createdAt_ != null) hash ^= CreatedAt.GetHashCode();
       if (TimeoutSeconds != 0) hash ^= TimeoutSeconds.GetHashCode();
+      if (ResourceType.Length != 0) hash ^= ResourceType.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -282,6 +298,10 @@ namespace Convergeplane.V1 {
         output.WriteRawTag(56);
         output.WriteInt32(TimeoutSeconds);
       }
+      if (ResourceType.Length != 0) {
+        output.WriteRawTag(66);
+        output.WriteString(ResourceType);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -320,6 +340,10 @@ namespace Convergeplane.V1 {
         output.WriteRawTag(56);
         output.WriteInt32(TimeoutSeconds);
       }
+      if (ResourceType.Length != 0) {
+        output.WriteRawTag(66);
+        output.WriteString(ResourceType);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -350,6 +374,9 @@ namespace Convergeplane.V1 {
       }
       if (TimeoutSeconds != 0) {
         size += 1 + pb::CodedOutputStream.ComputeInt32Size(TimeoutSeconds);
+      }
+      if (ResourceType.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ResourceType);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -389,6 +416,9 @@ namespace Convergeplane.V1 {
       }
       if (other.TimeoutSeconds != 0) {
         TimeoutSeconds = other.TimeoutSeconds;
+      }
+      if (other.ResourceType.Length != 0) {
+        ResourceType = other.ResourceType;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -443,6 +473,10 @@ namespace Convergeplane.V1 {
             TimeoutSeconds = input.ReadInt32();
             break;
           }
+          case 66: {
+            ResourceType = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -494,6 +528,10 @@ namespace Convergeplane.V1 {
           }
           case 56: {
             TimeoutSeconds = input.ReadInt32();
+            break;
+          }
+          case 66: {
+            ResourceType = input.ReadString();
             break;
           }
         }

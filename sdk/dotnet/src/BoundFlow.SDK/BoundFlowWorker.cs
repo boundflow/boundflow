@@ -94,7 +94,7 @@ public sealed class BoundFlowWorker
     private readonly AnthropicClient _anthropicClient;
     private readonly string _llmModel;
     private readonly ILoggerFactory _loggerFactory;
-    private readonly Dictionary<string, Func<OperationContext, CancellationToken, Task<OperationResult>>> _handlers = new();
+    private readonly Dictionary<(string ResourceType, string OperationName), Func<OperationContext, CancellationToken, Task<OperationResult>>> _handlers = new();
 
     public BoundFlowWorker(
         string serverAddress,
@@ -109,13 +109,14 @@ public sealed class BoundFlowWorker
     }
 
     /// <summary>
-    /// Registers a handler for the named operation.
+    /// Registers a handler for a specific resource type and operation name.
     /// </summary>
     public BoundFlowWorker Register(
+        string resourceType,
         string operationName,
         Func<OperationContext, CancellationToken, Task<OperationResult>> handler)
     {
-        _handlers[operationName] = handler;
+        _handlers[(resourceType, operationName)] = handler;
         return this;
     }
 
@@ -128,8 +129,8 @@ public sealed class BoundFlowWorker
 
         OperationHandler operationHandler = async (op, ct) =>
         {
-            if (!_handlers.TryGetValue(op.Name, out var handler))
-                throw new InvalidOperationException($"No handler registered for operation '{op.Name}'.");
+            if (!_handlers.TryGetValue((op.ResourceType, op.Name), out var handler))
+                throw new InvalidOperationException($"No handler registered for resource type '{op.ResourceType}' operation '{op.Name}'.");
 
             // New Orchestrator per call — stateless, cheap to create.
             var orchestrator = new Orchestrator(
