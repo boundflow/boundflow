@@ -10,7 +10,7 @@ namespace BoundFlow.SDK.Worker;
 /// Return a completed AtomicOperationResult to advance or complete the job,
 /// or throw to fail it. The CancellationToken is cancelled if the server sends Cancel.
 /// </summary>
-public delegate Task<AtomicOperationResult> OperationHandler(
+internal delegate Task<AtomicOperationResult> OperationHandler(
     AtomicOperation operation,
     CancellationToken ct
 );
@@ -18,7 +18,7 @@ public delegate Task<AtomicOperationResult> OperationHandler(
 /// <summary>
 /// Connects to the BoundFlow server and drives the worker session loop.
 /// </summary>
-public sealed class WorkerClient : IAsyncDisposable
+internal sealed class WorkerClient : IAsyncDisposable
 {
     private readonly GrpcChannel _channel;
     private readonly WorkerService.WorkerServiceClient _client;

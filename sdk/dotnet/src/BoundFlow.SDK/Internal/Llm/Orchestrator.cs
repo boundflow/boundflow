@@ -11,9 +11,9 @@ namespace BoundFlow.SDK.Llm;
 /// <summary>
 /// Runs the agentic step loop against the Claude API.
 /// </summary>
-public sealed class Orchestrator
+internal sealed class Orchestrator
 {
-    public const string SubmitResultTool = "submit_result";
+    internal const string SubmitResultTool = "submit_result";
 
     private const decimal InputCostPer1M = 3.0m;
     private const decimal OutputCostPer1M = 15.0m;
