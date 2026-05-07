@@ -135,7 +135,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 		}
 		log.Info("operation completed with next operation, advancing job", "request_id", job.RequestID, "next_operation", result.NextOperation.Name)
 		_, err := s.jobs.UpdateJob(ctx, job.ResourceInstanceID, s.id, domain.JobStatusAwaitingNext,
-			result.NextOperation.Name, result.NextOperation.Context.AsMap())
+			result.NextOperation.Name, int(result.NextOperation.TimeoutSeconds), result.NextOperation.Context.AsMap())
 
 		// consider returning error for ownership failure, for now the return isnt used for anything
 		return err
@@ -263,11 +263,12 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 							Payload: &convergeplanev1.ServerCommand_Launch{
 								Launch: &convergeplanev1.LaunchOperation{
 									Operation: &convergeplanev1.AtomicOperation{
-										Id:            job.RequestID,
-										ResourceId:    job.ResourceInstanceID,
-										OperationType: job.JobType,
-										Context:       contextStruct,
-										Name:          job.CurrentAtomicOperation,
+										Id:             job.RequestID,
+										ResourceId:     job.ResourceInstanceID,
+										OperationType:  job.JobType,
+										Context:        contextStruct,
+										Name:           job.CurrentAtomicOperation,
+										TimeoutSeconds: int32(job.Policy.OperationTimeoutSeconds),
 									},
 								},
 							},
@@ -324,7 +325,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 				state = ConnectedBusy
 
 			case ConnectedBusy:
-				ticker := time.NewTicker(time.Duration(s.defaultJobTimeout) * time.Second)
+				ticker := time.NewTicker(time.Duration(currentJob.Policy.OperationTimeoutSeconds) * time.Second)
 
 			ConnectedBusyLoop:
 				for {
@@ -362,7 +363,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 						state = ConnectedIdle
 						break ConnectedBusyLoop
 					case <-ticker.C:
-						log.Warn("job timed out, sending cancel", "request_id", currentJob.RequestID, "timeout_secs", s.defaultJobTimeout)
+						log.Warn("job timed out, sending cancel", "request_id", currentJob.RequestID, "timeout_secs", currentJob.Policy.OperationTimeoutSeconds)
 						err := cancelOperation(currentJob.RequestID)
 						if err != nil {
 							failOperation(cancelLease, currentJob)

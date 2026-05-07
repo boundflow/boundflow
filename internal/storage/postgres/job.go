@@ -48,12 +48,12 @@ func (r *JobRepo) AcquireJob(ctx context.Context, resourceInstanceID string, own
 		 WHERE resource_instance_id = $1
 		   AND status IN ('pending', 'awaiting_next')
 		   AND (owner IS NULL OR lease_expires_at < now())
-		 RETURNING resource_instance_id, request_id, version, current_atomic_operation, context, status, job_type, owner, lease_expires_at, created_at`,
+		 RETURNING resource_instance_id, request_id, version, current_atomic_operation, context, status, job_type, timeout_seconds, owner, lease_expires_at, created_at`,
 		resourceInstanceID, ownerID, leaseDuration.String(),
 	).Scan(
 		&job.ResourceInstanceID, &job.RequestID, &job.Version,
 		&job.CurrentAtomicOperation, &contextJSON, &job.Status,
-		&job.JobType, &job.Owner, &job.LeaseExpiresAt, &job.CreatedAt,
+		&job.JobType, &job.Policy.OperationTimeoutSeconds, &job.Owner, &job.LeaseExpiresAt, &job.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -107,7 +107,7 @@ func (r *JobRepo) ReleaseJob(ctx context.Context, resourceInstanceID string, own
 	return nil
 }
 
-func (r *JobRepo) UpdateJob(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, jobContext map[string]any) (bool, error) {
+func (r *JobRepo) UpdateJob(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any) (bool, error) {
 	contextJSON, err := json.Marshal(jobContext)
 	if err != nil {
 		return false, fmt.Errorf("marshal job context: %w", err)
@@ -115,9 +115,9 @@ func (r *JobRepo) UpdateJob(ctx context.Context, resourceInstanceID string, owne
 
 	tag, err := r.pool.Exec(ctx,
 		`UPDATE jobs
-		 SET status = $3, current_atomic_operation = $4, context = $5
+		 SET status = $3, current_atomic_operation = $4, timeout_seconds = $5, context = $6
 		 WHERE resource_instance_id = $1 AND owner = $2`,
-		resourceInstanceID, ownerID, status, currentAtomicOperation, contextJSON,
+		resourceInstanceID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, contextJSON,
 	)
 	if err != nil {
 		return false, fmt.Errorf("update job: %w", err)

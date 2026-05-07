@@ -28,8 +28,11 @@ type CreateResourceRequest struct {
 	ResourceType  string                 `protobuf:"bytes,2,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
 	TenantId      string                 `protobuf:"bytes,3,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
 	InitialState  *structpb.Struct       `protobuf:"bytes,4,opt,name=initial_state,json=initialState,proto3" json:"initial_state,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Per-request operation timeout in seconds. Falls back to tenant policy, then tenant group policy.
+	// Must be resolvable from one of these sources or the request will be rejected.
+	OperationTimeoutSeconds int32 `protobuf:"varint,5,opt,name=operation_timeout_seconds,json=operationTimeoutSeconds,proto3" json:"operation_timeout_seconds,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *CreateResourceRequest) Reset() {
@@ -90,6 +93,13 @@ func (x *CreateResourceRequest) GetInitialState() *structpb.Struct {
 	return nil
 }
 
+func (x *CreateResourceRequest) GetOperationTimeoutSeconds() int32 {
+	if x != nil {
+		return x.OperationTimeoutSeconds
+	}
+	return 0
+}
+
 type CreateResourceResponse struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	ResourceInstance *ResourceInstance      `protobuf:"bytes,1,opt,name=resource_instance,json=resourceInstance,proto3" json:"resource_instance,omitempty"`
@@ -135,12 +145,13 @@ func (x *CreateResourceResponse) GetResourceInstance() *ResourceInstance {
 }
 
 type ReconcileResourceRequest struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	CorrelationId      string                 `protobuf:"bytes,1,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
-	ResourceInstanceId string                 `protobuf:"bytes,2,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
-	GoalState          *structpb.Struct       `protobuf:"bytes,3,opt,name=goal_state,json=goalState,proto3" json:"goal_state,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	CorrelationId           string                 `protobuf:"bytes,1,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	ResourceInstanceId      string                 `protobuf:"bytes,2,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
+	GoalState               *structpb.Struct       `protobuf:"bytes,3,opt,name=goal_state,json=goalState,proto3" json:"goal_state,omitempty"`
+	OperationTimeoutSeconds int32                  `protobuf:"varint,4,opt,name=operation_timeout_seconds,json=operationTimeoutSeconds,proto3" json:"operation_timeout_seconds,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *ReconcileResourceRequest) Reset() {
@@ -194,6 +205,13 @@ func (x *ReconcileResourceRequest) GetGoalState() *structpb.Struct {
 	return nil
 }
 
+func (x *ReconcileResourceRequest) GetOperationTimeoutSeconds() int32 {
+	if x != nil {
+		return x.OperationTimeoutSeconds
+	}
+	return 0
+}
+
 type ReconcileResourceResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
@@ -239,11 +257,12 @@ func (x *ReconcileResourceResponse) GetRequestId() string {
 }
 
 type DeleteResourceRequest struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	CorrelationId      string                 `protobuf:"bytes,1,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
-	ResourceInstanceId string                 `protobuf:"bytes,2,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	CorrelationId           string                 `protobuf:"bytes,1,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	ResourceInstanceId      string                 `protobuf:"bytes,2,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
+	OperationTimeoutSeconds int32                  `protobuf:"varint,3,opt,name=operation_timeout_seconds,json=operationTimeoutSeconds,proto3" json:"operation_timeout_seconds,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *DeleteResourceRequest) Reset() {
@@ -288,6 +307,13 @@ func (x *DeleteResourceRequest) GetResourceInstanceId() string {
 		return x.ResourceInstanceId
 	}
 	return ""
+}
+
+func (x *DeleteResourceRequest) GetOperationTimeoutSeconds() int32 {
+	if x != nil {
+		return x.OperationTimeoutSeconds
+	}
+	return 0
 }
 
 type DeleteResourceResponse struct {
@@ -442,25 +468,28 @@ var File_convergeplane_v1_lifecycle_proto protoreflect.FileDescriptor
 
 const file_convergeplane_v1_lifecycle_proto_rawDesc = "" +
 	"\n" +
-	" convergeplane/v1/lifecycle.proto\x12\x10convergeplane.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a(convergeplane/v1/resource_instance.proto\"\xbe\x01\n" +
+	" convergeplane/v1/lifecycle.proto\x12\x10convergeplane.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a(convergeplane/v1/resource_instance.proto\"\xfa\x01\n" +
 	"\x15CreateResourceRequest\x12%\n" +
 	"\x0ecorrelation_id\x18\x01 \x01(\tR\rcorrelationId\x12#\n" +
 	"\rresource_type\x18\x02 \x01(\tR\fresourceType\x12\x1b\n" +
 	"\ttenant_id\x18\x03 \x01(\tR\btenantId\x12<\n" +
-	"\rinitial_state\x18\x04 \x01(\v2\x17.google.protobuf.StructR\finitialState\"i\n" +
+	"\rinitial_state\x18\x04 \x01(\v2\x17.google.protobuf.StructR\finitialState\x12:\n" +
+	"\x19operation_timeout_seconds\x18\x05 \x01(\x05R\x17operationTimeoutSeconds\"i\n" +
 	"\x16CreateResourceResponse\x12O\n" +
-	"\x11resource_instance\x18\x01 \x01(\v2\".convergeplane.v1.ResourceInstanceR\x10resourceInstance\"\xab\x01\n" +
+	"\x11resource_instance\x18\x01 \x01(\v2\".convergeplane.v1.ResourceInstanceR\x10resourceInstance\"\xe7\x01\n" +
 	"\x18ReconcileResourceRequest\x12%\n" +
 	"\x0ecorrelation_id\x18\x01 \x01(\tR\rcorrelationId\x120\n" +
 	"\x14resource_instance_id\x18\x02 \x01(\tR\x12resourceInstanceId\x126\n" +
 	"\n" +
-	"goal_state\x18\x03 \x01(\v2\x17.google.protobuf.StructR\tgoalState\":\n" +
+	"goal_state\x18\x03 \x01(\v2\x17.google.protobuf.StructR\tgoalState\x12:\n" +
+	"\x19operation_timeout_seconds\x18\x04 \x01(\x05R\x17operationTimeoutSeconds\":\n" +
 	"\x19ReconcileResourceResponse\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x01 \x01(\tR\trequestId\"p\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\"\xac\x01\n" +
 	"\x15DeleteResourceRequest\x12%\n" +
 	"\x0ecorrelation_id\x18\x01 \x01(\tR\rcorrelationId\x120\n" +
-	"\x14resource_instance_id\x18\x02 \x01(\tR\x12resourceInstanceId\"7\n" +
+	"\x14resource_instance_id\x18\x02 \x01(\tR\x12resourceInstanceId\x12:\n" +
+	"\x19operation_timeout_seconds\x18\x03 \x01(\x05R\x17operationTimeoutSeconds\"7\n" +
 	"\x16DeleteResourceResponse\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x01 \x01(\tR\trequestId\"K\n" +

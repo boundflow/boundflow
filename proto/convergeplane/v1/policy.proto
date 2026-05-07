@@ -11,6 +11,8 @@ message PolicySet {
   FailurePolicy failure = 2;
   MaintenanceWindowPolicy maintenance_window = 3;
   UpgradePolicy upgrade = 4;
+  // Default operation timeout in seconds. Applied when no per-request timeout is specified.
+  int32 operation_timeout_seconds = 5;
 }
 
 message ConcurrencyPolicy {

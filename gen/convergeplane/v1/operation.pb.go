@@ -79,15 +79,16 @@ func (OperationStatus) EnumDescriptor() ([]byte, []int) {
 }
 
 type AtomicOperation struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ResourceId    string                 `protobuf:"bytes,2,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
-	OperationType string                 `protobuf:"bytes,3,opt,name=operation_type,json=operationType,proto3" json:"operation_type,omitempty"`
-	Name          string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
-	Context       *structpb.Struct       `protobuf:"bytes,5,opt,name=context,proto3" json:"context,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ResourceId     string                 `protobuf:"bytes,2,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
+	OperationType  string                 `protobuf:"bytes,3,opt,name=operation_type,json=operationType,proto3" json:"operation_type,omitempty"`
+	Name           string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+	Context        *structpb.Struct       `protobuf:"bytes,5,opt,name=context,proto3" json:"context,omitempty"`
+	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	TimeoutSeconds int32                  `protobuf:"varint,7,opt,name=timeout_seconds,json=timeoutSeconds,proto3" json:"timeout_seconds,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *AtomicOperation) Reset() {
@@ -162,6 +163,13 @@ func (x *AtomicOperation) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *AtomicOperation) GetTimeoutSeconds() int32 {
+	if x != nil {
+		return x.TimeoutSeconds
+	}
+	return 0
+}
+
 type AtomicOperationResult struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Status        OperationStatus        `protobuf:"varint,1,opt,name=status,proto3,enum=convergeplane.v1.OperationStatus" json:"status,omitempty"`
@@ -226,7 +234,7 @@ var File_convergeplane_v1_operation_proto protoreflect.FileDescriptor
 
 const file_convergeplane_v1_operation_proto_rawDesc = "" +
 	"\n" +
-	" convergeplane/v1/operation.proto\x12\x10convergeplane.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xeb\x01\n" +
+	" convergeplane/v1/operation.proto\x12\x10convergeplane.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x94\x02\n" +
 	"\x0fAtomicOperation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vresource_id\x18\x02 \x01(\tR\n" +
@@ -235,7 +243,8 @@ const file_convergeplane_v1_operation_proto_rawDesc = "" +
 	"\x04name\x18\x04 \x01(\tR\x04name\x121\n" +
 	"\acontext\x18\x05 \x01(\v2\x17.google.protobuf.StructR\acontext\x129\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xb6\x01\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12'\n" +
+	"\x0ftimeout_seconds\x18\a \x01(\x05R\x0etimeoutSeconds\"\xb6\x01\n" +
 	"\x15AtomicOperationResult\x129\n" +
 	"\x06status\x18\x01 \x01(\x0e2!.convergeplane.v1.OperationStatusR\x06status\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12H\n" +

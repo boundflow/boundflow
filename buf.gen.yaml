@@ -6,3 +6,7 @@ plugins:
   - remote: buf.build/grpc/go
     out: gen
     opt: paths=source_relative
+  - remote: buf.build/protocolbuffers/csharp
+    out: sdk/dotnet/src/BoundFlow.SDK/Gen
+  - remote: buf.build/grpc/csharp
+    out: sdk/dotnet/src/BoundFlow.SDK/Gen

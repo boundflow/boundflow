@@ -28,8 +28,10 @@ type PolicySet struct {
 	Failure           *FailurePolicy           `protobuf:"bytes,2,opt,name=failure,proto3" json:"failure,omitempty"`
 	MaintenanceWindow *MaintenanceWindowPolicy `protobuf:"bytes,3,opt,name=maintenance_window,json=maintenanceWindow,proto3" json:"maintenance_window,omitempty"`
 	Upgrade           *UpgradePolicy           `protobuf:"bytes,4,opt,name=upgrade,proto3" json:"upgrade,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Default operation timeout in seconds. Applied when no per-request timeout is specified.
+	OperationTimeoutSeconds int32 `protobuf:"varint,5,opt,name=operation_timeout_seconds,json=operationTimeoutSeconds,proto3" json:"operation_timeout_seconds,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *PolicySet) Reset() {
@@ -88,6 +90,13 @@ func (x *PolicySet) GetUpgrade() *UpgradePolicy {
 		return x.Upgrade
 	}
 	return nil
+}
+
+func (x *PolicySet) GetOperationTimeoutSeconds() int32 {
+	if x != nil {
+		return x.OperationTimeoutSeconds
+	}
+	return 0
 }
 
 type ConcurrencyPolicy struct {
@@ -406,12 +415,13 @@ var File_convergeplane_v1_policy_proto protoreflect.FileDescriptor
 
 const file_convergeplane_v1_policy_proto_rawDesc = "" +
 	"\n" +
-	"\x1dconvergeplane/v1/policy.proto\x12\x10convergeplane.v1\x1a\x1egoogle/protobuf/duration.proto\"\xa2\x02\n" +
+	"\x1dconvergeplane/v1/policy.proto\x12\x10convergeplane.v1\x1a\x1egoogle/protobuf/duration.proto\"\xde\x02\n" +
 	"\tPolicySet\x12E\n" +
 	"\vconcurrency\x18\x01 \x01(\v2#.convergeplane.v1.ConcurrencyPolicyR\vconcurrency\x129\n" +
 	"\afailure\x18\x02 \x01(\v2\x1f.convergeplane.v1.FailurePolicyR\afailure\x12X\n" +
 	"\x12maintenance_window\x18\x03 \x01(\v2).convergeplane.v1.MaintenanceWindowPolicyR\x11maintenanceWindow\x129\n" +
-	"\aupgrade\x18\x04 \x01(\v2\x1f.convergeplane.v1.UpgradePolicyR\aupgrade\"O\n" +
+	"\aupgrade\x18\x04 \x01(\v2\x1f.convergeplane.v1.UpgradePolicyR\aupgrade\x12:\n" +
+	"\x19operation_timeout_seconds\x18\x05 \x01(\x05R\x17operationTimeoutSeconds\"O\n" +
 	"\x11ConcurrencyPolicy\x12:\n" +
 	"\x19max_concurrent_operations\x18\x01 \x01(\x05R\x17maxConcurrentOperations\"m\n" +
 	"\rFailurePolicy\x12'\n" +

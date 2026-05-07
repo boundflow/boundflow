@@ -35,10 +35,10 @@ func (r *CustomerRequestRepo) Create(ctx context.Context, req *domain.CustomerRe
 	}
 
 	_, err = r.pool.Exec(ctx,
-		`INSERT INTO customer_requests (id, resource_instance_id, status, request_type, request_info, current_config_snapshot, goal_config_snapshot, version, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		`INSERT INTO customer_requests (id, resource_instance_id, status, request_type, request_info, current_config_snapshot, goal_config_snapshot, version, operation_timeout_seconds, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 		req.ID, req.ResourceInstanceID,
-		req.Status, req.RequestType, requestInfo, currentSnapshot, goalSnapshot, req.Version, req.CreatedAt,
+		req.Status, req.RequestType, requestInfo, currentSnapshot, goalSnapshot, req.Version, req.JobPolicy.OperationTimeoutSeconds, req.CreatedAt,
 	)
 	if err != nil {
 		return handleError(err, "customer request")

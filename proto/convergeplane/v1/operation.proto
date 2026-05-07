@@ -14,6 +14,7 @@ message AtomicOperation {
   string name = 4;
   google.protobuf.Struct context = 5;
   google.protobuf.Timestamp created_at = 6;
+  int32 timeout_seconds = 7;
 }
 
 message AtomicOperationResult {

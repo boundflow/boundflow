@@ -50,13 +50,13 @@ func (r *SchedulerRepo) GetTopUnscheduledRequests(ctx context.Context, partition
 func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID string) (resourceInstanceID string, version int64, written bool, err error) {
 	err = r.pool.QueryRow(ctx,
 		`WITH candidate AS (
-		     SELECT cr.id, cr.resource_instance_id, cr.version, cr.request_type, cr.request_info
+		     SELECT cr.id, cr.resource_instance_id, cr.version, cr.request_type, cr.request_info, cr.operation_timeout_seconds
 		     FROM customer_requests cr
 		     WHERE cr.id = $1
 		 ),
 		 upserted AS (
-		     INSERT INTO jobs (resource_instance_id, request_id, version, current_atomic_operation, context, status, job_type)
-		     SELECT c.resource_instance_id, c.id, c.version, c.request_type || '_entry', c.request_info, 'pending', c.request_type
+		     INSERT INTO jobs (resource_instance_id, request_id, version, current_atomic_operation, context, status, job_type, timeout_seconds)
+		     SELECT c.resource_instance_id, c.id, c.version, c.request_type || '_entry', c.request_info, 'pending', c.request_type, c.operation_timeout_seconds
 		     FROM candidate c
 		     ON CONFLICT (resource_instance_id) DO UPDATE
 		         SET request_id               = EXCLUDED.request_id,
@@ -64,6 +64,7 @@ func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID stri
 		             current_atomic_operation = EXCLUDED.current_atomic_operation,
 		             context                  = EXCLUDED.context,
 		             job_type                 = EXCLUDED.job_type,
+		             timeout_seconds          = EXCLUDED.timeout_seconds,
 		             status                   = 'pending',
 		             owner                    = NULL,
 		             lease_expires_at         = NULL

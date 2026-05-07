@@ -3,10 +3,11 @@ package domain
 import "time"
 
 type PolicySet struct {
-	Concurrency       ConcurrencyPolicy
-	Failure           FailurePolicy
-	MaintenanceWindow MaintenanceWindowPolicy
-	Upgrade           UpgradePolicy
+	Concurrency             ConcurrencyPolicy
+	Failure                 FailurePolicy
+	MaintenanceWindow       MaintenanceWindowPolicy
+	Upgrade                 UpgradePolicy
+	OperationTimeoutSeconds int
 }
 
 type ConcurrencyPolicy struct {

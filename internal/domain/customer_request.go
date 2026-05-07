@@ -23,13 +23,14 @@ const (
 )
 
 type CustomerRequest struct {
-	ID                  string
-	ResourceInstanceID  string
-	Status              CustomerRequestStatus
-	RequestType         CustomerRequestType
+	ID                     string
+	ResourceInstanceID     string
+	Status                 CustomerRequestStatus
+	RequestType            CustomerRequestType
 	RequestInfo            map[string]any
 	CurrentConfigSnapshot  ResourceState
 	GoalConfigSnapshot     ResourceState
 	Version                int64
-	CreatedAt           time.Time
+	JobPolicy              JobPolicy
+	CreatedAt              time.Time
 }

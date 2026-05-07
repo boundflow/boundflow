@@ -1,0 +1,13 @@
+/Users/arjunlama/src/convergeplane/sdk/dotnet/src/BoundFlow.SDK/obj/Debug/net10.0/BoundFlow.SDK.csproj.AssemblyReference.cache
+/Users/arjunlama/src/convergeplane/sdk/dotnet/src/BoundFlow.SDK/obj/Debug/net10.0/BoundFlow.SDK.GeneratedMSBuildEditorConfig.editorconfig
+/Users/arjunlama/src/convergeplane/sdk/dotnet/src/BoundFlow.SDK/obj/Debug/net10.0/BoundFlow.SDK.AssemblyInfoInputs.cache
+/Users/arjunlama/src/convergeplane/sdk/dotnet/src/BoundFlow.SDK/obj/Debug/net10.0/BoundFlow.SDK.AssemblyInfo.cs
+/Users/arjunlama/src/convergeplane/sdk/dotnet/src/BoundFlow.SDK/obj/Debug/net10.0/BoundFlow.SDK.csproj.CoreCompileInputs.cache
+/Users/arjunlama/src/convergeplane/sdk/dotnet/src/BoundFlow.SDK/obj/Debug/net10.0/BoundFlow.SDK.sourcelink.json
+/Users/arjunlama/src/convergeplane/sdk/dotnet/src/BoundFlow.SDK/bin/Debug/net10.0/BoundFlow.SDK.deps.json
+/Users/arjunlama/src/convergeplane/sdk/dotnet/src/BoundFlow.SDK/bin/Debug/net10.0/BoundFlow.SDK.dll
+/Users/arjunlama/src/convergeplane/sdk/dotnet/src/BoundFlow.SDK/bin/Debug/net10.0/BoundFlow.SDK.pdb
+/Users/arjunlama/src/convergeplane/sdk/dotnet/src/BoundFlow.SDK/obj/Debug/net10.0/BoundFlow.SDK.dll
+/Users/arjunlama/src/convergeplane/sdk/dotnet/src/BoundFlow.SDK/obj/Debug/net10.0/refint/BoundFlow.SDK.dll
+/Users/arjunlama/src/convergeplane/sdk/dotnet/src/BoundFlow.SDK/obj/Debug/net10.0/BoundFlow.SDK.pdb
+/Users/arjunlama/src/convergeplane/sdk/dotnet/src/BoundFlow.SDK/obj/Debug/net10.0/ref/BoundFlow.SDK.dll

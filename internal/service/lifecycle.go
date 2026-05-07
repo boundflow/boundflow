@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"log/slog"
@@ -13,6 +14,8 @@ import (
 	"github.com/convergeplane/convergeplane/internal/storage"
 )
 
+var ErrMissingJobPolicy = errors.New("operation_timeout_seconds must be set on the request, tenant policy, or tenant group policy")
+
 // RequestScheduler is the scheduling capability the lifecycle service needs.
 // Satisfied by *scheduler.Scheduler.
 type RequestScheduler interface {
@@ -22,6 +25,8 @@ type RequestScheduler interface {
 type LifecycleService struct {
 	resourceInstances storage.ResourceInstanceRepository
 	customerRequests  storage.CustomerRequestRepository
+	tenants           storage.TenantRepository
+	tenantGroups      storage.TenantGroupRepository
 	scheduler         RequestScheduler
 	numPartitions     int
 	log               *slog.Logger
@@ -30,6 +35,8 @@ type LifecycleService struct {
 func NewLifecycleService(
 	resourceInstances storage.ResourceInstanceRepository,
 	customerRequests storage.CustomerRequestRepository,
+	tenants storage.TenantRepository,
+	tenantGroups storage.TenantGroupRepository,
 	scheduler RequestScheduler,
 	numPartitions int,
 	log *slog.Logger,
@@ -37,14 +44,50 @@ func NewLifecycleService(
 	return &LifecycleService{
 		resourceInstances: resourceInstances,
 		customerRequests:  customerRequests,
+		tenants:           tenants,
+		tenantGroups:      tenantGroups,
 		scheduler:         scheduler,
 		numPartitions:     numPartitions,
 		log:               log.With("component", "lifecycle_service"),
 	}
 }
 
-func (s *LifecycleService) CreateResource(ctx context.Context, correlationID, resourceType, tenantID string, initialState domain.ResourceState) (*domain.ResourceInstance, error) {
+// resolveJobPolicy builds the JobPolicy for a new job by merging (in order):
+// the per-request override, the tenant's policy overrides, the tenant group's policies.
+// Returns ErrMissingJobPolicy if required fields cannot be resolved.
+func (s *LifecycleService) resolveJobPolicy(ctx context.Context, tenantID string, requestPolicy domain.JobPolicy) (domain.JobPolicy, error) {
+	resolved := requestPolicy
+
+	if resolved.OperationTimeoutSeconds == 0 {
+		tenant, err := s.tenants.Get(ctx, tenantID)
+		if err != nil {
+			return domain.JobPolicy{}, fmt.Errorf("look up tenant: %w", err)
+		}
+		if tenant.PolicyOverrides != nil && tenant.PolicyOverrides.OperationTimeoutSeconds > 0 {
+			resolved.OperationTimeoutSeconds = tenant.PolicyOverrides.OperationTimeoutSeconds
+		} else {
+			group, err := s.tenantGroups.Get(ctx, tenant.TenantGroupID)
+			if err != nil {
+				return domain.JobPolicy{}, fmt.Errorf("look up tenant group: %w", err)
+			}
+			resolved.OperationTimeoutSeconds = group.Policies.OperationTimeoutSeconds
+		}
+	}
+
+	if resolved.OperationTimeoutSeconds == 0 {
+		return domain.JobPolicy{}, ErrMissingJobPolicy
+	}
+
+	return resolved, nil
+}
+
+func (s *LifecycleService) CreateResource(ctx context.Context, correlationID, resourceType, tenantID string, initialState domain.ResourceState, requestPolicy domain.JobPolicy) (*domain.ResourceInstance, error) {
 	s.log.Info("creating resource", "correlation_id", correlationID, "resource_type", resourceType, "tenant_id", tenantID)
+
+	policy, err := s.resolveJobPolicy(ctx, tenantID, requestPolicy)
+	if err != nil {
+		return nil, err
+	}
 
 	id := uuid.New().String()
 	resourceInstance := domain.ResourceInstance{
@@ -69,13 +112,14 @@ func (s *LifecycleService) CreateResource(ctx context.Context, correlationID, re
 	}
 
 	request := domain.CustomerRequest{
-		ID:                 uuid.New().String(),
-		ResourceInstanceID: resourceInstance.ID,
-		Status:             domain.CustomerRequestStatusUnscheduled,
-		RequestType:        domain.CustomerRequestTypeCreate,
-		RequestInfo:        requestInfo,
-		Version:            resourceInstance.TargetVersion,
+		ID:                      uuid.New().String(),
+		ResourceInstanceID:      resourceInstance.ID,
+		Status:                  domain.CustomerRequestStatusUnscheduled,
+		RequestType:             domain.CustomerRequestTypeCreate,
+		RequestInfo:             requestInfo,
+		Version:                 resourceInstance.TargetVersion,
 		GoalConfigSnapshot: initialState,
+		JobPolicy:          policy,
 	}
 
 	if err := s.customerRequests.Create(ctx, &request); err != nil {
@@ -91,8 +135,17 @@ func (s *LifecycleService) CreateResource(ctx context.Context, correlationID, re
 	return &resourceInstance, nil
 }
 
-func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID, resourceInstanceID string, goalState domain.ResourceState) error {
+func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID, resourceInstanceID string, goalState domain.ResourceState, requestPolicy domain.JobPolicy) error {
 	s.log.Info("reconciling resource", "correlation_id", correlationID, "resource_id", resourceInstanceID)
+
+	instance, err := s.resourceInstances.Get(ctx, resourceInstanceID)
+	if err != nil {
+		return fmt.Errorf("get resource instance: %w", err)
+	}
+	policy, err := s.resolveJobPolicy(ctx, instance.TenantID, requestPolicy)
+	if err != nil {
+		return err
+	}
 
 	ver, err := s.resourceInstances.ReconcileGoalStateAndIncrementVersion(ctx, resourceInstanceID, goalState,
 		domain.LifecycleStateDeleting, domain.LifecycleStateDeleted)
@@ -106,13 +159,14 @@ func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID,
 	}
 
 	request := domain.CustomerRequest{
-		ID:                 uuid.New().String(),
-		ResourceInstanceID: resourceInstanceID,
-		Status:             domain.CustomerRequestStatusUnscheduled,
-		RequestType:        domain.CustomerRequestTypeReconcile,
-		RequestInfo:        requestInfo,
-		Version:            ver,
+		ID:                      uuid.New().String(),
+		ResourceInstanceID:      resourceInstanceID,
+		Status:                  domain.CustomerRequestStatusUnscheduled,
+		RequestType:             domain.CustomerRequestTypeReconcile,
+		RequestInfo:             requestInfo,
+		Version:                 ver,
 		GoalConfigSnapshot: goalState,
+		JobPolicy:          policy,
 	}
 
 	if err := s.customerRequests.Create(ctx, &request); err != nil {
@@ -128,8 +182,17 @@ func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID,
 	return nil
 }
 
-func (s *LifecycleService) DeleteResource(ctx context.Context, correlationID, resourceInstanceID string) error {
+func (s *LifecycleService) DeleteResource(ctx context.Context, correlationID, resourceInstanceID string, requestPolicy domain.JobPolicy) error {
 	s.log.Info("deleting resource", "correlation_id", correlationID, "resource_id", resourceInstanceID)
+
+	instance, err := s.resourceInstances.Get(ctx, resourceInstanceID)
+	if err != nil {
+		return fmt.Errorf("get resource instance: %w", err)
+	}
+	policy, err := s.resolveJobPolicy(ctx, instance.TenantID, requestPolicy)
+	if err != nil {
+		return err
+	}
 
 	ver, err := s.resourceInstances.UpdateLifecycleStateAndIncrementVersion(ctx, resourceInstanceID,
 		domain.LifecycleStateDeleting, domain.LifecycleStateDeleting, domain.LifecycleStateDeleted)
@@ -143,12 +206,13 @@ func (s *LifecycleService) DeleteResource(ctx context.Context, correlationID, re
 	}
 
 	request := domain.CustomerRequest{
-		ID:                 uuid.New().String(),
-		ResourceInstanceID: resourceInstanceID,
-		Status:             domain.CustomerRequestStatusUnscheduled,
-		RequestType:        domain.CustomerRequestTypeDelete,
-		RequestInfo:        requestInfo,
-		Version:            ver,
+		ID:                      uuid.New().String(),
+		ResourceInstanceID:      resourceInstanceID,
+		Status:                  domain.CustomerRequestStatusUnscheduled,
+		RequestType:             domain.CustomerRequestTypeDelete,
+		RequestInfo:             requestInfo,
+		Version:   ver,
+		JobPolicy: policy,
 	}
 
 	if err := s.customerRequests.Create(ctx, &request); err != nil {

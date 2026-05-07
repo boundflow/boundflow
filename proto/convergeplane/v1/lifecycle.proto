@@ -22,6 +22,9 @@ message CreateResourceRequest {
   string resource_type = 2;
   string tenant_id = 3;
   google.protobuf.Struct initial_state = 4;
+  // Per-request operation timeout in seconds. Falls back to tenant policy, then tenant group policy.
+  // Must be resolvable from one of these sources or the request will be rejected.
+  int32 operation_timeout_seconds = 5;
 }
 
 message CreateResourceResponse {
@@ -32,6 +35,7 @@ message ReconcileResourceRequest {
   string correlation_id = 1;
   string resource_instance_id = 2;
   google.protobuf.Struct goal_state = 3;
+  int32 operation_timeout_seconds = 4;
 }
 
 message ReconcileResourceResponse {
@@ -41,6 +45,7 @@ message ReconcileResourceResponse {
 message DeleteResourceRequest {
   string correlation_id = 1;
   string resource_instance_id = 2;
+  int32 operation_timeout_seconds = 3;
 }
 
 message DeleteResourceResponse {

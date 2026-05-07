@@ -94,8 +94,9 @@ func runSession(client convergeplanev1.WorkerServiceClient, log *slog.Logger) er
 			}); err != nil {
 				return fmt.Errorf("send IN_PROGRESS: %w", err)
 			}
-			log.Info("sent IN_PROGRESS, simulating work for 2s")
-			time.Sleep(2 * time.Second)
+			sleepDuration := time.Duration(op.GetTimeoutSeconds()) * time.Second
+			log.Info("sent IN_PROGRESS, simulating work", "timeout_seconds", op.GetTimeoutSeconds(), "sleeping", sleepDuration)
+			time.Sleep(sleepDuration)
 
 			// Mark complete
 			if err := stream.Send(&convergeplanev1.WorkerMessage{
