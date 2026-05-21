@@ -16,6 +16,7 @@ import (
 type RequestScheduler interface {
 	CompleteRequest(ctx context.Context, req string) (bool, error)
 	FailRequest(ctx context.Context, req string) (bool, error)
+	UpdateAgentMetrics(ctx context.Context, resourceInstanceID string, updates map[string][]map[string]any) error
 }
 
 type RpcWorker struct {
@@ -120,6 +121,37 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 	completeOperation := func(cancelLease chan bool, job *domain.Job, result *convergeplanev1.AtomicOperationResult) error {
 		ctx := context.Background() // request completion doesnt depend on stream context
 		defer cancelLeaseIfExists(cancelLease)
+
+		// Persist any agent state metric updates from the SDK via the scheduler.
+		if result.AgentStateUpdates != nil {
+			updates := make(map[string][]map[string]any)
+			for agentName, stateVal := range result.AgentStateUpdates.Fields {
+				stateMap, ok := stateVal.GetKind().(*structpb.Value_StructValue)
+				if !ok {
+					continue
+				}
+				metricsVal, ok := stateMap.StructValue.Fields["invocation_metrics"]
+				if !ok {
+					continue
+				}
+				listVal, ok := metricsVal.GetKind().(*structpb.Value_ListValue)
+				if !ok {
+					continue
+				}
+				var metrics []map[string]any
+				for _, entry := range listVal.ListValue.Values {
+					if sv, ok := entry.GetKind().(*structpb.Value_StructValue); ok {
+						metrics = append(metrics, sv.StructValue.AsMap())
+					}
+				}
+				updates[agentName] = metrics
+			}
+			if len(updates) > 0 {
+				if err := s.scheduler.UpdateAgentMetrics(ctx, job.ResourceInstanceID, updates); err != nil {
+					log.Warn("failed to persist agent metrics", "error", err)
+				}
+			}
+		}
 
 		if result.NextOperation == nil {
 			updated, err := s.jobs.UpdateJobStatus(ctx, job.ResourceInstanceID, s.id, domain.JobStatusCompleted)

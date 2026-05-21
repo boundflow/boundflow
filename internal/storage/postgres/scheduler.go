@@ -51,14 +51,25 @@ func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID stri
 	err = r.pool.QueryRow(ctx,
 		`WITH candidate AS (
 		     SELECT cr.id, cr.resource_instance_id, cr.version, cr.request_type, cr.request_info, cr.operation_timeout_seconds,
-		            ri.resource_type
+		            ri.resource_type,
+		            COALESCE((
+		                SELECT jsonb_object_agg(agent_name, jsonb_build_object(
+		                    'runtime_policy',     runtime_policy,
+		                    'lifecycle_policy',   lifecycle_policy,
+		                    'invocation_metrics', invocation_metrics
+		                ))
+		                FROM agent_state
+		                WHERE resource_instance_id = cr.resource_instance_id
+		            ), '{}'::jsonb) AS agent_states
 		     FROM customer_requests cr
 		     JOIN resource_instances ri ON ri.id = cr.resource_instance_id
 		     WHERE cr.id = $1
 		 ),
 		 upserted AS (
 		     INSERT INTO jobs (resource_instance_id, request_id, version, current_atomic_operation, context, status, job_type, resource_type, timeout_seconds)
-		     SELECT c.resource_instance_id, c.id, c.version, c.request_type || '_entry', c.request_info, 'pending', c.request_type, c.resource_type, c.operation_timeout_seconds
+		     SELECT c.resource_instance_id, c.id, c.version, c.request_type || '_entry',
+		            c.request_info || jsonb_build_object('_bf_agent_state', c.agent_states),
+		            'pending', c.request_type, c.resource_type, c.operation_timeout_seconds
 		     FROM candidate c
 		     ON CONFLICT (resource_instance_id) DO UPDATE
 		         SET request_id               = EXCLUDED.request_id,
@@ -71,6 +82,7 @@ func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID stri
 		             status                   = 'pending',
 		             owner                    = NULL,
 		             lease_expires_at         = NULL
+
 		         WHERE jobs.version < EXCLUDED.version
 		           AND jobs.status = 'pending'
 		     RETURNING resource_instance_id, request_id

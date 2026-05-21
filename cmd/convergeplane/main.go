@@ -73,10 +73,11 @@ func runServer(sigCh <-chan os.Signal) {
 	schedulerRepo := postgres.NewSchedulerRepo(pool)
 	partitionRepo := postgres.NewSchedulerPartitionRepo(pool)
 
-	sched := internalscheduler.New("server", 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, logger)
+	agentStateRepo := postgres.NewAgentStateRepo(pool)
+	sched := internalscheduler.New("server", 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, agentStateRepo, logger)
 
 	regSvc := service.NewRegistrationService(tenantGroupRepo, tenantRepo)
-	lifecycleSvc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, sched, cfg.NumPartitions, logger)
+	lifecycleSvc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, sched, cfg.NumPartitions, logger)
 
 	srv := server.New(cfg, regSvc, lifecycleSvc, cfg.Debug)
 
@@ -105,13 +106,14 @@ func runScheduler(sigCh <-chan os.Signal) {
 	schedulerRepo := postgres.NewSchedulerRepo(pool)
 	customerRequestRepo := postgres.NewCustomerRequestRepo(pool)
 	resourceInstanceRepo := postgres.NewResourceInstanceRepo(pool)
+	agentStateRepo := postgres.NewAgentStateRepo(pool)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	errCh := make(chan error, 1)
 	for i := range cfg.NumPartitions {
 		schedulerID := uuid.NewString()
-		sched := internalscheduler.New(schedulerID, 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, logger)
+		sched := internalscheduler.New(schedulerID, 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, agentStateRepo, logger)
 		logger.Info("starting scheduler partition worker", "index", i, "scheduler_id", schedulerID)
 		go func() { errCh <- sched.Run(ctx) }()
 	}
@@ -142,9 +144,10 @@ func runWorker(sigCh <-chan os.Signal) {
 	// partitionRepo is passed to satisfy the scheduler constructor but the worker scheduler
 	// only calls CompleteRequest/FailRequest — the partition table is never queried.
 	partitionRepo := postgres.NewSchedulerPartitionRepo(pool)
+	agentStateRepo := postgres.NewAgentStateRepo(pool)
 
 	workerID := uuid.NewString()
-	sched := internalscheduler.New(workerID, 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, logger)
+	sched := internalscheduler.New(workerID, 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, agentStateRepo, logger)
 
 	worker := rpcworker.NewRpcWorker(jobRepo, workerID, cfg.JobTimeoutSecs, sched, logger)
 	srv := server.NewWorkerServer(cfg, worker)

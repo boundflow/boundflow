@@ -53,10 +53,9 @@ var worker = new BoundFlowWorker(workerAddress, llmApiKey, loggerFactory)
         var boundFlowInfo = "BoundFlow is a tenant-aware control plane for safely scheduling, running, and auditing long-lived resource or agent workflows with policies, retries, state tracking, and customer-owned execution logic.";
         ctx.AddLlmContext("This is information about a platform called boundflow", JsonValue.Create(boundFlowInfo));
 
-        var result = await ctx.RunAgentStepAsync(new AgentStepConfig(
-            Objective: "Summarise the context data in one sentence.",
+        var result = await ctx.RunAgentAsync(new AgentDefinition(
+            Name: "analyse",
             SystemPrompt: "You are a concise data analyst.",
-            Policy: new AgentPolicy(MaxLlmCalls: 3),
             OutputSchema: JsonNode.Parse("{\"summary\":{\"type\":\"string\"}}")
         ), ct);
 

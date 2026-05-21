@@ -12,13 +12,14 @@ import (
 )
 
 type Scheduler struct {
-	id         string
-	interval   int
-	partitions storage.SchedulerPartitionRepository
-	scheduler  storage.SchedulerRepository
-	requests   storage.CustomerRequestRepository
-	resource   storage.ResourceInstanceRepository
-	log        *slog.Logger
+	id          string
+	interval    int
+	partitions  storage.SchedulerPartitionRepository
+	scheduler   storage.SchedulerRepository
+	requests    storage.CustomerRequestRepository
+	resource    storage.ResourceInstanceRepository
+	agentStates storage.AgentStateRepository
+	log         *slog.Logger
 }
 
 // Functions of the scheduler:
@@ -26,15 +27,16 @@ type Scheduler struct {
 // 2. Schedules unscheduled requests onto the job queue (picking priority by version number)
 // 3. Checks for completed jobs, and updates current config state of the resource and lifecycle state, then deletes the job
 
-func New(id string, interval int, parts storage.SchedulerPartitionRepository, scheduler storage.SchedulerRepository, requests storage.CustomerRequestRepository, resource storage.ResourceInstanceRepository, log *slog.Logger) *Scheduler {
+func New(id string, interval int, parts storage.SchedulerPartitionRepository, scheduler storage.SchedulerRepository, requests storage.CustomerRequestRepository, resource storage.ResourceInstanceRepository, agentStates storage.AgentStateRepository, log *slog.Logger) *Scheduler {
 	return &Scheduler{
-		id:         id,
-		interval:   interval,
-		partitions: parts,
-		scheduler:  scheduler,
-		requests:   requests,
-		resource:   resource,
-		log:        log.With("component", "scheduler", "scheduler_id", id),
+		id:          id,
+		interval:    interval,
+		partitions:  parts,
+		scheduler:   scheduler,
+		requests:    requests,
+		resource:    resource,
+		agentStates: agentStates,
+		log:         log.With("component", "scheduler", "scheduler_id", id),
 	}
 }
 
@@ -258,5 +260,14 @@ func (s *Scheduler) ScheduleRequest(ctx context.Context, req string) error {
 	}
 	s.log.Debug("older requests superceded", "resource_id", resourceID, "version", ver)
 
+	return nil
+}
+
+func (s *Scheduler) UpdateAgentMetrics(ctx context.Context, resourceInstanceID string, updates map[string][]map[string]any) error {
+	for agentName, metrics := range updates {
+		if err := s.agentStates.UpdateMetrics(ctx, resourceInstanceID, agentName, metrics); err != nil {
+			s.log.Warn("failed to update agent metrics", "resource_id", resourceInstanceID, "agent", agentName, "error", err)
+		}
+	}
 	return nil
 }

@@ -45,6 +45,7 @@ internal sealed class Orchestrator
 
         var llmCallsUsed = 0;
         var costUsd = 0m;
+        var tokensUsed = 0;
         var maxLlmCalls = cfg.Policy.MaxLlmCalls;
 
         while (true)
@@ -72,6 +73,7 @@ internal sealed class Orchestrator
 
             llmCallsUsed++;
             costUsd += EstimateCost(resp.Usage);
+            tokensUsed += resp.Usage.InputTokens + resp.Usage.OutputTokens;
 
             if (cfg.Policy.MaxCostUsd > 0 && costUsd > cfg.Policy.MaxCostUsd && !policyLimitReached)
                 _logger.LogWarning("Cost limit reached, will force submit_result on next call. CostUsd={Cost} Limit={Limit}", costUsd, cfg.Policy.MaxCostUsd);
@@ -102,7 +104,7 @@ internal sealed class Orchestrator
                 if (toolUse.Name == SubmitResultTool)
                 {
                     _logger.LogInformation("Agent step complete via submit_result. LlmCalls={Calls} CostUsd={Cost}", llmCallsUsed, costUsd);
-                    return new StepResult(input, llmCallsUsed, costUsd);
+                    return new StepResult(input, llmCallsUsed, costUsd, tokensUsed);
                 }
 
                 if (!callbackMap.TryGetValue(toolUse.Name, out var cb))

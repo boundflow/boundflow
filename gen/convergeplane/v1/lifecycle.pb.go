@@ -464,6 +464,288 @@ func (x *GetResourceStateResponse) GetLifecycleState() string {
 	return ""
 }
 
+type SetAgentRuntimePolicyRequest struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	ResourceInstanceId string                 `protobuf:"bytes,1,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
+	AgentName          string                 `protobuf:"bytes,2,opt,name=agent_name,json=agentName,proto3" json:"agent_name,omitempty"`
+	// Serialised AgentRuntimePolicy JSON.
+	RuntimePolicy *structpb.Struct `protobuf:"bytes,3,opt,name=runtime_policy,json=runtimePolicy,proto3" json:"runtime_policy,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetAgentRuntimePolicyRequest) Reset() {
+	*x = SetAgentRuntimePolicyRequest{}
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetAgentRuntimePolicyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetAgentRuntimePolicyRequest) ProtoMessage() {}
+
+func (x *SetAgentRuntimePolicyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetAgentRuntimePolicyRequest.ProtoReflect.Descriptor instead.
+func (*SetAgentRuntimePolicyRequest) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *SetAgentRuntimePolicyRequest) GetResourceInstanceId() string {
+	if x != nil {
+		return x.ResourceInstanceId
+	}
+	return ""
+}
+
+func (x *SetAgentRuntimePolicyRequest) GetAgentName() string {
+	if x != nil {
+		return x.AgentName
+	}
+	return ""
+}
+
+func (x *SetAgentRuntimePolicyRequest) GetRuntimePolicy() *structpb.Struct {
+	if x != nil {
+		return x.RuntimePolicy
+	}
+	return nil
+}
+
+type SetAgentRuntimePolicyResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetAgentRuntimePolicyResponse) Reset() {
+	*x = SetAgentRuntimePolicyResponse{}
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetAgentRuntimePolicyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetAgentRuntimePolicyResponse) ProtoMessage() {}
+
+func (x *SetAgentRuntimePolicyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetAgentRuntimePolicyResponse.ProtoReflect.Descriptor instead.
+func (*SetAgentRuntimePolicyResponse) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{9}
+}
+
+type SetAgentLifecyclePolicyRequest struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	ResourceInstanceId string                 `protobuf:"bytes,1,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
+	AgentName          string                 `protobuf:"bytes,2,opt,name=agent_name,json=agentName,proto3" json:"agent_name,omitempty"`
+	// Serialised AgentLifecyclePolicy JSON.
+	LifecyclePolicy *structpb.Struct `protobuf:"bytes,3,opt,name=lifecycle_policy,json=lifecyclePolicy,proto3" json:"lifecycle_policy,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *SetAgentLifecyclePolicyRequest) Reset() {
+	*x = SetAgentLifecyclePolicyRequest{}
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetAgentLifecyclePolicyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetAgentLifecyclePolicyRequest) ProtoMessage() {}
+
+func (x *SetAgentLifecyclePolicyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetAgentLifecyclePolicyRequest.ProtoReflect.Descriptor instead.
+func (*SetAgentLifecyclePolicyRequest) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *SetAgentLifecyclePolicyRequest) GetResourceInstanceId() string {
+	if x != nil {
+		return x.ResourceInstanceId
+	}
+	return ""
+}
+
+func (x *SetAgentLifecyclePolicyRequest) GetAgentName() string {
+	if x != nil {
+		return x.AgentName
+	}
+	return ""
+}
+
+func (x *SetAgentLifecyclePolicyRequest) GetLifecyclePolicy() *structpb.Struct {
+	if x != nil {
+		return x.LifecyclePolicy
+	}
+	return nil
+}
+
+type SetAgentLifecyclePolicyResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetAgentLifecyclePolicyResponse) Reset() {
+	*x = SetAgentLifecyclePolicyResponse{}
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetAgentLifecyclePolicyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetAgentLifecyclePolicyResponse) ProtoMessage() {}
+
+func (x *SetAgentLifecyclePolicyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetAgentLifecyclePolicyResponse.ProtoReflect.Descriptor instead.
+func (*SetAgentLifecyclePolicyResponse) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{11}
+}
+
+type DeleteAgentRequest struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	ResourceInstanceId string                 `protobuf:"bytes,1,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
+	AgentName          string                 `protobuf:"bytes,2,opt,name=agent_name,json=agentName,proto3" json:"agent_name,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *DeleteAgentRequest) Reset() {
+	*x = DeleteAgentRequest{}
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteAgentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteAgentRequest) ProtoMessage() {}
+
+func (x *DeleteAgentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteAgentRequest.ProtoReflect.Descriptor instead.
+func (*DeleteAgentRequest) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *DeleteAgentRequest) GetResourceInstanceId() string {
+	if x != nil {
+		return x.ResourceInstanceId
+	}
+	return ""
+}
+
+func (x *DeleteAgentRequest) GetAgentName() string {
+	if x != nil {
+		return x.AgentName
+	}
+	return ""
+}
+
+type DeleteAgentResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteAgentResponse) Reset() {
+	*x = DeleteAgentResponse{}
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteAgentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteAgentResponse) ProtoMessage() {}
+
+func (x *DeleteAgentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteAgentResponse.ProtoReflect.Descriptor instead.
+func (*DeleteAgentResponse) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{13}
+}
+
 var File_convergeplane_v1_lifecycle_proto protoreflect.FileDescriptor
 
 const file_convergeplane_v1_lifecycle_proto_rawDesc = "" +
@@ -498,12 +780,32 @@ const file_convergeplane_v1_lifecycle_proto_rawDesc = "" +
 	"\x18GetResourceStateResponse\x12I\n" +
 	"\x14current_config_state\x18\x01 \x01(\v2\x17.google.protobuf.StructR\x12currentConfigState\x12C\n" +
 	"\x11goal_config_state\x18\x02 \x01(\v2\x17.google.protobuf.StructR\x0fgoalConfigState\x12'\n" +
-	"\x0flifecycle_state\x18\x03 \x01(\tR\x0elifecycleState2\xbd\x03\n" +
+	"\x0flifecycle_state\x18\x03 \x01(\tR\x0elifecycleState\"\xaf\x01\n" +
+	"\x1cSetAgentRuntimePolicyRequest\x120\n" +
+	"\x14resource_instance_id\x18\x01 \x01(\tR\x12resourceInstanceId\x12\x1d\n" +
+	"\n" +
+	"agent_name\x18\x02 \x01(\tR\tagentName\x12>\n" +
+	"\x0eruntime_policy\x18\x03 \x01(\v2\x17.google.protobuf.StructR\rruntimePolicy\"\x1f\n" +
+	"\x1dSetAgentRuntimePolicyResponse\"\xb5\x01\n" +
+	"\x1eSetAgentLifecyclePolicyRequest\x120\n" +
+	"\x14resource_instance_id\x18\x01 \x01(\tR\x12resourceInstanceId\x12\x1d\n" +
+	"\n" +
+	"agent_name\x18\x02 \x01(\tR\tagentName\x12B\n" +
+	"\x10lifecycle_policy\x18\x03 \x01(\v2\x17.google.protobuf.StructR\x0flifecyclePolicy\"!\n" +
+	"\x1fSetAgentLifecyclePolicyResponse\"e\n" +
+	"\x12DeleteAgentRequest\x120\n" +
+	"\x14resource_instance_id\x18\x01 \x01(\tR\x12resourceInstanceId\x12\x1d\n" +
+	"\n" +
+	"agent_name\x18\x02 \x01(\tR\tagentName\"\x15\n" +
+	"\x13DeleteAgentResponse2\x93\x06\n" +
 	"\x18ResourceLifecycleService\x12c\n" +
 	"\x0eCreateResource\x12'.convergeplane.v1.CreateResourceRequest\x1a(.convergeplane.v1.CreateResourceResponse\x12l\n" +
 	"\x11ReconcileResource\x12*.convergeplane.v1.ReconcileResourceRequest\x1a+.convergeplane.v1.ReconcileResourceResponse\x12c\n" +
 	"\x0eDeleteResource\x12'.convergeplane.v1.DeleteResourceRequest\x1a(.convergeplane.v1.DeleteResourceResponse\x12i\n" +
-	"\x10GetResourceState\x12).convergeplane.v1.GetResourceStateRequest\x1a*.convergeplane.v1.GetResourceStateResponseBMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
+	"\x10GetResourceState\x12).convergeplane.v1.GetResourceStateRequest\x1a*.convergeplane.v1.GetResourceStateResponse\x12x\n" +
+	"\x15SetAgentRuntimePolicy\x12..convergeplane.v1.SetAgentRuntimePolicyRequest\x1a/.convergeplane.v1.SetAgentRuntimePolicyResponse\x12~\n" +
+	"\x17SetAgentLifecyclePolicy\x120.convergeplane.v1.SetAgentLifecyclePolicyRequest\x1a1.convergeplane.v1.SetAgentLifecyclePolicyResponse\x12Z\n" +
+	"\vDeleteAgent\x12$.convergeplane.v1.DeleteAgentRequest\x1a%.convergeplane.v1.DeleteAgentResponseBMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
 
 var (
 	file_convergeplane_v1_lifecycle_proto_rawDescOnce sync.Once
@@ -517,38 +819,52 @@ func file_convergeplane_v1_lifecycle_proto_rawDescGZIP() []byte {
 	return file_convergeplane_v1_lifecycle_proto_rawDescData
 }
 
-var file_convergeplane_v1_lifecycle_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_convergeplane_v1_lifecycle_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_convergeplane_v1_lifecycle_proto_goTypes = []any{
-	(*CreateResourceRequest)(nil),     // 0: convergeplane.v1.CreateResourceRequest
-	(*CreateResourceResponse)(nil),    // 1: convergeplane.v1.CreateResourceResponse
-	(*ReconcileResourceRequest)(nil),  // 2: convergeplane.v1.ReconcileResourceRequest
-	(*ReconcileResourceResponse)(nil), // 3: convergeplane.v1.ReconcileResourceResponse
-	(*DeleteResourceRequest)(nil),     // 4: convergeplane.v1.DeleteResourceRequest
-	(*DeleteResourceResponse)(nil),    // 5: convergeplane.v1.DeleteResourceResponse
-	(*GetResourceStateRequest)(nil),   // 6: convergeplane.v1.GetResourceStateRequest
-	(*GetResourceStateResponse)(nil),  // 7: convergeplane.v1.GetResourceStateResponse
-	(*structpb.Struct)(nil),           // 8: google.protobuf.Struct
-	(*ResourceInstance)(nil),          // 9: convergeplane.v1.ResourceInstance
+	(*CreateResourceRequest)(nil),           // 0: convergeplane.v1.CreateResourceRequest
+	(*CreateResourceResponse)(nil),          // 1: convergeplane.v1.CreateResourceResponse
+	(*ReconcileResourceRequest)(nil),        // 2: convergeplane.v1.ReconcileResourceRequest
+	(*ReconcileResourceResponse)(nil),       // 3: convergeplane.v1.ReconcileResourceResponse
+	(*DeleteResourceRequest)(nil),           // 4: convergeplane.v1.DeleteResourceRequest
+	(*DeleteResourceResponse)(nil),          // 5: convergeplane.v1.DeleteResourceResponse
+	(*GetResourceStateRequest)(nil),         // 6: convergeplane.v1.GetResourceStateRequest
+	(*GetResourceStateResponse)(nil),        // 7: convergeplane.v1.GetResourceStateResponse
+	(*SetAgentRuntimePolicyRequest)(nil),    // 8: convergeplane.v1.SetAgentRuntimePolicyRequest
+	(*SetAgentRuntimePolicyResponse)(nil),   // 9: convergeplane.v1.SetAgentRuntimePolicyResponse
+	(*SetAgentLifecyclePolicyRequest)(nil),  // 10: convergeplane.v1.SetAgentLifecyclePolicyRequest
+	(*SetAgentLifecyclePolicyResponse)(nil), // 11: convergeplane.v1.SetAgentLifecyclePolicyResponse
+	(*DeleteAgentRequest)(nil),              // 12: convergeplane.v1.DeleteAgentRequest
+	(*DeleteAgentResponse)(nil),             // 13: convergeplane.v1.DeleteAgentResponse
+	(*structpb.Struct)(nil),                 // 14: google.protobuf.Struct
+	(*ResourceInstance)(nil),                // 15: convergeplane.v1.ResourceInstance
 }
 var file_convergeplane_v1_lifecycle_proto_depIdxs = []int32{
-	8, // 0: convergeplane.v1.CreateResourceRequest.initial_state:type_name -> google.protobuf.Struct
-	9, // 1: convergeplane.v1.CreateResourceResponse.resource_instance:type_name -> convergeplane.v1.ResourceInstance
-	8, // 2: convergeplane.v1.ReconcileResourceRequest.goal_state:type_name -> google.protobuf.Struct
-	8, // 3: convergeplane.v1.GetResourceStateResponse.current_config_state:type_name -> google.protobuf.Struct
-	8, // 4: convergeplane.v1.GetResourceStateResponse.goal_config_state:type_name -> google.protobuf.Struct
-	0, // 5: convergeplane.v1.ResourceLifecycleService.CreateResource:input_type -> convergeplane.v1.CreateResourceRequest
-	2, // 6: convergeplane.v1.ResourceLifecycleService.ReconcileResource:input_type -> convergeplane.v1.ReconcileResourceRequest
-	4, // 7: convergeplane.v1.ResourceLifecycleService.DeleteResource:input_type -> convergeplane.v1.DeleteResourceRequest
-	6, // 8: convergeplane.v1.ResourceLifecycleService.GetResourceState:input_type -> convergeplane.v1.GetResourceStateRequest
-	1, // 9: convergeplane.v1.ResourceLifecycleService.CreateResource:output_type -> convergeplane.v1.CreateResourceResponse
-	3, // 10: convergeplane.v1.ResourceLifecycleService.ReconcileResource:output_type -> convergeplane.v1.ReconcileResourceResponse
-	5, // 11: convergeplane.v1.ResourceLifecycleService.DeleteResource:output_type -> convergeplane.v1.DeleteResourceResponse
-	7, // 12: convergeplane.v1.ResourceLifecycleService.GetResourceState:output_type -> convergeplane.v1.GetResourceStateResponse
-	9, // [9:13] is the sub-list for method output_type
-	5, // [5:9] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	14, // 0: convergeplane.v1.CreateResourceRequest.initial_state:type_name -> google.protobuf.Struct
+	15, // 1: convergeplane.v1.CreateResourceResponse.resource_instance:type_name -> convergeplane.v1.ResourceInstance
+	14, // 2: convergeplane.v1.ReconcileResourceRequest.goal_state:type_name -> google.protobuf.Struct
+	14, // 3: convergeplane.v1.GetResourceStateResponse.current_config_state:type_name -> google.protobuf.Struct
+	14, // 4: convergeplane.v1.GetResourceStateResponse.goal_config_state:type_name -> google.protobuf.Struct
+	14, // 5: convergeplane.v1.SetAgentRuntimePolicyRequest.runtime_policy:type_name -> google.protobuf.Struct
+	14, // 6: convergeplane.v1.SetAgentLifecyclePolicyRequest.lifecycle_policy:type_name -> google.protobuf.Struct
+	0,  // 7: convergeplane.v1.ResourceLifecycleService.CreateResource:input_type -> convergeplane.v1.CreateResourceRequest
+	2,  // 8: convergeplane.v1.ResourceLifecycleService.ReconcileResource:input_type -> convergeplane.v1.ReconcileResourceRequest
+	4,  // 9: convergeplane.v1.ResourceLifecycleService.DeleteResource:input_type -> convergeplane.v1.DeleteResourceRequest
+	6,  // 10: convergeplane.v1.ResourceLifecycleService.GetResourceState:input_type -> convergeplane.v1.GetResourceStateRequest
+	8,  // 11: convergeplane.v1.ResourceLifecycleService.SetAgentRuntimePolicy:input_type -> convergeplane.v1.SetAgentRuntimePolicyRequest
+	10, // 12: convergeplane.v1.ResourceLifecycleService.SetAgentLifecyclePolicy:input_type -> convergeplane.v1.SetAgentLifecyclePolicyRequest
+	12, // 13: convergeplane.v1.ResourceLifecycleService.DeleteAgent:input_type -> convergeplane.v1.DeleteAgentRequest
+	1,  // 14: convergeplane.v1.ResourceLifecycleService.CreateResource:output_type -> convergeplane.v1.CreateResourceResponse
+	3,  // 15: convergeplane.v1.ResourceLifecycleService.ReconcileResource:output_type -> convergeplane.v1.ReconcileResourceResponse
+	5,  // 16: convergeplane.v1.ResourceLifecycleService.DeleteResource:output_type -> convergeplane.v1.DeleteResourceResponse
+	7,  // 17: convergeplane.v1.ResourceLifecycleService.GetResourceState:output_type -> convergeplane.v1.GetResourceStateResponse
+	9,  // 18: convergeplane.v1.ResourceLifecycleService.SetAgentRuntimePolicy:output_type -> convergeplane.v1.SetAgentRuntimePolicyResponse
+	11, // 19: convergeplane.v1.ResourceLifecycleService.SetAgentLifecyclePolicy:output_type -> convergeplane.v1.SetAgentLifecyclePolicyResponse
+	13, // 20: convergeplane.v1.ResourceLifecycleService.DeleteAgent:output_type -> convergeplane.v1.DeleteAgentResponse
+	14, // [14:21] is the sub-list for method output_type
+	7,  // [7:14] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_convergeplane_v1_lifecycle_proto_init() }
@@ -563,7 +879,7 @@ func file_convergeplane_v1_lifecycle_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_convergeplane_v1_lifecycle_proto_rawDesc), len(file_convergeplane_v1_lifecycle_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

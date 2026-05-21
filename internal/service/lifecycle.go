@@ -27,6 +27,7 @@ type LifecycleService struct {
 	customerRequests  storage.CustomerRequestRepository
 	tenants           storage.TenantRepository
 	tenantGroups      storage.TenantGroupRepository
+	agentStates       storage.AgentStateRepository
 	scheduler         RequestScheduler
 	numPartitions     int
 	log               *slog.Logger
@@ -37,6 +38,7 @@ func NewLifecycleService(
 	customerRequests storage.CustomerRequestRepository,
 	tenants storage.TenantRepository,
 	tenantGroups storage.TenantGroupRepository,
+	agentStates storage.AgentStateRepository,
 	scheduler RequestScheduler,
 	numPartitions int,
 	log *slog.Logger,
@@ -46,6 +48,7 @@ func NewLifecycleService(
 		customerRequests:  customerRequests,
 		tenants:           tenants,
 		tenantGroups:      tenantGroups,
+		agentStates:       agentStates,
 		scheduler:         scheduler,
 		numPartitions:     numPartitions,
 		log:               log.With("component", "lifecycle_service"),
@@ -231,6 +234,30 @@ func (s *LifecycleService) DeleteResource(ctx context.Context, correlationID, re
 func (s *LifecycleService) GetResourceState(ctx context.Context, resourceInstanceID string) (*domain.ResourceInstance, error) {
 	s.log.Debug("getting resource state", "resource_id", resourceInstanceID)
 	return s.resourceInstances.Get(ctx, resourceInstanceID)
+}
+
+func (s *LifecycleService) SetAgentRuntimePolicy(ctx context.Context, resourceInstanceID, agentName string, policy map[string]any) error {
+	s.log.Info("setting agent runtime policy", "resource_id", resourceInstanceID, "agent", agentName)
+	if err := s.agentStates.UpsertRuntimePolicy(ctx, resourceInstanceID, agentName, policy); err != nil {
+		return fmt.Errorf("upsert agent runtime policy: %w", err)
+	}
+	return nil
+}
+
+func (s *LifecycleService) SetAgentLifecyclePolicy(ctx context.Context, resourceInstanceID, agentName string, policy map[string]any) error {
+	s.log.Info("setting agent lifecycle policy", "resource_id", resourceInstanceID, "agent", agentName)
+	if err := s.agentStates.UpsertLifecyclePolicy(ctx, resourceInstanceID, agentName, policy); err != nil {
+		return fmt.Errorf("upsert agent lifecycle policy: %w", err)
+	}
+	return nil
+}
+
+func (s *LifecycleService) DeleteAgent(ctx context.Context, resourceInstanceID, agentName string) error {
+	s.log.Info("deleting agent state", "resource_id", resourceInstanceID, "agent", agentName)
+	if err := s.agentStates.Delete(ctx, resourceInstanceID, agentName); err != nil {
+		return fmt.Errorf("delete agent state: %w", err)
+	}
+	return nil
 }
 
 func partitionForID(id string, numPartitions int) string {

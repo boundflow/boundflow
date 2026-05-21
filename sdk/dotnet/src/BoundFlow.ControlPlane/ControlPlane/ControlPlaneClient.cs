@@ -135,6 +135,48 @@ public sealed class ControlPlaneClient : IDisposable
             ParseLifecycleState(resp.LifecycleState));
     }
 
+    // ── Agent state ──────────────────────────────────────────────────────────
+
+    public async Task SetAgentRuntimePolicyAsync(
+        string resourceInstanceId,
+        string agentName,
+        JsonNode runtimePolicy,
+        CancellationToken ct = default) =>
+        await _lifecycle.SetAgentRuntimePolicyAsync(
+            new SetAgentRuntimePolicyRequest
+            {
+                ResourceInstanceId = resourceInstanceId,
+                AgentName = agentName,
+                RuntimePolicy = ToStruct(runtimePolicy),
+            },
+            cancellationToken: ct);
+
+    public async Task SetAgentLifecyclePolicyAsync(
+        string resourceInstanceId,
+        string agentName,
+        JsonNode lifecyclePolicy,
+        CancellationToken ct = default) =>
+        await _lifecycle.SetAgentLifecyclePolicyAsync(
+            new SetAgentLifecyclePolicyRequest
+            {
+                ResourceInstanceId = resourceInstanceId,
+                AgentName = agentName,
+                LifecyclePolicy = ToStruct(lifecyclePolicy),
+            },
+            cancellationToken: ct);
+
+    public async Task DeleteAgentAsync(
+        string resourceInstanceId,
+        string agentName,
+        CancellationToken ct = default) =>
+        await _lifecycle.DeleteAgentAsync(
+            new DeleteAgentRequest
+            {
+                ResourceInstanceId = resourceInstanceId,
+                AgentName = agentName,
+            },
+            cancellationToken: ct);
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static Struct ToStruct(JsonNode node) =>

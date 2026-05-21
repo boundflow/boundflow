@@ -66,6 +66,18 @@ namespace Convergeplane.V1 {
     static readonly grpc::Marshaller<global::Convergeplane.V1.GetResourceStateRequest> __Marshaller_convergeplane_v1_GetResourceStateRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.GetResourceStateRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Convergeplane.V1.GetResourceStateResponse> __Marshaller_convergeplane_v1_GetResourceStateResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.GetResourceStateResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Convergeplane.V1.SetAgentRuntimePolicyRequest> __Marshaller_convergeplane_v1_SetAgentRuntimePolicyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.SetAgentRuntimePolicyRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Convergeplane.V1.SetAgentRuntimePolicyResponse> __Marshaller_convergeplane_v1_SetAgentRuntimePolicyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.SetAgentRuntimePolicyResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Convergeplane.V1.SetAgentLifecyclePolicyRequest> __Marshaller_convergeplane_v1_SetAgentLifecyclePolicyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.SetAgentLifecyclePolicyRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Convergeplane.V1.SetAgentLifecyclePolicyResponse> __Marshaller_convergeplane_v1_SetAgentLifecyclePolicyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.SetAgentLifecyclePolicyResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Convergeplane.V1.DeleteAgentRequest> __Marshaller_convergeplane_v1_DeleteAgentRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.DeleteAgentRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Convergeplane.V1.DeleteAgentResponse> __Marshaller_convergeplane_v1_DeleteAgentResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.DeleteAgentResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Convergeplane.V1.CreateResourceRequest, global::Convergeplane.V1.CreateResourceResponse> __Method_CreateResource = new grpc::Method<global::Convergeplane.V1.CreateResourceRequest, global::Convergeplane.V1.CreateResourceResponse>(
@@ -99,6 +111,30 @@ namespace Convergeplane.V1 {
         __Marshaller_convergeplane_v1_GetResourceStateRequest,
         __Marshaller_convergeplane_v1_GetResourceStateResponse);
 
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Convergeplane.V1.SetAgentRuntimePolicyRequest, global::Convergeplane.V1.SetAgentRuntimePolicyResponse> __Method_SetAgentRuntimePolicy = new grpc::Method<global::Convergeplane.V1.SetAgentRuntimePolicyRequest, global::Convergeplane.V1.SetAgentRuntimePolicyResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "SetAgentRuntimePolicy",
+        __Marshaller_convergeplane_v1_SetAgentRuntimePolicyRequest,
+        __Marshaller_convergeplane_v1_SetAgentRuntimePolicyResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Convergeplane.V1.SetAgentLifecyclePolicyRequest, global::Convergeplane.V1.SetAgentLifecyclePolicyResponse> __Method_SetAgentLifecyclePolicy = new grpc::Method<global::Convergeplane.V1.SetAgentLifecyclePolicyRequest, global::Convergeplane.V1.SetAgentLifecyclePolicyResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "SetAgentLifecyclePolicy",
+        __Marshaller_convergeplane_v1_SetAgentLifecyclePolicyRequest,
+        __Marshaller_convergeplane_v1_SetAgentLifecyclePolicyResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Convergeplane.V1.DeleteAgentRequest, global::Convergeplane.V1.DeleteAgentResponse> __Method_DeleteAgent = new grpc::Method<global::Convergeplane.V1.DeleteAgentRequest, global::Convergeplane.V1.DeleteAgentResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "DeleteAgent",
+        __Marshaller_convergeplane_v1_DeleteAgentRequest,
+        __Marshaller_convergeplane_v1_DeleteAgentResponse);
+
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
@@ -129,6 +165,24 @@ namespace Convergeplane.V1 {
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Convergeplane.V1.GetResourceStateResponse> GetResourceState(global::Convergeplane.V1.GetResourceStateRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Convergeplane.V1.SetAgentRuntimePolicyResponse> SetAgentRuntimePolicy(global::Convergeplane.V1.SetAgentRuntimePolicyRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Convergeplane.V1.SetAgentLifecyclePolicyResponse> SetAgentLifecyclePolicy(global::Convergeplane.V1.SetAgentLifecyclePolicyRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Convergeplane.V1.DeleteAgentResponse> DeleteAgent(global::Convergeplane.V1.DeleteAgentRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -242,6 +296,66 @@ namespace Convergeplane.V1 {
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetResourceState, null, options, request);
       }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Convergeplane.V1.SetAgentRuntimePolicyResponse SetAgentRuntimePolicy(global::Convergeplane.V1.SetAgentRuntimePolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return SetAgentRuntimePolicy(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Convergeplane.V1.SetAgentRuntimePolicyResponse SetAgentRuntimePolicy(global::Convergeplane.V1.SetAgentRuntimePolicyRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_SetAgentRuntimePolicy, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Convergeplane.V1.SetAgentRuntimePolicyResponse> SetAgentRuntimePolicyAsync(global::Convergeplane.V1.SetAgentRuntimePolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return SetAgentRuntimePolicyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Convergeplane.V1.SetAgentRuntimePolicyResponse> SetAgentRuntimePolicyAsync(global::Convergeplane.V1.SetAgentRuntimePolicyRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_SetAgentRuntimePolicy, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Convergeplane.V1.SetAgentLifecyclePolicyResponse SetAgentLifecyclePolicy(global::Convergeplane.V1.SetAgentLifecyclePolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return SetAgentLifecyclePolicy(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Convergeplane.V1.SetAgentLifecyclePolicyResponse SetAgentLifecyclePolicy(global::Convergeplane.V1.SetAgentLifecyclePolicyRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_SetAgentLifecyclePolicy, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Convergeplane.V1.SetAgentLifecyclePolicyResponse> SetAgentLifecyclePolicyAsync(global::Convergeplane.V1.SetAgentLifecyclePolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return SetAgentLifecyclePolicyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Convergeplane.V1.SetAgentLifecyclePolicyResponse> SetAgentLifecyclePolicyAsync(global::Convergeplane.V1.SetAgentLifecyclePolicyRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_SetAgentLifecyclePolicy, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Convergeplane.V1.DeleteAgentResponse DeleteAgent(global::Convergeplane.V1.DeleteAgentRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return DeleteAgent(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Convergeplane.V1.DeleteAgentResponse DeleteAgent(global::Convergeplane.V1.DeleteAgentRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_DeleteAgent, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Convergeplane.V1.DeleteAgentResponse> DeleteAgentAsync(global::Convergeplane.V1.DeleteAgentRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return DeleteAgentAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Convergeplane.V1.DeleteAgentResponse> DeleteAgentAsync(global::Convergeplane.V1.DeleteAgentRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_DeleteAgent, null, options, request);
+      }
       /// <summary>Creates a new instance of client from given <c>ClientBaseConfiguration</c>.</summary>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       protected override ResourceLifecycleServiceClient NewInstance(ClientBaseConfiguration configuration)
@@ -259,7 +373,10 @@ namespace Convergeplane.V1 {
           .AddMethod(__Method_CreateResource, serviceImpl.CreateResource)
           .AddMethod(__Method_ReconcileResource, serviceImpl.ReconcileResource)
           .AddMethod(__Method_DeleteResource, serviceImpl.DeleteResource)
-          .AddMethod(__Method_GetResourceState, serviceImpl.GetResourceState).Build();
+          .AddMethod(__Method_GetResourceState, serviceImpl.GetResourceState)
+          .AddMethod(__Method_SetAgentRuntimePolicy, serviceImpl.SetAgentRuntimePolicy)
+          .AddMethod(__Method_SetAgentLifecyclePolicy, serviceImpl.SetAgentLifecyclePolicy)
+          .AddMethod(__Method_DeleteAgent, serviceImpl.DeleteAgent).Build();
     }
 
     /// <summary>Register service method with a service binder with or without implementation. Useful when customizing the service binding logic.
@@ -273,6 +390,9 @@ namespace Convergeplane.V1 {
       serviceBinder.AddMethod(__Method_ReconcileResource, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Convergeplane.V1.ReconcileResourceRequest, global::Convergeplane.V1.ReconcileResourceResponse>(serviceImpl.ReconcileResource));
       serviceBinder.AddMethod(__Method_DeleteResource, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Convergeplane.V1.DeleteResourceRequest, global::Convergeplane.V1.DeleteResourceResponse>(serviceImpl.DeleteResource));
       serviceBinder.AddMethod(__Method_GetResourceState, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Convergeplane.V1.GetResourceStateRequest, global::Convergeplane.V1.GetResourceStateResponse>(serviceImpl.GetResourceState));
+      serviceBinder.AddMethod(__Method_SetAgentRuntimePolicy, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Convergeplane.V1.SetAgentRuntimePolicyRequest, global::Convergeplane.V1.SetAgentRuntimePolicyResponse>(serviceImpl.SetAgentRuntimePolicy));
+      serviceBinder.AddMethod(__Method_SetAgentLifecyclePolicy, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Convergeplane.V1.SetAgentLifecyclePolicyRequest, global::Convergeplane.V1.SetAgentLifecyclePolicyResponse>(serviceImpl.SetAgentLifecyclePolicy));
+      serviceBinder.AddMethod(__Method_DeleteAgent, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Convergeplane.V1.DeleteAgentRequest, global::Convergeplane.V1.DeleteAgentResponse>(serviceImpl.DeleteAgent));
     }
 
   }

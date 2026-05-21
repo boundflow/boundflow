@@ -112,3 +112,50 @@ func (h *ResourceLifecycleHandler) GetResourceState(ctx context.Context, req *co
 		LifecycleState:     string(instance.LifecycleState),
 	}, nil
 }
+
+func (h *ResourceLifecycleHandler) SetAgentRuntimePolicy(ctx context.Context, req *convergeplanev1.SetAgentRuntimePolicyRequest) (*convergeplanev1.SetAgentRuntimePolicyResponse, error) {
+	if req.ResourceInstanceId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
+	}
+	if req.AgentName == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "agent_name is required")
+	}
+	policy := map[string]any{}
+	if req.RuntimePolicy != nil {
+		policy = req.RuntimePolicy.AsMap()
+	}
+	if err := h.svc.SetAgentRuntimePolicy(ctx, req.ResourceInstanceId, req.AgentName, policy); err != nil {
+		return nil, status.Errorf(codes.Internal, "set agent runtime policy: %v", err)
+	}
+	return &convergeplanev1.SetAgentRuntimePolicyResponse{}, nil
+}
+
+func (h *ResourceLifecycleHandler) SetAgentLifecyclePolicy(ctx context.Context, req *convergeplanev1.SetAgentLifecyclePolicyRequest) (*convergeplanev1.SetAgentLifecyclePolicyResponse, error) {
+	if req.ResourceInstanceId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
+	}
+	if req.AgentName == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "agent_name is required")
+	}
+	policy := map[string]any{}
+	if req.LifecyclePolicy != nil {
+		policy = req.LifecyclePolicy.AsMap()
+	}
+	if err := h.svc.SetAgentLifecyclePolicy(ctx, req.ResourceInstanceId, req.AgentName, policy); err != nil {
+		return nil, status.Errorf(codes.Internal, "set agent lifecycle policy: %v", err)
+	}
+	return &convergeplanev1.SetAgentLifecyclePolicyResponse{}, nil
+}
+
+func (h *ResourceLifecycleHandler) DeleteAgent(ctx context.Context, req *convergeplanev1.DeleteAgentRequest) (*convergeplanev1.DeleteAgentResponse, error) {
+	if req.ResourceInstanceId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
+	}
+	if req.AgentName == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "agent_name is required")
+	}
+	if err := h.svc.DeleteAgent(ctx, req.ResourceInstanceId, req.AgentName); err != nil {
+		return nil, status.Errorf(codes.Internal, "delete agent: %v", err)
+	}
+	return &convergeplanev1.DeleteAgentResponse{}, nil
+}

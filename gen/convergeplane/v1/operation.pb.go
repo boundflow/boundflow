@@ -183,8 +183,12 @@ type AtomicOperationResult struct {
 	Status        OperationStatus        `protobuf:"varint,1,opt,name=status,proto3,enum=convergeplane.v1.OperationStatus" json:"status,omitempty"`
 	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	NextOperation *AtomicOperation       `protobuf:"bytes,3,opt,name=next_operation,json=nextOperation,proto3" json:"next_operation,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Agent state updates to persist after this operation completes.
+	// Keys are agent names; values are updated agent state objects
+	// (runtime_policy, lifecycle_policy, invocation_metrics).
+	AgentStateUpdates *structpb.Struct `protobuf:"bytes,4,opt,name=agent_state_updates,json=agentStateUpdates,proto3" json:"agent_state_updates,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *AtomicOperationResult) Reset() {
@@ -238,6 +242,13 @@ func (x *AtomicOperationResult) GetNextOperation() *AtomicOperation {
 	return nil
 }
 
+func (x *AtomicOperationResult) GetAgentStateUpdates() *structpb.Struct {
+	if x != nil {
+		return x.AgentStateUpdates
+	}
+	return nil
+}
+
 var File_convergeplane_v1_operation_proto protoreflect.FileDescriptor
 
 const file_convergeplane_v1_operation_proto_rawDesc = "" +
@@ -253,11 +264,12 @@ const file_convergeplane_v1_operation_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12'\n" +
 	"\x0ftimeout_seconds\x18\a \x01(\x05R\x0etimeoutSeconds\x12#\n" +
-	"\rresource_type\x18\b \x01(\tR\fresourceType\"\xb6\x01\n" +
+	"\rresource_type\x18\b \x01(\tR\fresourceType\"\xff\x01\n" +
 	"\x15AtomicOperationResult\x129\n" +
 	"\x06status\x18\x01 \x01(\x0e2!.convergeplane.v1.OperationStatusR\x06status\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12H\n" +
-	"\x0enext_operation\x18\x03 \x01(\v2!.convergeplane.v1.AtomicOperationR\rnextOperation*\xb2\x01\n" +
+	"\x0enext_operation\x18\x03 \x01(\v2!.convergeplane.v1.AtomicOperationR\rnextOperation\x12G\n" +
+	"\x13agent_state_updates\x18\x04 \x01(\v2\x17.google.protobuf.StructR\x11agentStateUpdates*\xb2\x01\n" +
 	"\x0fOperationStatus\x12 \n" +
 	"\x1cOPERATION_STATUS_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cOPERATION_STATUS_IN_PROGRESS\x10\x01\x12\x1e\n" +
@@ -291,11 +303,12 @@ var file_convergeplane_v1_operation_proto_depIdxs = []int32{
 	4, // 1: convergeplane.v1.AtomicOperation.created_at:type_name -> google.protobuf.Timestamp
 	0, // 2: convergeplane.v1.AtomicOperationResult.status:type_name -> convergeplane.v1.OperationStatus
 	1, // 3: convergeplane.v1.AtomicOperationResult.next_operation:type_name -> convergeplane.v1.AtomicOperation
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	3, // 4: convergeplane.v1.AtomicOperationResult.agent_state_updates:type_name -> google.protobuf.Struct
+	5, // [5:5] is the sub-list for method output_type
+	5, // [5:5] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_convergeplane_v1_operation_proto_init() }

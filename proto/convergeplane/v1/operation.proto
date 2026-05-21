@@ -22,6 +22,10 @@ message AtomicOperationResult {
   OperationStatus status = 1;
   string message = 2;
   AtomicOperation next_operation = 3;
+  // Agent state updates to persist after this operation completes.
+  // Keys are agent names; values are updated agent state objects
+  // (runtime_policy, lifecycle_policy, invocation_metrics).
+  google.protobuf.Struct agent_state_updates = 4;
 }
 
 enum OperationStatus {

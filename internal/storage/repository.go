@@ -104,6 +104,19 @@ type JobRepository interface {
 	ReleaseJob(ctx context.Context, resourceInstanceID string, ownerID string) error
 }
 
+type AgentStateRepository interface {
+	// UpsertRuntimePolicy sets the runtime policy for an agent, creating the row if needed.
+	UpsertRuntimePolicy(ctx context.Context, resourceInstanceID, agentName string, policy map[string]any) error
+	// UpsertLifecyclePolicy sets the lifecycle policy for an agent, creating the row if needed.
+	UpsertLifecyclePolicy(ctx context.Context, resourceInstanceID, agentName string, policy map[string]any) error
+	// UpdateMetrics persists updated invocation metrics for an agent.
+	UpdateMetrics(ctx context.Context, resourceInstanceID, agentName string, metrics []map[string]any) error
+	// GetAllForResource returns all agent states for a resource instance (used when building the job context).
+	GetAllForResource(ctx context.Context, resourceInstanceID string) ([]*domain.AgentState, error)
+	// Delete removes the agent state row entirely.
+	Delete(ctx context.Context, resourceInstanceID, agentName string) error
+}
+
 type CustomerRequestRepository interface {
 	Create(ctx context.Context, req *domain.CustomerRequest) error
 	Get(ctx context.Context, resourceInstanceID, id string) (*domain.CustomerRequest, error)

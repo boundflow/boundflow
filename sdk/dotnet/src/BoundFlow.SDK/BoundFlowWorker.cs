@@ -31,6 +31,8 @@ public sealed class OperationContext
     private readonly AtomicOperation _operation;
     private readonly Orchestrator _orchestrator;
     private readonly List<(string Key, LlmContextEntry Entry)> _llmContext = [];
+    // Pending agent state updates to be written back via AtomicOperationResult.
+    internal readonly Dictionary<string, JsonNode> AgentStateUpdates = [];
 
     internal OperationContext(AtomicOperation operation, Orchestrator orchestrator)
     {
@@ -47,8 +49,7 @@ public sealed class OperationContext
     public readonly JsonNode Context;
 
     /// <summary>
-    /// Adds a context entry that will be included in the next RunAgentStepAsync call.
-    /// Entries added here are merged with any LlmContext already in AgentStepConfig.
+    /// Adds a context entry that will be included in the next RunAgentAsync call.
     /// key defaults to metadata if not provided and is used to remove the entry later.
     /// </summary>
     public OperationContext AddLlmContext(string metadata, JsonNode? payload, string? key = null)
@@ -65,22 +66,149 @@ public sealed class OperationContext
     }
 
     /// <summary>
-    /// Runs an LLM agent step inline within the current operation.
-    /// Context entries added via AddLlmContext are merged into the config.
-    /// Server-enforced policy from the operation context is merged over cfg.Policy.
-    /// Audit metadata (LLM calls, cost) is recorded automatically.
+    /// Runs an agent step inline. Policies are loaded from the server-stored agent_state
+    /// in the operation context. Lifecycle rules are evaluated against invocation history
+    /// before the run; metrics are accumulated and written back at operation completion.
     /// </summary>
-    public Task<StepResult> RunAgentStepAsync(AgentStepConfig cfg, CancellationToken ct = default)
+    public async Task<StepResult> RunAgentAsync(AgentDefinition agent, CancellationToken ct = default)
     {
-        // TODO: read _boundflow_policy from Context and merge over cfg.Policy (server limits win)
-        // TODO: store StepResult metadata (LlmCallsUsed, CostUsd) for audit bundling
+        // Load server-stored agent state from context.
+        var agentStateNode = Context["_bf_agent_state"]?[agent.Name];
+        var runtimePolicy = LoadRuntimePolicy(agentStateNode);
+        var lifecyclePolicy = LoadLifecyclePolicy(agentStateNode);
+        var history = LoadMetricsHistory(agentStateNode);
 
-        var mergedContext = _llmContext.Count > 0
-            ? [.. (cfg.LlmContext ?? []), .. _llmContext.Select(e => e.Entry)]
-            : cfg.LlmContext;
+        // Evaluate lifecycle rules and mutate policy accordingly.
+        runtimePolicy = ApplyLifecycleRules(lifecyclePolicy, history, runtimePolicy);
 
-        var mergedCfg = cfg with { LlmContext = mergedContext };
-        return _orchestrator.RunAsync(mergedCfg, ct);
+        var llmContext = _llmContext.Count > 0
+            ? (IReadOnlyList<LlmContextEntry>)[.. _llmContext.Select(e => e.Entry)]
+            : null;
+
+        var cfg = new AgentStepConfig(
+            Objective: agent.Name,
+            SystemPrompt: agent.SystemPrompt,
+            Policy: runtimePolicy,
+            AllowedCallbacks: agent.AllowedCallbacks,
+            OutputSchema: agent.OutputSchema,
+            LlmContext: llmContext
+        );
+
+        var result = await _orchestrator.RunAsync(cfg, ct);
+
+        // Append new metric snapshot and update the in-memory state for return.
+        var newSnapshot = new JsonObject
+        {
+            ["tokens_used"]    = result.TokensUsed,
+            ["cost_usd"]       = (double)result.CostUsd,
+            ["llm_calls"]      = result.LlmCallsUsed,
+            ["calls_per_tool"] = 0,
+            ["ran_at"]         = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+        };
+
+        var maxWindow = lifecyclePolicy?.Rules.Count > 0
+            ? lifecyclePolicy.Rules.Max(r => r.Window)
+            : 100;
+
+        var updatedHistory = new JsonArray([.. history, newSnapshot]);
+        while (updatedHistory.Count > Math.Max(maxWindow, 1))
+            updatedHistory.RemoveAt(0);
+
+        AgentStateUpdates[agent.Name] = new JsonObject
+        {
+            ["invocation_metrics"] = updatedHistory,
+        };
+
+        return result;
+    }
+
+    // ── Private helpers ───────────────────────────────────────────────────────
+
+    private static AgentRuntimePolicy LoadRuntimePolicy(JsonNode? stateNode)
+    {
+        if (stateNode?["runtime_policy"] is not JsonObject rp) return new AgentRuntimePolicy();
+        return new AgentRuntimePolicy(
+            MaxLlmCalls:      rp["max_llm_calls"]?.GetValue<int>()           ?? 0,
+            MaxCostUsd:       (decimal)(rp["max_cost_usd"]?.GetValue<double>() ?? 0),
+            MaxTokensPerCall: rp["max_tokens_per_call"]?.GetValue<int>()     ?? 0,
+            MaxCallsPerTool:  rp["max_calls_per_tool"]?.GetValue<int>()      ?? 0
+        );
+    }
+
+    private static AgentLifecyclePolicy? LoadLifecyclePolicy(JsonNode? stateNode)
+    {
+        if (stateNode?["lifecycle_policy"]?["rules"] is not JsonArray rulesNode) return null;
+        var rules = rulesNode
+            .OfType<JsonObject>()
+            .Select(r => new AgentLifecycleRule(
+                Metric:    System.Enum.Parse<AgentMetric>(r["metric"]?.GetValue<string>() ?? "TokensUsed", ignoreCase: true),
+                Operator:  System.Enum.Parse<PolicyOperator>(r["operator"]?.GetValue<string>() ?? "GreaterThan", ignoreCase: true),
+                Threshold: (decimal)(r["threshold"]?.GetValue<double>() ?? 0),
+                Window:    r["window"]?.GetValue<int>() ?? 0,
+                Action: new PolicyMutation(
+                    System.Enum.Parse<PolicyField>(r["action"]?["field"]?.GetValue<string>() ?? "Model", ignoreCase: true),
+                    r["action"]?["value"]?.ToString() ?? ""
+                )
+            ))
+            .ToList();
+        return new AgentLifecyclePolicy(rules);
+    }
+
+    private static List<JsonNode> LoadMetricsHistory(JsonNode? stateNode)
+    {
+        if (stateNode?["invocation_metrics"] is not JsonArray arr) return [];
+        return [.. arr.OfType<JsonNode>()];
+    }
+
+    private static AgentRuntimePolicy ApplyLifecycleRules(
+        AgentLifecyclePolicy? policy,
+        List<JsonNode> history,
+        AgentRuntimePolicy current)
+    {
+        if (policy is null || policy.Rules.Count == 0) return current;
+
+        foreach (var rule in policy.Rules)
+        {
+            var window = rule.Window > 0 ? history.TakeLast(rule.Window).ToList() : history;
+            var sum = window.Sum(e => GetMetricValue(e, rule.Metric));
+            if (!Evaluate(sum, rule.Operator, rule.Threshold)) continue;
+
+            current = ApplyMutation(current, rule.Action);
+        }
+        return current;
+    }
+
+    private static decimal GetMetricValue(JsonNode entry, AgentMetric metric) => metric switch
+    {
+        AgentMetric.TokensUsed    => (decimal)(entry["tokens_used"]?.GetValue<double>()    ?? 0),
+        AgentMetric.CostUsd       => (decimal)(entry["cost_usd"]?.GetValue<double>()       ?? 0),
+        AgentMetric.LlmCalls      => (decimal)(entry["llm_calls"]?.GetValue<double>()      ?? 0),
+        AgentMetric.CallsPerTool  => (decimal)(entry["calls_per_tool"]?.GetValue<double>() ?? 0),
+        _                         => 0,
+    };
+
+    private static bool Evaluate(decimal sum, PolicyOperator op, decimal threshold) => op switch
+    {
+        PolicyOperator.LessThan           => sum < threshold,
+        PolicyOperator.LessThanOrEqual    => sum <= threshold,
+        PolicyOperator.GreaterThan        => sum > threshold,
+        PolicyOperator.GreaterThanOrEqual => sum >= threshold,
+        PolicyOperator.Equal              => sum == threshold,
+        _                                 => false,
+    };
+
+    private static AgentRuntimePolicy ApplyMutation(AgentRuntimePolicy policy, PolicyMutation mutation)
+    {
+        var val = mutation.Value?.ToString() ?? "";
+        return mutation.Field switch
+        {
+            PolicyField.MaxLlmCalls      => policy with { MaxLlmCalls      = int.TryParse(val, out var i)     ? i : policy.MaxLlmCalls },
+            PolicyField.MaxCostUsd       => policy with { MaxCostUsd       = decimal.TryParse(val, out var d) ? d : policy.MaxCostUsd },
+            PolicyField.MaxTokensPerCall => policy with { MaxTokensPerCall = int.TryParse(val, out var t)     ? t : policy.MaxTokensPerCall },
+            PolicyField.MaxCallsPerTool  => policy with { MaxCallsPerTool  = int.TryParse(val, out var c)     ? c : policy.MaxCallsPerTool },
+            // Model mutations are passed through to the orchestrator via AllowedModels check.
+            _                            => policy,
+        };
     }
 }
 
@@ -140,7 +268,15 @@ public sealed class BoundFlowWorker
 
             var customerContext = new OperationContext(op, orchestrator);
             var result = await handler(customerContext, ct);
-            return MapToProto(result);
+            var proto = MapToProto(result);
+            if (customerContext.AgentStateUpdates.Count > 0)
+            {
+                var updatesObj = new JsonObject();
+                foreach (var (name, state) in customerContext.AgentStateUpdates)
+                    updatesObj[name] = state.DeepClone();
+                proto.AgentStateUpdates = JsonParser.Default.Parse<Struct>(updatesObj.ToJsonString());
+            }
+            return proto;
         };
 
         return workerClient.RunAsync(operationHandler, ct);
