@@ -1,4 +1,6 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using Convergeplane.V1;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
@@ -140,28 +142,28 @@ public sealed class ControlPlaneClient : IDisposable
     public async Task SetAgentRuntimePolicyAsync(
         string resourceInstanceId,
         string agentName,
-        JsonNode runtimePolicy,
+        AgentRuntimePolicy runtimePolicy,
         CancellationToken ct = default) =>
         await _lifecycle.SetAgentRuntimePolicyAsync(
             new SetAgentRuntimePolicyRequest
             {
                 ResourceInstanceId = resourceInstanceId,
                 AgentName = agentName,
-                RuntimePolicy = ToStruct(runtimePolicy),
+                RuntimePolicy = ToStruct(SerializePolicy(runtimePolicy)),
             },
             cancellationToken: ct);
 
     public async Task SetAgentLifecyclePolicyAsync(
         string resourceInstanceId,
         string agentName,
-        JsonNode lifecyclePolicy,
+        AgentLifecyclePolicy lifecyclePolicy,
         CancellationToken ct = default) =>
         await _lifecycle.SetAgentLifecyclePolicyAsync(
             new SetAgentLifecyclePolicyRequest
             {
                 ResourceInstanceId = resourceInstanceId,
                 AgentName = agentName,
-                LifecyclePolicy = ToStruct(lifecyclePolicy),
+                LifecyclePolicy = ToStruct(SerializePolicy(lifecyclePolicy)),
             },
             cancellationToken: ct);
 
@@ -178,6 +180,16 @@ public sealed class ControlPlaneClient : IDisposable
             cancellationToken: ct);
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private static readonly JsonSerializerOptions PolicySerializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    };
+
+    private static JsonNode SerializePolicy<T>(T policy) =>
+        JsonSerializer.SerializeToNode(policy, PolicySerializerOptions)!;
 
     private static Struct ToStruct(JsonNode node) =>
         JsonParser.Default.Parse<Struct>(node.ToJsonString());

@@ -85,10 +85,13 @@ public sealed class OperationContext
             ? (IReadOnlyList<LlmContextEntry>)[.. _llmContext.Select(e => e.Entry)]
             : null;
 
+        var effectiveModel = runtimePolicy.Model ?? agent.Model;
+
         var cfg = new AgentStepConfig(
             Objective: agent.Name,
             SystemPrompt: agent.SystemPrompt,
             Policy: runtimePolicy,
+            Model: effectiveModel,
             AllowedCallbacks: agent.AllowedCallbacks,
             OutputSchema: agent.OutputSchema,
             LlmContext: llmContext
@@ -96,27 +99,25 @@ public sealed class OperationContext
 
         var result = await _orchestrator.RunAsync(cfg, ct);
 
-        // Append new metric snapshot and update the in-memory state for return.
-        var newSnapshot = new JsonObject
-        {
-            ["tokens_used"]    = result.TokensUsed,
-            ["cost_usd"]       = (double)result.CostUsd,
-            ["llm_calls"]      = result.LlmCallsUsed,
-            ["calls_per_tool"] = 0,
-            ["ran_at"]         = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-        };
+        var newSnapshot = new InvocationSnapshot(
+            TokensUsed:   result.TokensUsed,
+            CostUsd:      (double)result.CostUsd,
+            LlmCalls:     result.LlmCallsUsed,
+            CallsPerTool: 0,
+            RanAt:        DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+        );
 
         var maxWindow = lifecyclePolicy?.Rules.Count > 0
             ? lifecyclePolicy.Rules.Max(r => r.Window)
             : 100;
 
-        var updatedHistory = new JsonArray([.. history, newSnapshot]);
+        List<InvocationSnapshot> updatedHistory = [.. history, newSnapshot];
         while (updatedHistory.Count > Math.Max(maxWindow, 1))
             updatedHistory.RemoveAt(0);
 
         AgentStateUpdates[agent.Name] = new JsonObject
         {
-            ["invocation_metrics"] = updatedHistory,
+            ["invocation_metrics"] = LifecyclePolicyEvaluator.SerializeMetricsHistory(updatedHistory),
         };
 
         return result;
@@ -132,19 +133,16 @@ public sealed class BoundFlowWorker
 {
     private readonly string _serverAddress;
     private readonly AnthropicClient _anthropicClient;
-    private readonly string _llmModel;
     private readonly ILoggerFactory _loggerFactory;
     private readonly Dictionary<(string ResourceType, string OperationName), Func<OperationContext, CancellationToken, Task<OperationResult>>> _handlers = new();
 
     public BoundFlowWorker(
         string serverAddress,
         string llmApiKey,
-        ILoggerFactory loggerFactory,
-        string llmModel = "claude-sonnet-4-6")
+        ILoggerFactory loggerFactory)
     {
         _serverAddress = serverAddress;
         _anthropicClient = new AnthropicClient(new APIAuthentication(llmApiKey));
-        _llmModel = llmModel;
         _loggerFactory = loggerFactory;
     }
 
@@ -175,7 +173,6 @@ public sealed class BoundFlowWorker
             // New Orchestrator per call — stateless, cheap to create.
             var orchestrator = new Orchestrator(
                 _anthropicClient,
-                _llmModel,
                 _loggerFactory.CreateLogger<Orchestrator>());
 
             var customerContext = new OperationContext(op, orchestrator);

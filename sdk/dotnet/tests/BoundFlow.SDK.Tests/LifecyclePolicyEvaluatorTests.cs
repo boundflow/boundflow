@@ -8,14 +8,8 @@ public class LifecyclePolicyEvaluatorTests
 {
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private static JsonNode Snapshot(int tokens = 0, double cost = 0, int llmCalls = 0, int callsPerTool = 0) =>
-        new JsonObject
-        {
-            ["tokens_used"]    = tokens,
-            ["cost_usd"]       = cost,
-            ["llm_calls"]      = llmCalls,
-            ["calls_per_tool"] = callsPerTool,
-        };
+    private static InvocationSnapshot Snapshot(int tokens = 0, double cost = 0, int llmCalls = 0, int callsPerTool = 0) =>
+        new(tokens, cost, llmCalls, callsPerTool, RanAt: 0);
 
     private static AgentLifecycleRule Rule(
         AgentMetric metric,
@@ -57,10 +51,13 @@ public class LifecyclePolicyEvaluatorTests
     }
 
     [Fact]
-    public void GetMetricValue_MissingField_ReturnsZero()
+    public void GetMetricValue_DefaultSnapshot_ReturnsZeroForAllMetrics()
     {
-        var snap = new JsonObject(); // no keys
+        var snap = Snapshot(); // all fields default to 0
         Assert.Equal(0m, LifecyclePolicyEvaluator.GetMetricValue(snap, AgentMetric.TokensUsed));
+        Assert.Equal(0m, LifecyclePolicyEvaluator.GetMetricValue(snap, AgentMetric.CostUsd));
+        Assert.Equal(0m, LifecyclePolicyEvaluator.GetMetricValue(snap, AgentMetric.LlmCalls));
+        Assert.Equal(0m, LifecyclePolicyEvaluator.GetMetricValue(snap, AgentMetric.CallsPerTool));
     }
 
     // ── Evaluate ─────────────────────────────────────────────────────────────
@@ -179,7 +176,7 @@ public class LifecyclePolicyEvaluatorTests
     [Fact]
     public void ApplyLifecycleRules_ThresholdExceeded_MutatesPolicyField()
     {
-        var history = new List<JsonNode>
+        var history = new List<InvocationSnapshot>
         {
             Snapshot(tokens: 500),
             Snapshot(tokens: 600), // sum = 1100 > 1000
@@ -195,7 +192,7 @@ public class LifecyclePolicyEvaluatorTests
     [Fact]
     public void ApplyLifecycleRules_ThresholdNotExceeded_PolicyUnchanged()
     {
-        var history = new List<JsonNode>
+        var history = new List<InvocationSnapshot>
         {
             Snapshot(tokens: 300),
             Snapshot(tokens: 400), // sum = 700 < 1000
@@ -214,7 +211,7 @@ public class LifecyclePolicyEvaluatorTests
         // 5 snapshots, window = 3: only last 3 count
         // last 3: 200 + 200 + 200 = 600, which is NOT > 1000
         // all 5:  400 + 400 + 200 + 200 + 200 = 1400, which IS > 1000
-        var history = new List<JsonNode>
+        var history = new List<InvocationSnapshot>
         {
             Snapshot(tokens: 400),
             Snapshot(tokens: 400),
@@ -234,7 +231,7 @@ public class LifecyclePolicyEvaluatorTests
     public void ApplyLifecycleRules_Window_FiresWhenWindowSumExceedsThreshold()
     {
         // window = 3, last 3: 400 + 400 + 400 = 1200 > 1000
-        var history = new List<JsonNode>
+        var history = new List<InvocationSnapshot>
         {
             Snapshot(tokens: 100),
             Snapshot(tokens: 400),
@@ -252,7 +249,7 @@ public class LifecyclePolicyEvaluatorTests
     [Fact]
     public void ApplyLifecycleRules_MultipleRules_AllFiringRulesApplied()
     {
-        var history = new List<JsonNode>
+        var history = new List<InvocationSnapshot>
         {
             Snapshot(tokens: 2000, llmCalls: 10),
         };
@@ -270,7 +267,7 @@ public class LifecyclePolicyEvaluatorTests
     [Fact]
     public void ApplyLifecycleRules_MultipleRules_OnlyFiringRulesApplied()
     {
-        var history = new List<JsonNode>
+        var history = new List<InvocationSnapshot>
         {
             Snapshot(tokens: 2000, llmCalls: 2), // tokens fires, llmCalls does not
         };

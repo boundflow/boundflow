@@ -6,64 +6,37 @@ namespace BoundFlow.SDK.Llm;
 /// Per-step runtime limits enforced by the orchestrator.
 /// Server-stored values (loaded from agent_state context) take precedence over these.
 /// </summary>
-public record AgentRuntimePolicy(
-    int MaxLlmCalls = 0,
-    decimal MaxCostUsd = 0,
-    /// <summary>Max tokens per individual LLM call. Defaults to 4096 if 0.</summary>
-    int MaxTokensPerCall = 0,
-    /// <summary>Max times any single tool may be called within the step. 0 = unlimited.</summary>
-    int MaxCallsPerTool = 0,
-    /// <summary>Restrict which models may be used. Null = use whatever model is configured.</summary>
-    IReadOnlyList<string>? AllowedModels = null
+internal record InvocationSnapshot(
+    int TokensUsed,
+    double CostUsd,
+    int LlmCalls,
+    int CallsPerTool,
+    long RanAt
 );
 
-/// <summary>
-/// Describes a single adaptive rule. If the cumulative sum of <see cref="Metric"/> over
-/// the last <see cref="Window"/> invocations satisfies the comparison, <see cref="Action"/>
-/// is applied to the runtime policy before the next agent run.
-/// </summary>
-public record AgentLifecycleRule(
+internal record AgentRuntimePolicy(
+    int MaxLlmCalls = 0,
+    decimal MaxCostUsd = 0,
+    int MaxTokensPerCall = 0,
+    int MaxCallsPerTool = 0,
+    IReadOnlyList<string>? AllowedModels = null,
+    // Written by lifecycle rules only. Null = use AgentDefinition.Model.
+    string? Model = null
+);
+
+internal record AgentLifecycleRule(
     AgentMetric Metric,
     PolicyOperator Operator,
     decimal Threshold,
-    /// <summary>Rolling window in invocation count. 0 = evaluate against the current step only.</summary>
     int Window,
     PolicyMutation Action
 );
 
-public enum AgentMetric
-{
-    TokensUsed,
-    CostUsd,
-    LlmCalls,
-    CallsPerTool,
-}
-
-public enum PolicyOperator
-{
-    LessThan,
-    LessThanOrEqual,
-    GreaterThan,
-    GreaterThanOrEqual,
-    Equal,
-}
-
-/// <summary>Mutates a single field of the runtime policy when a lifecycle rule fires.</summary>
-public record PolicyMutation(PolicyField Field, object Value);
-
-public enum PolicyField
-{
-    Model,
-    MaxLlmCalls,
-    MaxCostUsd,
-    MaxTokensPerCall,
-    MaxCallsPerTool,
-}
-
-/// <summary>
-/// A set of adaptive rules evaluated before each agent run.
-/// </summary>
-public record AgentLifecyclePolicy(IReadOnlyList<AgentLifecycleRule> Rules);
+internal enum AgentMetric     { TokensUsed, CostUsd, LlmCalls, CallsPerTool }
+internal enum PolicyOperator  { LessThan, LessThanOrEqual, GreaterThan, GreaterThanOrEqual, Equal }
+internal record PolicyMutation(PolicyField Field, object Value);
+internal enum PolicyField     { Model, MaxLlmCalls, MaxCostUsd, MaxTokensPerCall, MaxCallsPerTool }
+internal record AgentLifecyclePolicy(IReadOnlyList<AgentLifecycleRule> Rules);
 
 /// <summary>
 /// Inline definition of an agent step — system prompt, callbacks, and output schema.
@@ -72,6 +45,7 @@ public record AgentLifecyclePolicy(IReadOnlyList<AgentLifecycleRule> Rules);
 public record AgentDefinition(
     string Name,
     string SystemPrompt,
+    string Model,
     IReadOnlyList<AllowedCallback>? AllowedCallbacks = null,
     JsonNode? OutputSchema = null
 );
@@ -110,7 +84,9 @@ public record StepResult(
     JsonNode? Output,
     int LlmCallsUsed,
     decimal CostUsd,
-    int TokensUsed
+    int TokensUsed,
+    /// <summary>The model that was actually used for this step.</summary>
+    string ModelUsed
 );
 
 /// <summary>
@@ -120,6 +96,7 @@ internal record AgentStepConfig(
     string Objective,
     string SystemPrompt,
     AgentRuntimePolicy Policy,
+    string Model,
     IReadOnlyList<AllowedCallback>? AllowedCallbacks = null,
     JsonNode? OutputSchema = null,
     IReadOnlyList<LlmContextEntry>? LlmContext = null

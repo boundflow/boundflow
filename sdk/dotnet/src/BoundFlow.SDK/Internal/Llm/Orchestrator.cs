@@ -19,13 +19,11 @@ internal sealed class Orchestrator
     private const decimal OutputCostPer1M = 15.0m;
 
     private readonly AnthropicClient _client;
-    private readonly string _model;
     private readonly ILogger<Orchestrator> _logger;
 
-    public Orchestrator(AnthropicClient client, string model, ILogger<Orchestrator> logger)
+    public Orchestrator(AnthropicClient client, ILogger<Orchestrator> logger)
     {
         _client = client;
-        _model = model;
         _logger = logger;
     }
 
@@ -59,7 +57,7 @@ internal sealed class Orchestrator
 
             var request = new MessageParameters
             {
-                Model = _model,
+                Model = cfg.Model,
                 MaxTokens = 4096,
                 SystemMessage = cfg.SystemPrompt + "\n\nWhen you have completed your objective, call the submit_result tool with your findings.",
                 Messages = messages,
@@ -103,8 +101,8 @@ internal sealed class Orchestrator
                 // submit_result — capture output and return.
                 if (toolUse.Name == SubmitResultTool)
                 {
-                    _logger.LogInformation("Agent step complete via submit_result. LlmCalls={Calls} CostUsd={Cost}", llmCallsUsed, costUsd);
-                    return new StepResult(input, llmCallsUsed, costUsd, tokensUsed);
+                    _logger.LogInformation("Agent step complete via submit_result. LlmCalls={Calls} CostUsd={Cost} Model={Model}", llmCallsUsed, costUsd, cfg.Model);
+                    return new StepResult(input, llmCallsUsed, costUsd, tokensUsed, cfg.Model);
                 }
 
                 if (!callbackMap.TryGetValue(toolUse.Name, out var cb))
