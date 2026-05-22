@@ -67,7 +67,7 @@ type SchedulerRepository interface {
 	// If the write happens it also atomically marks the customer request as scheduled.
 	// Returns the resource instance ID and version written, and written=true, if the job was
 	// written. Returns written=false if the existing job had an equal or higher version.
-	UpsertJobAndSchedule(ctx context.Context, requestID string) (resourceInstanceID string, version int64, written bool, err error)
+	UpsertJobAndSchedule(ctx context.Context, requestID string, agentStateJSON string) (resourceInstanceID string, version int64, written bool, err error)
 	// SupercedeOlderRequests marks all unscheduled or scheduled requests for the given resource
 	// whose version is strictly less than version as superceded.
 	SupercedeOlderRequests(ctx context.Context, resourceInstanceID string, version int64) error
@@ -111,8 +111,11 @@ type AgentStateRepository interface {
 	UpsertLifecyclePolicy(ctx context.Context, resourceInstanceID, agentName string, policy map[string]any) error
 	// UpdateMetrics persists updated invocation metrics for an agent.
 	UpdateMetrics(ctx context.Context, resourceInstanceID, agentName string, metrics []map[string]any) error
-	// GetAllForResource returns all agent states for a resource instance (used when building the job context).
+	// GetAllForResource returns all agent states for a resource instance.
 	GetAllForResource(ctx context.Context, resourceInstanceID string) ([]*domain.AgentState, error)
+	// GetAllForRequest returns all agent states for the resource instance associated with a customer request.
+	// Used by the scheduler when building the initial job context.
+	GetAllForRequest(ctx context.Context, requestID string) ([]*domain.AgentState, error)
 	// Delete removes the agent state row entirely.
 	Delete(ctx context.Context, resourceInstanceID, agentName string) error
 }

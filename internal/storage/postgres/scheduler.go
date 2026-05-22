@@ -47,20 +47,11 @@ func (r *SchedulerRepo) GetTopUnscheduledRequests(ctx context.Context, partition
 // but only if the request's version is strictly higher than the job currently in the table
 // (and that job is still pending). Atomically marks the request as scheduled if written.
 // Returns written=false (no error) if the existing job had an equal or higher version or the job has been started already.
-func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID string) (resourceInstanceID string, version int64, written bool, err error) {
+func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID string, agentStateJSON string) (resourceInstanceID string, version int64, written bool, err error) {
 	err = r.pool.QueryRow(ctx,
 		`WITH candidate AS (
 		     SELECT cr.id, cr.resource_instance_id, cr.version, cr.request_type, cr.request_info, cr.operation_timeout_seconds,
-		            ri.resource_type,
-		            COALESCE((
-		                SELECT jsonb_object_agg(agent_name, jsonb_build_object(
-		                    'runtime_policy',     runtime_policy,
-		                    'lifecycle_policy',   lifecycle_policy,
-		                    'invocation_metrics', invocation_metrics
-		                ))
-		                FROM agent_state
-		                WHERE resource_instance_id = cr.resource_instance_id
-		            ), '{}'::jsonb) AS agent_states
+		            ri.resource_type
 		     FROM customer_requests cr
 		     JOIN resource_instances ri ON ri.id = cr.resource_instance_id
 		     WHERE cr.id = $1
@@ -68,7 +59,7 @@ func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID stri
 		 upserted AS (
 		     INSERT INTO jobs (resource_instance_id, request_id, version, current_atomic_operation, context, status, job_type, resource_type, timeout_seconds)
 		     SELECT c.resource_instance_id, c.id, c.version, c.request_type || '_entry',
-		            c.request_info || jsonb_build_object('_bf_agent_state', c.agent_states),
+		            c.request_info || jsonb_build_object('_bf_agent_state', $2::jsonb),
 		            'pending', c.request_type, c.resource_type, c.operation_timeout_seconds
 		     FROM candidate c
 		     ON CONFLICT (resource_instance_id) DO UPDATE
@@ -92,7 +83,7 @@ func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID stri
 		 FROM upserted u
 		 WHERE cr.id = u.request_id
 		 RETURNING cr.resource_instance_id, cr.version`,
-		requestID,
+		requestID, agentStateJSON,
 	).Scan(&resourceInstanceID, &version)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

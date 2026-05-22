@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -243,7 +244,24 @@ func (s *Scheduler) scheduleJobs(ctx context.Context, partitionID string) error 
 func (s *Scheduler) ScheduleRequest(ctx context.Context, req string) error {
 	s.log.Debug("attempting to schedule request", "request_id", req)
 
-	resourceID, ver, written, err := s.scheduler.UpsertJobAndSchedule(ctx, req)
+	agentStates, err := s.agentStates.GetAllForRequest(ctx, req)
+	if err != nil {
+		return fmt.Errorf("get agent states for request %s: %w", req, err)
+	}
+	agentStateMap := make(map[string]any, len(agentStates))
+	for _, s := range agentStates {
+		agentStateMap[s.AgentName] = map[string]any{
+			"runtime_policy":     s.RuntimePolicy,
+			"lifecycle_policy":   s.LifecyclePolicy,
+			"invocation_metrics": s.InvocationMetrics,
+		}
+	}
+	agentStateJSON, err := json.Marshal(agentStateMap)
+	if err != nil {
+		return fmt.Errorf("marshal agent states: %w", err)
+	}
+
+	resourceID, ver, written, err := s.scheduler.UpsertJobAndSchedule(ctx, req, string(agentStateJSON))
 	if err != nil {
 		return fmt.Errorf("error scheduling request %s: %w", req, err)
 	}

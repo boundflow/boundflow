@@ -70,10 +70,9 @@ func runServer(sigCh <-chan os.Signal) {
 	tenantRepo := postgres.NewTenantRepo(pool)
 	resourceInstanceRepo := postgres.NewResourceInstanceRepo(pool)
 	customerRequestRepo := postgres.NewCustomerRequestRepo(pool)
+	agentStateRepo := postgres.NewAgentStateRepo(pool)
 	schedulerRepo := postgres.NewSchedulerRepo(pool)
 	partitionRepo := postgres.NewSchedulerPartitionRepo(pool)
-
-	agentStateRepo := postgres.NewAgentStateRepo(pool)
 	sched := internalscheduler.New("server", 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, agentStateRepo, logger)
 
 	regSvc := service.NewRegistrationService(tenantGroupRepo, tenantRepo)
@@ -103,10 +102,10 @@ func runScheduler(sigCh <-chan os.Signal) {
 	defer pool.Close()
 
 	partitionRepo := postgres.NewSchedulerPartitionRepo(pool)
-	schedulerRepo := postgres.NewSchedulerRepo(pool)
 	customerRequestRepo := postgres.NewCustomerRequestRepo(pool)
 	resourceInstanceRepo := postgres.NewResourceInstanceRepo(pool)
 	agentStateRepo := postgres.NewAgentStateRepo(pool)
+	schedulerRepo := postgres.NewSchedulerRepo(pool)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -138,13 +137,13 @@ func runWorker(sigCh <-chan os.Signal) {
 	defer pool.Close()
 
 	jobRepo := postgres.NewJobRepo(pool)
-	schedulerRepo := postgres.NewSchedulerRepo(pool)
 	customerRequestRepo := postgres.NewCustomerRequestRepo(pool)
 	resourceInstanceRepo := postgres.NewResourceInstanceRepo(pool)
 	// partitionRepo is passed to satisfy the scheduler constructor but the worker scheduler
 	// only calls CompleteRequest/FailRequest — the partition table is never queried.
 	partitionRepo := postgres.NewSchedulerPartitionRepo(pool)
 	agentStateRepo := postgres.NewAgentStateRepo(pool)
+	schedulerRepo := postgres.NewSchedulerRepo(pool)
 
 	workerID := uuid.NewString()
 	sched := internalscheduler.New(workerID, 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, agentStateRepo, logger)
