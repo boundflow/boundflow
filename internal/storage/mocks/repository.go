@@ -532,7 +532,7 @@ func (mr *MockSchedulerRepositoryMockRecorder) SupercedeOlderRequests(ctx, resou
 }
 
 // UpsertJobAndSchedule mocks base method.
-func (m *MockSchedulerRepository) UpsertJobAndSchedule(ctx context.Context, requestID string, agentStateJSON string) (string, int64, bool, error) {
+func (m *MockSchedulerRepository) UpsertJobAndSchedule(ctx context.Context, requestID, agentStateJSON string) (string, int64, bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpsertJobAndSchedule", ctx, requestID, agentStateJSON)
 	ret0, _ := ret[0].(string)
@@ -659,6 +659,116 @@ func (m *MockJobRepository) UpdateJobStatus(ctx context.Context, resourceInstanc
 func (mr *MockJobRepositoryMockRecorder) UpdateJobStatus(ctx, resourceInstanceID, ownerID, status any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateJobStatus", reflect.TypeOf((*MockJobRepository)(nil).UpdateJobStatus), ctx, resourceInstanceID, ownerID, status)
+}
+
+// MockAgentStateRepository is a mock of AgentStateRepository interface.
+type MockAgentStateRepository struct {
+	ctrl     *gomock.Controller
+	recorder *MockAgentStateRepositoryMockRecorder
+	isgomock struct{}
+}
+
+// MockAgentStateRepositoryMockRecorder is the mock recorder for MockAgentStateRepository.
+type MockAgentStateRepositoryMockRecorder struct {
+	mock *MockAgentStateRepository
+}
+
+// NewMockAgentStateRepository creates a new mock instance.
+func NewMockAgentStateRepository(ctrl *gomock.Controller) *MockAgentStateRepository {
+	mock := &MockAgentStateRepository{ctrl: ctrl}
+	mock.recorder = &MockAgentStateRepositoryMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockAgentStateRepository) EXPECT() *MockAgentStateRepositoryMockRecorder {
+	return m.recorder
+}
+
+// Delete mocks base method.
+func (m *MockAgentStateRepository) Delete(ctx context.Context, resourceInstanceID, agentName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, resourceInstanceID, agentName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockAgentStateRepositoryMockRecorder) Delete(ctx, resourceInstanceID, agentName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockAgentStateRepository)(nil).Delete), ctx, resourceInstanceID, agentName)
+}
+
+// GetAllForRequest mocks base method.
+func (m *MockAgentStateRepository) GetAllForRequest(ctx context.Context, requestID string) ([]*domain.AgentState, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAllForRequest", ctx, requestID)
+	ret0, _ := ret[0].([]*domain.AgentState)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAllForRequest indicates an expected call of GetAllForRequest.
+func (mr *MockAgentStateRepositoryMockRecorder) GetAllForRequest(ctx, requestID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllForRequest", reflect.TypeOf((*MockAgentStateRepository)(nil).GetAllForRequest), ctx, requestID)
+}
+
+// GetAllForResource mocks base method.
+func (m *MockAgentStateRepository) GetAllForResource(ctx context.Context, resourceInstanceID string) ([]*domain.AgentState, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAllForResource", ctx, resourceInstanceID)
+	ret0, _ := ret[0].([]*domain.AgentState)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAllForResource indicates an expected call of GetAllForResource.
+func (mr *MockAgentStateRepositoryMockRecorder) GetAllForResource(ctx, resourceInstanceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllForResource", reflect.TypeOf((*MockAgentStateRepository)(nil).GetAllForResource), ctx, resourceInstanceID)
+}
+
+// UpdateMetrics mocks base method.
+func (m *MockAgentStateRepository) UpdateMetrics(ctx context.Context, resourceInstanceID, agentName string, metrics []map[string]any) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateMetrics", ctx, resourceInstanceID, agentName, metrics)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateMetrics indicates an expected call of UpdateMetrics.
+func (mr *MockAgentStateRepositoryMockRecorder) UpdateMetrics(ctx, resourceInstanceID, agentName, metrics any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetrics", reflect.TypeOf((*MockAgentStateRepository)(nil).UpdateMetrics), ctx, resourceInstanceID, agentName, metrics)
+}
+
+// UpsertLifecyclePolicy mocks base method.
+func (m *MockAgentStateRepository) UpsertLifecyclePolicy(ctx context.Context, resourceInstanceID, agentName string, policy map[string]any) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpsertLifecyclePolicy", ctx, resourceInstanceID, agentName, policy)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpsertLifecyclePolicy indicates an expected call of UpsertLifecyclePolicy.
+func (mr *MockAgentStateRepositoryMockRecorder) UpsertLifecyclePolicy(ctx, resourceInstanceID, agentName, policy any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertLifecyclePolicy", reflect.TypeOf((*MockAgentStateRepository)(nil).UpsertLifecyclePolicy), ctx, resourceInstanceID, agentName, policy)
+}
+
+// UpsertRuntimePolicy mocks base method.
+func (m *MockAgentStateRepository) UpsertRuntimePolicy(ctx context.Context, resourceInstanceID, agentName string, policy map[string]any) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpsertRuntimePolicy", ctx, resourceInstanceID, agentName, policy)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpsertRuntimePolicy indicates an expected call of UpsertRuntimePolicy.
+func (mr *MockAgentStateRepositoryMockRecorder) UpsertRuntimePolicy(ctx, resourceInstanceID, agentName, policy any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertRuntimePolicy", reflect.TypeOf((*MockAgentStateRepository)(nil).UpsertRuntimePolicy), ctx, resourceInstanceID, agentName, policy)
 }
 
 // MockCustomerRequestRepository is a mock of CustomerRequestRepository interface.

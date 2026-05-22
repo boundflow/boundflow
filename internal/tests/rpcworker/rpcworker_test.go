@@ -108,6 +108,10 @@ func (m *mockScheduler) FailRequest(_ context.Context, req string) (bool, error)
 	return true, nil
 }
 
+func (m *mockScheduler) UpdateAgentMetrics(_ context.Context, _ string, _ map[string][]map[string]any) error {
+	return nil
+}
+
 // ---- constants and helpers ----
 
 const (

@@ -22,23 +22,29 @@ func newTestScheduler(ctrl *gomock.Controller) (
 	*mocks.MockSchedulerRepository,
 	*mocks.MockCustomerRequestRepository,
 	*mocks.MockResourceInstanceRepository,
+	*mocks.MockAgentStateRepository,
 ) {
 	partitions := mocks.NewMockSchedulerPartitionRepository(ctrl)
 	schedulerRepo := mocks.NewMockSchedulerRepository(ctrl)
 	requests := mocks.NewMockCustomerRequestRepository(ctrl)
 	resource := mocks.NewMockResourceInstanceRepository(ctrl)
-	s := scheduler.New("test", 30, partitions, schedulerRepo, requests, resource, discardLogger)
-	return s, partitions, schedulerRepo, requests, resource
+	agentStates := mocks.NewMockAgentStateRepository(ctrl)
+	s := scheduler.New("test", 30, partitions, schedulerRepo, requests, resource, agentStates, discardLogger)
+	return s, partitions, schedulerRepo, requests, resource, agentStates
 }
 
 // --- ScheduleRequest ---
 
 func TestScheduleRequest_WrittenSupercedes(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, schedulerRepo, _, _ := newTestScheduler(ctrl)
+	s, _, schedulerRepo, _, _, agentStates := newTestScheduler(ctrl)
+
+	agentStates.EXPECT().
+		GetAllForRequest(gomock.Any(), "req-1").
+		Return(nil, nil)
 
 	schedulerRepo.EXPECT().
-		UpsertJobAndSchedule(gomock.Any(), "req-1").
+		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any()).
 		Return("resource-1", int64(3), true, nil)
 
 	schedulerRepo.EXPECT().
@@ -52,10 +58,14 @@ func TestScheduleRequest_WrittenSupercedes(t *testing.T) {
 
 func TestScheduleRequest_NotWritten_NoSupercede(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, schedulerRepo, _, _ := newTestScheduler(ctrl)
+	s, _, schedulerRepo, _, _, agentStates := newTestScheduler(ctrl)
+
+	agentStates.EXPECT().
+		GetAllForRequest(gomock.Any(), "req-1").
+		Return(nil, nil)
 
 	schedulerRepo.EXPECT().
-		UpsertJobAndSchedule(gomock.Any(), "req-1").
+		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any()).
 		Return("", int64(0), false, nil)
 
 	// SupercedeOlderRequests must NOT be called
@@ -66,10 +76,14 @@ func TestScheduleRequest_NotWritten_NoSupercede(t *testing.T) {
 
 func TestScheduleRequest_UpsertError(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, schedulerRepo, _, _ := newTestScheduler(ctrl)
+	s, _, schedulerRepo, _, _, agentStates := newTestScheduler(ctrl)
+
+	agentStates.EXPECT().
+		GetAllForRequest(gomock.Any(), "req-1").
+		Return(nil, nil)
 
 	schedulerRepo.EXPECT().
-		UpsertJobAndSchedule(gomock.Any(), "req-1").
+		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any()).
 		Return("", int64(0), false, errors.New("db error"))
 
 	if err := s.ScheduleRequest(context.Background(), "req-1"); err == nil {
@@ -79,10 +93,14 @@ func TestScheduleRequest_UpsertError(t *testing.T) {
 
 func TestScheduleRequest_SupercedeError(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, schedulerRepo, _, _ := newTestScheduler(ctrl)
+	s, _, schedulerRepo, _, _, agentStates := newTestScheduler(ctrl)
+
+	agentStates.EXPECT().
+		GetAllForRequest(gomock.Any(), "req-1").
+		Return(nil, nil)
 
 	schedulerRepo.EXPECT().
-		UpsertJobAndSchedule(gomock.Any(), "req-1").
+		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any()).
 		Return("resource-1", int64(3), true, nil)
 
 	schedulerRepo.EXPECT().
@@ -94,11 +112,101 @@ func TestScheduleRequest_SupercedeError(t *testing.T) {
 	}
 }
 
+func TestScheduleRequest_GetAgentStatesError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	s, _, _, _, _, agentStates := newTestScheduler(ctrl)
+
+	agentStates.EXPECT().
+		GetAllForRequest(gomock.Any(), "req-1").
+		Return(nil, errors.New("db error"))
+
+	if err := s.ScheduleRequest(context.Background(), "req-1"); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+// TestScheduleRequest_AgentStateIncludedInJSON verifies that agent state for a
+// request is serialised and forwarded to UpsertJobAndSchedule.
+func TestScheduleRequest_AgentStateIncludedInJSON(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	s, _, schedulerRepo, _, _, agentStates := newTestScheduler(ctrl)
+
+	agentStates.EXPECT().
+		GetAllForRequest(gomock.Any(), "req-1").
+		Return([]*domain.AgentState{
+			{
+				AgentName:         "my_agent",
+				RuntimePolicy:     map[string]any{"model": "claude-sonnet-4-6"},
+				LifecyclePolicy:   map[string]any{},
+				InvocationMetrics: []map[string]any{},
+			},
+		}, nil)
+
+	schedulerRepo.EXPECT().
+		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.AssignableToTypeOf("")).
+		DoAndReturn(func(_ context.Context, _ string, json string) (string, int64, bool, error) {
+			if json == "" || json == "{}" {
+				t.Error("expected non-empty agent state JSON")
+			}
+			return "resource-1", int64(1), true, nil
+		})
+
+	schedulerRepo.EXPECT().
+		SupercedeOlderRequests(gomock.Any(), "resource-1", int64(1)).
+		Return(nil)
+
+	if err := s.ScheduleRequest(context.Background(), "req-1"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// --- UpdateAgentMetrics ---
+
+func TestUpdateAgentMetrics_CallsRepoForEachAgent(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	s, _, _, _, _, agentStates := newTestScheduler(ctrl)
+
+	metrics1 := []map[string]any{{"tokens": 100}}
+	metrics2 := []map[string]any{{"tokens": 200}}
+
+	agentStates.EXPECT().
+		UpdateMetrics(gomock.Any(), "resource-1", "agent_a", metrics1).
+		Return(nil)
+	agentStates.EXPECT().
+		UpdateMetrics(gomock.Any(), "resource-1", "agent_b", metrics2).
+		Return(nil)
+
+	err := s.UpdateAgentMetrics(context.Background(), "resource-1", map[string][]map[string]any{
+		"agent_a": metrics1,
+		"agent_b": metrics2,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestUpdateAgentMetrics_RepoErrorDoesNotStop(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	s, _, _, _, _, agentStates := newTestScheduler(ctrl)
+
+	agentStates.EXPECT().
+		UpdateMetrics(gomock.Any(), "resource-1", "agent_a", gomock.Any()).
+		Return(errors.New("db error"))
+
+	// UpdateAgentMetrics logs and continues — should return nil.
+	err := s.UpdateAgentMetrics(context.Background(), "resource-1", map[string][]map[string]any{
+		"agent_a": {{"tokens": 50}},
+	})
+	if err != nil {
+		t.Fatalf("expected nil despite repo error, got %v", err)
+	}
+}
+
 // --- CompleteRequest ---
 
 func TestCompleteRequest_Create_TransitionsToActive(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, schedulerRepo, requests, resource := newTestScheduler(ctrl)
+	s, _, schedulerRepo, requests, resource, _ := newTestScheduler(ctrl)
 
 	goalState := domain.ResourceState{"sku": "standard"}
 	requests.EXPECT().
@@ -130,7 +238,7 @@ func TestCompleteRequest_Create_TransitionsToActive(t *testing.T) {
 
 func TestCompleteRequest_Delete_TransitionsToDeleted(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, schedulerRepo, requests, resource := newTestScheduler(ctrl)
+	s, _, schedulerRepo, requests, resource, _ := newTestScheduler(ctrl)
 
 	requests.EXPECT().
 		CompleteRequest(gomock.Any(), "req-1").
@@ -161,7 +269,7 @@ func TestCompleteRequest_Delete_TransitionsToDeleted(t *testing.T) {
 
 func TestCompleteRequest_VersionSkipped_ReturnsFalse(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, schedulerRepo, requests, resource := newTestScheduler(ctrl)
+	s, _, schedulerRepo, requests, resource, _ := newTestScheduler(ctrl)
 
 	goalState := domain.ResourceState{"sku": "standard"}
 	requests.EXPECT().
@@ -193,7 +301,7 @@ func TestCompleteRequest_VersionSkipped_ReturnsFalse(t *testing.T) {
 
 func TestCompleteRequest_FailRequestError(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, _, requests, _ := newTestScheduler(ctrl)
+	s, _, _, requests, _, _ := newTestScheduler(ctrl)
 
 	requests.EXPECT().
 		CompleteRequest(gomock.Any(), "req-1").
@@ -208,7 +316,7 @@ func TestCompleteRequest_FailRequestError(t *testing.T) {
 
 func TestFailRequest_AppliesFailedState(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, schedulerRepo, requests, resource := newTestScheduler(ctrl)
+	s, _, schedulerRepo, requests, resource, _ := newTestScheduler(ctrl)
 
 	goalState := domain.ResourceState{"sku": "standard"}
 	requests.EXPECT().
@@ -239,7 +347,7 @@ func TestFailRequest_AppliesFailedState(t *testing.T) {
 
 func TestFailRequest_VersionSkipped_ReturnsFalse(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, schedulerRepo, requests, resource := newTestScheduler(ctrl)
+	s, _, schedulerRepo, requests, resource, _ := newTestScheduler(ctrl)
 
 	goalState := domain.ResourceState{}
 	requests.EXPECT().
@@ -270,7 +378,7 @@ func TestFailRequest_VersionSkipped_ReturnsFalse(t *testing.T) {
 
 func TestFailRequest_RepoError(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, _, requests, _ := newTestScheduler(ctrl)
+	s, _, _, requests, _, _ := newTestScheduler(ctrl)
 
 	requests.EXPECT().
 		FailRequest(gomock.Any(), "req-1").

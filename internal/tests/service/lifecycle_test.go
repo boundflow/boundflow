@@ -2,6 +2,7 @@ package service_test
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"testing"
@@ -27,19 +28,20 @@ func (m *mockRequestScheduler) ScheduleRequest(_ context.Context, _ string) erro
 // policy used in all tests — non-zero so resolveJobPolicy returns immediately.
 var testPolicy = domain.JobPolicy{OperationTimeoutSeconds: 30}
 
-func newSvc(ctrl *gomock.Controller) (*service.LifecycleService, *mocks.MockResourceInstanceRepository, *mocks.MockCustomerRequestRepository, *mocks.MockTenantRepository, *mocks.MockTenantGroupRepository) {
+func newSvc(ctrl *gomock.Controller) (*service.LifecycleService, *mocks.MockResourceInstanceRepository, *mocks.MockCustomerRequestRepository, *mocks.MockTenantRepository, *mocks.MockTenantGroupRepository, *mocks.MockAgentStateRepository) {
 	resourceInstanceRepo := mocks.NewMockResourceInstanceRepository(ctrl)
 	customerRequestRepo := mocks.NewMockCustomerRequestRepository(ctrl)
 	tenantRepo := mocks.NewMockTenantRepository(ctrl)
 	tenantGroupRepo := mocks.NewMockTenantGroupRepository(ctrl)
+	agentStateRepo := mocks.NewMockAgentStateRepository(ctrl)
 	sched := &mockRequestScheduler{}
-	svc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, sched, 10, discardLogger)
-	return svc, resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo
+	svc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, sched, 10, discardLogger)
+	return svc, resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo
 }
 
 func TestCreateResource(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	svc, resourceInstanceRepo, customerRequestRepo, _, _ := newSvc(ctrl)
+	svc, resourceInstanceRepo, customerRequestRepo, _, _, _ := newSvc(ctrl)
 
 	initialState := domain.ResourceState{"sku": "standard"}
 
@@ -102,7 +104,7 @@ func TestCreateResource(t *testing.T) {
 
 func TestReconcileResource(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	svc, resourceInstanceRepo, customerRequestRepo, _, _ := newSvc(ctrl)
+	svc, resourceInstanceRepo, customerRequestRepo, _, _, _ := newSvc(ctrl)
 
 	goalState := domain.ResourceState{"sku": "premium"}
 
@@ -140,7 +142,7 @@ func TestReconcileResource(t *testing.T) {
 
 func TestDeleteResource(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	svc, resourceInstanceRepo, customerRequestRepo, _, _ := newSvc(ctrl)
+	svc, resourceInstanceRepo, customerRequestRepo, _, _, _ := newSvc(ctrl)
 
 	resourceInstanceRepo.EXPECT().
 		Get(gomock.Any(), "instance-1").
@@ -176,7 +178,7 @@ func TestDeleteResource(t *testing.T) {
 
 func TestGetResourceState(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	svc, resourceInstanceRepo, _, _, _ := newSvc(ctrl)
+	svc, resourceInstanceRepo, _, _, _, _ := newSvc(ctrl)
 
 	expected := &domain.ResourceInstance{
 		ID:                 "instance-1",
@@ -203,5 +205,97 @@ func TestGetResourceState(t *testing.T) {
 	}
 	if instance.ConfigGoalState["sku"] != "premium" {
 		t.Errorf("expected goal sku=premium, got %v", instance.ConfigGoalState["sku"])
+	}
+}
+
+// --- SetAgentRuntimePolicy ---
+
+func TestSetAgentRuntimePolicy_DelegatesToRepo(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	svc, _, _, _, _, agentStateRepo := newSvc(ctrl)
+
+	policy := map[string]any{"model": "claude-sonnet-4-6", "max_tokens": float64(4096)}
+
+	agentStateRepo.EXPECT().
+		UpsertRuntimePolicy(gomock.Any(), "instance-1", "my_agent", policy).
+		Return(nil)
+
+	if err := svc.SetAgentRuntimePolicy(context.Background(), "instance-1", "my_agent", policy); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestSetAgentRuntimePolicy_RepoError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	svc, _, _, _, _, agentStateRepo := newSvc(ctrl)
+
+	agentStateRepo.EXPECT().
+		UpsertRuntimePolicy(gomock.Any(), "instance-1", "my_agent", gomock.Any()).
+		Return(errors.New("db error"))
+
+	if err := svc.SetAgentRuntimePolicy(context.Background(), "instance-1", "my_agent", map[string]any{}); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+// --- SetAgentLifecyclePolicy ---
+
+func TestSetAgentLifecyclePolicy_DelegatesToRepo(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	svc, _, _, _, _, agentStateRepo := newSvc(ctrl)
+
+	policy := map[string]any{
+		"rules": []any{
+			map[string]any{"metric": "error_count", "window": float64(10), "threshold": float64(5), "operator": "gte"},
+		},
+	}
+
+	agentStateRepo.EXPECT().
+		UpsertLifecyclePolicy(gomock.Any(), "instance-1", "my_agent", policy).
+		Return(nil)
+
+	if err := svc.SetAgentLifecyclePolicy(context.Background(), "instance-1", "my_agent", policy); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestSetAgentLifecyclePolicy_RepoError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	svc, _, _, _, _, agentStateRepo := newSvc(ctrl)
+
+	agentStateRepo.EXPECT().
+		UpsertLifecyclePolicy(gomock.Any(), "instance-1", "my_agent", gomock.Any()).
+		Return(errors.New("db error"))
+
+	if err := svc.SetAgentLifecyclePolicy(context.Background(), "instance-1", "my_agent", map[string]any{}); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+// --- DeleteAgent ---
+
+func TestDeleteAgent_DelegatesToRepo(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	svc, _, _, _, _, agentStateRepo := newSvc(ctrl)
+
+	agentStateRepo.EXPECT().
+		Delete(gomock.Any(), "instance-1", "my_agent").
+		Return(nil)
+
+	if err := svc.DeleteAgent(context.Background(), "instance-1", "my_agent"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestDeleteAgent_RepoError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	svc, _, _, _, _, agentStateRepo := newSvc(ctrl)
+
+	agentStateRepo.EXPECT().
+		Delete(gomock.Any(), "instance-1", "my_agent").
+		Return(errors.New("db error"))
+
+	if err := svc.DeleteAgent(context.Background(), "instance-1", "my_agent"); err == nil {
+		t.Fatal("expected error, got nil")
 	}
 }
