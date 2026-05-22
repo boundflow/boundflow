@@ -74,12 +74,12 @@ public sealed class OperationContext
     {
         // Load server-stored agent state from context.
         var agentStateNode = Context["_bf_agent_state"]?[agent.Name];
-        var runtimePolicy = LoadRuntimePolicy(agentStateNode);
-        var lifecyclePolicy = LoadLifecyclePolicy(agentStateNode);
-        var history = LoadMetricsHistory(agentStateNode);
+        var runtimePolicy = LifecyclePolicyEvaluator.LoadRuntimePolicy(agentStateNode);
+        var lifecyclePolicy = LifecyclePolicyEvaluator.LoadLifecyclePolicy(agentStateNode);
+        var history = LifecyclePolicyEvaluator.LoadMetricsHistory(agentStateNode);
 
         // Evaluate lifecycle rules and mutate policy accordingly.
-        runtimePolicy = ApplyLifecycleRules(lifecyclePolicy, history, runtimePolicy);
+        runtimePolicy = LifecyclePolicyEvaluator.ApplyLifecycleRules(lifecyclePolicy, history, runtimePolicy);
 
         var llmContext = _llmContext.Count > 0
             ? (IReadOnlyList<LlmContextEntry>)[.. _llmContext.Select(e => e.Entry)]
@@ -122,94 +122,6 @@ public sealed class OperationContext
         return result;
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────────
-
-    private static AgentRuntimePolicy LoadRuntimePolicy(JsonNode? stateNode)
-    {
-        if (stateNode?["runtime_policy"] is not JsonObject rp) return new AgentRuntimePolicy();
-        return new AgentRuntimePolicy(
-            MaxLlmCalls:      rp["max_llm_calls"]?.GetValue<int>()           ?? 0,
-            MaxCostUsd:       (decimal)(rp["max_cost_usd"]?.GetValue<double>() ?? 0),
-            MaxTokensPerCall: rp["max_tokens_per_call"]?.GetValue<int>()     ?? 0,
-            MaxCallsPerTool:  rp["max_calls_per_tool"]?.GetValue<int>()      ?? 0
-        );
-    }
-
-    private static AgentLifecyclePolicy? LoadLifecyclePolicy(JsonNode? stateNode)
-    {
-        if (stateNode?["lifecycle_policy"]?["rules"] is not JsonArray rulesNode) return null;
-        var rules = rulesNode
-            .OfType<JsonObject>()
-            .Select(r => new AgentLifecycleRule(
-                Metric:    System.Enum.Parse<AgentMetric>(r["metric"]?.GetValue<string>() ?? "TokensUsed", ignoreCase: true),
-                Operator:  System.Enum.Parse<PolicyOperator>(r["operator"]?.GetValue<string>() ?? "GreaterThan", ignoreCase: true),
-                Threshold: (decimal)(r["threshold"]?.GetValue<double>() ?? 0),
-                Window:    r["window"]?.GetValue<int>() ?? 0,
-                Action: new PolicyMutation(
-                    System.Enum.Parse<PolicyField>(r["action"]?["field"]?.GetValue<string>() ?? "Model", ignoreCase: true),
-                    r["action"]?["value"]?.ToString() ?? ""
-                )
-            ))
-            .ToList();
-        return new AgentLifecyclePolicy(rules);
-    }
-
-    private static List<JsonNode> LoadMetricsHistory(JsonNode? stateNode)
-    {
-        if (stateNode?["invocation_metrics"] is not JsonArray arr) return [];
-        return [.. arr.OfType<JsonNode>()];
-    }
-
-    private static AgentRuntimePolicy ApplyLifecycleRules(
-        AgentLifecyclePolicy? policy,
-        List<JsonNode> history,
-        AgentRuntimePolicy current)
-    {
-        if (policy is null || policy.Rules.Count == 0) return current;
-
-        foreach (var rule in policy.Rules)
-        {
-            var window = rule.Window > 0 ? history.TakeLast(rule.Window).ToList() : history;
-            var sum = window.Sum(e => GetMetricValue(e, rule.Metric));
-            if (!Evaluate(sum, rule.Operator, rule.Threshold)) continue;
-
-            current = ApplyMutation(current, rule.Action);
-        }
-        return current;
-    }
-
-    private static decimal GetMetricValue(JsonNode entry, AgentMetric metric) => metric switch
-    {
-        AgentMetric.TokensUsed    => (decimal)(entry["tokens_used"]?.GetValue<double>()    ?? 0),
-        AgentMetric.CostUsd       => (decimal)(entry["cost_usd"]?.GetValue<double>()       ?? 0),
-        AgentMetric.LlmCalls      => (decimal)(entry["llm_calls"]?.GetValue<double>()      ?? 0),
-        AgentMetric.CallsPerTool  => (decimal)(entry["calls_per_tool"]?.GetValue<double>() ?? 0),
-        _                         => 0,
-    };
-
-    private static bool Evaluate(decimal sum, PolicyOperator op, decimal threshold) => op switch
-    {
-        PolicyOperator.LessThan           => sum < threshold,
-        PolicyOperator.LessThanOrEqual    => sum <= threshold,
-        PolicyOperator.GreaterThan        => sum > threshold,
-        PolicyOperator.GreaterThanOrEqual => sum >= threshold,
-        PolicyOperator.Equal              => sum == threshold,
-        _                                 => false,
-    };
-
-    private static AgentRuntimePolicy ApplyMutation(AgentRuntimePolicy policy, PolicyMutation mutation)
-    {
-        var val = mutation.Value?.ToString() ?? "";
-        return mutation.Field switch
-        {
-            PolicyField.MaxLlmCalls      => policy with { MaxLlmCalls      = int.TryParse(val, out var i)     ? i : policy.MaxLlmCalls },
-            PolicyField.MaxCostUsd       => policy with { MaxCostUsd       = decimal.TryParse(val, out var d) ? d : policy.MaxCostUsd },
-            PolicyField.MaxTokensPerCall => policy with { MaxTokensPerCall = int.TryParse(val, out var t)     ? t : policy.MaxTokensPerCall },
-            PolicyField.MaxCallsPerTool  => policy with { MaxCallsPerTool  = int.TryParse(val, out var c)     ? c : policy.MaxCallsPerTool },
-            // Model mutations are passed through to the orchestrator via AllowedModels check.
-            _                            => policy,
-        };
-    }
 }
 
 /// <summary>
