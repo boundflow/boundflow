@@ -32,6 +32,13 @@ internal record AgentLifecycleRule(
     PolicyMutation Action
 );
 
+internal record WorkflowConfig(
+    int InitialVersion,
+    double TimeoutSeconds,
+    double RepeatEvery,
+    bool Triggerable
+);
+
 internal enum AgentMetric     { TokensUsed, CostUsd, LlmCalls, CallsPerTool }
 internal enum PolicyOperator  { LessThan, LessThanOrEqual, GreaterThan, GreaterThanOrEqual, Equal }
 internal record PolicyMutation(PolicyField Field, object Value);

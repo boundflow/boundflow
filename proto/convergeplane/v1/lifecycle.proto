@@ -7,9 +7,6 @@ option go_package = "github.com/convergeplane/convergeplane/gen/convergeplane/v1
 import "google/protobuf/struct.proto";
 import "convergeplane/v1/resource_instance.proto";
 
-// ResourceLifecycleService is the customer-facing API for requesting
-// resource lifecycle actions. The platform internally translates these
-// into operations and schedules them via workers.
 service ResourceLifecycleService {
   rpc CreateResource(CreateResourceRequest) returns (CreateResourceResponse);
   rpc ReconcileResource(ReconcileResourceRequest) returns (ReconcileResourceResponse);
@@ -26,9 +23,9 @@ message CreateResourceRequest {
   string resource_type = 2;
   string tenant_id = 3;
   google.protobuf.Struct initial_state = 4;
-  // Per-request operation timeout in seconds. Falls back to tenant policy, then tenant group policy.
-  // Must be resolvable from one of these sources or the request will be rejected.
+  // Deprecated: use workflow_config.invoke_timeout_seconds instead.
   int32 operation_timeout_seconds = 5;
+  WorkflowConfig workflow_config = 6;
 }
 
 message CreateResourceResponse {
@@ -61,9 +58,7 @@ message GetResourceStateRequest {
 }
 
 message GetResourceStateResponse {
-  google.protobuf.Struct current_config_state = 1;
-  google.protobuf.Struct goal_config_state = 2;
-  string lifecycle_state = 3;
+  ResourceInstance resource_instance = 1;
 }
 
 message SetAgentRuntimePolicyRequest {

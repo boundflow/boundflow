@@ -28,10 +28,27 @@ func ResourceInstanceToProto(r *domain.ResourceInstance) *convergeplanev1.Resour
 		return nil
 	}
 	return &convergeplanev1.ResourceInstance{
-		Id:           r.ID,
-		TenantId:     r.TenantID,
-		CurrentState: ResourceStateToProto(r.CurrentConfigState),
-		GoalState:    ResourceStateToProto(r.ConfigGoalState),
-		CreatedAt:    timestamppb.New(r.CreatedAt),
+		Id:        r.ID,
+		TenantId:  r.TenantID,
+		CreatedAt: timestamppb.New(r.CreatedAt),
+		WorkflowConfig: &convergeplanev1.WorkflowConfig{
+			InitialVersion:       r.WorkflowConfig.InitialVersion,
+			InvokeTimeoutSeconds: r.WorkflowConfig.InvokeTimeoutSeconds,
+			RepeatEverySeconds:   r.WorkflowConfig.RepeatEverySeconds,
+			Triggerable:          r.WorkflowConfig.Triggerable,
+		},
+		LifecycleState: string(r.LifecycleState),
+	}
+}
+
+func WorkflowConfigFromProto(p *convergeplanev1.WorkflowConfig) domain.WorkflowConfig {
+	if p == nil {
+		return domain.WorkflowConfig{Triggerable: true}
+	}
+	return domain.WorkflowConfig{
+		InitialVersion:       p.InitialVersion,
+		InvokeTimeoutSeconds: p.InvokeTimeoutSeconds,
+		RepeatEverySeconds:   p.RepeatEverySeconds,
+		Triggerable:          p.Triggerable,
 	}
 }

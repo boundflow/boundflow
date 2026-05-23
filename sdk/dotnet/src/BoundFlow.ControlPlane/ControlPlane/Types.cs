@@ -13,10 +13,16 @@ public record Tenant(
     string TenantGroupId
 );
 
-public record ResourceInstance(
+public record Workflow(
     string Id,
     string TenantId,
-    JsonNode? GoalState
+    WorkflowConfig Config
+);
+public record WorkflowConfig(
+    int InitialVersion = 0,
+    int InvokeTimeoutSeconds = 60,
+    int RepeatEverySeconds = 0,
+    bool Triggerable = true
 );
 
 public enum LifecycleState
@@ -24,13 +30,13 @@ public enum LifecycleState
     Unknown,
     Creating,
     Active,
-    Reconciling,
+    Invoking,
     Deleting,
     Deleted,
     Failed,
 }
 
-public record ResourceState(
+public record WorkflowState(
     JsonNode? CurrentConfigState,
     JsonNode? GoalConfigState,
     LifecycleState LifecycleState

@@ -70,34 +70,44 @@ public sealed class ControlPlaneClient : IDisposable
             new DeleteTenantRequest { Id = id },
             cancellationToken: ct);
 
-    // ── Resources ─────────────────────────────────────────────────────────────
+    // ── Workflows ─────────────────────────────────────────────────────────────
 
-    public async Task<ResourceInstance> CreateResourceAsync(
-        string resourceType,
+    public async Task<Workflow> CreateWorkflowAsync(
+        string workflowType,
         string tenantId,
-        JsonNode initialState,
-        int operationTimeoutSeconds,
+        WorkflowConfig? workflowConfig = null,
         string correlationId = "",
         CancellationToken ct = default)
     {
+        var cfg = workflowConfig ?? new WorkflowConfig();
         var resp = await _lifecycle.CreateResourceAsync(
             new CreateResourceRequest
             {
-                ResourceType = resourceType,
+                ResourceType = workflowType,
                 TenantId = tenantId,
-                InitialState = ToStruct(initialState),
-                OperationTimeoutSeconds = operationTimeoutSeconds,
                 CorrelationId = correlationId,
+                WorkflowConfig = new Convergeplane.V1.WorkflowConfig
+                {
+                    InitialVersion       = cfg.InitialVersion,
+                    InvokeTimeoutSeconds = cfg.InvokeTimeoutSeconds,
+                    RepeatEverySeconds   = cfg.RepeatEverySeconds,
+                    Triggerable          = cfg.Triggerable,
+                },
             },
             cancellationToken: ct);
-        return new ResourceInstance(
+        var retCfg = resp.WorkflowConfig;
+        return new Workflow(
             resp.ResourceInstance.Id,
             resp.ResourceInstance.TenantId,
-            FromStruct(resp.ResourceInstance.GoalState));
+            new WorkflowConfig(
+                retCfg.InitialVersion,
+                retCfg.InvokeTimeoutSeconds,
+                retCfg.RepeatEverySeconds,
+                retCfg.Triggerable));
     }
 
-    public async Task ReconcileResourceAsync(
-        string resourceInstanceId,
+    public async Task InvokeWorkflowAsync(
+        string workflowId,
         JsonNode goalState,
         int operationTimeoutSeconds,
         string correlationId = "",
@@ -105,33 +115,31 @@ public sealed class ControlPlaneClient : IDisposable
         await _lifecycle.ReconcileResourceAsync(
             new ReconcileResourceRequest
             {
-                ResourceInstanceId = resourceInstanceId,
+                ResourceInstanceId = workflowId,
                 GoalState = ToStruct(goalState),
                 OperationTimeoutSeconds = operationTimeoutSeconds,
                 CorrelationId = correlationId,
             },
             cancellationToken: ct);
 
-    public async Task DeleteResourceAsync(
-        string resourceInstanceId,
-        int operationTimeoutSeconds,
+    public async Task DeleteWorkflowAsync(
+        string workflowId,
         string correlationId = "",
         CancellationToken ct = default) =>
         await _lifecycle.DeleteResourceAsync(
             new DeleteResourceRequest
             {
-                ResourceInstanceId = resourceInstanceId,
-                OperationTimeoutSeconds = operationTimeoutSeconds,
+                ResourceInstanceId = workflowId,
                 CorrelationId = correlationId,
             },
             cancellationToken: ct);
 
-    public async Task<ResourceState> GetResourceStateAsync(string resourceInstanceId, CancellationToken ct = default)
+    public async Task<WorkflowState> GetWorkflowStateAsync(string workflowId, CancellationToken ct = default)
     {
         var resp = await _lifecycle.GetResourceStateAsync(
-            new GetResourceStateRequest { ResourceInstanceId = resourceInstanceId },
+            new GetResourceStateRequest { ResourceInstanceId = workflowId },
             cancellationToken: ct);
-        return new ResourceState(
+        return new WorkflowState(
             FromStruct(resp.CurrentConfigState),
             FromStruct(resp.GoalConfigState),
             ParseLifecycleState(resp.LifecycleState));
@@ -140,41 +148,41 @@ public sealed class ControlPlaneClient : IDisposable
     // ── Agent state ──────────────────────────────────────────────────────────
 
     public async Task SetAgentRuntimePolicyAsync(
-        string resourceInstanceId,
+        string workflowId,
         string agentName,
         AgentRuntimePolicy runtimePolicy,
         CancellationToken ct = default) =>
         await _lifecycle.SetAgentRuntimePolicyAsync(
             new SetAgentRuntimePolicyRequest
             {
-                ResourceInstanceId = resourceInstanceId,
+                ResourceInstanceId = workflowId,
                 AgentName = agentName,
                 RuntimePolicy = ToStruct(SerializePolicy(runtimePolicy)),
             },
             cancellationToken: ct);
 
     public async Task SetAgentLifecyclePolicyAsync(
-        string resourceInstanceId,
+        string workflowId,
         string agentName,
         AgentLifecyclePolicy lifecyclePolicy,
         CancellationToken ct = default) =>
         await _lifecycle.SetAgentLifecyclePolicyAsync(
             new SetAgentLifecyclePolicyRequest
             {
-                ResourceInstanceId = resourceInstanceId,
+                ResourceInstanceId = workflowId,
                 AgentName = agentName,
                 LifecyclePolicy = ToStruct(SerializePolicy(lifecyclePolicy)),
             },
             cancellationToken: ct);
 
     public async Task DeleteAgentAsync(
-        string resourceInstanceId,
+        string workflowId,
         string agentName,
         CancellationToken ct = default) =>
         await _lifecycle.DeleteAgentAsync(
             new DeleteAgentRequest
             {
-                ResourceInstanceId = resourceInstanceId,
+                ResourceInstanceId = workflowId,
                 AgentName = agentName,
             },
             cancellationToken: ct);
@@ -201,7 +209,7 @@ public sealed class ControlPlaneClient : IDisposable
     {
         "creating"    => LifecycleState.Creating,
         "active"      => LifecycleState.Active,
-        "reconciling" => LifecycleState.Reconciling,
+        "reconciling" => LifecycleState.Invoking,
         "deleting"    => LifecycleState.Deleting,
         "deleted"     => LifecycleState.Deleted,
         "failed"      => LifecycleState.Failed,

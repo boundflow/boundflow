@@ -10,14 +10,14 @@ using Microsoft.Extensions.Logging;
 // Worker must be running locally: ./bin/convergeplane -mode=worker
 // Scheduler must be running locally: ./bin/convergeplane -mode=scheduler
 //
-// Requires a real ANTHROPIC_API_KEY — the analyse step calls the Claude API.
+// Requires a real ANTHROPIC_API_KEY — the invoke step calls the Claude API.
 
 var workerAddress = "http://localhost:50052";
 var serverAddress = "http://localhost:50051";
 var llmApiKey = Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY")
     ?? throw new InvalidOperationException("ANTHROPIC_API_KEY is required for this test.");
 
-const string AgentName  = "analyse";
+const string AgentName   = "analyse";
 const string SonnetModel = "claude-sonnet-4-6";
 const string HaikuModel  = "claude-haiku-4-5-20251001";
 
@@ -26,7 +26,6 @@ using var loggerFactory = LoggerFactory.Create(b => b.AddConsole().SetMinimumLev
 var cts = new CancellationTokenSource();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-// Shared agent definition — model is the AgentDefinition default; lifecycle rule may override it.
 AgentDefinition AnalyseAgent() => new AgentDefinition(
     Name:         AgentName,
     SystemPrompt: "You are a concise data analyst.",
@@ -37,40 +36,14 @@ AgentDefinition AnalyseAgent() => new AgentDefinition(
 // ── Worker ───────────────────────────────────────────────────────────────────
 var worker = new BoundFlowWorker(workerAddress, llmApiKey, loggerFactory)
 
-    .Register("database_agent", "create_entry", async (ctx, ct) =>
+    .RegisterWorkflowInvokeEntry("database_agent", async (ctx, ct) =>
     {
-        Console.WriteLine("[create_entry] running");
-        await Task.Delay(200, ct);
-        return OperationResult.Next("analyse_entry", ctx.Context, 60);
-    })
-
-    .Register("database_agent", "analyse_entry", async (ctx, ct) =>
-    {
-        var boundFlowInfo = "BoundFlow is a tenant-aware control plane for safely scheduling and running agentic workflows.";
-        ctx.AddLlmContext("Platform context", JsonValue.Create(boundFlowInfo));
-
-        var result = await ctx.RunAgentAsync(AnalyseAgent(), ct);
-
-        Console.WriteLine($"[analyse_entry] model_used={result.ModelUsed}  llm_calls={result.LlmCallsUsed}");
-        return OperationResult.Complete();
-    })
-
-    .Register("database_agent", "reconcile_entry", async (ctx, ct) =>
-    {
-        Console.WriteLine("[reconcile_entry] running agent step");
-
         var boundFlowInfo = "BoundFlow is a tenant-aware control plane for safely scheduling and running agentic workflows.";
         ctx.AddLlmContext("Platform context", JsonValue.Create(boundFlowInfo));
 
         var result = await ctx.RunAgentAsync(AnalyseAgent(), ct);
 
         Console.WriteLine($"[reconcile_entry] model_used={result.ModelUsed}  llm_calls={result.LlmCallsUsed}");
-        return OperationResult.Complete();
-    })
-
-    .Register("database_agent", "delete_entry", async (ctx, ct) =>
-    {
-        await Task.Delay(200, ct);
         return OperationResult.Complete();
     });
 
@@ -85,37 +58,17 @@ var cp = new ControlPlaneClient(serverAddress);
 
 var tenantGroup = await cp.CreateTenantGroupAsync("test-group");
 var tenant      = await cp.CreateTenantAsync("test-tenant", tenantGroup.Id);
-var resource    = await cp.CreateResourceAsync(
-    resourceType:            "database_agent",
-    tenantId:                tenant.Id,
-    initialState:            JsonNode.Parse("{\"sku\": \"standard\"}")!,
-    operationTimeoutSeconds: 60);
+var workflow = await cp.CreateWorkflowAsync(
+    workflowType: "database_agent",
+    tenantId:     tenant.Id);
 
-Console.WriteLine($"Resource {resource.Id} created — waiting for Active...");
+Console.WriteLine($"Workflow {workflow.Id} created and active.");
 
-// ── Run 1: create → analyse_entry (no policies set yet, runs with sonnet default) ──
-ResourceState state;
-do
-{
-    await Task.Delay(500);
-    state = await cp.GetResourceStateAsync(resource.Id);
-}
-while (state.LifecycleState == LifecycleState.Creating);
-
-if (state.LifecycleState != LifecycleState.Active)
-{
-    Console.WriteLine($"Resource failed to become active: {state.LifecycleState}");
-    return;
-}
-
-Console.WriteLine($"\nRun 1 complete. Resource is Active.");
-Console.WriteLine($"Expected: model_used={SonnetModel} (no lifecycle rule has fired yet)\n");
-
-// ── Set policies now that we have a resource_instance_id and run 1 metrics ──
+// ── Set lifecycle policy before any invocation ───────────────────────────────
 Console.WriteLine("Setting lifecycle policy: if llm_calls >= 1 in last invocation → switch to haiku...");
 
 await cp.SetAgentLifecyclePolicyAsync(
-    resource.Id,
+    workflow.Id,
     AgentName,
     new AgentLifecyclePolicy([
         new AgentLifecycleRule(
@@ -129,23 +82,40 @@ await cp.SetAgentLifecyclePolicyAsync(
 
 Console.WriteLine("Lifecycle policy set.\n");
 
-// ── Run 2: reconcile → analyse_entry with lifecycle rule active ──────────────
-Console.WriteLine("Triggering reconcile (run 2)...");
+// ── Invoke 1: no prior metrics → rule does not fire → sonnet ─────────────────
+Console.WriteLine("Invoke 1 (expect sonnet — no prior metrics)...");
 
-await cp.ReconcileResourceAsync(
-    resource.Id,
-    goalState: JsonNode.Parse("{\"sku\": \"standard\"}")!,
+await cp.InvokeWorkflowAsync(
+    workflowId:              workflow.Id,
+    goalState:               JsonNode.Parse("{\"sku\": \"standard\"}")!,
+    operationTimeoutSeconds: 60);
+
+WorkflowState state;
+do
+{
+    await Task.Delay(500);
+    state = await cp.GetWorkflowStateAsync(workflow.Id);
+}
+while (state.LifecycleState == LifecycleState.Invoking);
+
+Console.WriteLine($"\nInvoke 1 complete. Expected: model_used={SonnetModel}\n");
+
+// ── Invoke 2: invoke 1 metrics trigger rule → haiku ──────────────────────────
+Console.WriteLine("Invoke 2 (expect haiku — rule fires on invoke 1 metrics)...");
+
+await cp.InvokeWorkflowAsync(
+    workflowId:              workflow.Id,
+    goalState:               JsonNode.Parse("{\"sku\": \"standard\"}")!,
     operationTimeoutSeconds: 60);
 
 do
 {
     await Task.Delay(500);
-    state = await cp.GetResourceStateAsync(resource.Id);
+    state = await cp.GetWorkflowStateAsync(workflow.Id);
 }
-while (state.LifecycleState == LifecycleState.Reconciling);
+while (state.LifecycleState == LifecycleState.Invoking);
 
-Console.WriteLine($"\nRun 2 complete.");
-Console.WriteLine($"Expected: model_used={HaikuModel} (lifecycle rule fired because run 1 had llm_calls >= 1)");
+Console.WriteLine($"\nInvoke 2 complete. Expected: model_used={HaikuModel}");
 
 cts.Cancel();
 try { await workerTask; } catch (Exception) { /* expected on cancellation */ }

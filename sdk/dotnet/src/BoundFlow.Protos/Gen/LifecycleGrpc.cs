@@ -8,11 +8,6 @@
 using grpc = global::Grpc.Core;
 
 namespace Convergeplane.V1 {
-  /// <summary>
-  /// ResourceLifecycleService is the customer-facing API for requesting
-  /// resource lifecycle actions. The platform internally translates these
-  /// into operations and schedules them via workers.
-  /// </summary>
   public static partial class ResourceLifecycleService
   {
     static readonly string __ServiceName = "convergeplane.v1.ResourceLifecycleService";

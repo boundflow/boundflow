@@ -25,28 +25,339 @@ namespace Convergeplane.V1 {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "Cihjb252ZXJnZXBsYW5lL3YxL3Jlc291cmNlX2luc3RhbmNlLnByb3RvEhBj",
-            "b252ZXJnZXBsYW5lLnYxGhxnb29nbGUvcHJvdG9idWYvc3RydWN0LnByb3Rv",
-            "Gh9nb29nbGUvcHJvdG9idWYvdGltZXN0YW1wLnByb3RvIswCChBSZXNvdXJj",
-            "ZUluc3RhbmNlEg4KAmlkGAEgASgJUgJpZBIfCgtyZXNvdXJjZV9pZBgCIAEo",
-            "CVIKcmVzb3VyY2VJZBIbCgl0ZW5hbnRfaWQYAyABKAlSCHRlbmFudElkEjwK",
-            "DWN1cnJlbnRfc3RhdGUYBCABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0",
-            "UgxjdXJyZW50U3RhdGUSNgoKZ29hbF9zdGF0ZRgFIAEoCzIXLmdvb2dsZS5w",
-            "cm90b2J1Zi5TdHJ1Y3RSCWdvYWxTdGF0ZRI5CgpjcmVhdGVkX2F0GAYgASgL",
-            "MhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcFIJY3JlYXRlZEF0EjkKCnVw",
-            "ZGF0ZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wUgl1",
-            "cGRhdGVkQXRCTVpLZ2l0aHViLmNvbS9jb252ZXJnZXBsYW5lL2NvbnZlcmdl",
-            "cGxhbmUvZ2VuL2NvbnZlcmdlcGxhbmUvdjE7Y29udmVyZ2VwbGFuZXYxYgZw",
-            "cm90bzM="));
+            "b252ZXJnZXBsYW5lLnYxGh9nb29nbGUvcHJvdG9idWYvdGltZXN0YW1wLnBy",
+            "b3RvIsMBCg5Xb3JrZmxvd0NvbmZpZxInCg9pbml0aWFsX3ZlcnNpb24YASAB",
+            "KAVSDmluaXRpYWxWZXJzaW9uEjQKFmludm9rZV90aW1lb3V0X3NlY29uZHMY",
+            "AiABKAVSFGludm9rZVRpbWVvdXRTZWNvbmRzEjAKFHJlcGVhdF9ldmVyeV9z",
+            "ZWNvbmRzGAMgASgFUhJyZXBlYXRFdmVyeVNlY29uZHMSIAoLdHJpZ2dlcmFi",
+            "bGUYBCABKAhSC3RyaWdnZXJhYmxlIu4BChBSZXNvdXJjZUluc3RhbmNlEg4K",
+            "AmlkGAEgASgJUgJpZBIbCgl0ZW5hbnRfaWQYAyABKAlSCHRlbmFudElkEjkK",
+            "CmNyZWF0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1w",
+            "UgljcmVhdGVkQXQSSQoPd29ya2Zsb3dfY29uZmlnGAggASgLMiAuY29udmVy",
+            "Z2VwbGFuZS52MS5Xb3JrZmxvd0NvbmZpZ1IOd29ya2Zsb3dDb25maWcSJwoP",
+            "bGlmZWN5Y2xlX3N0YXRlGAkgASgJUg5saWZlY3ljbGVTdGF0ZUJNWktnaXRo",
+            "dWIuY29tL2NvbnZlcmdlcGxhbmUvY29udmVyZ2VwbGFuZS9nZW4vY29udmVy",
+            "Z2VwbGFuZS92MTtjb252ZXJnZXBsYW5ldjFiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
-          new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.StructReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, },
+          new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.ResourceInstance), global::Convergeplane.V1.ResourceInstance.Parser, new[]{ "Id", "ResourceId", "TenantId", "CurrentState", "GoalState", "CreatedAt", "UpdatedAt" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.WorkflowConfig), global::Convergeplane.V1.WorkflowConfig.Parser, new[]{ "InitialVersion", "InvokeTimeoutSeconds", "RepeatEverySeconds", "Triggerable" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.ResourceInstance), global::Convergeplane.V1.ResourceInstance.Parser, new[]{ "Id", "TenantId", "CreatedAt", "WorkflowConfig", "LifecycleState" }, null, null, null, null)
           }));
     }
     #endregion
 
   }
   #region Messages
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class WorkflowConfig : pb::IMessage<WorkflowConfig>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<WorkflowConfig> _parser = new pb::MessageParser<WorkflowConfig>(() => new WorkflowConfig());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<WorkflowConfig> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Convergeplane.V1.ResourceInstanceReflection.Descriptor.MessageTypes[0]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public WorkflowConfig() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public WorkflowConfig(WorkflowConfig other) : this() {
+      initialVersion_ = other.initialVersion_;
+      invokeTimeoutSeconds_ = other.invokeTimeoutSeconds_;
+      repeatEverySeconds_ = other.repeatEverySeconds_;
+      triggerable_ = other.triggerable_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public WorkflowConfig Clone() {
+      return new WorkflowConfig(this);
+    }
+
+    /// <summary>Field number for the "initial_version" field.</summary>
+    public const int InitialVersionFieldNumber = 1;
+    private int initialVersion_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int InitialVersion {
+      get { return initialVersion_; }
+      set {
+        initialVersion_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "invoke_timeout_seconds" field.</summary>
+    public const int InvokeTimeoutSecondsFieldNumber = 2;
+    private int invokeTimeoutSeconds_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int InvokeTimeoutSeconds {
+      get { return invokeTimeoutSeconds_; }
+      set {
+        invokeTimeoutSeconds_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "repeat_every_seconds" field.</summary>
+    public const int RepeatEverySecondsFieldNumber = 3;
+    private int repeatEverySeconds_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int RepeatEverySeconds {
+      get { return repeatEverySeconds_; }
+      set {
+        repeatEverySeconds_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "triggerable" field.</summary>
+    public const int TriggerableFieldNumber = 4;
+    private bool triggerable_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Triggerable {
+      get { return triggerable_; }
+      set {
+        triggerable_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as WorkflowConfig);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(WorkflowConfig other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (InitialVersion != other.InitialVersion) return false;
+      if (InvokeTimeoutSeconds != other.InvokeTimeoutSeconds) return false;
+      if (RepeatEverySeconds != other.RepeatEverySeconds) return false;
+      if (Triggerable != other.Triggerable) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (InitialVersion != 0) hash ^= InitialVersion.GetHashCode();
+      if (InvokeTimeoutSeconds != 0) hash ^= InvokeTimeoutSeconds.GetHashCode();
+      if (RepeatEverySeconds != 0) hash ^= RepeatEverySeconds.GetHashCode();
+      if (Triggerable != false) hash ^= Triggerable.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (InitialVersion != 0) {
+        output.WriteRawTag(8);
+        output.WriteInt32(InitialVersion);
+      }
+      if (InvokeTimeoutSeconds != 0) {
+        output.WriteRawTag(16);
+        output.WriteInt32(InvokeTimeoutSeconds);
+      }
+      if (RepeatEverySeconds != 0) {
+        output.WriteRawTag(24);
+        output.WriteInt32(RepeatEverySeconds);
+      }
+      if (Triggerable != false) {
+        output.WriteRawTag(32);
+        output.WriteBool(Triggerable);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (InitialVersion != 0) {
+        output.WriteRawTag(8);
+        output.WriteInt32(InitialVersion);
+      }
+      if (InvokeTimeoutSeconds != 0) {
+        output.WriteRawTag(16);
+        output.WriteInt32(InvokeTimeoutSeconds);
+      }
+      if (RepeatEverySeconds != 0) {
+        output.WriteRawTag(24);
+        output.WriteInt32(RepeatEverySeconds);
+      }
+      if (Triggerable != false) {
+        output.WriteRawTag(32);
+        output.WriteBool(Triggerable);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (InitialVersion != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(InitialVersion);
+      }
+      if (InvokeTimeoutSeconds != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(InvokeTimeoutSeconds);
+      }
+      if (RepeatEverySeconds != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(RepeatEverySeconds);
+      }
+      if (Triggerable != false) {
+        size += 1 + 1;
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(WorkflowConfig other) {
+      if (other == null) {
+        return;
+      }
+      if (other.InitialVersion != 0) {
+        InitialVersion = other.InitialVersion;
+      }
+      if (other.InvokeTimeoutSeconds != 0) {
+        InvokeTimeoutSeconds = other.InvokeTimeoutSeconds;
+      }
+      if (other.RepeatEverySeconds != 0) {
+        RepeatEverySeconds = other.RepeatEverySeconds;
+      }
+      if (other.Triggerable != false) {
+        Triggerable = other.Triggerable;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 8: {
+            InitialVersion = input.ReadInt32();
+            break;
+          }
+          case 16: {
+            InvokeTimeoutSeconds = input.ReadInt32();
+            break;
+          }
+          case 24: {
+            RepeatEverySeconds = input.ReadInt32();
+            break;
+          }
+          case 32: {
+            Triggerable = input.ReadBool();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 8: {
+            InitialVersion = input.ReadInt32();
+            break;
+          }
+          case 16: {
+            InvokeTimeoutSeconds = input.ReadInt32();
+            break;
+          }
+          case 24: {
+            RepeatEverySeconds = input.ReadInt32();
+            break;
+          }
+          case 32: {
+            Triggerable = input.ReadBool();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
   /// <summary>
   /// ResourceInstance is an actual instance of a registered resource,
   /// tied to a specific tenant. Managed via the ResourceLifecycleService.
@@ -66,7 +377,7 @@ namespace Convergeplane.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Convergeplane.V1.ResourceInstanceReflection.Descriptor.MessageTypes[0]; }
+      get { return global::Convergeplane.V1.ResourceInstanceReflection.Descriptor.MessageTypes[1]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -87,12 +398,10 @@ namespace Convergeplane.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public ResourceInstance(ResourceInstance other) : this() {
       id_ = other.id_;
-      resourceId_ = other.resourceId_;
       tenantId_ = other.tenantId_;
-      currentState_ = other.currentState_ != null ? other.currentState_.Clone() : null;
-      goalState_ = other.goalState_ != null ? other.goalState_.Clone() : null;
       createdAt_ = other.createdAt_ != null ? other.createdAt_.Clone() : null;
-      updatedAt_ = other.updatedAt_ != null ? other.updatedAt_.Clone() : null;
+      workflowConfig_ = other.workflowConfig_ != null ? other.workflowConfig_.Clone() : null;
+      lifecycleState_ = other.lifecycleState_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -114,18 +423,6 @@ namespace Convergeplane.V1 {
       }
     }
 
-    /// <summary>Field number for the "resource_id" field.</summary>
-    public const int ResourceIdFieldNumber = 2;
-    private string resourceId_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string ResourceId {
-      get { return resourceId_; }
-      set {
-        resourceId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
     /// <summary>Field number for the "tenant_id" field.</summary>
     public const int TenantIdFieldNumber = 3;
     private string tenantId_ = "";
@@ -135,30 +432,6 @@ namespace Convergeplane.V1 {
       get { return tenantId_; }
       set {
         tenantId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "current_state" field.</summary>
-    public const int CurrentStateFieldNumber = 4;
-    private global::Google.Protobuf.WellKnownTypes.Struct currentState_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Google.Protobuf.WellKnownTypes.Struct CurrentState {
-      get { return currentState_; }
-      set {
-        currentState_ = value;
-      }
-    }
-
-    /// <summary>Field number for the "goal_state" field.</summary>
-    public const int GoalStateFieldNumber = 5;
-    private global::Google.Protobuf.WellKnownTypes.Struct goalState_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Google.Protobuf.WellKnownTypes.Struct GoalState {
-      get { return goalState_; }
-      set {
-        goalState_ = value;
       }
     }
 
@@ -174,15 +447,27 @@ namespace Convergeplane.V1 {
       }
     }
 
-    /// <summary>Field number for the "updated_at" field.</summary>
-    public const int UpdatedAtFieldNumber = 7;
-    private global::Google.Protobuf.WellKnownTypes.Timestamp updatedAt_;
+    /// <summary>Field number for the "workflow_config" field.</summary>
+    public const int WorkflowConfigFieldNumber = 8;
+    private global::Convergeplane.V1.WorkflowConfig workflowConfig_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Google.Protobuf.WellKnownTypes.Timestamp UpdatedAt {
-      get { return updatedAt_; }
+    public global::Convergeplane.V1.WorkflowConfig WorkflowConfig {
+      get { return workflowConfig_; }
       set {
-        updatedAt_ = value;
+        workflowConfig_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "lifecycle_state" field.</summary>
+    public const int LifecycleStateFieldNumber = 9;
+    private string lifecycleState_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string LifecycleState {
+      get { return lifecycleState_; }
+      set {
+        lifecycleState_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
       }
     }
 
@@ -202,12 +487,10 @@ namespace Convergeplane.V1 {
         return true;
       }
       if (Id != other.Id) return false;
-      if (ResourceId != other.ResourceId) return false;
       if (TenantId != other.TenantId) return false;
-      if (!object.Equals(CurrentState, other.CurrentState)) return false;
-      if (!object.Equals(GoalState, other.GoalState)) return false;
       if (!object.Equals(CreatedAt, other.CreatedAt)) return false;
-      if (!object.Equals(UpdatedAt, other.UpdatedAt)) return false;
+      if (!object.Equals(WorkflowConfig, other.WorkflowConfig)) return false;
+      if (LifecycleState != other.LifecycleState) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -216,12 +499,10 @@ namespace Convergeplane.V1 {
     public override int GetHashCode() {
       int hash = 1;
       if (Id.Length != 0) hash ^= Id.GetHashCode();
-      if (ResourceId.Length != 0) hash ^= ResourceId.GetHashCode();
       if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
-      if (currentState_ != null) hash ^= CurrentState.GetHashCode();
-      if (goalState_ != null) hash ^= GoalState.GetHashCode();
       if (createdAt_ != null) hash ^= CreatedAt.GetHashCode();
-      if (updatedAt_ != null) hash ^= UpdatedAt.GetHashCode();
+      if (workflowConfig_ != null) hash ^= WorkflowConfig.GetHashCode();
+      if (LifecycleState.Length != 0) hash ^= LifecycleState.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -244,29 +525,21 @@ namespace Convergeplane.V1 {
         output.WriteRawTag(10);
         output.WriteString(Id);
       }
-      if (ResourceId.Length != 0) {
-        output.WriteRawTag(18);
-        output.WriteString(ResourceId);
-      }
       if (TenantId.Length != 0) {
         output.WriteRawTag(26);
         output.WriteString(TenantId);
-      }
-      if (currentState_ != null) {
-        output.WriteRawTag(34);
-        output.WriteMessage(CurrentState);
-      }
-      if (goalState_ != null) {
-        output.WriteRawTag(42);
-        output.WriteMessage(GoalState);
       }
       if (createdAt_ != null) {
         output.WriteRawTag(50);
         output.WriteMessage(CreatedAt);
       }
-      if (updatedAt_ != null) {
-        output.WriteRawTag(58);
-        output.WriteMessage(UpdatedAt);
+      if (workflowConfig_ != null) {
+        output.WriteRawTag(66);
+        output.WriteMessage(WorkflowConfig);
+      }
+      if (LifecycleState.Length != 0) {
+        output.WriteRawTag(74);
+        output.WriteString(LifecycleState);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
@@ -282,29 +555,21 @@ namespace Convergeplane.V1 {
         output.WriteRawTag(10);
         output.WriteString(Id);
       }
-      if (ResourceId.Length != 0) {
-        output.WriteRawTag(18);
-        output.WriteString(ResourceId);
-      }
       if (TenantId.Length != 0) {
         output.WriteRawTag(26);
         output.WriteString(TenantId);
-      }
-      if (currentState_ != null) {
-        output.WriteRawTag(34);
-        output.WriteMessage(CurrentState);
-      }
-      if (goalState_ != null) {
-        output.WriteRawTag(42);
-        output.WriteMessage(GoalState);
       }
       if (createdAt_ != null) {
         output.WriteRawTag(50);
         output.WriteMessage(CreatedAt);
       }
-      if (updatedAt_ != null) {
-        output.WriteRawTag(58);
-        output.WriteMessage(UpdatedAt);
+      if (workflowConfig_ != null) {
+        output.WriteRawTag(66);
+        output.WriteMessage(WorkflowConfig);
+      }
+      if (LifecycleState.Length != 0) {
+        output.WriteRawTag(74);
+        output.WriteString(LifecycleState);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
@@ -319,23 +584,17 @@ namespace Convergeplane.V1 {
       if (Id.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Id);
       }
-      if (ResourceId.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(ResourceId);
-      }
       if (TenantId.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantId);
-      }
-      if (currentState_ != null) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(CurrentState);
-      }
-      if (goalState_ != null) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(GoalState);
       }
       if (createdAt_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(CreatedAt);
       }
-      if (updatedAt_ != null) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(UpdatedAt);
+      if (workflowConfig_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(WorkflowConfig);
+      }
+      if (LifecycleState.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(LifecycleState);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -352,23 +611,8 @@ namespace Convergeplane.V1 {
       if (other.Id.Length != 0) {
         Id = other.Id;
       }
-      if (other.ResourceId.Length != 0) {
-        ResourceId = other.ResourceId;
-      }
       if (other.TenantId.Length != 0) {
         TenantId = other.TenantId;
-      }
-      if (other.currentState_ != null) {
-        if (currentState_ == null) {
-          CurrentState = new global::Google.Protobuf.WellKnownTypes.Struct();
-        }
-        CurrentState.MergeFrom(other.CurrentState);
-      }
-      if (other.goalState_ != null) {
-        if (goalState_ == null) {
-          GoalState = new global::Google.Protobuf.WellKnownTypes.Struct();
-        }
-        GoalState.MergeFrom(other.GoalState);
       }
       if (other.createdAt_ != null) {
         if (createdAt_ == null) {
@@ -376,11 +620,14 @@ namespace Convergeplane.V1 {
         }
         CreatedAt.MergeFrom(other.CreatedAt);
       }
-      if (other.updatedAt_ != null) {
-        if (updatedAt_ == null) {
-          UpdatedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+      if (other.workflowConfig_ != null) {
+        if (workflowConfig_ == null) {
+          WorkflowConfig = new global::Convergeplane.V1.WorkflowConfig();
         }
-        UpdatedAt.MergeFrom(other.UpdatedAt);
+        WorkflowConfig.MergeFrom(other.WorkflowConfig);
+      }
+      if (other.LifecycleState.Length != 0) {
+        LifecycleState = other.LifecycleState;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -405,26 +652,8 @@ namespace Convergeplane.V1 {
             Id = input.ReadString();
             break;
           }
-          case 18: {
-            ResourceId = input.ReadString();
-            break;
-          }
           case 26: {
             TenantId = input.ReadString();
-            break;
-          }
-          case 34: {
-            if (currentState_ == null) {
-              CurrentState = new global::Google.Protobuf.WellKnownTypes.Struct();
-            }
-            input.ReadMessage(CurrentState);
-            break;
-          }
-          case 42: {
-            if (goalState_ == null) {
-              GoalState = new global::Google.Protobuf.WellKnownTypes.Struct();
-            }
-            input.ReadMessage(GoalState);
             break;
           }
           case 50: {
@@ -434,11 +663,15 @@ namespace Convergeplane.V1 {
             input.ReadMessage(CreatedAt);
             break;
           }
-          case 58: {
-            if (updatedAt_ == null) {
-              UpdatedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+          case 66: {
+            if (workflowConfig_ == null) {
+              WorkflowConfig = new global::Convergeplane.V1.WorkflowConfig();
             }
-            input.ReadMessage(UpdatedAt);
+            input.ReadMessage(WorkflowConfig);
+            break;
+          }
+          case 74: {
+            LifecycleState = input.ReadString();
             break;
           }
         }
@@ -464,26 +697,8 @@ namespace Convergeplane.V1 {
             Id = input.ReadString();
             break;
           }
-          case 18: {
-            ResourceId = input.ReadString();
-            break;
-          }
           case 26: {
             TenantId = input.ReadString();
-            break;
-          }
-          case 34: {
-            if (currentState_ == null) {
-              CurrentState = new global::Google.Protobuf.WellKnownTypes.Struct();
-            }
-            input.ReadMessage(CurrentState);
-            break;
-          }
-          case 42: {
-            if (goalState_ == null) {
-              GoalState = new global::Google.Protobuf.WellKnownTypes.Struct();
-            }
-            input.ReadMessage(GoalState);
             break;
           }
           case 50: {
@@ -493,11 +708,15 @@ namespace Convergeplane.V1 {
             input.ReadMessage(CreatedAt);
             break;
           }
-          case 58: {
-            if (updatedAt_ == null) {
-              UpdatedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+          case 66: {
+            if (workflowConfig_ == null) {
+              WorkflowConfig = new global::Convergeplane.V1.WorkflowConfig();
             }
-            input.ReadMessage(UpdatedAt);
+            input.ReadMessage(WorkflowConfig);
+            break;
+          }
+          case 74: {
+            LifecycleState = input.ReadString();
             break;
           }
         }

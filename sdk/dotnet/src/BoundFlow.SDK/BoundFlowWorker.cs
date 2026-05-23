@@ -135,6 +135,7 @@ public sealed class BoundFlowWorker
     private readonly AnthropicClient _anthropicClient;
     private readonly ILoggerFactory _loggerFactory;
     private readonly Dictionary<(string ResourceType, string OperationName), Func<OperationContext, CancellationToken, Task<OperationResult>>> _handlers = new();
+    private const string InvokeEntryHandlerName = "reconcile_entry";  
 
     public BoundFlowWorker(
         string serverAddress,
@@ -155,6 +156,18 @@ public sealed class BoundFlowWorker
         Func<OperationContext, CancellationToken, Task<OperationResult>> handler)
     {
         _handlers[(resourceType, operationName)] = handler;
+        return this;
+    }
+
+
+    /// <summary>
+    /// Registers the entry operation for the workflow invocation 
+    /// </summary>
+    public BoundFlowWorker RegisterWorkflowInvokeEntry(
+        string resourceType,
+        Func<OperationContext, CancellationToken, Task<OperationResult>> handler)
+    {
+        _handlers[(resourceType, InvokeEntryHandlerName)] = handler;
         return this;
     }
 

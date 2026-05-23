@@ -31,10 +31,6 @@ const (
 // ResourceLifecycleServiceClient is the client API for ResourceLifecycleService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-//
-// ResourceLifecycleService is the customer-facing API for requesting
-// resource lifecycle actions. The platform internally translates these
-// into operations and schedules them via workers.
 type ResourceLifecycleServiceClient interface {
 	CreateResource(ctx context.Context, in *CreateResourceRequest, opts ...grpc.CallOption) (*CreateResourceResponse, error)
 	ReconcileResource(ctx context.Context, in *ReconcileResourceRequest, opts ...grpc.CallOption) (*ReconcileResourceResponse, error)
@@ -126,10 +122,6 @@ func (c *resourceLifecycleServiceClient) DeleteAgent(ctx context.Context, in *De
 // ResourceLifecycleServiceServer is the server API for ResourceLifecycleService service.
 // All implementations must embed UnimplementedResourceLifecycleServiceServer
 // for forward compatibility.
-//
-// ResourceLifecycleService is the customer-facing API for requesting
-// resource lifecycle actions. The platform internally translates these
-// into operations and schedules them via workers.
 type ResourceLifecycleServiceServer interface {
 	CreateResource(context.Context, *CreateResourceRequest) (*CreateResourceResponse, error)
 	ReconcileResource(context.Context, *ReconcileResourceRequest) (*ReconcileResourceResponse, error)

@@ -208,19 +208,17 @@ func TestCompleteRequest_Create_TransitionsToActive(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	s, _, schedulerRepo, requests, resource, _ := newTestScheduler(ctrl)
 
-	goalState := domain.ResourceState{"sku": "standard"}
 	requests.EXPECT().
 		CompleteRequest(gomock.Any(), "req-1").
 		Return(&domain.CustomerRequest{
 			ID:                 "req-1",
 			ResourceInstanceID: "resource-1",
 			RequestType:        domain.CustomerRequestTypeCreate,
-			GoalConfigSnapshot: goalState,
-			Version:            1,
+						Version:            1,
 		}, nil)
 
 	resource.EXPECT().
-		ApplyCompletedJob(gomock.Any(), "resource-1", goalState, domain.LifecycleStateActive, int64(1)).
+		ApplyCompletedJob(gomock.Any(), "resource-1", domain.LifecycleStateActive, int64(1)).
 		Return(true, nil)
 
 	schedulerRepo.EXPECT().
@@ -246,12 +244,11 @@ func TestCompleteRequest_Delete_TransitionsToDeleted(t *testing.T) {
 			ID:                 "req-1",
 			ResourceInstanceID: "resource-1",
 			RequestType:        domain.CustomerRequestTypeDelete,
-			GoalConfigSnapshot: domain.ResourceState{},
 			Version:            2,
 		}, nil)
 
 	resource.EXPECT().
-		ApplyCompletedJob(gomock.Any(), "resource-1", domain.ResourceState{}, domain.LifecycleStateDeleted, int64(2)).
+		ApplyCompletedJob(gomock.Any(), "resource-1", domain.LifecycleStateDeleted, int64(2)).
 		Return(true, nil)
 
 	schedulerRepo.EXPECT().
@@ -271,19 +268,17 @@ func TestCompleteRequest_VersionSkipped_ReturnsFalse(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	s, _, schedulerRepo, requests, resource, _ := newTestScheduler(ctrl)
 
-	goalState := domain.ResourceState{"sku": "standard"}
 	requests.EXPECT().
 		CompleteRequest(gomock.Any(), "req-1").
 		Return(&domain.CustomerRequest{
 			ID:                 "req-1",
 			ResourceInstanceID: "resource-1",
 			RequestType:        domain.CustomerRequestTypeReconcile,
-			GoalConfigSnapshot: goalState,
-			Version:            1,
+						Version:            1,
 		}, nil)
 
 	resource.EXPECT().
-		ApplyCompletedJob(gomock.Any(), "resource-1", goalState, domain.LifecycleStateActive, int64(1)).
+		ApplyCompletedJob(gomock.Any(), "resource-1", domain.LifecycleStateActive, int64(1)).
 		Return(false, nil)
 
 	schedulerRepo.EXPECT().
@@ -318,18 +313,16 @@ func TestFailRequest_AppliesFailedState(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	s, _, schedulerRepo, requests, resource, _ := newTestScheduler(ctrl)
 
-	goalState := domain.ResourceState{"sku": "standard"}
 	requests.EXPECT().
 		FailRequest(gomock.Any(), "req-1").
 		Return(&domain.CustomerRequest{
 			ID:                 "req-1",
 			ResourceInstanceID: "resource-1",
-			GoalConfigSnapshot: goalState,
-			Version:            2,
+						Version:            2,
 		}, nil)
 
 	resource.EXPECT().
-		ApplyCompletedJob(gomock.Any(), "resource-1", goalState, domain.LifecycleStateFailed, int64(2)).
+		ApplyCompletedJob(gomock.Any(), "resource-1", domain.LifecycleStateFailed, int64(2)).
 		Return(true, nil)
 
 	schedulerRepo.EXPECT().
@@ -349,18 +342,16 @@ func TestFailRequest_VersionSkipped_ReturnsFalse(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	s, _, schedulerRepo, requests, resource, _ := newTestScheduler(ctrl)
 
-	goalState := domain.ResourceState{}
 	requests.EXPECT().
 		FailRequest(gomock.Any(), "req-1").
 		Return(&domain.CustomerRequest{
 			ID:                 "req-1",
 			ResourceInstanceID: "resource-1",
-			GoalConfigSnapshot: goalState,
-			Version:            1,
+						Version:            1,
 		}, nil)
 
 	resource.EXPECT().
-		ApplyCompletedJob(gomock.Any(), "resource-1", goalState, domain.LifecycleStateFailed, int64(1)).
+		ApplyCompletedJob(gomock.Any(), "resource-1", domain.LifecycleStateFailed, int64(1)).
 		Return(false, nil)
 
 	schedulerRepo.EXPECT().

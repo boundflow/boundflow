@@ -13,9 +13,7 @@ CREATE TABLE customer_requests (
     status                customer_request_status NOT NULL,
     request_type          TEXT NOT NULL,
     request_info          JSONB NOT NULL DEFAULT '{}',
-    current_config_snapshot JSONB NOT NULL DEFAULT '{}',
-    goal_config_snapshot    JSONB NOT NULL DEFAULT '{}',
-    version                  BIGINT NOT NULL,
+    version               BIGINT NOT NULL,
     operation_timeout_seconds INTEGER NOT NULL,
     created_at               TIMESTAMPTZ NOT NULL DEFAULT now()
 );

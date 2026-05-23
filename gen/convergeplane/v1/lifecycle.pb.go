@@ -28,9 +28,9 @@ type CreateResourceRequest struct {
 	ResourceType  string                 `protobuf:"bytes,2,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
 	TenantId      string                 `protobuf:"bytes,3,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
 	InitialState  *structpb.Struct       `protobuf:"bytes,4,opt,name=initial_state,json=initialState,proto3" json:"initial_state,omitempty"`
-	// Per-request operation timeout in seconds. Falls back to tenant policy, then tenant group policy.
-	// Must be resolvable from one of these sources or the request will be rejected.
-	OperationTimeoutSeconds int32 `protobuf:"varint,5,opt,name=operation_timeout_seconds,json=operationTimeoutSeconds,proto3" json:"operation_timeout_seconds,omitempty"`
+	// Deprecated: use workflow_config.invoke_timeout_seconds instead.
+	OperationTimeoutSeconds int32           `protobuf:"varint,5,opt,name=operation_timeout_seconds,json=operationTimeoutSeconds,proto3" json:"operation_timeout_seconds,omitempty"`
+	WorkflowConfig          *WorkflowConfig `protobuf:"bytes,6,opt,name=workflow_config,json=workflowConfig,proto3" json:"workflow_config,omitempty"`
 	unknownFields           protoimpl.UnknownFields
 	sizeCache               protoimpl.SizeCache
 }
@@ -98,6 +98,13 @@ func (x *CreateResourceRequest) GetOperationTimeoutSeconds() int32 {
 		return x.OperationTimeoutSeconds
 	}
 	return 0
+}
+
+func (x *CreateResourceRequest) GetWorkflowConfig() *WorkflowConfig {
+	if x != nil {
+		return x.WorkflowConfig
+	}
+	return nil
 }
 
 type CreateResourceResponse struct {
@@ -405,12 +412,10 @@ func (x *GetResourceStateRequest) GetResourceInstanceId() string {
 }
 
 type GetResourceStateResponse struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	CurrentConfigState *structpb.Struct       `protobuf:"bytes,1,opt,name=current_config_state,json=currentConfigState,proto3" json:"current_config_state,omitempty"`
-	GoalConfigState    *structpb.Struct       `protobuf:"bytes,2,opt,name=goal_config_state,json=goalConfigState,proto3" json:"goal_config_state,omitempty"`
-	LifecycleState     string                 `protobuf:"bytes,3,opt,name=lifecycle_state,json=lifecycleState,proto3" json:"lifecycle_state,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	ResourceInstance *ResourceInstance      `protobuf:"bytes,1,opt,name=resource_instance,json=resourceInstance,proto3" json:"resource_instance,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *GetResourceStateResponse) Reset() {
@@ -443,25 +448,11 @@ func (*GetResourceStateResponse) Descriptor() ([]byte, []int) {
 	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{7}
 }
 
-func (x *GetResourceStateResponse) GetCurrentConfigState() *structpb.Struct {
+func (x *GetResourceStateResponse) GetResourceInstance() *ResourceInstance {
 	if x != nil {
-		return x.CurrentConfigState
+		return x.ResourceInstance
 	}
 	return nil
-}
-
-func (x *GetResourceStateResponse) GetGoalConfigState() *structpb.Struct {
-	if x != nil {
-		return x.GoalConfigState
-	}
-	return nil
-}
-
-func (x *GetResourceStateResponse) GetLifecycleState() string {
-	if x != nil {
-		return x.LifecycleState
-	}
-	return ""
 }
 
 type SetAgentRuntimePolicyRequest struct {
@@ -750,13 +741,14 @@ var File_convergeplane_v1_lifecycle_proto protoreflect.FileDescriptor
 
 const file_convergeplane_v1_lifecycle_proto_rawDesc = "" +
 	"\n" +
-	" convergeplane/v1/lifecycle.proto\x12\x10convergeplane.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a(convergeplane/v1/resource_instance.proto\"\xfa\x01\n" +
+	" convergeplane/v1/lifecycle.proto\x12\x10convergeplane.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a(convergeplane/v1/resource_instance.proto\"\xc5\x02\n" +
 	"\x15CreateResourceRequest\x12%\n" +
 	"\x0ecorrelation_id\x18\x01 \x01(\tR\rcorrelationId\x12#\n" +
 	"\rresource_type\x18\x02 \x01(\tR\fresourceType\x12\x1b\n" +
 	"\ttenant_id\x18\x03 \x01(\tR\btenantId\x12<\n" +
 	"\rinitial_state\x18\x04 \x01(\v2\x17.google.protobuf.StructR\finitialState\x12:\n" +
-	"\x19operation_timeout_seconds\x18\x05 \x01(\x05R\x17operationTimeoutSeconds\"i\n" +
+	"\x19operation_timeout_seconds\x18\x05 \x01(\x05R\x17operationTimeoutSeconds\x12I\n" +
+	"\x0fworkflow_config\x18\x06 \x01(\v2 .convergeplane.v1.WorkflowConfigR\x0eworkflowConfig\"i\n" +
 	"\x16CreateResourceResponse\x12O\n" +
 	"\x11resource_instance\x18\x01 \x01(\v2\".convergeplane.v1.ResourceInstanceR\x10resourceInstance\"\xe7\x01\n" +
 	"\x18ReconcileResourceRequest\x12%\n" +
@@ -776,11 +768,9 @@ const file_convergeplane_v1_lifecycle_proto_rawDesc = "" +
 	"\n" +
 	"request_id\x18\x01 \x01(\tR\trequestId\"K\n" +
 	"\x17GetResourceStateRequest\x120\n" +
-	"\x14resource_instance_id\x18\x01 \x01(\tR\x12resourceInstanceId\"\xd3\x01\n" +
-	"\x18GetResourceStateResponse\x12I\n" +
-	"\x14current_config_state\x18\x01 \x01(\v2\x17.google.protobuf.StructR\x12currentConfigState\x12C\n" +
-	"\x11goal_config_state\x18\x02 \x01(\v2\x17.google.protobuf.StructR\x0fgoalConfigState\x12'\n" +
-	"\x0flifecycle_state\x18\x03 \x01(\tR\x0elifecycleState\"\xaf\x01\n" +
+	"\x14resource_instance_id\x18\x01 \x01(\tR\x12resourceInstanceId\"k\n" +
+	"\x18GetResourceStateResponse\x12O\n" +
+	"\x11resource_instance\x18\x01 \x01(\v2\".convergeplane.v1.ResourceInstanceR\x10resourceInstance\"\xaf\x01\n" +
 	"\x1cSetAgentRuntimePolicyRequest\x120\n" +
 	"\x14resource_instance_id\x18\x01 \x01(\tR\x12resourceInstanceId\x12\x1d\n" +
 	"\n" +
@@ -836,14 +826,15 @@ var file_convergeplane_v1_lifecycle_proto_goTypes = []any{
 	(*DeleteAgentRequest)(nil),              // 12: convergeplane.v1.DeleteAgentRequest
 	(*DeleteAgentResponse)(nil),             // 13: convergeplane.v1.DeleteAgentResponse
 	(*structpb.Struct)(nil),                 // 14: google.protobuf.Struct
-	(*ResourceInstance)(nil),                // 15: convergeplane.v1.ResourceInstance
+	(*WorkflowConfig)(nil),                  // 15: convergeplane.v1.WorkflowConfig
+	(*ResourceInstance)(nil),                // 16: convergeplane.v1.ResourceInstance
 }
 var file_convergeplane_v1_lifecycle_proto_depIdxs = []int32{
 	14, // 0: convergeplane.v1.CreateResourceRequest.initial_state:type_name -> google.protobuf.Struct
-	15, // 1: convergeplane.v1.CreateResourceResponse.resource_instance:type_name -> convergeplane.v1.ResourceInstance
-	14, // 2: convergeplane.v1.ReconcileResourceRequest.goal_state:type_name -> google.protobuf.Struct
-	14, // 3: convergeplane.v1.GetResourceStateResponse.current_config_state:type_name -> google.protobuf.Struct
-	14, // 4: convergeplane.v1.GetResourceStateResponse.goal_config_state:type_name -> google.protobuf.Struct
+	15, // 1: convergeplane.v1.CreateResourceRequest.workflow_config:type_name -> convergeplane.v1.WorkflowConfig
+	16, // 2: convergeplane.v1.CreateResourceResponse.resource_instance:type_name -> convergeplane.v1.ResourceInstance
+	14, // 3: convergeplane.v1.ReconcileResourceRequest.goal_state:type_name -> google.protobuf.Struct
+	16, // 4: convergeplane.v1.GetResourceStateResponse.resource_instance:type_name -> convergeplane.v1.ResourceInstance
 	14, // 5: convergeplane.v1.SetAgentRuntimePolicyRequest.runtime_policy:type_name -> google.protobuf.Struct
 	14, // 6: convergeplane.v1.SetAgentLifecyclePolicyRequest.lifecycle_policy:type_name -> google.protobuf.Struct
 	0,  // 7: convergeplane.v1.ResourceLifecycleService.CreateResource:input_type -> convergeplane.v1.CreateResourceRequest

@@ -84,25 +84,19 @@ func (s *LifecycleService) resolveJobPolicy(ctx context.Context, tenantID string
 	return resolved, nil
 }
 
-func (s *LifecycleService) CreateResource(ctx context.Context, correlationID, resourceType, tenantID string, initialState domain.ResourceState, requestPolicy domain.JobPolicy) (*domain.ResourceInstance, error) {
+func (s *LifecycleService) CreateResource(ctx context.Context, correlationID, resourceType, tenantID string, cfg domain.WorkflowConfig) (*domain.ResourceInstance, error) {
 	s.log.Info("creating resource", "correlation_id", correlationID, "resource_type", resourceType, "tenant_id", tenantID)
-
-	policy, err := s.resolveJobPolicy(ctx, tenantID, requestPolicy)
-	if err != nil {
-		return nil, err
-	}
 
 	id := uuid.New().String()
 	resourceInstance := domain.ResourceInstance{
 		ID:                   id,
 		TenantID:             tenantID,
 		ResourceType:         resourceType,
-		CurrentConfigState:   nil,
-		ConfigGoalState:      initialState,
-		LifecycleState:       domain.LifecycleStateCreating,
+		WorkflowConfig:       cfg,
+		LifecycleState:       domain.LifecycleStateActive,
 		SchedulerPartitionID: partitionForID(id, s.numPartitions),
 		TargetVersion:        1,
-		CurrentVersion:       0,
+		CurrentVersion:       1,
 	}
 
 	if err := s.resourceInstances.Create(ctx, &resourceInstance); err != nil {
@@ -110,35 +104,11 @@ func (s *LifecycleService) CreateResource(ctx context.Context, correlationID, re
 		return nil, fmt.Errorf("create resource: %w", err)
 	}
 
-	requestInfo := map[string]any{
-		"correlationId": correlationID,
-	}
-
-	request := domain.CustomerRequest{
-		ID:                      uuid.New().String(),
-		ResourceInstanceID:      resourceInstance.ID,
-		Status:                  domain.CustomerRequestStatusUnscheduled,
-		RequestType:             domain.CustomerRequestTypeCreate,
-		RequestInfo:             requestInfo,
-		Version:                 resourceInstance.TargetVersion,
-		GoalConfigSnapshot: initialState,
-		JobPolicy:          policy,
-	}
-
-	if err := s.customerRequests.Create(ctx, &request); err != nil {
-		s.log.Error("failed to create customer request", "correlation_id", correlationID, "resource_id", resourceInstance.ID, "error", err)
-		return nil, fmt.Errorf("create customer request: %w", err)
-	}
-
-	s.log.Info("resource created, attempting immediate schedule", "correlation_id", correlationID, "resource_id", resourceInstance.ID, "request_id", request.ID)
-	if err := s.scheduler.ScheduleRequest(ctx, request.ID); err != nil {
-		s.log.Warn("immediate schedule failed, scheduler will retry", "request_id", request.ID, "error", err)
-	}
-
+	s.log.Info("resource created and active", "correlation_id", correlationID, "resource_id", resourceInstance.ID)
 	return &resourceInstance, nil
 }
 
-func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID, resourceInstanceID string, goalState domain.ResourceState, requestPolicy domain.JobPolicy) error {
+func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID, resourceInstanceID string, requestPolicy domain.JobPolicy) error {
 	s.log.Info("reconciling resource", "correlation_id", correlationID, "resource_id", resourceInstanceID)
 
 	instance, err := s.resourceInstances.Get(ctx, resourceInstanceID)
@@ -150,11 +120,11 @@ func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID,
 		return err
 	}
 
-	ver, err := s.resourceInstances.ReconcileGoalStateAndIncrementVersion(ctx, resourceInstanceID, goalState,
+	ver, err := s.resourceInstances.StartInvocationAndIncrementVersion(ctx, resourceInstanceID,
 		domain.LifecycleStateDeleting, domain.LifecycleStateDeleted)
 	if err != nil {
-		s.log.Error("failed to update goal state", "correlation_id", correlationID, "resource_id", resourceInstanceID, "error", err)
-		return fmt.Errorf("reconcile resource: %w", err)
+		s.log.Error("failed to start invocation", "correlation_id", correlationID, "resource_id", resourceInstanceID, "error", err)
+		return fmt.Errorf("start invocation: %w", err)
 	}
 
 	requestInfo := map[string]any{
@@ -162,13 +132,12 @@ func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID,
 	}
 
 	request := domain.CustomerRequest{
-		ID:                      uuid.New().String(),
-		ResourceInstanceID:      resourceInstanceID,
-		Status:                  domain.CustomerRequestStatusUnscheduled,
-		RequestType:             domain.CustomerRequestTypeReconcile,
-		RequestInfo:             requestInfo,
-		Version:                 ver,
-		GoalConfigSnapshot: goalState,
+		ID:                 uuid.New().String(),
+		ResourceInstanceID: resourceInstanceID,
+		Status:             domain.CustomerRequestStatusUnscheduled,
+		RequestType:        domain.CustomerRequestTypeReconcile,
+		RequestInfo:        requestInfo,
+		Version:            ver,
 		JobPolicy:          policy,
 	}
 
@@ -185,49 +154,19 @@ func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID,
 	return nil
 }
 
-func (s *LifecycleService) DeleteResource(ctx context.Context, correlationID, resourceInstanceID string, requestPolicy domain.JobPolicy) error {
+func (s *LifecycleService) DeleteResource(ctx context.Context, correlationID, resourceInstanceID string) error {
 	s.log.Info("deleting resource", "correlation_id", correlationID, "resource_id", resourceInstanceID)
 
-	instance, err := s.resourceInstances.Get(ctx, resourceInstanceID)
-	if err != nil {
+	if _, err := s.resourceInstances.Get(ctx, resourceInstanceID); err != nil {
 		return fmt.Errorf("get resource instance: %w", err)
 	}
-	policy, err := s.resolveJobPolicy(ctx, instance.TenantID, requestPolicy)
-	if err != nil {
-		return err
+
+	if err := s.resourceInstances.UpdateLifecycleState(ctx, resourceInstanceID, domain.LifecycleStateDeleted); err != nil {
+		s.log.Error("failed to delete resource", "correlation_id", correlationID, "resource_id", resourceInstanceID, "error", err)
+		return fmt.Errorf("delete resource: %w", err)
 	}
 
-	ver, err := s.resourceInstances.UpdateLifecycleStateAndIncrementVersion(ctx, resourceInstanceID,
-		domain.LifecycleStateDeleting, domain.LifecycleStateDeleting, domain.LifecycleStateDeleted)
-	if err != nil {
-		s.log.Error("failed to transition resource to deleting", "correlation_id", correlationID, "resource_id", resourceInstanceID, "error", err)
-		return fmt.Errorf("soft delete resource: %w", err)
-	}
-
-	requestInfo := map[string]any{
-		"correlationId": correlationID,
-	}
-
-	request := domain.CustomerRequest{
-		ID:                      uuid.New().String(),
-		ResourceInstanceID:      resourceInstanceID,
-		Status:                  domain.CustomerRequestStatusUnscheduled,
-		RequestType:             domain.CustomerRequestTypeDelete,
-		RequestInfo:             requestInfo,
-		Version:   ver,
-		JobPolicy: policy,
-	}
-
-	if err := s.customerRequests.Create(ctx, &request); err != nil {
-		s.log.Error("failed to create delete request", "correlation_id", correlationID, "resource_id", resourceInstanceID, "error", err)
-		return fmt.Errorf("delete customer request: %w", err)
-	}
-
-	s.log.Info("delete request created, attempting immediate schedule", "correlation_id", correlationID, "resource_id", resourceInstanceID, "request_id", request.ID, "version", ver)
-	if err := s.scheduler.ScheduleRequest(ctx, request.ID); err != nil {
-		s.log.Warn("immediate schedule failed, scheduler will retry", "request_id", request.ID, "error", err)
-	}
-
+	s.log.Info("resource deleted", "correlation_id", correlationID, "resource_id", resourceInstanceID)
 	return nil
 }
 

@@ -26,22 +26,17 @@ type ResourceInstanceRepository interface {
 	// UpdateLifecycleStateAndIncrementVersion atomically sets the lifecycle state and bumps the target version.
 	// Optionally pass lifecycle states that should cause the call to fail with ErrInvalidLifecycleState.
 	UpdateLifecycleStateAndIncrementVersion(ctx context.Context, id string, state domain.LifecycleState, invalidStates ...domain.LifecycleState) (newTargetVersion int64, err error)
-	UpdateConfigState(ctx context.Context, id string, currentState, goalState domain.ResourceState) error
-	// UpdateGoalStateAndIncrementVersion atomically sets the goal state and bumps the target version.
+	// StartInvocationAndIncrementVersion atomically sets lifecycle_state to invoking and bumps the target version.
 	// Optionally pass lifecycle states that should cause the call to fail with ErrInvalidLifecycleState.
-	UpdateGoalStateAndIncrementVersion(ctx context.Context, id string, goalState domain.ResourceState, invalidStates ...domain.LifecycleState) (newTargetVersion int64, err error)
-	// ReconcileGoalStateAndIncrementVersion atomically sets the lifecycle state to reconciling,
-	// updates the goal config state, and bumps the target version.
-	// Optionally pass lifecycle states that should cause the call to fail with ErrInvalidLifecycleState.
-	ReconcileGoalStateAndIncrementVersion(ctx context.Context, id string, goalState domain.ResourceState, invalidStates ...domain.LifecycleState) (newTargetVersion int64, err error)
+	StartInvocationAndIncrementVersion(ctx context.Context, id string, invalidStates ...domain.LifecycleState) (newTargetVersion int64, err error)
 	// IncrementTargetVersion atomically increments the target version and returns the new value.
 	IncrementTargetVersion(ctx context.Context, id string) (newVersion int64, err error)
 	// UpdateCurrentVersion sets the current version to match the completed target version.
 	UpdateCurrentVersion(ctx context.Context, id string, version int64) error
-	// ApplyCompletedJob updates current_config_state, lifecycle_state, and current_version for
-	// a resource, but only if the provided version is strictly greater than the stored current_version.
+	// ApplyCompletedJob updates lifecycle_state and current_version for a resource, but only if
+	// the provided version is strictly greater than the stored current_version.
 	// Returns false if the version check failed (a newer completion already applied).
-	ApplyCompletedJob(ctx context.Context, id string, configState domain.ResourceState, lifecycleState domain.LifecycleState, version int64) (bool, error)
+	ApplyCompletedJob(ctx context.Context, id string, lifecycleState domain.LifecycleState, version int64) (bool, error)
 	UpdateSchedulerPartition(ctx context.Context, id string, partitionID string) error
 	UpdateLastCompletedRequestAt(ctx context.Context, id string, t time.Time) error
 }

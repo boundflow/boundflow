@@ -26,76 +26,76 @@ namespace Convergeplane.V1 {
           string.Concat(
             "CiBjb252ZXJnZXBsYW5lL3YxL2xpZmVjeWNsZS5wcm90bxIQY29udmVyZ2Vw",
             "bGFuZS52MRocZ29vZ2xlL3Byb3RvYnVmL3N0cnVjdC5wcm90bxooY29udmVy",
-            "Z2VwbGFuZS92MS9yZXNvdXJjZV9pbnN0YW5jZS5wcm90byL6AQoVQ3JlYXRl",
+            "Z2VwbGFuZS92MS9yZXNvdXJjZV9pbnN0YW5jZS5wcm90byLFAgoVQ3JlYXRl",
             "UmVzb3VyY2VSZXF1ZXN0EiUKDmNvcnJlbGF0aW9uX2lkGAEgASgJUg1jb3Jy",
             "ZWxhdGlvbklkEiMKDXJlc291cmNlX3R5cGUYAiABKAlSDHJlc291cmNlVHlw",
             "ZRIbCgl0ZW5hbnRfaWQYAyABKAlSCHRlbmFudElkEjwKDWluaXRpYWxfc3Rh",
             "dGUYBCABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0Ugxpbml0aWFsU3Rh",
             "dGUSOgoZb3BlcmF0aW9uX3RpbWVvdXRfc2Vjb25kcxgFIAEoBVIXb3BlcmF0",
-            "aW9uVGltZW91dFNlY29uZHMiaQoWQ3JlYXRlUmVzb3VyY2VSZXNwb25zZRJP",
-            "ChFyZXNvdXJjZV9pbnN0YW5jZRgBIAEoCzIiLmNvbnZlcmdlcGxhbmUudjEu",
-            "UmVzb3VyY2VJbnN0YW5jZVIQcmVzb3VyY2VJbnN0YW5jZSLnAQoYUmVjb25j",
-            "aWxlUmVzb3VyY2VSZXF1ZXN0EiUKDmNvcnJlbGF0aW9uX2lkGAEgASgJUg1j",
-            "b3JyZWxhdGlvbklkEjAKFHJlc291cmNlX2luc3RhbmNlX2lkGAIgASgJUhJy",
-            "ZXNvdXJjZUluc3RhbmNlSWQSNgoKZ29hbF9zdGF0ZRgDIAEoCzIXLmdvb2ds",
-            "ZS5wcm90b2J1Zi5TdHJ1Y3RSCWdvYWxTdGF0ZRI6ChlvcGVyYXRpb25fdGlt",
-            "ZW91dF9zZWNvbmRzGAQgASgFUhdvcGVyYXRpb25UaW1lb3V0U2Vjb25kcyI6",
-            "ChlSZWNvbmNpbGVSZXNvdXJjZVJlc3BvbnNlEh0KCnJlcXVlc3RfaWQYASAB",
-            "KAlSCXJlcXVlc3RJZCKsAQoVRGVsZXRlUmVzb3VyY2VSZXF1ZXN0EiUKDmNv",
-            "cnJlbGF0aW9uX2lkGAEgASgJUg1jb3JyZWxhdGlvbklkEjAKFHJlc291cmNl",
-            "X2luc3RhbmNlX2lkGAIgASgJUhJyZXNvdXJjZUluc3RhbmNlSWQSOgoZb3Bl",
-            "cmF0aW9uX3RpbWVvdXRfc2Vjb25kcxgDIAEoBVIXb3BlcmF0aW9uVGltZW91",
-            "dFNlY29uZHMiNwoWRGVsZXRlUmVzb3VyY2VSZXNwb25zZRIdCgpyZXF1ZXN0",
-            "X2lkGAEgASgJUglyZXF1ZXN0SWQiSwoXR2V0UmVzb3VyY2VTdGF0ZVJlcXVl",
-            "c3QSMAoUcmVzb3VyY2VfaW5zdGFuY2VfaWQYASABKAlSEnJlc291cmNlSW5z",
-            "dGFuY2VJZCLTAQoYR2V0UmVzb3VyY2VTdGF0ZVJlc3BvbnNlEkkKFGN1cnJl",
-            "bnRfY29uZmlnX3N0YXRlGAEgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVj",
-            "dFISY3VycmVudENvbmZpZ1N0YXRlEkMKEWdvYWxfY29uZmlnX3N0YXRlGAIg",
-            "ASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdFIPZ29hbENvbmZpZ1N0YXRl",
-            "EicKD2xpZmVjeWNsZV9zdGF0ZRgDIAEoCVIObGlmZWN5Y2xlU3RhdGUirwEK",
-            "HFNldEFnZW50UnVudGltZVBvbGljeVJlcXVlc3QSMAoUcmVzb3VyY2VfaW5z",
-            "dGFuY2VfaWQYASABKAlSEnJlc291cmNlSW5zdGFuY2VJZBIdCgphZ2VudF9u",
-            "YW1lGAIgASgJUglhZ2VudE5hbWUSPgoOcnVudGltZV9wb2xpY3kYAyABKAsy",
-            "Fy5nb29nbGUucHJvdG9idWYuU3RydWN0Ug1ydW50aW1lUG9saWN5Ih8KHVNl",
-            "dEFnZW50UnVudGltZVBvbGljeVJlc3BvbnNlIrUBCh5TZXRBZ2VudExpZmVj",
-            "eWNsZVBvbGljeVJlcXVlc3QSMAoUcmVzb3VyY2VfaW5zdGFuY2VfaWQYASAB",
-            "KAlSEnJlc291cmNlSW5zdGFuY2VJZBIdCgphZ2VudF9uYW1lGAIgASgJUglh",
-            "Z2VudE5hbWUSQgoQbGlmZWN5Y2xlX3BvbGljeRgDIAEoCzIXLmdvb2dsZS5w",
-            "cm90b2J1Zi5TdHJ1Y3RSD2xpZmVjeWNsZVBvbGljeSIhCh9TZXRBZ2VudExp",
-            "ZmVjeWNsZVBvbGljeVJlc3BvbnNlImUKEkRlbGV0ZUFnZW50UmVxdWVzdBIw",
-            "ChRyZXNvdXJjZV9pbnN0YW5jZV9pZBgBIAEoCVIScmVzb3VyY2VJbnN0YW5j",
-            "ZUlkEh0KCmFnZW50X25hbWUYAiABKAlSCWFnZW50TmFtZSIVChNEZWxldGVB",
-            "Z2VudFJlc3BvbnNlMpMGChhSZXNvdXJjZUxpZmVjeWNsZVNlcnZpY2USYwoO",
-            "Q3JlYXRlUmVzb3VyY2USJy5jb252ZXJnZXBsYW5lLnYxLkNyZWF0ZVJlc291",
-            "cmNlUmVxdWVzdBooLmNvbnZlcmdlcGxhbmUudjEuQ3JlYXRlUmVzb3VyY2VS",
-            "ZXNwb25zZRJsChFSZWNvbmNpbGVSZXNvdXJjZRIqLmNvbnZlcmdlcGxhbmUu",
-            "djEuUmVjb25jaWxlUmVzb3VyY2VSZXF1ZXN0GisuY29udmVyZ2VwbGFuZS52",
-            "MS5SZWNvbmNpbGVSZXNvdXJjZVJlc3BvbnNlEmMKDkRlbGV0ZVJlc291cmNl",
-            "EicuY29udmVyZ2VwbGFuZS52MS5EZWxldGVSZXNvdXJjZVJlcXVlc3QaKC5j",
-            "b252ZXJnZXBsYW5lLnYxLkRlbGV0ZVJlc291cmNlUmVzcG9uc2USaQoQR2V0",
-            "UmVzb3VyY2VTdGF0ZRIpLmNvbnZlcmdlcGxhbmUudjEuR2V0UmVzb3VyY2VT",
-            "dGF0ZVJlcXVlc3QaKi5jb252ZXJnZXBsYW5lLnYxLkdldFJlc291cmNlU3Rh",
-            "dGVSZXNwb25zZRJ4ChVTZXRBZ2VudFJ1bnRpbWVQb2xpY3kSLi5jb252ZXJn",
-            "ZXBsYW5lLnYxLlNldEFnZW50UnVudGltZVBvbGljeVJlcXVlc3QaLy5jb252",
-            "ZXJnZXBsYW5lLnYxLlNldEFnZW50UnVudGltZVBvbGljeVJlc3BvbnNlEn4K",
-            "F1NldEFnZW50TGlmZWN5Y2xlUG9saWN5EjAuY29udmVyZ2VwbGFuZS52MS5T",
-            "ZXRBZ2VudExpZmVjeWNsZVBvbGljeVJlcXVlc3QaMS5jb252ZXJnZXBsYW5l",
-            "LnYxLlNldEFnZW50TGlmZWN5Y2xlUG9saWN5UmVzcG9uc2USWgoLRGVsZXRl",
-            "QWdlbnQSJC5jb252ZXJnZXBsYW5lLnYxLkRlbGV0ZUFnZW50UmVxdWVzdBol",
-            "LmNvbnZlcmdlcGxhbmUudjEuRGVsZXRlQWdlbnRSZXNwb25zZUJNWktnaXRo",
-            "dWIuY29tL2NvbnZlcmdlcGxhbmUvY29udmVyZ2VwbGFuZS9nZW4vY29udmVy",
-            "Z2VwbGFuZS92MTtjb252ZXJnZXBsYW5ldjFiBnByb3RvMw=="));
+            "aW9uVGltZW91dFNlY29uZHMSSQoPd29ya2Zsb3dfY29uZmlnGAYgASgLMiAu",
+            "Y29udmVyZ2VwbGFuZS52MS5Xb3JrZmxvd0NvbmZpZ1IOd29ya2Zsb3dDb25m",
+            "aWciaQoWQ3JlYXRlUmVzb3VyY2VSZXNwb25zZRJPChFyZXNvdXJjZV9pbnN0",
+            "YW5jZRgBIAEoCzIiLmNvbnZlcmdlcGxhbmUudjEuUmVzb3VyY2VJbnN0YW5j",
+            "ZVIQcmVzb3VyY2VJbnN0YW5jZSLnAQoYUmVjb25jaWxlUmVzb3VyY2VSZXF1",
+            "ZXN0EiUKDmNvcnJlbGF0aW9uX2lkGAEgASgJUg1jb3JyZWxhdGlvbklkEjAK",
+            "FHJlc291cmNlX2luc3RhbmNlX2lkGAIgASgJUhJyZXNvdXJjZUluc3RhbmNl",
+            "SWQSNgoKZ29hbF9zdGF0ZRgDIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1",
+            "Y3RSCWdvYWxTdGF0ZRI6ChlvcGVyYXRpb25fdGltZW91dF9zZWNvbmRzGAQg",
+            "ASgFUhdvcGVyYXRpb25UaW1lb3V0U2Vjb25kcyI6ChlSZWNvbmNpbGVSZXNv",
+            "dXJjZVJlc3BvbnNlEh0KCnJlcXVlc3RfaWQYASABKAlSCXJlcXVlc3RJZCKs",
+            "AQoVRGVsZXRlUmVzb3VyY2VSZXF1ZXN0EiUKDmNvcnJlbGF0aW9uX2lkGAEg",
+            "ASgJUg1jb3JyZWxhdGlvbklkEjAKFHJlc291cmNlX2luc3RhbmNlX2lkGAIg",
+            "ASgJUhJyZXNvdXJjZUluc3RhbmNlSWQSOgoZb3BlcmF0aW9uX3RpbWVvdXRf",
+            "c2Vjb25kcxgDIAEoBVIXb3BlcmF0aW9uVGltZW91dFNlY29uZHMiNwoWRGVs",
+            "ZXRlUmVzb3VyY2VSZXNwb25zZRIdCgpyZXF1ZXN0X2lkGAEgASgJUglyZXF1",
+            "ZXN0SWQiSwoXR2V0UmVzb3VyY2VTdGF0ZVJlcXVlc3QSMAoUcmVzb3VyY2Vf",
+            "aW5zdGFuY2VfaWQYASABKAlSEnJlc291cmNlSW5zdGFuY2VJZCJrChhHZXRS",
+            "ZXNvdXJjZVN0YXRlUmVzcG9uc2USTwoRcmVzb3VyY2VfaW5zdGFuY2UYASAB",
+            "KAsyIi5jb252ZXJnZXBsYW5lLnYxLlJlc291cmNlSW5zdGFuY2VSEHJlc291",
+            "cmNlSW5zdGFuY2UirwEKHFNldEFnZW50UnVudGltZVBvbGljeVJlcXVlc3QS",
+            "MAoUcmVzb3VyY2VfaW5zdGFuY2VfaWQYASABKAlSEnJlc291cmNlSW5zdGFu",
+            "Y2VJZBIdCgphZ2VudF9uYW1lGAIgASgJUglhZ2VudE5hbWUSPgoOcnVudGlt",
+            "ZV9wb2xpY3kYAyABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0Ug1ydW50",
+            "aW1lUG9saWN5Ih8KHVNldEFnZW50UnVudGltZVBvbGljeVJlc3BvbnNlIrUB",
+            "Ch5TZXRBZ2VudExpZmVjeWNsZVBvbGljeVJlcXVlc3QSMAoUcmVzb3VyY2Vf",
+            "aW5zdGFuY2VfaWQYASABKAlSEnJlc291cmNlSW5zdGFuY2VJZBIdCgphZ2Vu",
+            "dF9uYW1lGAIgASgJUglhZ2VudE5hbWUSQgoQbGlmZWN5Y2xlX3BvbGljeRgD",
+            "IAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RSD2xpZmVjeWNsZVBvbGlj",
+            "eSIhCh9TZXRBZ2VudExpZmVjeWNsZVBvbGljeVJlc3BvbnNlImUKEkRlbGV0",
+            "ZUFnZW50UmVxdWVzdBIwChRyZXNvdXJjZV9pbnN0YW5jZV9pZBgBIAEoCVIS",
+            "cmVzb3VyY2VJbnN0YW5jZUlkEh0KCmFnZW50X25hbWUYAiABKAlSCWFnZW50",
+            "TmFtZSIVChNEZWxldGVBZ2VudFJlc3BvbnNlMpMGChhSZXNvdXJjZUxpZmVj",
+            "eWNsZVNlcnZpY2USYwoOQ3JlYXRlUmVzb3VyY2USJy5jb252ZXJnZXBsYW5l",
+            "LnYxLkNyZWF0ZVJlc291cmNlUmVxdWVzdBooLmNvbnZlcmdlcGxhbmUudjEu",
+            "Q3JlYXRlUmVzb3VyY2VSZXNwb25zZRJsChFSZWNvbmNpbGVSZXNvdXJjZRIq",
+            "LmNvbnZlcmdlcGxhbmUudjEuUmVjb25jaWxlUmVzb3VyY2VSZXF1ZXN0Gisu",
+            "Y29udmVyZ2VwbGFuZS52MS5SZWNvbmNpbGVSZXNvdXJjZVJlc3BvbnNlEmMK",
+            "DkRlbGV0ZVJlc291cmNlEicuY29udmVyZ2VwbGFuZS52MS5EZWxldGVSZXNv",
+            "dXJjZVJlcXVlc3QaKC5jb252ZXJnZXBsYW5lLnYxLkRlbGV0ZVJlc291cmNl",
+            "UmVzcG9uc2USaQoQR2V0UmVzb3VyY2VTdGF0ZRIpLmNvbnZlcmdlcGxhbmUu",
+            "djEuR2V0UmVzb3VyY2VTdGF0ZVJlcXVlc3QaKi5jb252ZXJnZXBsYW5lLnYx",
+            "LkdldFJlc291cmNlU3RhdGVSZXNwb25zZRJ4ChVTZXRBZ2VudFJ1bnRpbWVQ",
+            "b2xpY3kSLi5jb252ZXJnZXBsYW5lLnYxLlNldEFnZW50UnVudGltZVBvbGlj",
+            "eVJlcXVlc3QaLy5jb252ZXJnZXBsYW5lLnYxLlNldEFnZW50UnVudGltZVBv",
+            "bGljeVJlc3BvbnNlEn4KF1NldEFnZW50TGlmZWN5Y2xlUG9saWN5EjAuY29u",
+            "dmVyZ2VwbGFuZS52MS5TZXRBZ2VudExpZmVjeWNsZVBvbGljeVJlcXVlc3Qa",
+            "MS5jb252ZXJnZXBsYW5lLnYxLlNldEFnZW50TGlmZWN5Y2xlUG9saWN5UmVz",
+            "cG9uc2USWgoLRGVsZXRlQWdlbnQSJC5jb252ZXJnZXBsYW5lLnYxLkRlbGV0",
+            "ZUFnZW50UmVxdWVzdBolLmNvbnZlcmdlcGxhbmUudjEuRGVsZXRlQWdlbnRS",
+            "ZXNwb25zZUJNWktnaXRodWIuY29tL2NvbnZlcmdlcGxhbmUvY29udmVyZ2Vw",
+            "bGFuZS9nZW4vY29udmVyZ2VwbGFuZS92MTtjb252ZXJnZXBsYW5ldjFiBnBy",
+            "b3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.StructReflection.Descriptor, global::Convergeplane.V1.ResourceInstanceReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.CreateResourceRequest), global::Convergeplane.V1.CreateResourceRequest.Parser, new[]{ "CorrelationId", "ResourceType", "TenantId", "InitialState", "OperationTimeoutSeconds" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.CreateResourceRequest), global::Convergeplane.V1.CreateResourceRequest.Parser, new[]{ "CorrelationId", "ResourceType", "TenantId", "InitialState", "OperationTimeoutSeconds", "WorkflowConfig" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.CreateResourceResponse), global::Convergeplane.V1.CreateResourceResponse.Parser, new[]{ "ResourceInstance" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.ReconcileResourceRequest), global::Convergeplane.V1.ReconcileResourceRequest.Parser, new[]{ "CorrelationId", "ResourceInstanceId", "GoalState", "OperationTimeoutSeconds" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.ReconcileResourceResponse), global::Convergeplane.V1.ReconcileResourceResponse.Parser, new[]{ "RequestId" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.DeleteResourceRequest), global::Convergeplane.V1.DeleteResourceRequest.Parser, new[]{ "CorrelationId", "ResourceInstanceId", "OperationTimeoutSeconds" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.DeleteResourceResponse), global::Convergeplane.V1.DeleteResourceResponse.Parser, new[]{ "RequestId" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.GetResourceStateRequest), global::Convergeplane.V1.GetResourceStateRequest.Parser, new[]{ "ResourceInstanceId" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.GetResourceStateResponse), global::Convergeplane.V1.GetResourceStateResponse.Parser, new[]{ "CurrentConfigState", "GoalConfigState", "LifecycleState" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.GetResourceStateResponse), global::Convergeplane.V1.GetResourceStateResponse.Parser, new[]{ "ResourceInstance" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.SetAgentRuntimePolicyRequest), global::Convergeplane.V1.SetAgentRuntimePolicyRequest.Parser, new[]{ "ResourceInstanceId", "AgentName", "RuntimePolicy" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.SetAgentRuntimePolicyResponse), global::Convergeplane.V1.SetAgentRuntimePolicyResponse.Parser, null, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.SetAgentLifecyclePolicyRequest), global::Convergeplane.V1.SetAgentLifecyclePolicyRequest.Parser, new[]{ "ResourceInstanceId", "AgentName", "LifecyclePolicy" }, null, null, null, null),
@@ -148,6 +148,7 @@ namespace Convergeplane.V1 {
       tenantId_ = other.tenantId_;
       initialState_ = other.initialState_ != null ? other.initialState_.Clone() : null;
       operationTimeoutSeconds_ = other.operationTimeoutSeconds_;
+      workflowConfig_ = other.workflowConfig_ != null ? other.workflowConfig_.Clone() : null;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -209,8 +210,7 @@ namespace Convergeplane.V1 {
     public const int OperationTimeoutSecondsFieldNumber = 5;
     private int operationTimeoutSeconds_;
     /// <summary>
-    /// Per-request operation timeout in seconds. Falls back to tenant policy, then tenant group policy.
-    /// Must be resolvable from one of these sources or the request will be rejected.
+    /// Deprecated: use workflow_config.invoke_timeout_seconds instead.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -218,6 +218,18 @@ namespace Convergeplane.V1 {
       get { return operationTimeoutSeconds_; }
       set {
         operationTimeoutSeconds_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "workflow_config" field.</summary>
+    public const int WorkflowConfigFieldNumber = 6;
+    private global::Convergeplane.V1.WorkflowConfig workflowConfig_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Convergeplane.V1.WorkflowConfig WorkflowConfig {
+      get { return workflowConfig_; }
+      set {
+        workflowConfig_ = value;
       }
     }
 
@@ -241,6 +253,7 @@ namespace Convergeplane.V1 {
       if (TenantId != other.TenantId) return false;
       if (!object.Equals(InitialState, other.InitialState)) return false;
       if (OperationTimeoutSeconds != other.OperationTimeoutSeconds) return false;
+      if (!object.Equals(WorkflowConfig, other.WorkflowConfig)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -253,6 +266,7 @@ namespace Convergeplane.V1 {
       if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
       if (initialState_ != null) hash ^= InitialState.GetHashCode();
       if (OperationTimeoutSeconds != 0) hash ^= OperationTimeoutSeconds.GetHashCode();
+      if (workflowConfig_ != null) hash ^= WorkflowConfig.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -291,6 +305,10 @@ namespace Convergeplane.V1 {
         output.WriteRawTag(40);
         output.WriteInt32(OperationTimeoutSeconds);
       }
+      if (workflowConfig_ != null) {
+        output.WriteRawTag(50);
+        output.WriteMessage(WorkflowConfig);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -321,6 +339,10 @@ namespace Convergeplane.V1 {
         output.WriteRawTag(40);
         output.WriteInt32(OperationTimeoutSeconds);
       }
+      if (workflowConfig_ != null) {
+        output.WriteRawTag(50);
+        output.WriteMessage(WorkflowConfig);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -345,6 +367,9 @@ namespace Convergeplane.V1 {
       }
       if (OperationTimeoutSeconds != 0) {
         size += 1 + pb::CodedOutputStream.ComputeInt32Size(OperationTimeoutSeconds);
+      }
+      if (workflowConfig_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(WorkflowConfig);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -375,6 +400,12 @@ namespace Convergeplane.V1 {
       }
       if (other.OperationTimeoutSeconds != 0) {
         OperationTimeoutSeconds = other.OperationTimeoutSeconds;
+      }
+      if (other.workflowConfig_ != null) {
+        if (workflowConfig_ == null) {
+          WorkflowConfig = new global::Convergeplane.V1.WorkflowConfig();
+        }
+        WorkflowConfig.MergeFrom(other.WorkflowConfig);
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -418,6 +449,13 @@ namespace Convergeplane.V1 {
             OperationTimeoutSeconds = input.ReadInt32();
             break;
           }
+          case 50: {
+            if (workflowConfig_ == null) {
+              WorkflowConfig = new global::Convergeplane.V1.WorkflowConfig();
+            }
+            input.ReadMessage(WorkflowConfig);
+            break;
+          }
         }
       }
     #endif
@@ -458,6 +496,13 @@ namespace Convergeplane.V1 {
           }
           case 40: {
             OperationTimeoutSeconds = input.ReadInt32();
+            break;
+          }
+          case 50: {
+            if (workflowConfig_ == null) {
+              WorkflowConfig = new global::Convergeplane.V1.WorkflowConfig();
+            }
+            input.ReadMessage(WorkflowConfig);
             break;
           }
         }
@@ -1893,9 +1938,7 @@ namespace Convergeplane.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public GetResourceStateResponse(GetResourceStateResponse other) : this() {
-      currentConfigState_ = other.currentConfigState_ != null ? other.currentConfigState_.Clone() : null;
-      goalConfigState_ = other.goalConfigState_ != null ? other.goalConfigState_.Clone() : null;
-      lifecycleState_ = other.lifecycleState_;
+      resourceInstance_ = other.resourceInstance_ != null ? other.resourceInstance_.Clone() : null;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -1905,39 +1948,15 @@ namespace Convergeplane.V1 {
       return new GetResourceStateResponse(this);
     }
 
-    /// <summary>Field number for the "current_config_state" field.</summary>
-    public const int CurrentConfigStateFieldNumber = 1;
-    private global::Google.Protobuf.WellKnownTypes.Struct currentConfigState_;
+    /// <summary>Field number for the "resource_instance" field.</summary>
+    public const int ResourceInstanceFieldNumber = 1;
+    private global::Convergeplane.V1.ResourceInstance resourceInstance_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Google.Protobuf.WellKnownTypes.Struct CurrentConfigState {
-      get { return currentConfigState_; }
+    public global::Convergeplane.V1.ResourceInstance ResourceInstance {
+      get { return resourceInstance_; }
       set {
-        currentConfigState_ = value;
-      }
-    }
-
-    /// <summary>Field number for the "goal_config_state" field.</summary>
-    public const int GoalConfigStateFieldNumber = 2;
-    private global::Google.Protobuf.WellKnownTypes.Struct goalConfigState_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Google.Protobuf.WellKnownTypes.Struct GoalConfigState {
-      get { return goalConfigState_; }
-      set {
-        goalConfigState_ = value;
-      }
-    }
-
-    /// <summary>Field number for the "lifecycle_state" field.</summary>
-    public const int LifecycleStateFieldNumber = 3;
-    private string lifecycleState_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string LifecycleState {
-      get { return lifecycleState_; }
-      set {
-        lifecycleState_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+        resourceInstance_ = value;
       }
     }
 
@@ -1956,9 +1975,7 @@ namespace Convergeplane.V1 {
       if (ReferenceEquals(other, this)) {
         return true;
       }
-      if (!object.Equals(CurrentConfigState, other.CurrentConfigState)) return false;
-      if (!object.Equals(GoalConfigState, other.GoalConfigState)) return false;
-      if (LifecycleState != other.LifecycleState) return false;
+      if (!object.Equals(ResourceInstance, other.ResourceInstance)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -1966,9 +1983,7 @@ namespace Convergeplane.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override int GetHashCode() {
       int hash = 1;
-      if (currentConfigState_ != null) hash ^= CurrentConfigState.GetHashCode();
-      if (goalConfigState_ != null) hash ^= GoalConfigState.GetHashCode();
-      if (LifecycleState.Length != 0) hash ^= LifecycleState.GetHashCode();
+      if (resourceInstance_ != null) hash ^= ResourceInstance.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -1987,17 +2002,9 @@ namespace Convergeplane.V1 {
     #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       output.WriteRawMessage(this);
     #else
-      if (currentConfigState_ != null) {
+      if (resourceInstance_ != null) {
         output.WriteRawTag(10);
-        output.WriteMessage(CurrentConfigState);
-      }
-      if (goalConfigState_ != null) {
-        output.WriteRawTag(18);
-        output.WriteMessage(GoalConfigState);
-      }
-      if (LifecycleState.Length != 0) {
-        output.WriteRawTag(26);
-        output.WriteString(LifecycleState);
+        output.WriteMessage(ResourceInstance);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
@@ -2009,17 +2016,9 @@ namespace Convergeplane.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (currentConfigState_ != null) {
+      if (resourceInstance_ != null) {
         output.WriteRawTag(10);
-        output.WriteMessage(CurrentConfigState);
-      }
-      if (goalConfigState_ != null) {
-        output.WriteRawTag(18);
-        output.WriteMessage(GoalConfigState);
-      }
-      if (LifecycleState.Length != 0) {
-        output.WriteRawTag(26);
-        output.WriteString(LifecycleState);
+        output.WriteMessage(ResourceInstance);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
@@ -2031,14 +2030,8 @@ namespace Convergeplane.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int CalculateSize() {
       int size = 0;
-      if (currentConfigState_ != null) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(CurrentConfigState);
-      }
-      if (goalConfigState_ != null) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(GoalConfigState);
-      }
-      if (LifecycleState.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(LifecycleState);
+      if (resourceInstance_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(ResourceInstance);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -2052,20 +2045,11 @@ namespace Convergeplane.V1 {
       if (other == null) {
         return;
       }
-      if (other.currentConfigState_ != null) {
-        if (currentConfigState_ == null) {
-          CurrentConfigState = new global::Google.Protobuf.WellKnownTypes.Struct();
+      if (other.resourceInstance_ != null) {
+        if (resourceInstance_ == null) {
+          ResourceInstance = new global::Convergeplane.V1.ResourceInstance();
         }
-        CurrentConfigState.MergeFrom(other.CurrentConfigState);
-      }
-      if (other.goalConfigState_ != null) {
-        if (goalConfigState_ == null) {
-          GoalConfigState = new global::Google.Protobuf.WellKnownTypes.Struct();
-        }
-        GoalConfigState.MergeFrom(other.GoalConfigState);
-      }
-      if (other.LifecycleState.Length != 0) {
-        LifecycleState = other.LifecycleState;
+        ResourceInstance.MergeFrom(other.ResourceInstance);
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -2087,21 +2071,10 @@ namespace Convergeplane.V1 {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
           case 10: {
-            if (currentConfigState_ == null) {
-              CurrentConfigState = new global::Google.Protobuf.WellKnownTypes.Struct();
+            if (resourceInstance_ == null) {
+              ResourceInstance = new global::Convergeplane.V1.ResourceInstance();
             }
-            input.ReadMessage(CurrentConfigState);
-            break;
-          }
-          case 18: {
-            if (goalConfigState_ == null) {
-              GoalConfigState = new global::Google.Protobuf.WellKnownTypes.Struct();
-            }
-            input.ReadMessage(GoalConfigState);
-            break;
-          }
-          case 26: {
-            LifecycleState = input.ReadString();
+            input.ReadMessage(ResourceInstance);
             break;
           }
         }
@@ -2124,21 +2097,10 @@ namespace Convergeplane.V1 {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
           case 10: {
-            if (currentConfigState_ == null) {
-              CurrentConfigState = new global::Google.Protobuf.WellKnownTypes.Struct();
+            if (resourceInstance_ == null) {
+              ResourceInstance = new global::Convergeplane.V1.ResourceInstance();
             }
-            input.ReadMessage(CurrentConfigState);
-            break;
-          }
-          case 18: {
-            if (goalConfigState_ == null) {
-              GoalConfigState = new global::Google.Protobuf.WellKnownTypes.Struct();
-            }
-            input.ReadMessage(GoalConfigState);
-            break;
-          }
-          case 26: {
-            LifecycleState = input.ReadString();
+            input.ReadMessage(ResourceInstance);
             break;
           }
         }

@@ -4,17 +4,21 @@ package convergeplane.v1;
 
 option go_package = "github.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1";
 
-import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
+
+message WorkflowConfig {
+  int32 initial_version = 1;
+  int32 invoke_timeout_seconds = 2;
+  int32 repeat_every_seconds = 3;
+  bool triggerable = 4;
+}
 
 // ResourceInstance is an actual instance of a registered resource,
 // tied to a specific tenant. Managed via the ResourceLifecycleService.
 message ResourceInstance {
   string id = 1;
-  string resource_id = 2;
   string tenant_id = 3;
-  google.protobuf.Struct current_state = 4;
-  google.protobuf.Struct goal_state = 5;
   google.protobuf.Timestamp created_at = 6;
-  google.protobuf.Timestamp updated_at = 7;
+  WorkflowConfig workflow_config = 8;
+  string lifecycle_state = 9;
 }

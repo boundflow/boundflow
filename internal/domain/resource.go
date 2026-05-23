@@ -13,12 +13,18 @@ const (
 	LifecycleStateFailed      LifecycleState = "failed"
 )
 
+type WorkflowConfig struct {
+	InitialVersion       int32
+	InvokeTimeoutSeconds int32
+	RepeatEverySeconds   int32
+	Triggerable          bool
+}
+
 type ResourceInstance struct {
 	ID                     string
 	TenantID               string
 	ResourceType           string
-	CurrentConfigState     ResourceState
-	ConfigGoalState        ResourceState
+	WorkflowConfig         WorkflowConfig
 	LifecycleState         LifecycleState
 	SchedulerPartitionID   string
 	TargetVersion          int64

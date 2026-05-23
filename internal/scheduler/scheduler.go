@@ -134,7 +134,7 @@ func (s *Scheduler) FailRequest(ctx context.Context, req string) (bool, error) {
 		return false, fmt.Errorf("error failing request %s: %w", req, err)
 	}
 
-	applied, err := s.resource.ApplyCompletedJob(ctx, request.ResourceInstanceID, request.GoalConfigSnapshot, domain.LifecycleStateFailed, request.Version)
+	applied, err := s.resource.ApplyCompletedJob(ctx, request.ResourceInstanceID, domain.LifecycleStateFailed, request.Version)
 	if err != nil {
 		s.log.Error("failed to apply failed job to resource", "request_id", req, "resource_id", request.ResourceInstanceID, "error", err)
 		return false, err
@@ -196,7 +196,7 @@ func (s *Scheduler) CompleteRequest(ctx context.Context, req string) (bool, erro
 		lifecycleState = domain.LifecycleStateDeleted
 	}
 
-	applied, err := s.resource.ApplyCompletedJob(ctx, request.ResourceInstanceID, request.GoalConfigSnapshot, lifecycleState, request.Version)
+	applied, err := s.resource.ApplyCompletedJob(ctx, request.ResourceInstanceID, lifecycleState, request.Version)
 	if err != nil {
 		s.log.Error("failed to apply completed job to resource", "request_id", req, "resource_id", request.ResourceInstanceID, "error", err)
 		return false, err

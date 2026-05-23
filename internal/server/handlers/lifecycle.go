@@ -31,15 +31,12 @@ func (h *ResourceLifecycleHandler) CreateResource(ctx context.Context, req *conv
 		return nil, status.Errorf(codes.InvalidArgument, "tenant_id is required")
 	}
 
-	initialState := convert.ResourceStateFromProto(req.InitialState)
+	cfg := convert.WorkflowConfigFromProto(req.WorkflowConfig)
 
-	instance, err := h.svc.CreateResource(ctx, req.CorrelationId, req.ResourceType, req.TenantId, initialState, domain.JobPolicy{OperationTimeoutSeconds: int(req.OperationTimeoutSeconds)})
+	instance, err := h.svc.CreateResource(ctx, req.CorrelationId, req.ResourceType, req.TenantId, cfg)
 	if err != nil {
 		if errors.Is(err, storage.ErrAlreadyExists) {
 			return nil, status.Errorf(codes.AlreadyExists, "resource instance already exists")
-		}
-		if errors.Is(err, service.ErrMissingJobPolicy) {
-			return nil, status.Errorf(codes.InvalidArgument, "%v", err)
 		}
 		return nil, status.Errorf(codes.Internal, "create resource: %v", err)
 	}
@@ -54,9 +51,7 @@ func (h *ResourceLifecycleHandler) ReconcileResource(ctx context.Context, req *c
 		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
 	}
 
-	goalState := convert.ResourceStateFromProto(req.GoalState)
-
-	if err := h.svc.ReconcileResource(ctx, req.CorrelationId, req.ResourceInstanceId, goalState, domain.JobPolicy{OperationTimeoutSeconds: int(req.OperationTimeoutSeconds)}); err != nil {
+	if err := h.svc.ReconcileResource(ctx, req.CorrelationId, req.ResourceInstanceId, domain.JobPolicy{OperationTimeoutSeconds: int(req.OperationTimeoutSeconds)}); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Errorf(codes.NotFound, "resource instance not found")
 		}
@@ -77,15 +72,9 @@ func (h *ResourceLifecycleHandler) DeleteResource(ctx context.Context, req *conv
 		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
 	}
 
-	if err := h.svc.DeleteResource(ctx, req.CorrelationId, req.ResourceInstanceId, domain.JobPolicy{OperationTimeoutSeconds: int(req.OperationTimeoutSeconds)}); err != nil {
+	if err := h.svc.DeleteResource(ctx, req.CorrelationId, req.ResourceInstanceId); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Errorf(codes.NotFound, "resource instance not found")
-		}
-		if errors.Is(err, storage.ErrInvalidLifecycleState) {
-			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
-		}
-		if errors.Is(err, service.ErrMissingJobPolicy) {
-			return nil, status.Errorf(codes.InvalidArgument, "%v", err)
 		}
 		return nil, status.Errorf(codes.Internal, "delete resource: %v", err)
 	}
@@ -107,9 +96,7 @@ func (h *ResourceLifecycleHandler) GetResourceState(ctx context.Context, req *co
 	}
 
 	return &convergeplanev1.GetResourceStateResponse{
-		CurrentConfigState: convert.ResourceStateToProto(instance.CurrentConfigState),
-		GoalConfigState:    convert.ResourceStateToProto(instance.ConfigGoalState),
-		LifecycleState:     string(instance.LifecycleState),
+		ResourceInstance: convert.ResourceInstanceToProto(instance),
 	}, nil
 }
 

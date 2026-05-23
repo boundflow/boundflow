@@ -177,18 +177,18 @@ func (m *MockResourceInstanceRepository) EXPECT() *MockResourceInstanceRepositor
 }
 
 // ApplyCompletedJob mocks base method.
-func (m *MockResourceInstanceRepository) ApplyCompletedJob(ctx context.Context, id string, configState domain.ResourceState, lifecycleState domain.LifecycleState, version int64) (bool, error) {
+func (m *MockResourceInstanceRepository) ApplyCompletedJob(ctx context.Context, id string, lifecycleState domain.LifecycleState, version int64) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ApplyCompletedJob", ctx, id, configState, lifecycleState, version)
+	ret := m.ctrl.Call(m, "ApplyCompletedJob", ctx, id, lifecycleState, version)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ApplyCompletedJob indicates an expected call of ApplyCompletedJob.
-func (mr *MockResourceInstanceRepositoryMockRecorder) ApplyCompletedJob(ctx, id, configState, lifecycleState, version any) *gomock.Call {
+func (mr *MockResourceInstanceRepositoryMockRecorder) ApplyCompletedJob(ctx, id, lifecycleState, version any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyCompletedJob", reflect.TypeOf((*MockResourceInstanceRepository)(nil).ApplyCompletedJob), ctx, id, configState, lifecycleState, version)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyCompletedJob", reflect.TypeOf((*MockResourceInstanceRepository)(nil).ApplyCompletedJob), ctx, id, lifecycleState, version)
 }
 
 // Create mocks base method.
@@ -235,38 +235,24 @@ func (mr *MockResourceInstanceRepositoryMockRecorder) IncrementTargetVersion(ctx
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IncrementTargetVersion", reflect.TypeOf((*MockResourceInstanceRepository)(nil).IncrementTargetVersion), ctx, id)
 }
 
-// ReconcileGoalStateAndIncrementVersion mocks base method.
-func (m *MockResourceInstanceRepository) ReconcileGoalStateAndIncrementVersion(ctx context.Context, id string, goalState domain.ResourceState, invalidStates ...domain.LifecycleState) (int64, error) {
+// StartInvocationAndIncrementVersion mocks base method.
+func (m *MockResourceInstanceRepository) StartInvocationAndIncrementVersion(ctx context.Context, id string, invalidStates ...domain.LifecycleState) (int64, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, id, goalState}
+	varargs := []any{ctx, id}
 	for _, a := range invalidStates {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "ReconcileGoalStateAndIncrementVersion", varargs...)
+	ret := m.ctrl.Call(m, "StartInvocationAndIncrementVersion", varargs...)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ReconcileGoalStateAndIncrementVersion indicates an expected call of ReconcileGoalStateAndIncrementVersion.
-func (mr *MockResourceInstanceRepositoryMockRecorder) ReconcileGoalStateAndIncrementVersion(ctx, id, goalState any, invalidStates ...any) *gomock.Call {
+// StartInvocationAndIncrementVersion indicates an expected call of StartInvocationAndIncrementVersion.
+func (mr *MockResourceInstanceRepositoryMockRecorder) StartInvocationAndIncrementVersion(ctx, id any, invalidStates ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, id, goalState}, invalidStates...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileGoalStateAndIncrementVersion", reflect.TypeOf((*MockResourceInstanceRepository)(nil).ReconcileGoalStateAndIncrementVersion), varargs...)
-}
-
-// UpdateConfigState mocks base method.
-func (m *MockResourceInstanceRepository) UpdateConfigState(ctx context.Context, id string, currentState, goalState domain.ResourceState) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateConfigState", ctx, id, currentState, goalState)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// UpdateConfigState indicates an expected call of UpdateConfigState.
-func (mr *MockResourceInstanceRepositoryMockRecorder) UpdateConfigState(ctx, id, currentState, goalState any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateConfigState", reflect.TypeOf((*MockResourceInstanceRepository)(nil).UpdateConfigState), ctx, id, currentState, goalState)
+	varargs := append([]any{ctx, id}, invalidStates...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartInvocationAndIncrementVersion", reflect.TypeOf((*MockResourceInstanceRepository)(nil).StartInvocationAndIncrementVersion), varargs...)
 }
 
 // UpdateCurrentVersion mocks base method.
@@ -281,26 +267,6 @@ func (m *MockResourceInstanceRepository) UpdateCurrentVersion(ctx context.Contex
 func (mr *MockResourceInstanceRepositoryMockRecorder) UpdateCurrentVersion(ctx, id, version any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCurrentVersion", reflect.TypeOf((*MockResourceInstanceRepository)(nil).UpdateCurrentVersion), ctx, id, version)
-}
-
-// UpdateGoalStateAndIncrementVersion mocks base method.
-func (m *MockResourceInstanceRepository) UpdateGoalStateAndIncrementVersion(ctx context.Context, id string, goalState domain.ResourceState, invalidStates ...domain.LifecycleState) (int64, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, id, goalState}
-	for _, a := range invalidStates {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "UpdateGoalStateAndIncrementVersion", varargs...)
-	ret0, _ := ret[0].(int64)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UpdateGoalStateAndIncrementVersion indicates an expected call of UpdateGoalStateAndIncrementVersion.
-func (mr *MockResourceInstanceRepositoryMockRecorder) UpdateGoalStateAndIncrementVersion(ctx, id, goalState any, invalidStates ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, id, goalState}, invalidStates...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateGoalStateAndIncrementVersion", reflect.TypeOf((*MockResourceInstanceRepository)(nil).UpdateGoalStateAndIncrementVersion), varargs...)
 }
 
 // UpdateLastCompletedRequestAt mocks base method.

@@ -9,7 +9,6 @@ package convergeplanev1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	structpb "google.golang.org/protobuf/types/known/structpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -23,24 +22,90 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type WorkflowConfig struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	InitialVersion       int32                  `protobuf:"varint,1,opt,name=initial_version,json=initialVersion,proto3" json:"initial_version,omitempty"`
+	InvokeTimeoutSeconds int32                  `protobuf:"varint,2,opt,name=invoke_timeout_seconds,json=invokeTimeoutSeconds,proto3" json:"invoke_timeout_seconds,omitempty"`
+	RepeatEverySeconds   int32                  `protobuf:"varint,3,opt,name=repeat_every_seconds,json=repeatEverySeconds,proto3" json:"repeat_every_seconds,omitempty"`
+	Triggerable          bool                   `protobuf:"varint,4,opt,name=triggerable,proto3" json:"triggerable,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *WorkflowConfig) Reset() {
+	*x = WorkflowConfig{}
+	mi := &file_convergeplane_v1_resource_instance_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WorkflowConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WorkflowConfig) ProtoMessage() {}
+
+func (x *WorkflowConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_resource_instance_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WorkflowConfig.ProtoReflect.Descriptor instead.
+func (*WorkflowConfig) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_resource_instance_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *WorkflowConfig) GetInitialVersion() int32 {
+	if x != nil {
+		return x.InitialVersion
+	}
+	return 0
+}
+
+func (x *WorkflowConfig) GetInvokeTimeoutSeconds() int32 {
+	if x != nil {
+		return x.InvokeTimeoutSeconds
+	}
+	return 0
+}
+
+func (x *WorkflowConfig) GetRepeatEverySeconds() int32 {
+	if x != nil {
+		return x.RepeatEverySeconds
+	}
+	return 0
+}
+
+func (x *WorkflowConfig) GetTriggerable() bool {
+	if x != nil {
+		return x.Triggerable
+	}
+	return false
+}
+
 // ResourceInstance is an actual instance of a registered resource,
 // tied to a specific tenant. Managed via the ResourceLifecycleService.
 type ResourceInstance struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ResourceId    string                 `protobuf:"bytes,2,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
-	TenantId      string                 `protobuf:"bytes,3,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	CurrentState  *structpb.Struct       `protobuf:"bytes,4,opt,name=current_state,json=currentState,proto3" json:"current_state,omitempty"`
-	GoalState     *structpb.Struct       `protobuf:"bytes,5,opt,name=goal_state,json=goalState,proto3" json:"goal_state,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TenantId       string                 `protobuf:"bytes,3,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	WorkflowConfig *WorkflowConfig        `protobuf:"bytes,8,opt,name=workflow_config,json=workflowConfig,proto3" json:"workflow_config,omitempty"`
+	LifecycleState string                 `protobuf:"bytes,9,opt,name=lifecycle_state,json=lifecycleState,proto3" json:"lifecycle_state,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ResourceInstance) Reset() {
 	*x = ResourceInstance{}
-	mi := &file_convergeplane_v1_resource_instance_proto_msgTypes[0]
+	mi := &file_convergeplane_v1_resource_instance_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -52,7 +117,7 @@ func (x *ResourceInstance) String() string {
 func (*ResourceInstance) ProtoMessage() {}
 
 func (x *ResourceInstance) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_resource_instance_proto_msgTypes[0]
+	mi := &file_convergeplane_v1_resource_instance_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -65,19 +130,12 @@ func (x *ResourceInstance) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResourceInstance.ProtoReflect.Descriptor instead.
 func (*ResourceInstance) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_resource_instance_proto_rawDescGZIP(), []int{0}
+	return file_convergeplane_v1_resource_instance_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *ResourceInstance) GetId() string {
 	if x != nil {
 		return x.Id
-	}
-	return ""
-}
-
-func (x *ResourceInstance) GetResourceId() string {
-	if x != nil {
-		return x.ResourceId
 	}
 	return ""
 }
@@ -89,20 +147,6 @@ func (x *ResourceInstance) GetTenantId() string {
 	return ""
 }
 
-func (x *ResourceInstance) GetCurrentState() *structpb.Struct {
-	if x != nil {
-		return x.CurrentState
-	}
-	return nil
-}
-
-func (x *ResourceInstance) GetGoalState() *structpb.Struct {
-	if x != nil {
-		return x.GoalState
-	}
-	return nil
-}
-
 func (x *ResourceInstance) GetCreatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.CreatedAt
@@ -110,30 +154,37 @@ func (x *ResourceInstance) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *ResourceInstance) GetUpdatedAt() *timestamppb.Timestamp {
+func (x *ResourceInstance) GetWorkflowConfig() *WorkflowConfig {
 	if x != nil {
-		return x.UpdatedAt
+		return x.WorkflowConfig
 	}
 	return nil
+}
+
+func (x *ResourceInstance) GetLifecycleState() string {
+	if x != nil {
+		return x.LifecycleState
+	}
+	return ""
 }
 
 var File_convergeplane_v1_resource_instance_proto protoreflect.FileDescriptor
 
 const file_convergeplane_v1_resource_instance_proto_rawDesc = "" +
 	"\n" +
-	"(convergeplane/v1/resource_instance.proto\x12\x10convergeplane.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcc\x02\n" +
+	"(convergeplane/v1/resource_instance.proto\x12\x10convergeplane.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc3\x01\n" +
+	"\x0eWorkflowConfig\x12'\n" +
+	"\x0finitial_version\x18\x01 \x01(\x05R\x0einitialVersion\x124\n" +
+	"\x16invoke_timeout_seconds\x18\x02 \x01(\x05R\x14invokeTimeoutSeconds\x120\n" +
+	"\x14repeat_every_seconds\x18\x03 \x01(\x05R\x12repeatEverySeconds\x12 \n" +
+	"\vtriggerable\x18\x04 \x01(\bR\vtriggerable\"\xee\x01\n" +
 	"\x10ResourceInstance\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
-	"\vresource_id\x18\x02 \x01(\tR\n" +
-	"resourceId\x12\x1b\n" +
-	"\ttenant_id\x18\x03 \x01(\tR\btenantId\x12<\n" +
-	"\rcurrent_state\x18\x04 \x01(\v2\x17.google.protobuf.StructR\fcurrentState\x126\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
+	"\ttenant_id\x18\x03 \x01(\tR\btenantId\x129\n" +
 	"\n" +
-	"goal_state\x18\x05 \x01(\v2\x17.google.protobuf.StructR\tgoalState\x129\n" +
-	"\n" +
-	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
-	"\n" +
-	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtBMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12I\n" +
+	"\x0fworkflow_config\x18\b \x01(\v2 .convergeplane.v1.WorkflowConfigR\x0eworkflowConfig\x12'\n" +
+	"\x0flifecycle_state\x18\t \x01(\tR\x0elifecycleStateBMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
 
 var (
 	file_convergeplane_v1_resource_instance_proto_rawDescOnce sync.Once
@@ -147,22 +198,20 @@ func file_convergeplane_v1_resource_instance_proto_rawDescGZIP() []byte {
 	return file_convergeplane_v1_resource_instance_proto_rawDescData
 }
 
-var file_convergeplane_v1_resource_instance_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_convergeplane_v1_resource_instance_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_convergeplane_v1_resource_instance_proto_goTypes = []any{
-	(*ResourceInstance)(nil),      // 0: convergeplane.v1.ResourceInstance
-	(*structpb.Struct)(nil),       // 1: google.protobuf.Struct
+	(*WorkflowConfig)(nil),        // 0: convergeplane.v1.WorkflowConfig
+	(*ResourceInstance)(nil),      // 1: convergeplane.v1.ResourceInstance
 	(*timestamppb.Timestamp)(nil), // 2: google.protobuf.Timestamp
 }
 var file_convergeplane_v1_resource_instance_proto_depIdxs = []int32{
-	1, // 0: convergeplane.v1.ResourceInstance.current_state:type_name -> google.protobuf.Struct
-	1, // 1: convergeplane.v1.ResourceInstance.goal_state:type_name -> google.protobuf.Struct
-	2, // 2: convergeplane.v1.ResourceInstance.created_at:type_name -> google.protobuf.Timestamp
-	2, // 3: convergeplane.v1.ResourceInstance.updated_at:type_name -> google.protobuf.Timestamp
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	2, // 0: convergeplane.v1.ResourceInstance.created_at:type_name -> google.protobuf.Timestamp
+	0, // 1: convergeplane.v1.ResourceInstance.workflow_config:type_name -> convergeplane.v1.WorkflowConfig
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_convergeplane_v1_resource_instance_proto_init() }
@@ -176,7 +225,7 @@ func file_convergeplane_v1_resource_instance_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_convergeplane_v1_resource_instance_proto_rawDesc), len(file_convergeplane_v1_resource_instance_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
