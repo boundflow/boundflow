@@ -36,10 +36,10 @@ public enum LifecycleState
     Failed,
 }
 
-public record WorkflowState(
-    JsonNode? CurrentConfigState,
-    JsonNode? GoalConfigState,
-    LifecycleState LifecycleState
+
+public record RuntimeOverrides(
+    int InitialVersion = 0,
+    int OperationTimeoutSeconds = 0
 );
 
 public record AgentRuntimePolicy(
@@ -49,6 +49,36 @@ public record AgentRuntimePolicy(
     int MaxCallsPerTool = 0,
     string? Model = null
 );
+
+public enum WorkflowState { Created, Active, Paused, Cooldown, Disabled, Deleted }
+
+public enum WorkflowMetric
+{
+    NumFailures,
+    Cost,
+    NumLlmCalls,
+    Latency,
+    ApprovalRejections,
+    ToolFailureRate,
+}
+
+public enum WorkflowPolicyActionType { Pause, Cooldown, SetVersion }
+
+public record WorkflowLifecyclePolicyAction(
+    WorkflowPolicyActionType Type,
+    int CooldownSeconds = 0,
+    int TargetVersion = 0
+);
+
+public record WorkflowLifecyclePolicyRule(
+    WorkflowMetric Metric,
+    double Threshold,
+    int Window = 0,
+    string? ToolName = null,
+    WorkflowLifecyclePolicyAction? Action = null
+);
+
+public record WorkflowLifecyclePolicy(IReadOnlyList<WorkflowLifecyclePolicyRule> Rules);
 
 public enum AgentMetric     { TokensUsed, CostUsd, LlmCalls, CallsPerTool }
 public enum PolicyOperator  { LessThan, LessThanOrEqual, GreaterThan, GreaterThanOrEqual, Equal }

@@ -14,9 +14,9 @@ internal static class LifecyclePolicyEvaluator
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
     };
 
-    internal static AgentRuntimePolicy LoadRuntimePolicy(JsonNode? stateNode)
+    internal static AgentRuntimePolicy LoadRuntimePolicy(JsonNode? policyNode)
     {
-        if (stateNode?["runtime_policy"] is not JsonObject rp) return new AgentRuntimePolicy();
+        if (policyNode is not JsonObject rp) return new AgentRuntimePolicy();
         return new AgentRuntimePolicy(
             MaxLlmCalls:      rp["max_llm_calls"]?.GetValue<int>()             ?? 0,
             MaxCostUsd:       (decimal)(rp["max_cost_usd"]?.GetValue<double>() ?? 0),

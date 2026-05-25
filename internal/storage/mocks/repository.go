@@ -498,9 +498,9 @@ func (mr *MockSchedulerRepositoryMockRecorder) SupercedeOlderRequests(ctx, resou
 }
 
 // UpsertJobAndSchedule mocks base method.
-func (m *MockSchedulerRepository) UpsertJobAndSchedule(ctx context.Context, requestID, agentStateJSON string) (string, int64, bool, error) {
+func (m *MockSchedulerRepository) UpsertJobAndSchedule(ctx context.Context, requestID, contextJSON, currentAtomicOperation string) (string, int64, bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpsertJobAndSchedule", ctx, requestID, agentStateJSON)
+	ret := m.ctrl.Call(m, "UpsertJobAndSchedule", ctx, requestID, contextJSON, currentAtomicOperation)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(int64)
 	ret2, _ := ret[2].(bool)
@@ -509,9 +509,9 @@ func (m *MockSchedulerRepository) UpsertJobAndSchedule(ctx context.Context, requ
 }
 
 // UpsertJobAndSchedule indicates an expected call of UpsertJobAndSchedule.
-func (mr *MockSchedulerRepositoryMockRecorder) UpsertJobAndSchedule(ctx, requestID, agentStateJSON any) *gomock.Call {
+func (mr *MockSchedulerRepositoryMockRecorder) UpsertJobAndSchedule(ctx, requestID, contextJSON, currentAtomicOperation any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertJobAndSchedule", reflect.TypeOf((*MockSchedulerRepository)(nil).UpsertJobAndSchedule), ctx, requestID, agentStateJSON)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertJobAndSchedule", reflect.TypeOf((*MockSchedulerRepository)(nil).UpsertJobAndSchedule), ctx, requestID, contextJSON, currentAtomicOperation)
 }
 
 // MockJobRepository is a mock of JobRepository interface.
@@ -665,21 +665,6 @@ func (mr *MockAgentStateRepositoryMockRecorder) Delete(ctx, resourceInstanceID, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockAgentStateRepository)(nil).Delete), ctx, resourceInstanceID, agentName)
 }
 
-// GetAllForRequest mocks base method.
-func (m *MockAgentStateRepository) GetAllForRequest(ctx context.Context, requestID string) ([]*domain.AgentState, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAllForRequest", ctx, requestID)
-	ret0, _ := ret[0].([]*domain.AgentState)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetAllForRequest indicates an expected call of GetAllForRequest.
-func (mr *MockAgentStateRepositoryMockRecorder) GetAllForRequest(ctx, requestID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllForRequest", reflect.TypeOf((*MockAgentStateRepository)(nil).GetAllForRequest), ctx, requestID)
-}
-
 // GetAllForResource mocks base method.
 func (m *MockAgentStateRepository) GetAllForResource(ctx context.Context, resourceInstanceID string) ([]*domain.AgentState, error) {
 	m.ctrl.T.Helper()
@@ -806,18 +791,18 @@ func (mr *MockCustomerRequestRepositoryMockRecorder) FailRequest(ctx, id any) *g
 }
 
 // Get mocks base method.
-func (m *MockCustomerRequestRepository) Get(ctx context.Context, resourceInstanceID, id string) (*domain.CustomerRequest, error) {
+func (m *MockCustomerRequestRepository) Get(ctx context.Context, id string) (*domain.CustomerRequest, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", ctx, resourceInstanceID, id)
+	ret := m.ctrl.Call(m, "Get", ctx, id)
 	ret0, _ := ret[0].(*domain.CustomerRequest)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockCustomerRequestRepositoryMockRecorder) Get(ctx, resourceInstanceID, id any) *gomock.Call {
+func (mr *MockCustomerRequestRepositoryMockRecorder) Get(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockCustomerRequestRepository)(nil).Get), ctx, resourceInstanceID, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockCustomerRequestRepository)(nil).Get), ctx, id)
 }
 
 // UpdateStatus mocks base method.

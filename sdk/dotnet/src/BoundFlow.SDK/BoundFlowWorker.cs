@@ -72,11 +72,13 @@ public sealed class OperationContext
     /// </summary>
     public async Task<StepResult> RunAgentAsync(AgentDefinition agent, CancellationToken ct = default)
     {
-        // Load server-stored agent state from context.
-        var agentStateNode = Context["_bf_agent_state"]?[agent.Name];
-        var runtimePolicy = LifecyclePolicyEvaluator.LoadRuntimePolicy(agentStateNode);
+        // Runtime policy is snapshotted at request-creation time; lifecycle policy and
+        // metrics are live values injected by the scheduler just before job dispatch.
+        var runtimePolicyNode = Context["agentRuntimePolicies"]?[agent.Name];
+        var agentStateNode    = Context["agentStates"]?[agent.Name];
+        var runtimePolicy  = LifecyclePolicyEvaluator.LoadRuntimePolicy(runtimePolicyNode);
         var lifecyclePolicy = LifecyclePolicyEvaluator.LoadLifecyclePolicy(agentStateNode);
-        var history = LifecyclePolicyEvaluator.LoadMetricsHistory(agentStateNode);
+        var history         = LifecyclePolicyEvaluator.LoadMetricsHistory(agentStateNode);
 
         // Evaluate lifecycle rules and mutate policy accordingly.
         runtimePolicy = LifecyclePolicyEvaluator.ApplyLifecycleRules(lifecyclePolicy, history, runtimePolicy);

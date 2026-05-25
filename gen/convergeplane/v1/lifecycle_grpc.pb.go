@@ -19,13 +19,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ResourceLifecycleService_CreateResource_FullMethodName          = "/convergeplane.v1.ResourceLifecycleService/CreateResource"
-	ResourceLifecycleService_ReconcileResource_FullMethodName       = "/convergeplane.v1.ResourceLifecycleService/ReconcileResource"
-	ResourceLifecycleService_DeleteResource_FullMethodName          = "/convergeplane.v1.ResourceLifecycleService/DeleteResource"
-	ResourceLifecycleService_GetResourceState_FullMethodName        = "/convergeplane.v1.ResourceLifecycleService/GetResourceState"
-	ResourceLifecycleService_SetAgentRuntimePolicy_FullMethodName   = "/convergeplane.v1.ResourceLifecycleService/SetAgentRuntimePolicy"
-	ResourceLifecycleService_SetAgentLifecyclePolicy_FullMethodName = "/convergeplane.v1.ResourceLifecycleService/SetAgentLifecyclePolicy"
-	ResourceLifecycleService_DeleteAgent_FullMethodName             = "/convergeplane.v1.ResourceLifecycleService/DeleteAgent"
+	ResourceLifecycleService_CreateResource_FullMethodName             = "/convergeplane.v1.ResourceLifecycleService/CreateResource"
+	ResourceLifecycleService_ReconcileResource_FullMethodName          = "/convergeplane.v1.ResourceLifecycleService/ReconcileResource"
+	ResourceLifecycleService_DeleteResource_FullMethodName             = "/convergeplane.v1.ResourceLifecycleService/DeleteResource"
+	ResourceLifecycleService_GetResourceState_FullMethodName           = "/convergeplane.v1.ResourceLifecycleService/GetResourceState"
+	ResourceLifecycleService_SetAgentRuntimePolicy_FullMethodName      = "/convergeplane.v1.ResourceLifecycleService/SetAgentRuntimePolicy"
+	ResourceLifecycleService_SetAgentLifecyclePolicy_FullMethodName    = "/convergeplane.v1.ResourceLifecycleService/SetAgentLifecyclePolicy"
+	ResourceLifecycleService_DeleteAgent_FullMethodName                = "/convergeplane.v1.ResourceLifecycleService/DeleteAgent"
+	ResourceLifecycleService_SetWorkflowLifecyclePolicy_FullMethodName = "/convergeplane.v1.ResourceLifecycleService/SetWorkflowLifecyclePolicy"
+	ResourceLifecycleService_ApproveWorkflow_FullMethodName            = "/convergeplane.v1.ResourceLifecycleService/ApproveWorkflow"
 )
 
 // ResourceLifecycleServiceClient is the client API for ResourceLifecycleService service.
@@ -39,6 +41,8 @@ type ResourceLifecycleServiceClient interface {
 	SetAgentRuntimePolicy(ctx context.Context, in *SetAgentRuntimePolicyRequest, opts ...grpc.CallOption) (*SetAgentRuntimePolicyResponse, error)
 	SetAgentLifecyclePolicy(ctx context.Context, in *SetAgentLifecyclePolicyRequest, opts ...grpc.CallOption) (*SetAgentLifecyclePolicyResponse, error)
 	DeleteAgent(ctx context.Context, in *DeleteAgentRequest, opts ...grpc.CallOption) (*DeleteAgentResponse, error)
+	SetWorkflowLifecyclePolicy(ctx context.Context, in *SetWorkflowLifecyclePolicyRequest, opts ...grpc.CallOption) (*SetWorkflowLifecyclePolicyResponse, error)
+	ApproveWorkflow(ctx context.Context, in *ApproveWorkflowRequest, opts ...grpc.CallOption) (*ApproveWorkflowResponse, error)
 }
 
 type resourceLifecycleServiceClient struct {
@@ -119,6 +123,26 @@ func (c *resourceLifecycleServiceClient) DeleteAgent(ctx context.Context, in *De
 	return out, nil
 }
 
+func (c *resourceLifecycleServiceClient) SetWorkflowLifecyclePolicy(ctx context.Context, in *SetWorkflowLifecyclePolicyRequest, opts ...grpc.CallOption) (*SetWorkflowLifecyclePolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetWorkflowLifecyclePolicyResponse)
+	err := c.cc.Invoke(ctx, ResourceLifecycleService_SetWorkflowLifecyclePolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *resourceLifecycleServiceClient) ApproveWorkflow(ctx context.Context, in *ApproveWorkflowRequest, opts ...grpc.CallOption) (*ApproveWorkflowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ApproveWorkflowResponse)
+	err := c.cc.Invoke(ctx, ResourceLifecycleService_ApproveWorkflow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ResourceLifecycleServiceServer is the server API for ResourceLifecycleService service.
 // All implementations must embed UnimplementedResourceLifecycleServiceServer
 // for forward compatibility.
@@ -130,6 +154,8 @@ type ResourceLifecycleServiceServer interface {
 	SetAgentRuntimePolicy(context.Context, *SetAgentRuntimePolicyRequest) (*SetAgentRuntimePolicyResponse, error)
 	SetAgentLifecyclePolicy(context.Context, *SetAgentLifecyclePolicyRequest) (*SetAgentLifecyclePolicyResponse, error)
 	DeleteAgent(context.Context, *DeleteAgentRequest) (*DeleteAgentResponse, error)
+	SetWorkflowLifecyclePolicy(context.Context, *SetWorkflowLifecyclePolicyRequest) (*SetWorkflowLifecyclePolicyResponse, error)
+	ApproveWorkflow(context.Context, *ApproveWorkflowRequest) (*ApproveWorkflowResponse, error)
 	mustEmbedUnimplementedResourceLifecycleServiceServer()
 }
 
@@ -160,6 +186,12 @@ func (UnimplementedResourceLifecycleServiceServer) SetAgentLifecyclePolicy(conte
 }
 func (UnimplementedResourceLifecycleServiceServer) DeleteAgent(context.Context, *DeleteAgentRequest) (*DeleteAgentResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteAgent not implemented")
+}
+func (UnimplementedResourceLifecycleServiceServer) SetWorkflowLifecyclePolicy(context.Context, *SetWorkflowLifecyclePolicyRequest) (*SetWorkflowLifecyclePolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetWorkflowLifecyclePolicy not implemented")
+}
+func (UnimplementedResourceLifecycleServiceServer) ApproveWorkflow(context.Context, *ApproveWorkflowRequest) (*ApproveWorkflowResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ApproveWorkflow not implemented")
 }
 func (UnimplementedResourceLifecycleServiceServer) mustEmbedUnimplementedResourceLifecycleServiceServer() {
 }
@@ -309,6 +341,42 @@ func _ResourceLifecycleService_DeleteAgent_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ResourceLifecycleService_SetWorkflowLifecyclePolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetWorkflowLifecyclePolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ResourceLifecycleServiceServer).SetWorkflowLifecyclePolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ResourceLifecycleService_SetWorkflowLifecyclePolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ResourceLifecycleServiceServer).SetWorkflowLifecyclePolicy(ctx, req.(*SetWorkflowLifecyclePolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ResourceLifecycleService_ApproveWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ApproveWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ResourceLifecycleServiceServer).ApproveWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ResourceLifecycleService_ApproveWorkflow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ResourceLifecycleServiceServer).ApproveWorkflow(ctx, req.(*ApproveWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ResourceLifecycleService_ServiceDesc is the grpc.ServiceDesc for ResourceLifecycleService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -343,6 +411,14 @@ var ResourceLifecycleService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteAgent",
 			Handler:    _ResourceLifecycleService_DeleteAgent_Handler,
+		},
+		{
+			MethodName: "SetWorkflowLifecyclePolicy",
+			Handler:    _ResourceLifecycleService_SetWorkflowLifecyclePolicy_Handler,
+		},
+		{
+			MethodName: "ApproveWorkflow",
+			Handler:    _ResourceLifecycleService_ApproveWorkflow_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

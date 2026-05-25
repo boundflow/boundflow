@@ -14,7 +14,7 @@ import (
 	"github.com/convergeplane/convergeplane/internal/storage"
 )
 
-var ErrMissingJobPolicy = errors.New("operation_timeout_seconds must be set on the request, tenant policy, or tenant group policy")
+var ErrMissingRuntimeParams = errors.New("operation_timeout_seconds must be set on the request, tenant policy, or tenant group policy")
 
 // RequestScheduler is the scheduling capability the lifecycle service needs.
 // Satisfied by *scheduler.Scheduler.
@@ -55,33 +55,43 @@ func NewLifecycleService(
 	}
 }
 
-// resolveJobPolicy builds the JobPolicy for a new job by merging (in order):
-// the per-request override, the tenant's policy overrides, the tenant group's policies.
-// Returns ErrMissingJobPolicy if required fields cannot be resolved.
-func (s *LifecycleService) resolveJobPolicy(ctx context.Context, tenantID string, requestPolicy domain.JobPolicy) (domain.JobPolicy, error) {
-	resolved := requestPolicy
+func (s *LifecycleService) resolveRuntimeParams(params domain.WorkflowRuntimeParams, instance *domain.ResourceInstance, userTriggered bool, requestInfo map[string]any) error {
+	if !instance.WorkflowConfig.Triggerable && userTriggered {
+		return fmt.Errorf("workflow is not triggerable")
+	}
 
-	if resolved.OperationTimeoutSeconds == 0 {
-		tenant, err := s.tenants.Get(ctx, tenantID)
-		if err != nil {
-			return domain.JobPolicy{}, fmt.Errorf("look up tenant: %w", err)
-		}
-		if tenant.PolicyOverrides != nil && tenant.PolicyOverrides.OperationTimeoutSeconds > 0 {
-			resolved.OperationTimeoutSeconds = tenant.PolicyOverrides.OperationTimeoutSeconds
-		} else {
-			group, err := s.tenantGroups.Get(ctx, tenant.TenantGroupID)
-			if err != nil {
-				return domain.JobPolicy{}, fmt.Errorf("look up tenant group: %w", err)
-			}
-			resolved.OperationTimeoutSeconds = group.Policies.OperationTimeoutSeconds
+	version := params.InitialVersion
+	if version == 0 {
+		version = int(instance.WorkflowConfig.InitialVersion)
+		if version == 0 {
+			return fmt.Errorf("no workflow version specified")
 		}
 	}
 
-	if resolved.OperationTimeoutSeconds == 0 {
-		return domain.JobPolicy{}, ErrMissingJobPolicy
+	timeout := params.OperationTimeoutSeconds
+	if timeout == 0 {
+		timeout = int(instance.WorkflowConfig.InvokeTimeoutSeconds)
+		if timeout == 0 {
+			return fmt.Errorf("no invoke timeout specified")
+		}
 	}
 
-	return resolved, nil
+	requestInfo["initialVersion"] = version
+	requestInfo["operationTimeoutSeconds"] = timeout
+	return nil
+}
+
+func (s *LifecycleService) resolveAgentRuntimeParams(ctx context.Context, resourceInstanceID string, requestInfo map[string]any) error {
+	agents, err := s.agentStates.GetAllForResource(ctx, resourceInstanceID)
+	if err != nil {
+		return fmt.Errorf("get agent states: %w", err)
+	}
+	policies := make(map[string]any, len(agents))
+	for _, a := range agents {
+		policies[a.AgentName] = a.RuntimePolicy
+	}
+	requestInfo["agentRuntimePolicies"] = policies
+	return nil
 }
 
 func (s *LifecycleService) CreateResource(ctx context.Context, correlationID, resourceType, tenantID string, cfg domain.WorkflowConfig) (*domain.ResourceInstance, error) {
@@ -108,15 +118,22 @@ func (s *LifecycleService) CreateResource(ctx context.Context, correlationID, re
 	return &resourceInstance, nil
 }
 
-func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID, resourceInstanceID string, requestPolicy domain.JobPolicy) error {
+func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID, resourceInstanceID string, params domain.WorkflowRuntimeParams) error {
 	s.log.Info("reconciling resource", "correlation_id", correlationID, "resource_id", resourceInstanceID)
 
 	instance, err := s.resourceInstances.Get(ctx, resourceInstanceID)
 	if err != nil {
 		return fmt.Errorf("get resource instance: %w", err)
 	}
-	policy, err := s.resolveJobPolicy(ctx, instance.TenantID, requestPolicy)
-	if err != nil {
+
+	requestInfo := map[string]any{
+		"correlationId": correlationID,
+	}
+
+	if err := s.resolveRuntimeParams(params, instance, true, requestInfo); err != nil {
+		return err
+	}
+	if err := s.resolveAgentRuntimeParams(ctx, resourceInstanceID, requestInfo); err != nil {
 		return err
 	}
 
@@ -127,10 +144,6 @@ func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID,
 		return fmt.Errorf("start invocation: %w", err)
 	}
 
-	requestInfo := map[string]any{
-		"correlationId": correlationID,
-	}
-
 	request := domain.CustomerRequest{
 		ID:                 uuid.New().String(),
 		ResourceInstanceID: resourceInstanceID,
@@ -138,7 +151,6 @@ func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID,
 		RequestType:        domain.CustomerRequestTypeReconcile,
 		RequestInfo:        requestInfo,
 		Version:            ver,
-		JobPolicy:          policy,
 	}
 
 	if err := s.customerRequests.Create(ctx, &request); err != nil {
@@ -197,6 +209,16 @@ func (s *LifecycleService) DeleteAgent(ctx context.Context, resourceInstanceID, 
 		return fmt.Errorf("delete agent state: %w", err)
 	}
 	return nil
+}
+
+func (s *LifecycleService) SetWorkflowLifecyclePolicy(ctx context.Context, resourceInstanceID string, policy domain.WorkflowLifecyclePolicy) error {
+	s.log.Info("setting workflow lifecycle policy", "resource_id", resourceInstanceID)
+	return fmt.Errorf("not implemented")
+}
+
+func (s *LifecycleService) ApproveWorkflow(ctx context.Context, resourceInstanceID string) error {
+	s.log.Info("approving workflow", "resource_id", resourceInstanceID)
+	return fmt.Errorf("not implemented")
 }
 
 func partitionForID(id string, numPartitions int) string {

@@ -22,6 +22,113 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type WorkflowMetric int32
+
+const (
+	WorkflowMetric_WORKFLOW_METRIC_NUM_FAILURES        WorkflowMetric = 0
+	WorkflowMetric_WORKFLOW_METRIC_COST                WorkflowMetric = 1
+	WorkflowMetric_WORKFLOW_METRIC_NUM_LLM_CALLS       WorkflowMetric = 2
+	WorkflowMetric_WORKFLOW_METRIC_LATENCY             WorkflowMetric = 3
+	WorkflowMetric_WORKFLOW_METRIC_APPROVAL_REJECTIONS WorkflowMetric = 4
+	WorkflowMetric_WORKFLOW_METRIC_TOOL_FAILURE_RATE   WorkflowMetric = 5
+)
+
+// Enum value maps for WorkflowMetric.
+var (
+	WorkflowMetric_name = map[int32]string{
+		0: "WORKFLOW_METRIC_NUM_FAILURES",
+		1: "WORKFLOW_METRIC_COST",
+		2: "WORKFLOW_METRIC_NUM_LLM_CALLS",
+		3: "WORKFLOW_METRIC_LATENCY",
+		4: "WORKFLOW_METRIC_APPROVAL_REJECTIONS",
+		5: "WORKFLOW_METRIC_TOOL_FAILURE_RATE",
+	}
+	WorkflowMetric_value = map[string]int32{
+		"WORKFLOW_METRIC_NUM_FAILURES":        0,
+		"WORKFLOW_METRIC_COST":                1,
+		"WORKFLOW_METRIC_NUM_LLM_CALLS":       2,
+		"WORKFLOW_METRIC_LATENCY":             3,
+		"WORKFLOW_METRIC_APPROVAL_REJECTIONS": 4,
+		"WORKFLOW_METRIC_TOOL_FAILURE_RATE":   5,
+	}
+)
+
+func (x WorkflowMetric) Enum() *WorkflowMetric {
+	p := new(WorkflowMetric)
+	*p = x
+	return p
+}
+
+func (x WorkflowMetric) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (WorkflowMetric) Descriptor() protoreflect.EnumDescriptor {
+	return file_convergeplane_v1_lifecycle_proto_enumTypes[0].Descriptor()
+}
+
+func (WorkflowMetric) Type() protoreflect.EnumType {
+	return &file_convergeplane_v1_lifecycle_proto_enumTypes[0]
+}
+
+func (x WorkflowMetric) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use WorkflowMetric.Descriptor instead.
+func (WorkflowMetric) EnumDescriptor() ([]byte, []int) {
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{0}
+}
+
+type WorkflowPolicyActionType int32
+
+const (
+	WorkflowPolicyActionType_WORKFLOW_POLICY_ACTION_PAUSE       WorkflowPolicyActionType = 0
+	WorkflowPolicyActionType_WORKFLOW_POLICY_ACTION_COOLDOWN    WorkflowPolicyActionType = 1
+	WorkflowPolicyActionType_WORKFLOW_POLICY_ACTION_SET_VERSION WorkflowPolicyActionType = 2
+)
+
+// Enum value maps for WorkflowPolicyActionType.
+var (
+	WorkflowPolicyActionType_name = map[int32]string{
+		0: "WORKFLOW_POLICY_ACTION_PAUSE",
+		1: "WORKFLOW_POLICY_ACTION_COOLDOWN",
+		2: "WORKFLOW_POLICY_ACTION_SET_VERSION",
+	}
+	WorkflowPolicyActionType_value = map[string]int32{
+		"WORKFLOW_POLICY_ACTION_PAUSE":       0,
+		"WORKFLOW_POLICY_ACTION_COOLDOWN":    1,
+		"WORKFLOW_POLICY_ACTION_SET_VERSION": 2,
+	}
+)
+
+func (x WorkflowPolicyActionType) Enum() *WorkflowPolicyActionType {
+	p := new(WorkflowPolicyActionType)
+	*p = x
+	return p
+}
+
+func (x WorkflowPolicyActionType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (WorkflowPolicyActionType) Descriptor() protoreflect.EnumDescriptor {
+	return file_convergeplane_v1_lifecycle_proto_enumTypes[1].Descriptor()
+}
+
+func (WorkflowPolicyActionType) Type() protoreflect.EnumType {
+	return &file_convergeplane_v1_lifecycle_proto_enumTypes[1]
+}
+
+func (x WorkflowPolicyActionType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use WorkflowPolicyActionType.Descriptor instead.
+func (WorkflowPolicyActionType) EnumDescriptor() ([]byte, []int) {
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{1}
+}
+
 type CreateResourceRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	CorrelationId string                 `protobuf:"bytes,1,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
@@ -151,19 +258,70 @@ func (x *CreateResourceResponse) GetResourceInstance() *ResourceInstance {
 	return nil
 }
 
-type ReconcileResourceRequest struct {
+type RuntimeOverrides struct {
 	state                   protoimpl.MessageState `protogen:"open.v1"`
-	CorrelationId           string                 `protobuf:"bytes,1,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
-	ResourceInstanceId      string                 `protobuf:"bytes,2,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
-	GoalState               *structpb.Struct       `protobuf:"bytes,3,opt,name=goal_state,json=goalState,proto3" json:"goal_state,omitempty"`
-	OperationTimeoutSeconds int32                  `protobuf:"varint,4,opt,name=operation_timeout_seconds,json=operationTimeoutSeconds,proto3" json:"operation_timeout_seconds,omitempty"`
+	InitialVersion          int32                  `protobuf:"varint,1,opt,name=initial_version,json=initialVersion,proto3" json:"initial_version,omitempty"`
+	OperationTimeoutSeconds int32                  `protobuf:"varint,2,opt,name=operation_timeout_seconds,json=operationTimeoutSeconds,proto3" json:"operation_timeout_seconds,omitempty"`
 	unknownFields           protoimpl.UnknownFields
 	sizeCache               protoimpl.SizeCache
 }
 
+func (x *RuntimeOverrides) Reset() {
+	*x = RuntimeOverrides{}
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RuntimeOverrides) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RuntimeOverrides) ProtoMessage() {}
+
+func (x *RuntimeOverrides) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RuntimeOverrides.ProtoReflect.Descriptor instead.
+func (*RuntimeOverrides) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *RuntimeOverrides) GetInitialVersion() int32 {
+	if x != nil {
+		return x.InitialVersion
+	}
+	return 0
+}
+
+func (x *RuntimeOverrides) GetOperationTimeoutSeconds() int32 {
+	if x != nil {
+		return x.OperationTimeoutSeconds
+	}
+	return 0
+}
+
+type ReconcileResourceRequest struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	CorrelationId      string                 `protobuf:"bytes,1,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	ResourceInstanceId string                 `protobuf:"bytes,2,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
+	RuntimeOverrides   *RuntimeOverrides      `protobuf:"bytes,3,opt,name=runtime_overrides,json=runtimeOverrides,proto3" json:"runtime_overrides,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
 func (x *ReconcileResourceRequest) Reset() {
 	*x = ReconcileResourceRequest{}
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[2]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -175,7 +333,7 @@ func (x *ReconcileResourceRequest) String() string {
 func (*ReconcileResourceRequest) ProtoMessage() {}
 
 func (x *ReconcileResourceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[2]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -188,7 +346,7 @@ func (x *ReconcileResourceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReconcileResourceRequest.ProtoReflect.Descriptor instead.
 func (*ReconcileResourceRequest) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{2}
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ReconcileResourceRequest) GetCorrelationId() string {
@@ -205,18 +363,11 @@ func (x *ReconcileResourceRequest) GetResourceInstanceId() string {
 	return ""
 }
 
-func (x *ReconcileResourceRequest) GetGoalState() *structpb.Struct {
+func (x *ReconcileResourceRequest) GetRuntimeOverrides() *RuntimeOverrides {
 	if x != nil {
-		return x.GoalState
+		return x.RuntimeOverrides
 	}
 	return nil
-}
-
-func (x *ReconcileResourceRequest) GetOperationTimeoutSeconds() int32 {
-	if x != nil {
-		return x.OperationTimeoutSeconds
-	}
-	return 0
 }
 
 type ReconcileResourceResponse struct {
@@ -228,7 +379,7 @@ type ReconcileResourceResponse struct {
 
 func (x *ReconcileResourceResponse) Reset() {
 	*x = ReconcileResourceResponse{}
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[3]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -240,7 +391,7 @@ func (x *ReconcileResourceResponse) String() string {
 func (*ReconcileResourceResponse) ProtoMessage() {}
 
 func (x *ReconcileResourceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[3]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -253,7 +404,7 @@ func (x *ReconcileResourceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReconcileResourceResponse.ProtoReflect.Descriptor instead.
 func (*ReconcileResourceResponse) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{3}
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ReconcileResourceResponse) GetRequestId() string {
@@ -274,7 +425,7 @@ type DeleteResourceRequest struct {
 
 func (x *DeleteResourceRequest) Reset() {
 	*x = DeleteResourceRequest{}
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[4]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -286,7 +437,7 @@ func (x *DeleteResourceRequest) String() string {
 func (*DeleteResourceRequest) ProtoMessage() {}
 
 func (x *DeleteResourceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[4]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -299,7 +450,7 @@ func (x *DeleteResourceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteResourceRequest.ProtoReflect.Descriptor instead.
 func (*DeleteResourceRequest) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{4}
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *DeleteResourceRequest) GetCorrelationId() string {
@@ -332,7 +483,7 @@ type DeleteResourceResponse struct {
 
 func (x *DeleteResourceResponse) Reset() {
 	*x = DeleteResourceResponse{}
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[5]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -344,7 +495,7 @@ func (x *DeleteResourceResponse) String() string {
 func (*DeleteResourceResponse) ProtoMessage() {}
 
 func (x *DeleteResourceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[5]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -357,7 +508,7 @@ func (x *DeleteResourceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteResourceResponse.ProtoReflect.Descriptor instead.
 func (*DeleteResourceResponse) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{5}
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *DeleteResourceResponse) GetRequestId() string {
@@ -376,7 +527,7 @@ type GetResourceStateRequest struct {
 
 func (x *GetResourceStateRequest) Reset() {
 	*x = GetResourceStateRequest{}
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[6]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -388,7 +539,7 @@ func (x *GetResourceStateRequest) String() string {
 func (*GetResourceStateRequest) ProtoMessage() {}
 
 func (x *GetResourceStateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[6]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -401,7 +552,7 @@ func (x *GetResourceStateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetResourceStateRequest.ProtoReflect.Descriptor instead.
 func (*GetResourceStateRequest) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{6}
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *GetResourceStateRequest) GetResourceInstanceId() string {
@@ -420,7 +571,7 @@ type GetResourceStateResponse struct {
 
 func (x *GetResourceStateResponse) Reset() {
 	*x = GetResourceStateResponse{}
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[7]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -432,7 +583,7 @@ func (x *GetResourceStateResponse) String() string {
 func (*GetResourceStateResponse) ProtoMessage() {}
 
 func (x *GetResourceStateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[7]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -445,7 +596,7 @@ func (x *GetResourceStateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetResourceStateResponse.ProtoReflect.Descriptor instead.
 func (*GetResourceStateResponse) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{7}
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetResourceStateResponse) GetResourceInstance() *ResourceInstance {
@@ -467,7 +618,7 @@ type SetAgentRuntimePolicyRequest struct {
 
 func (x *SetAgentRuntimePolicyRequest) Reset() {
 	*x = SetAgentRuntimePolicyRequest{}
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[8]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -479,7 +630,7 @@ func (x *SetAgentRuntimePolicyRequest) String() string {
 func (*SetAgentRuntimePolicyRequest) ProtoMessage() {}
 
 func (x *SetAgentRuntimePolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[8]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -492,7 +643,7 @@ func (x *SetAgentRuntimePolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetAgentRuntimePolicyRequest.ProtoReflect.Descriptor instead.
 func (*SetAgentRuntimePolicyRequest) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{8}
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SetAgentRuntimePolicyRequest) GetResourceInstanceId() string {
@@ -524,7 +675,7 @@ type SetAgentRuntimePolicyResponse struct {
 
 func (x *SetAgentRuntimePolicyResponse) Reset() {
 	*x = SetAgentRuntimePolicyResponse{}
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[9]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -536,7 +687,7 @@ func (x *SetAgentRuntimePolicyResponse) String() string {
 func (*SetAgentRuntimePolicyResponse) ProtoMessage() {}
 
 func (x *SetAgentRuntimePolicyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[9]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -549,7 +700,7 @@ func (x *SetAgentRuntimePolicyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetAgentRuntimePolicyResponse.ProtoReflect.Descriptor instead.
 func (*SetAgentRuntimePolicyResponse) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{9}
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{10}
 }
 
 type SetAgentLifecyclePolicyRequest struct {
@@ -564,7 +715,7 @@ type SetAgentLifecyclePolicyRequest struct {
 
 func (x *SetAgentLifecyclePolicyRequest) Reset() {
 	*x = SetAgentLifecyclePolicyRequest{}
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[10]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -576,7 +727,7 @@ func (x *SetAgentLifecyclePolicyRequest) String() string {
 func (*SetAgentLifecyclePolicyRequest) ProtoMessage() {}
 
 func (x *SetAgentLifecyclePolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[10]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -589,7 +740,7 @@ func (x *SetAgentLifecyclePolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetAgentLifecyclePolicyRequest.ProtoReflect.Descriptor instead.
 func (*SetAgentLifecyclePolicyRequest) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{10}
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *SetAgentLifecyclePolicyRequest) GetResourceInstanceId() string {
@@ -621,7 +772,7 @@ type SetAgentLifecyclePolicyResponse struct {
 
 func (x *SetAgentLifecyclePolicyResponse) Reset() {
 	*x = SetAgentLifecyclePolicyResponse{}
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[11]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -633,7 +784,7 @@ func (x *SetAgentLifecyclePolicyResponse) String() string {
 func (*SetAgentLifecyclePolicyResponse) ProtoMessage() {}
 
 func (x *SetAgentLifecyclePolicyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[11]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -646,7 +797,7 @@ func (x *SetAgentLifecyclePolicyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetAgentLifecyclePolicyResponse.ProtoReflect.Descriptor instead.
 func (*SetAgentLifecyclePolicyResponse) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{11}
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{12}
 }
 
 type DeleteAgentRequest struct {
@@ -659,7 +810,7 @@ type DeleteAgentRequest struct {
 
 func (x *DeleteAgentRequest) Reset() {
 	*x = DeleteAgentRequest{}
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[12]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -671,7 +822,7 @@ func (x *DeleteAgentRequest) String() string {
 func (*DeleteAgentRequest) ProtoMessage() {}
 
 func (x *DeleteAgentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[12]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -684,7 +835,7 @@ func (x *DeleteAgentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAgentRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAgentRequest) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{12}
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *DeleteAgentRequest) GetResourceInstanceId() string {
@@ -709,7 +860,7 @@ type DeleteAgentResponse struct {
 
 func (x *DeleteAgentResponse) Reset() {
 	*x = DeleteAgentResponse{}
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[13]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -721,7 +872,7 @@ func (x *DeleteAgentResponse) String() string {
 func (*DeleteAgentResponse) ProtoMessage() {}
 
 func (x *DeleteAgentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[13]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -734,7 +885,359 @@ func (x *DeleteAgentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAgentResponse.ProtoReflect.Descriptor instead.
 func (*DeleteAgentResponse) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{13}
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{14}
+}
+
+type WorkflowLifecyclePolicyAction struct {
+	state protoimpl.MessageState   `protogen:"open.v1"`
+	Type  WorkflowPolicyActionType `protobuf:"varint,1,opt,name=type,proto3,enum=convergeplane.v1.WorkflowPolicyActionType" json:"type,omitempty"`
+	// Populated when type = COOLDOWN.
+	CooldownSeconds int32 `protobuf:"varint,2,opt,name=cooldown_seconds,json=cooldownSeconds,proto3" json:"cooldown_seconds,omitempty"`
+	// Populated when type = SET_VERSION: the version to roll to.
+	TargetVersion int32 `protobuf:"varint,3,opt,name=target_version,json=targetVersion,proto3" json:"target_version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WorkflowLifecyclePolicyAction) Reset() {
+	*x = WorkflowLifecyclePolicyAction{}
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WorkflowLifecyclePolicyAction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WorkflowLifecyclePolicyAction) ProtoMessage() {}
+
+func (x *WorkflowLifecyclePolicyAction) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WorkflowLifecyclePolicyAction.ProtoReflect.Descriptor instead.
+func (*WorkflowLifecyclePolicyAction) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *WorkflowLifecyclePolicyAction) GetType() WorkflowPolicyActionType {
+	if x != nil {
+		return x.Type
+	}
+	return WorkflowPolicyActionType_WORKFLOW_POLICY_ACTION_PAUSE
+}
+
+func (x *WorkflowLifecyclePolicyAction) GetCooldownSeconds() int32 {
+	if x != nil {
+		return x.CooldownSeconds
+	}
+	return 0
+}
+
+func (x *WorkflowLifecyclePolicyAction) GetTargetVersion() int32 {
+	if x != nil {
+		return x.TargetVersion
+	}
+	return 0
+}
+
+type WorkflowLifecyclePolicyRule struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Metric    WorkflowMetric         `protobuf:"varint,1,opt,name=metric,proto3,enum=convergeplane.v1.WorkflowMetric" json:"metric,omitempty"`
+	Threshold float64                `protobuf:"fixed64,2,opt,name=threshold,proto3" json:"threshold,omitempty"`
+	// Number of recent runs to evaluate. 0 = version-total (only valid with SET_VERSION).
+	Window int32 `protobuf:"varint,3,opt,name=window,proto3" json:"window,omitempty"`
+	// Only for TOOL_FAILURE_RATE: names the specific callback to track.
+	ToolName      string                         `protobuf:"bytes,4,opt,name=tool_name,json=toolName,proto3" json:"tool_name,omitempty"`
+	Action        *WorkflowLifecyclePolicyAction `protobuf:"bytes,5,opt,name=action,proto3" json:"action,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WorkflowLifecyclePolicyRule) Reset() {
+	*x = WorkflowLifecyclePolicyRule{}
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WorkflowLifecyclePolicyRule) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WorkflowLifecyclePolicyRule) ProtoMessage() {}
+
+func (x *WorkflowLifecyclePolicyRule) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WorkflowLifecyclePolicyRule.ProtoReflect.Descriptor instead.
+func (*WorkflowLifecyclePolicyRule) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *WorkflowLifecyclePolicyRule) GetMetric() WorkflowMetric {
+	if x != nil {
+		return x.Metric
+	}
+	return WorkflowMetric_WORKFLOW_METRIC_NUM_FAILURES
+}
+
+func (x *WorkflowLifecyclePolicyRule) GetThreshold() float64 {
+	if x != nil {
+		return x.Threshold
+	}
+	return 0
+}
+
+func (x *WorkflowLifecyclePolicyRule) GetWindow() int32 {
+	if x != nil {
+		return x.Window
+	}
+	return 0
+}
+
+func (x *WorkflowLifecyclePolicyRule) GetToolName() string {
+	if x != nil {
+		return x.ToolName
+	}
+	return ""
+}
+
+func (x *WorkflowLifecyclePolicyRule) GetAction() *WorkflowLifecyclePolicyAction {
+	if x != nil {
+		return x.Action
+	}
+	return nil
+}
+
+type WorkflowLifecyclePolicy struct {
+	state         protoimpl.MessageState         `protogen:"open.v1"`
+	Rules         []*WorkflowLifecyclePolicyRule `protobuf:"bytes,1,rep,name=rules,proto3" json:"rules,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WorkflowLifecyclePolicy) Reset() {
+	*x = WorkflowLifecyclePolicy{}
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WorkflowLifecyclePolicy) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WorkflowLifecyclePolicy) ProtoMessage() {}
+
+func (x *WorkflowLifecyclePolicy) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WorkflowLifecyclePolicy.ProtoReflect.Descriptor instead.
+func (*WorkflowLifecyclePolicy) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *WorkflowLifecyclePolicy) GetRules() []*WorkflowLifecyclePolicyRule {
+	if x != nil {
+		return x.Rules
+	}
+	return nil
+}
+
+type SetWorkflowLifecyclePolicyRequest struct {
+	state              protoimpl.MessageState   `protogen:"open.v1"`
+	ResourceInstanceId string                   `protobuf:"bytes,1,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
+	LifecyclePolicy    *WorkflowLifecyclePolicy `protobuf:"bytes,2,opt,name=lifecycle_policy,json=lifecyclePolicy,proto3" json:"lifecycle_policy,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *SetWorkflowLifecyclePolicyRequest) Reset() {
+	*x = SetWorkflowLifecyclePolicyRequest{}
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetWorkflowLifecyclePolicyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetWorkflowLifecyclePolicyRequest) ProtoMessage() {}
+
+func (x *SetWorkflowLifecyclePolicyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetWorkflowLifecyclePolicyRequest.ProtoReflect.Descriptor instead.
+func (*SetWorkflowLifecyclePolicyRequest) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *SetWorkflowLifecyclePolicyRequest) GetResourceInstanceId() string {
+	if x != nil {
+		return x.ResourceInstanceId
+	}
+	return ""
+}
+
+func (x *SetWorkflowLifecyclePolicyRequest) GetLifecyclePolicy() *WorkflowLifecyclePolicy {
+	if x != nil {
+		return x.LifecyclePolicy
+	}
+	return nil
+}
+
+type SetWorkflowLifecyclePolicyResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetWorkflowLifecyclePolicyResponse) Reset() {
+	*x = SetWorkflowLifecyclePolicyResponse{}
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetWorkflowLifecyclePolicyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetWorkflowLifecyclePolicyResponse) ProtoMessage() {}
+
+func (x *SetWorkflowLifecyclePolicyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetWorkflowLifecyclePolicyResponse.ProtoReflect.Descriptor instead.
+func (*SetWorkflowLifecyclePolicyResponse) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{19}
+}
+
+type ApproveWorkflowRequest struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	ResourceInstanceId string                 `protobuf:"bytes,1,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *ApproveWorkflowRequest) Reset() {
+	*x = ApproveWorkflowRequest{}
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApproveWorkflowRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApproveWorkflowRequest) ProtoMessage() {}
+
+func (x *ApproveWorkflowRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApproveWorkflowRequest.ProtoReflect.Descriptor instead.
+func (*ApproveWorkflowRequest) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *ApproveWorkflowRequest) GetResourceInstanceId() string {
+	if x != nil {
+		return x.ResourceInstanceId
+	}
+	return ""
+}
+
+type ApproveWorkflowResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApproveWorkflowResponse) Reset() {
+	*x = ApproveWorkflowResponse{}
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApproveWorkflowResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApproveWorkflowResponse) ProtoMessage() {}
+
+func (x *ApproveWorkflowResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApproveWorkflowResponse.ProtoReflect.Descriptor instead.
+func (*ApproveWorkflowResponse) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{21}
 }
 
 var File_convergeplane_v1_lifecycle_proto protoreflect.FileDescriptor
@@ -750,13 +1253,14 @@ const file_convergeplane_v1_lifecycle_proto_rawDesc = "" +
 	"\x19operation_timeout_seconds\x18\x05 \x01(\x05R\x17operationTimeoutSeconds\x12I\n" +
 	"\x0fworkflow_config\x18\x06 \x01(\v2 .convergeplane.v1.WorkflowConfigR\x0eworkflowConfig\"i\n" +
 	"\x16CreateResourceResponse\x12O\n" +
-	"\x11resource_instance\x18\x01 \x01(\v2\".convergeplane.v1.ResourceInstanceR\x10resourceInstance\"\xe7\x01\n" +
+	"\x11resource_instance\x18\x01 \x01(\v2\".convergeplane.v1.ResourceInstanceR\x10resourceInstance\"w\n" +
+	"\x10RuntimeOverrides\x12'\n" +
+	"\x0finitial_version\x18\x01 \x01(\x05R\x0einitialVersion\x12:\n" +
+	"\x19operation_timeout_seconds\x18\x02 \x01(\x05R\x17operationTimeoutSeconds\"\xc4\x01\n" +
 	"\x18ReconcileResourceRequest\x12%\n" +
 	"\x0ecorrelation_id\x18\x01 \x01(\tR\rcorrelationId\x120\n" +
-	"\x14resource_instance_id\x18\x02 \x01(\tR\x12resourceInstanceId\x126\n" +
-	"\n" +
-	"goal_state\x18\x03 \x01(\v2\x17.google.protobuf.StructR\tgoalState\x12:\n" +
-	"\x19operation_timeout_seconds\x18\x04 \x01(\x05R\x17operationTimeoutSeconds\":\n" +
+	"\x14resource_instance_id\x18\x02 \x01(\tR\x12resourceInstanceId\x12O\n" +
+	"\x11runtime_overrides\x18\x03 \x01(\v2\".convergeplane.v1.RuntimeOverridesR\x10runtimeOverrides\":\n" +
 	"\x19ReconcileResourceResponse\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x01 \x01(\tR\trequestId\"\xac\x01\n" +
@@ -787,7 +1291,37 @@ const file_convergeplane_v1_lifecycle_proto_rawDesc = "" +
 	"\x14resource_instance_id\x18\x01 \x01(\tR\x12resourceInstanceId\x12\x1d\n" +
 	"\n" +
 	"agent_name\x18\x02 \x01(\tR\tagentName\"\x15\n" +
-	"\x13DeleteAgentResponse2\x93\x06\n" +
+	"\x13DeleteAgentResponse\"\xb1\x01\n" +
+	"\x1dWorkflowLifecyclePolicyAction\x12>\n" +
+	"\x04type\x18\x01 \x01(\x0e2*.convergeplane.v1.WorkflowPolicyActionTypeR\x04type\x12)\n" +
+	"\x10cooldown_seconds\x18\x02 \x01(\x05R\x0fcooldownSeconds\x12%\n" +
+	"\x0etarget_version\x18\x03 \x01(\x05R\rtargetVersion\"\xf3\x01\n" +
+	"\x1bWorkflowLifecyclePolicyRule\x128\n" +
+	"\x06metric\x18\x01 \x01(\x0e2 .convergeplane.v1.WorkflowMetricR\x06metric\x12\x1c\n" +
+	"\tthreshold\x18\x02 \x01(\x01R\tthreshold\x12\x16\n" +
+	"\x06window\x18\x03 \x01(\x05R\x06window\x12\x1b\n" +
+	"\ttool_name\x18\x04 \x01(\tR\btoolName\x12G\n" +
+	"\x06action\x18\x05 \x01(\v2/.convergeplane.v1.WorkflowLifecyclePolicyActionR\x06action\"^\n" +
+	"\x17WorkflowLifecyclePolicy\x12C\n" +
+	"\x05rules\x18\x01 \x03(\v2-.convergeplane.v1.WorkflowLifecyclePolicyRuleR\x05rules\"\xab\x01\n" +
+	"!SetWorkflowLifecyclePolicyRequest\x120\n" +
+	"\x14resource_instance_id\x18\x01 \x01(\tR\x12resourceInstanceId\x12T\n" +
+	"\x10lifecycle_policy\x18\x02 \x01(\v2).convergeplane.v1.WorkflowLifecyclePolicyR\x0flifecyclePolicy\"$\n" +
+	"\"SetWorkflowLifecyclePolicyResponse\"J\n" +
+	"\x16ApproveWorkflowRequest\x120\n" +
+	"\x14resource_instance_id\x18\x01 \x01(\tR\x12resourceInstanceId\"\x19\n" +
+	"\x17ApproveWorkflowResponse*\xdc\x01\n" +
+	"\x0eWorkflowMetric\x12 \n" +
+	"\x1cWORKFLOW_METRIC_NUM_FAILURES\x10\x00\x12\x18\n" +
+	"\x14WORKFLOW_METRIC_COST\x10\x01\x12!\n" +
+	"\x1dWORKFLOW_METRIC_NUM_LLM_CALLS\x10\x02\x12\x1b\n" +
+	"\x17WORKFLOW_METRIC_LATENCY\x10\x03\x12'\n" +
+	"#WORKFLOW_METRIC_APPROVAL_REJECTIONS\x10\x04\x12%\n" +
+	"!WORKFLOW_METRIC_TOOL_FAILURE_RATE\x10\x05*\x89\x01\n" +
+	"\x18WorkflowPolicyActionType\x12 \n" +
+	"\x1cWORKFLOW_POLICY_ACTION_PAUSE\x10\x00\x12#\n" +
+	"\x1fWORKFLOW_POLICY_ACTION_COOLDOWN\x10\x01\x12&\n" +
+	"\"WORKFLOW_POLICY_ACTION_SET_VERSION\x10\x022\x85\b\n" +
 	"\x18ResourceLifecycleService\x12c\n" +
 	"\x0eCreateResource\x12'.convergeplane.v1.CreateResourceRequest\x1a(.convergeplane.v1.CreateResourceResponse\x12l\n" +
 	"\x11ReconcileResource\x12*.convergeplane.v1.ReconcileResourceRequest\x1a+.convergeplane.v1.ReconcileResourceResponse\x12c\n" +
@@ -795,7 +1329,9 @@ const file_convergeplane_v1_lifecycle_proto_rawDesc = "" +
 	"\x10GetResourceState\x12).convergeplane.v1.GetResourceStateRequest\x1a*.convergeplane.v1.GetResourceStateResponse\x12x\n" +
 	"\x15SetAgentRuntimePolicy\x12..convergeplane.v1.SetAgentRuntimePolicyRequest\x1a/.convergeplane.v1.SetAgentRuntimePolicyResponse\x12~\n" +
 	"\x17SetAgentLifecyclePolicy\x120.convergeplane.v1.SetAgentLifecyclePolicyRequest\x1a1.convergeplane.v1.SetAgentLifecyclePolicyResponse\x12Z\n" +
-	"\vDeleteAgent\x12$.convergeplane.v1.DeleteAgentRequest\x1a%.convergeplane.v1.DeleteAgentResponseBMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
+	"\vDeleteAgent\x12$.convergeplane.v1.DeleteAgentRequest\x1a%.convergeplane.v1.DeleteAgentResponse\x12\x87\x01\n" +
+	"\x1aSetWorkflowLifecyclePolicy\x123.convergeplane.v1.SetWorkflowLifecyclePolicyRequest\x1a4.convergeplane.v1.SetWorkflowLifecyclePolicyResponse\x12f\n" +
+	"\x0fApproveWorkflow\x12(.convergeplane.v1.ApproveWorkflowRequest\x1a).convergeplane.v1.ApproveWorkflowResponseBMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
 
 var (
 	file_convergeplane_v1_lifecycle_proto_rawDescOnce sync.Once
@@ -809,53 +1345,73 @@ func file_convergeplane_v1_lifecycle_proto_rawDescGZIP() []byte {
 	return file_convergeplane_v1_lifecycle_proto_rawDescData
 }
 
-var file_convergeplane_v1_lifecycle_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_convergeplane_v1_lifecycle_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_convergeplane_v1_lifecycle_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_convergeplane_v1_lifecycle_proto_goTypes = []any{
-	(*CreateResourceRequest)(nil),           // 0: convergeplane.v1.CreateResourceRequest
-	(*CreateResourceResponse)(nil),          // 1: convergeplane.v1.CreateResourceResponse
-	(*ReconcileResourceRequest)(nil),        // 2: convergeplane.v1.ReconcileResourceRequest
-	(*ReconcileResourceResponse)(nil),       // 3: convergeplane.v1.ReconcileResourceResponse
-	(*DeleteResourceRequest)(nil),           // 4: convergeplane.v1.DeleteResourceRequest
-	(*DeleteResourceResponse)(nil),          // 5: convergeplane.v1.DeleteResourceResponse
-	(*GetResourceStateRequest)(nil),         // 6: convergeplane.v1.GetResourceStateRequest
-	(*GetResourceStateResponse)(nil),        // 7: convergeplane.v1.GetResourceStateResponse
-	(*SetAgentRuntimePolicyRequest)(nil),    // 8: convergeplane.v1.SetAgentRuntimePolicyRequest
-	(*SetAgentRuntimePolicyResponse)(nil),   // 9: convergeplane.v1.SetAgentRuntimePolicyResponse
-	(*SetAgentLifecyclePolicyRequest)(nil),  // 10: convergeplane.v1.SetAgentLifecyclePolicyRequest
-	(*SetAgentLifecyclePolicyResponse)(nil), // 11: convergeplane.v1.SetAgentLifecyclePolicyResponse
-	(*DeleteAgentRequest)(nil),              // 12: convergeplane.v1.DeleteAgentRequest
-	(*DeleteAgentResponse)(nil),             // 13: convergeplane.v1.DeleteAgentResponse
-	(*structpb.Struct)(nil),                 // 14: google.protobuf.Struct
-	(*WorkflowConfig)(nil),                  // 15: convergeplane.v1.WorkflowConfig
-	(*ResourceInstance)(nil),                // 16: convergeplane.v1.ResourceInstance
+	(WorkflowMetric)(0),                        // 0: convergeplane.v1.WorkflowMetric
+	(WorkflowPolicyActionType)(0),              // 1: convergeplane.v1.WorkflowPolicyActionType
+	(*CreateResourceRequest)(nil),              // 2: convergeplane.v1.CreateResourceRequest
+	(*CreateResourceResponse)(nil),             // 3: convergeplane.v1.CreateResourceResponse
+	(*RuntimeOverrides)(nil),                   // 4: convergeplane.v1.RuntimeOverrides
+	(*ReconcileResourceRequest)(nil),           // 5: convergeplane.v1.ReconcileResourceRequest
+	(*ReconcileResourceResponse)(nil),          // 6: convergeplane.v1.ReconcileResourceResponse
+	(*DeleteResourceRequest)(nil),              // 7: convergeplane.v1.DeleteResourceRequest
+	(*DeleteResourceResponse)(nil),             // 8: convergeplane.v1.DeleteResourceResponse
+	(*GetResourceStateRequest)(nil),            // 9: convergeplane.v1.GetResourceStateRequest
+	(*GetResourceStateResponse)(nil),           // 10: convergeplane.v1.GetResourceStateResponse
+	(*SetAgentRuntimePolicyRequest)(nil),       // 11: convergeplane.v1.SetAgentRuntimePolicyRequest
+	(*SetAgentRuntimePolicyResponse)(nil),      // 12: convergeplane.v1.SetAgentRuntimePolicyResponse
+	(*SetAgentLifecyclePolicyRequest)(nil),     // 13: convergeplane.v1.SetAgentLifecyclePolicyRequest
+	(*SetAgentLifecyclePolicyResponse)(nil),    // 14: convergeplane.v1.SetAgentLifecyclePolicyResponse
+	(*DeleteAgentRequest)(nil),                 // 15: convergeplane.v1.DeleteAgentRequest
+	(*DeleteAgentResponse)(nil),                // 16: convergeplane.v1.DeleteAgentResponse
+	(*WorkflowLifecyclePolicyAction)(nil),      // 17: convergeplane.v1.WorkflowLifecyclePolicyAction
+	(*WorkflowLifecyclePolicyRule)(nil),        // 18: convergeplane.v1.WorkflowLifecyclePolicyRule
+	(*WorkflowLifecyclePolicy)(nil),            // 19: convergeplane.v1.WorkflowLifecyclePolicy
+	(*SetWorkflowLifecyclePolicyRequest)(nil),  // 20: convergeplane.v1.SetWorkflowLifecyclePolicyRequest
+	(*SetWorkflowLifecyclePolicyResponse)(nil), // 21: convergeplane.v1.SetWorkflowLifecyclePolicyResponse
+	(*ApproveWorkflowRequest)(nil),             // 22: convergeplane.v1.ApproveWorkflowRequest
+	(*ApproveWorkflowResponse)(nil),            // 23: convergeplane.v1.ApproveWorkflowResponse
+	(*structpb.Struct)(nil),                    // 24: google.protobuf.Struct
+	(*WorkflowConfig)(nil),                     // 25: convergeplane.v1.WorkflowConfig
+	(*ResourceInstance)(nil),                   // 26: convergeplane.v1.ResourceInstance
 }
 var file_convergeplane_v1_lifecycle_proto_depIdxs = []int32{
-	14, // 0: convergeplane.v1.CreateResourceRequest.initial_state:type_name -> google.protobuf.Struct
-	15, // 1: convergeplane.v1.CreateResourceRequest.workflow_config:type_name -> convergeplane.v1.WorkflowConfig
-	16, // 2: convergeplane.v1.CreateResourceResponse.resource_instance:type_name -> convergeplane.v1.ResourceInstance
-	14, // 3: convergeplane.v1.ReconcileResourceRequest.goal_state:type_name -> google.protobuf.Struct
-	16, // 4: convergeplane.v1.GetResourceStateResponse.resource_instance:type_name -> convergeplane.v1.ResourceInstance
-	14, // 5: convergeplane.v1.SetAgentRuntimePolicyRequest.runtime_policy:type_name -> google.protobuf.Struct
-	14, // 6: convergeplane.v1.SetAgentLifecyclePolicyRequest.lifecycle_policy:type_name -> google.protobuf.Struct
-	0,  // 7: convergeplane.v1.ResourceLifecycleService.CreateResource:input_type -> convergeplane.v1.CreateResourceRequest
-	2,  // 8: convergeplane.v1.ResourceLifecycleService.ReconcileResource:input_type -> convergeplane.v1.ReconcileResourceRequest
-	4,  // 9: convergeplane.v1.ResourceLifecycleService.DeleteResource:input_type -> convergeplane.v1.DeleteResourceRequest
-	6,  // 10: convergeplane.v1.ResourceLifecycleService.GetResourceState:input_type -> convergeplane.v1.GetResourceStateRequest
-	8,  // 11: convergeplane.v1.ResourceLifecycleService.SetAgentRuntimePolicy:input_type -> convergeplane.v1.SetAgentRuntimePolicyRequest
-	10, // 12: convergeplane.v1.ResourceLifecycleService.SetAgentLifecyclePolicy:input_type -> convergeplane.v1.SetAgentLifecyclePolicyRequest
-	12, // 13: convergeplane.v1.ResourceLifecycleService.DeleteAgent:input_type -> convergeplane.v1.DeleteAgentRequest
-	1,  // 14: convergeplane.v1.ResourceLifecycleService.CreateResource:output_type -> convergeplane.v1.CreateResourceResponse
-	3,  // 15: convergeplane.v1.ResourceLifecycleService.ReconcileResource:output_type -> convergeplane.v1.ReconcileResourceResponse
-	5,  // 16: convergeplane.v1.ResourceLifecycleService.DeleteResource:output_type -> convergeplane.v1.DeleteResourceResponse
-	7,  // 17: convergeplane.v1.ResourceLifecycleService.GetResourceState:output_type -> convergeplane.v1.GetResourceStateResponse
-	9,  // 18: convergeplane.v1.ResourceLifecycleService.SetAgentRuntimePolicy:output_type -> convergeplane.v1.SetAgentRuntimePolicyResponse
-	11, // 19: convergeplane.v1.ResourceLifecycleService.SetAgentLifecyclePolicy:output_type -> convergeplane.v1.SetAgentLifecyclePolicyResponse
-	13, // 20: convergeplane.v1.ResourceLifecycleService.DeleteAgent:output_type -> convergeplane.v1.DeleteAgentResponse
-	14, // [14:21] is the sub-list for method output_type
-	7,  // [7:14] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	24, // 0: convergeplane.v1.CreateResourceRequest.initial_state:type_name -> google.protobuf.Struct
+	25, // 1: convergeplane.v1.CreateResourceRequest.workflow_config:type_name -> convergeplane.v1.WorkflowConfig
+	26, // 2: convergeplane.v1.CreateResourceResponse.resource_instance:type_name -> convergeplane.v1.ResourceInstance
+	4,  // 3: convergeplane.v1.ReconcileResourceRequest.runtime_overrides:type_name -> convergeplane.v1.RuntimeOverrides
+	26, // 4: convergeplane.v1.GetResourceStateResponse.resource_instance:type_name -> convergeplane.v1.ResourceInstance
+	24, // 5: convergeplane.v1.SetAgentRuntimePolicyRequest.runtime_policy:type_name -> google.protobuf.Struct
+	24, // 6: convergeplane.v1.SetAgentLifecyclePolicyRequest.lifecycle_policy:type_name -> google.protobuf.Struct
+	1,  // 7: convergeplane.v1.WorkflowLifecyclePolicyAction.type:type_name -> convergeplane.v1.WorkflowPolicyActionType
+	0,  // 8: convergeplane.v1.WorkflowLifecyclePolicyRule.metric:type_name -> convergeplane.v1.WorkflowMetric
+	17, // 9: convergeplane.v1.WorkflowLifecyclePolicyRule.action:type_name -> convergeplane.v1.WorkflowLifecyclePolicyAction
+	18, // 10: convergeplane.v1.WorkflowLifecyclePolicy.rules:type_name -> convergeplane.v1.WorkflowLifecyclePolicyRule
+	19, // 11: convergeplane.v1.SetWorkflowLifecyclePolicyRequest.lifecycle_policy:type_name -> convergeplane.v1.WorkflowLifecyclePolicy
+	2,  // 12: convergeplane.v1.ResourceLifecycleService.CreateResource:input_type -> convergeplane.v1.CreateResourceRequest
+	5,  // 13: convergeplane.v1.ResourceLifecycleService.ReconcileResource:input_type -> convergeplane.v1.ReconcileResourceRequest
+	7,  // 14: convergeplane.v1.ResourceLifecycleService.DeleteResource:input_type -> convergeplane.v1.DeleteResourceRequest
+	9,  // 15: convergeplane.v1.ResourceLifecycleService.GetResourceState:input_type -> convergeplane.v1.GetResourceStateRequest
+	11, // 16: convergeplane.v1.ResourceLifecycleService.SetAgentRuntimePolicy:input_type -> convergeplane.v1.SetAgentRuntimePolicyRequest
+	13, // 17: convergeplane.v1.ResourceLifecycleService.SetAgentLifecyclePolicy:input_type -> convergeplane.v1.SetAgentLifecyclePolicyRequest
+	15, // 18: convergeplane.v1.ResourceLifecycleService.DeleteAgent:input_type -> convergeplane.v1.DeleteAgentRequest
+	20, // 19: convergeplane.v1.ResourceLifecycleService.SetWorkflowLifecyclePolicy:input_type -> convergeplane.v1.SetWorkflowLifecyclePolicyRequest
+	22, // 20: convergeplane.v1.ResourceLifecycleService.ApproveWorkflow:input_type -> convergeplane.v1.ApproveWorkflowRequest
+	3,  // 21: convergeplane.v1.ResourceLifecycleService.CreateResource:output_type -> convergeplane.v1.CreateResourceResponse
+	6,  // 22: convergeplane.v1.ResourceLifecycleService.ReconcileResource:output_type -> convergeplane.v1.ReconcileResourceResponse
+	8,  // 23: convergeplane.v1.ResourceLifecycleService.DeleteResource:output_type -> convergeplane.v1.DeleteResourceResponse
+	10, // 24: convergeplane.v1.ResourceLifecycleService.GetResourceState:output_type -> convergeplane.v1.GetResourceStateResponse
+	12, // 25: convergeplane.v1.ResourceLifecycleService.SetAgentRuntimePolicy:output_type -> convergeplane.v1.SetAgentRuntimePolicyResponse
+	14, // 26: convergeplane.v1.ResourceLifecycleService.SetAgentLifecyclePolicy:output_type -> convergeplane.v1.SetAgentLifecyclePolicyResponse
+	16, // 27: convergeplane.v1.ResourceLifecycleService.DeleteAgent:output_type -> convergeplane.v1.DeleteAgentResponse
+	21, // 28: convergeplane.v1.ResourceLifecycleService.SetWorkflowLifecyclePolicy:output_type -> convergeplane.v1.SetWorkflowLifecyclePolicyResponse
+	23, // 29: convergeplane.v1.ResourceLifecycleService.ApproveWorkflow:output_type -> convergeplane.v1.ApproveWorkflowResponse
+	21, // [21:30] is the sub-list for method output_type
+	12, // [12:21] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_convergeplane_v1_lifecycle_proto_init() }
@@ -869,13 +1425,14 @@ func file_convergeplane_v1_lifecycle_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_convergeplane_v1_lifecycle_proto_rawDesc), len(file_convergeplane_v1_lifecycle_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   14,
+			NumEnums:      2,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_convergeplane_v1_lifecycle_proto_goTypes,
 		DependencyIndexes: file_convergeplane_v1_lifecycle_proto_depIdxs,
+		EnumInfos:         file_convergeplane_v1_lifecycle_proto_enumTypes,
 		MessageInfos:      file_convergeplane_v1_lifecycle_proto_msgTypes,
 	}.Build()
 	File_convergeplane_v1_lifecycle_proto = out.File

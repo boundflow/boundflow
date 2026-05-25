@@ -20,12 +20,24 @@ type WorkflowConfig struct {
 	Triggerable          bool
 }
 
+type WorkflowState string
+
+const (
+	WorkflowStateCreated  WorkflowState = "created"
+	WorkflowStateActive   WorkflowState = "active"
+	WorkflowStatePaused   WorkflowState = "paused"
+	WorkflowStateCooldown WorkflowState = "cooldown"
+	WorkflowStateDisabled WorkflowState = "disabled"
+	WorkflowStateDeleted  WorkflowState = "deleted"
+)
+
 type ResourceInstance struct {
 	ID                     string
 	TenantID               string
 	ResourceType           string
 	WorkflowConfig         WorkflowConfig
 	LifecycleState         LifecycleState
+	WorkflowState          WorkflowState
 	SchedulerPartitionID   string
 	TargetVersion          int64
 	CurrentVersion         int64

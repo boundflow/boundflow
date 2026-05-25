@@ -22,6 +22,64 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type WorkflowState int32
+
+const (
+	WorkflowState_WORKFLOW_STATE_CREATED  WorkflowState = 0
+	WorkflowState_WORKFLOW_STATE_ACTIVE   WorkflowState = 1
+	WorkflowState_WORKFLOW_STATE_PAUSED   WorkflowState = 2
+	WorkflowState_WORKFLOW_STATE_COOLDOWN WorkflowState = 3
+	WorkflowState_WORKFLOW_STATE_DISABLED WorkflowState = 4
+	WorkflowState_WORKFLOW_STATE_DELETED  WorkflowState = 5
+)
+
+// Enum value maps for WorkflowState.
+var (
+	WorkflowState_name = map[int32]string{
+		0: "WORKFLOW_STATE_CREATED",
+		1: "WORKFLOW_STATE_ACTIVE",
+		2: "WORKFLOW_STATE_PAUSED",
+		3: "WORKFLOW_STATE_COOLDOWN",
+		4: "WORKFLOW_STATE_DISABLED",
+		5: "WORKFLOW_STATE_DELETED",
+	}
+	WorkflowState_value = map[string]int32{
+		"WORKFLOW_STATE_CREATED":  0,
+		"WORKFLOW_STATE_ACTIVE":   1,
+		"WORKFLOW_STATE_PAUSED":   2,
+		"WORKFLOW_STATE_COOLDOWN": 3,
+		"WORKFLOW_STATE_DISABLED": 4,
+		"WORKFLOW_STATE_DELETED":  5,
+	}
+)
+
+func (x WorkflowState) Enum() *WorkflowState {
+	p := new(WorkflowState)
+	*p = x
+	return p
+}
+
+func (x WorkflowState) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (WorkflowState) Descriptor() protoreflect.EnumDescriptor {
+	return file_convergeplane_v1_resource_instance_proto_enumTypes[0].Descriptor()
+}
+
+func (WorkflowState) Type() protoreflect.EnumType {
+	return &file_convergeplane_v1_resource_instance_proto_enumTypes[0]
+}
+
+func (x WorkflowState) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use WorkflowState.Descriptor instead.
+func (WorkflowState) EnumDescriptor() ([]byte, []int) {
+	return file_convergeplane_v1_resource_instance_proto_rawDescGZIP(), []int{0}
+}
+
 type WorkflowConfig struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	InitialVersion       int32                  `protobuf:"varint,1,opt,name=initial_version,json=initialVersion,proto3" json:"initial_version,omitempty"`
@@ -99,6 +157,7 @@ type ResourceInstance struct {
 	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	WorkflowConfig *WorkflowConfig        `protobuf:"bytes,8,opt,name=workflow_config,json=workflowConfig,proto3" json:"workflow_config,omitempty"`
 	LifecycleState string                 `protobuf:"bytes,9,opt,name=lifecycle_state,json=lifecycleState,proto3" json:"lifecycle_state,omitempty"`
+	WorkflowState  WorkflowState          `protobuf:"varint,10,opt,name=workflow_state,json=workflowState,proto3,enum=convergeplane.v1.WorkflowState" json:"workflow_state,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -168,6 +227,13 @@ func (x *ResourceInstance) GetLifecycleState() string {
 	return ""
 }
 
+func (x *ResourceInstance) GetWorkflowState() WorkflowState {
+	if x != nil {
+		return x.WorkflowState
+	}
+	return WorkflowState_WORKFLOW_STATE_CREATED
+}
+
 var File_convergeplane_v1_resource_instance_proto protoreflect.FileDescriptor
 
 const file_convergeplane_v1_resource_instance_proto_rawDesc = "" +
@@ -177,14 +243,23 @@ const file_convergeplane_v1_resource_instance_proto_rawDesc = "" +
 	"\x0finitial_version\x18\x01 \x01(\x05R\x0einitialVersion\x124\n" +
 	"\x16invoke_timeout_seconds\x18\x02 \x01(\x05R\x14invokeTimeoutSeconds\x120\n" +
 	"\x14repeat_every_seconds\x18\x03 \x01(\x05R\x12repeatEverySeconds\x12 \n" +
-	"\vtriggerable\x18\x04 \x01(\bR\vtriggerable\"\xee\x01\n" +
+	"\vtriggerable\x18\x04 \x01(\bR\vtriggerable\"\xb6\x02\n" +
 	"\x10ResourceInstance\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x03 \x01(\tR\btenantId\x129\n" +
 	"\n" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12I\n" +
 	"\x0fworkflow_config\x18\b \x01(\v2 .convergeplane.v1.WorkflowConfigR\x0eworkflowConfig\x12'\n" +
-	"\x0flifecycle_state\x18\t \x01(\tR\x0elifecycleStateBMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
+	"\x0flifecycle_state\x18\t \x01(\tR\x0elifecycleState\x12F\n" +
+	"\x0eworkflow_state\x18\n" +
+	" \x01(\x0e2\x1f.convergeplane.v1.WorkflowStateR\rworkflowState*\xb7\x01\n" +
+	"\rWorkflowState\x12\x1a\n" +
+	"\x16WORKFLOW_STATE_CREATED\x10\x00\x12\x19\n" +
+	"\x15WORKFLOW_STATE_ACTIVE\x10\x01\x12\x19\n" +
+	"\x15WORKFLOW_STATE_PAUSED\x10\x02\x12\x1b\n" +
+	"\x17WORKFLOW_STATE_COOLDOWN\x10\x03\x12\x1b\n" +
+	"\x17WORKFLOW_STATE_DISABLED\x10\x04\x12\x1a\n" +
+	"\x16WORKFLOW_STATE_DELETED\x10\x05BMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
 
 var (
 	file_convergeplane_v1_resource_instance_proto_rawDescOnce sync.Once
@@ -198,20 +273,23 @@ func file_convergeplane_v1_resource_instance_proto_rawDescGZIP() []byte {
 	return file_convergeplane_v1_resource_instance_proto_rawDescData
 }
 
+var file_convergeplane_v1_resource_instance_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_convergeplane_v1_resource_instance_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_convergeplane_v1_resource_instance_proto_goTypes = []any{
-	(*WorkflowConfig)(nil),        // 0: convergeplane.v1.WorkflowConfig
-	(*ResourceInstance)(nil),      // 1: convergeplane.v1.ResourceInstance
-	(*timestamppb.Timestamp)(nil), // 2: google.protobuf.Timestamp
+	(WorkflowState)(0),            // 0: convergeplane.v1.WorkflowState
+	(*WorkflowConfig)(nil),        // 1: convergeplane.v1.WorkflowConfig
+	(*ResourceInstance)(nil),      // 2: convergeplane.v1.ResourceInstance
+	(*timestamppb.Timestamp)(nil), // 3: google.protobuf.Timestamp
 }
 var file_convergeplane_v1_resource_instance_proto_depIdxs = []int32{
-	2, // 0: convergeplane.v1.ResourceInstance.created_at:type_name -> google.protobuf.Timestamp
-	0, // 1: convergeplane.v1.ResourceInstance.workflow_config:type_name -> convergeplane.v1.WorkflowConfig
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	3, // 0: convergeplane.v1.ResourceInstance.created_at:type_name -> google.protobuf.Timestamp
+	1, // 1: convergeplane.v1.ResourceInstance.workflow_config:type_name -> convergeplane.v1.WorkflowConfig
+	0, // 2: convergeplane.v1.ResourceInstance.workflow_state:type_name -> convergeplane.v1.WorkflowState
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_convergeplane_v1_resource_instance_proto_init() }
@@ -224,13 +302,14 @@ func file_convergeplane_v1_resource_instance_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_convergeplane_v1_resource_instance_proto_rawDesc), len(file_convergeplane_v1_resource_instance_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_convergeplane_v1_resource_instance_proto_goTypes,
 		DependencyIndexes: file_convergeplane_v1_resource_instance_proto_depIdxs,
+		EnumInfos:         file_convergeplane_v1_resource_instance_proto_enumTypes,
 		MessageInfos:      file_convergeplane_v1_resource_instance_proto_msgTypes,
 	}.Build()
 	File_convergeplane_v1_resource_instance_proto = out.File

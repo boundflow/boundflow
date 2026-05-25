@@ -73,6 +73,14 @@ namespace Convergeplane.V1 {
     static readonly grpc::Marshaller<global::Convergeplane.V1.DeleteAgentRequest> __Marshaller_convergeplane_v1_DeleteAgentRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.DeleteAgentRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Convergeplane.V1.DeleteAgentResponse> __Marshaller_convergeplane_v1_DeleteAgentResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.DeleteAgentResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Convergeplane.V1.SetWorkflowLifecyclePolicyRequest> __Marshaller_convergeplane_v1_SetWorkflowLifecyclePolicyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.SetWorkflowLifecyclePolicyRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Convergeplane.V1.SetWorkflowLifecyclePolicyResponse> __Marshaller_convergeplane_v1_SetWorkflowLifecyclePolicyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.SetWorkflowLifecyclePolicyResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Convergeplane.V1.ApproveWorkflowRequest> __Marshaller_convergeplane_v1_ApproveWorkflowRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.ApproveWorkflowRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Convergeplane.V1.ApproveWorkflowResponse> __Marshaller_convergeplane_v1_ApproveWorkflowResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.ApproveWorkflowResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Convergeplane.V1.CreateResourceRequest, global::Convergeplane.V1.CreateResourceResponse> __Method_CreateResource = new grpc::Method<global::Convergeplane.V1.CreateResourceRequest, global::Convergeplane.V1.CreateResourceResponse>(
@@ -130,6 +138,22 @@ namespace Convergeplane.V1 {
         __Marshaller_convergeplane_v1_DeleteAgentRequest,
         __Marshaller_convergeplane_v1_DeleteAgentResponse);
 
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Convergeplane.V1.SetWorkflowLifecyclePolicyRequest, global::Convergeplane.V1.SetWorkflowLifecyclePolicyResponse> __Method_SetWorkflowLifecyclePolicy = new grpc::Method<global::Convergeplane.V1.SetWorkflowLifecyclePolicyRequest, global::Convergeplane.V1.SetWorkflowLifecyclePolicyResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "SetWorkflowLifecyclePolicy",
+        __Marshaller_convergeplane_v1_SetWorkflowLifecyclePolicyRequest,
+        __Marshaller_convergeplane_v1_SetWorkflowLifecyclePolicyResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Convergeplane.V1.ApproveWorkflowRequest, global::Convergeplane.V1.ApproveWorkflowResponse> __Method_ApproveWorkflow = new grpc::Method<global::Convergeplane.V1.ApproveWorkflowRequest, global::Convergeplane.V1.ApproveWorkflowResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ApproveWorkflow",
+        __Marshaller_convergeplane_v1_ApproveWorkflowRequest,
+        __Marshaller_convergeplane_v1_ApproveWorkflowResponse);
+
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
@@ -178,6 +202,18 @@ namespace Convergeplane.V1 {
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Convergeplane.V1.DeleteAgentResponse> DeleteAgent(global::Convergeplane.V1.DeleteAgentRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Convergeplane.V1.SetWorkflowLifecyclePolicyResponse> SetWorkflowLifecyclePolicy(global::Convergeplane.V1.SetWorkflowLifecyclePolicyRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Convergeplane.V1.ApproveWorkflowResponse> ApproveWorkflow(global::Convergeplane.V1.ApproveWorkflowRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -351,6 +387,46 @@ namespace Convergeplane.V1 {
       {
         return CallInvoker.AsyncUnaryCall(__Method_DeleteAgent, null, options, request);
       }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Convergeplane.V1.SetWorkflowLifecyclePolicyResponse SetWorkflowLifecyclePolicy(global::Convergeplane.V1.SetWorkflowLifecyclePolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return SetWorkflowLifecyclePolicy(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Convergeplane.V1.SetWorkflowLifecyclePolicyResponse SetWorkflowLifecyclePolicy(global::Convergeplane.V1.SetWorkflowLifecyclePolicyRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_SetWorkflowLifecyclePolicy, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Convergeplane.V1.SetWorkflowLifecyclePolicyResponse> SetWorkflowLifecyclePolicyAsync(global::Convergeplane.V1.SetWorkflowLifecyclePolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return SetWorkflowLifecyclePolicyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Convergeplane.V1.SetWorkflowLifecyclePolicyResponse> SetWorkflowLifecyclePolicyAsync(global::Convergeplane.V1.SetWorkflowLifecyclePolicyRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_SetWorkflowLifecyclePolicy, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Convergeplane.V1.ApproveWorkflowResponse ApproveWorkflow(global::Convergeplane.V1.ApproveWorkflowRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ApproveWorkflow(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Convergeplane.V1.ApproveWorkflowResponse ApproveWorkflow(global::Convergeplane.V1.ApproveWorkflowRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ApproveWorkflow, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Convergeplane.V1.ApproveWorkflowResponse> ApproveWorkflowAsync(global::Convergeplane.V1.ApproveWorkflowRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ApproveWorkflowAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Convergeplane.V1.ApproveWorkflowResponse> ApproveWorkflowAsync(global::Convergeplane.V1.ApproveWorkflowRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ApproveWorkflow, null, options, request);
+      }
       /// <summary>Creates a new instance of client from given <c>ClientBaseConfiguration</c>.</summary>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       protected override ResourceLifecycleServiceClient NewInstance(ClientBaseConfiguration configuration)
@@ -371,7 +447,9 @@ namespace Convergeplane.V1 {
           .AddMethod(__Method_GetResourceState, serviceImpl.GetResourceState)
           .AddMethod(__Method_SetAgentRuntimePolicy, serviceImpl.SetAgentRuntimePolicy)
           .AddMethod(__Method_SetAgentLifecyclePolicy, serviceImpl.SetAgentLifecyclePolicy)
-          .AddMethod(__Method_DeleteAgent, serviceImpl.DeleteAgent).Build();
+          .AddMethod(__Method_DeleteAgent, serviceImpl.DeleteAgent)
+          .AddMethod(__Method_SetWorkflowLifecyclePolicy, serviceImpl.SetWorkflowLifecyclePolicy)
+          .AddMethod(__Method_ApproveWorkflow, serviceImpl.ApproveWorkflow).Build();
     }
 
     /// <summary>Register service method with a service binder with or without implementation. Useful when customizing the service binding logic.
@@ -388,6 +466,8 @@ namespace Convergeplane.V1 {
       serviceBinder.AddMethod(__Method_SetAgentRuntimePolicy, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Convergeplane.V1.SetAgentRuntimePolicyRequest, global::Convergeplane.V1.SetAgentRuntimePolicyResponse>(serviceImpl.SetAgentRuntimePolicy));
       serviceBinder.AddMethod(__Method_SetAgentLifecyclePolicy, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Convergeplane.V1.SetAgentLifecyclePolicyRequest, global::Convergeplane.V1.SetAgentLifecyclePolicyResponse>(serviceImpl.SetAgentLifecyclePolicy));
       serviceBinder.AddMethod(__Method_DeleteAgent, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Convergeplane.V1.DeleteAgentRequest, global::Convergeplane.V1.DeleteAgentResponse>(serviceImpl.DeleteAgent));
+      serviceBinder.AddMethod(__Method_SetWorkflowLifecyclePolicy, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Convergeplane.V1.SetWorkflowLifecyclePolicyRequest, global::Convergeplane.V1.SetWorkflowLifecyclePolicyResponse>(serviceImpl.SetWorkflowLifecyclePolicy));
+      serviceBinder.AddMethod(__Method_ApproveWorkflow, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Convergeplane.V1.ApproveWorkflowRequest, global::Convergeplane.V1.ApproveWorkflowResponse>(serviceImpl.ApproveWorkflow));
     }
 
   }

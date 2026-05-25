@@ -244,24 +244,42 @@ func (s *Scheduler) scheduleJobs(ctx context.Context, partitionID string) error 
 func (s *Scheduler) ScheduleRequest(ctx context.Context, req string) error {
 	s.log.Debug("attempting to schedule request", "request_id", req)
 
-	agentStates, err := s.agentStates.GetAllForRequest(ctx, req)
+	request, err := s.requests.Get(ctx, req)
 	if err != nil {
-		return fmt.Errorf("get agent states for request %s: %w", req, err)
-	}
-	agentStateMap := make(map[string]any, len(agentStates))
-	for _, s := range agentStates {
-		agentStateMap[s.AgentName] = map[string]any{
-			"runtime_policy":     s.RuntimePolicy,
-			"lifecycle_policy":   s.LifecyclePolicy,
-			"invocation_metrics": s.InvocationMetrics,
-		}
-	}
-	agentStateJSON, err := json.Marshal(agentStateMap)
-	if err != nil {
-		return fmt.Errorf("marshal agent states: %w", err)
+		return fmt.Errorf("get customer request %s: %w", req, err)
 	}
 
-	resourceID, ver, written, err := s.scheduler.UpsertJobAndSchedule(ctx, req, string(agentStateJSON))
+	agentStates, err := s.agentStates.GetAllForResource(ctx, request.ResourceInstanceID)
+	if err != nil {
+		return fmt.Errorf("get agent states for resource %s: %w", request.ResourceInstanceID, err)
+	}
+
+	// Build the full job context in memory: start from the snapshotted request info
+	// (which already carries agentRuntimePolicies, initialVersion, operationTimeoutSeconds)
+	// then layer in live agent lifecycle policies and metrics.
+	jobContext := make(map[string]any, len(request.RequestInfo)+1)
+	for k, v := range request.RequestInfo {
+		jobContext[k] = v
+	}
+	if len(agentStates) > 0 {
+		agentStateMap := make(map[string]any, len(agentStates))
+		for _, a := range agentStates {
+			agentStateMap[a.AgentName] = map[string]any{
+				"lifecycle_policy":   a.LifecyclePolicy,
+				"invocation_metrics": a.InvocationMetrics,
+			}
+		}
+		jobContext["agentStates"] = agentStateMap
+	}
+
+	contextJSON, err := json.Marshal(jobContext)
+	if err != nil {
+		return fmt.Errorf("marshal job context: %w", err)
+	}
+
+	currentAtomicOperation := string(request.RequestType) + "_entry"
+
+	resourceID, ver, written, err := s.scheduler.UpsertJobAndSchedule(ctx, req, string(contextJSON), currentAtomicOperation)
 	if err != nil {
 		return fmt.Errorf("error scheduling request %s: %w", req, err)
 	}

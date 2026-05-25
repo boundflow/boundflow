@@ -16,6 +16,9 @@ service ResourceLifecycleService {
   rpc SetAgentRuntimePolicy(SetAgentRuntimePolicyRequest) returns (SetAgentRuntimePolicyResponse);
   rpc SetAgentLifecyclePolicy(SetAgentLifecyclePolicyRequest) returns (SetAgentLifecyclePolicyResponse);
   rpc DeleteAgent(DeleteAgentRequest) returns (DeleteAgentResponse);
+
+  rpc SetWorkflowLifecyclePolicy(SetWorkflowLifecyclePolicyRequest) returns (SetWorkflowLifecyclePolicyResponse);
+  rpc ApproveWorkflow(ApproveWorkflowRequest) returns (ApproveWorkflowResponse);
 }
 
 message CreateResourceRequest {
@@ -32,11 +35,15 @@ message CreateResourceResponse {
   ResourceInstance resource_instance = 1;
 }
 
+message RuntimeOverrides {
+  int32 initial_version = 1;
+  int32 operation_timeout_seconds = 2;
+}
+
 message ReconcileResourceRequest {
   string correlation_id = 1;
   string resource_instance_id = 2;
-  google.protobuf.Struct goal_state = 3;
-  int32 operation_timeout_seconds = 4;
+  RuntimeOverrides runtime_overrides = 3;
 }
 
 message ReconcileResourceResponse {
@@ -85,3 +92,55 @@ message DeleteAgentRequest {
 }
 
 message DeleteAgentResponse {}
+
+// --- Workflow lifecycle policy ---
+
+enum WorkflowMetric {
+  WORKFLOW_METRIC_NUM_FAILURES         = 0;
+  WORKFLOW_METRIC_COST                 = 1;
+  WORKFLOW_METRIC_NUM_LLM_CALLS        = 2;
+  WORKFLOW_METRIC_LATENCY              = 3;
+  WORKFLOW_METRIC_APPROVAL_REJECTIONS  = 4;
+  WORKFLOW_METRIC_TOOL_FAILURE_RATE    = 5;
+}
+
+enum WorkflowPolicyActionType {
+  WORKFLOW_POLICY_ACTION_PAUSE       = 0;
+  WORKFLOW_POLICY_ACTION_COOLDOWN    = 1;
+  WORKFLOW_POLICY_ACTION_SET_VERSION = 2;
+}
+
+message WorkflowLifecyclePolicyAction {
+  WorkflowPolicyActionType type = 1;
+  // Populated when type = COOLDOWN.
+  int32 cooldown_seconds = 2;
+  // Populated when type = SET_VERSION: the version to roll to.
+  int32 target_version = 3;
+}
+
+message WorkflowLifecyclePolicyRule {
+  WorkflowMetric metric = 1;
+  double threshold = 2;
+  // Number of recent runs to evaluate. 0 = version-total (only valid with SET_VERSION).
+  int32 window = 3;
+  // Only for TOOL_FAILURE_RATE: names the specific callback to track.
+  string tool_name = 4;
+  WorkflowLifecyclePolicyAction action = 5;
+}
+
+message WorkflowLifecyclePolicy {
+  repeated WorkflowLifecyclePolicyRule rules = 1;
+}
+
+message SetWorkflowLifecyclePolicyRequest {
+  string resource_instance_id = 1;
+  WorkflowLifecyclePolicy lifecycle_policy = 2;
+}
+
+message SetWorkflowLifecyclePolicyResponse {}
+
+message ApproveWorkflowRequest {
+  string resource_instance_id = 1;
+}
+
+message ApproveWorkflowResponse {}

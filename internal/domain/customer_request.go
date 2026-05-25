@@ -29,6 +29,5 @@ type CustomerRequest struct {
 	RequestType        CustomerRequestType
 	RequestInfo        map[string]any
 	Version            int64
-	JobPolicy          JobPolicy
 	CreatedAt          time.Time
 }

@@ -53,7 +53,7 @@ func (r *JobRepo) AcquireJob(ctx context.Context, resourceInstanceID string, own
 	).Scan(
 		&job.ResourceInstanceID, &job.RequestID, &job.Version,
 		&job.CurrentAtomicOperation, &contextJSON, &job.Status,
-		&job.JobType, &job.ResourceType, &job.Policy.OperationTimeoutSeconds, &job.Owner, &job.LeaseExpiresAt, &job.CreatedAt,
+		&job.JobType, &job.ResourceType, &job.RuntimeParams.OperationTimeoutSeconds, &job.Owner, &job.LeaseExpiresAt, &job.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

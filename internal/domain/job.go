@@ -21,7 +21,7 @@ type Job struct {
 	Status                 JobStatus
 	JobType                string
 	ResourceType           string
-	Policy                 JobPolicy
+	RuntimeParams          WorkflowRuntimeParams
 	Owner                  *string
 	LeaseExpiresAt         *time.Time
 	CreatedAt              time.Time

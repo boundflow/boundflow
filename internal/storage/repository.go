@@ -62,7 +62,9 @@ type SchedulerRepository interface {
 	// If the write happens it also atomically marks the customer request as scheduled.
 	// Returns the resource instance ID and version written, and written=true, if the job was
 	// written. Returns written=false if the existing job had an equal or higher version.
-	UpsertJobAndSchedule(ctx context.Context, requestID string, agentStateJSON string) (resourceInstanceID string, version int64, written bool, err error)
+	// contextJSON is the fully-assembled job context (built in the scheduler layer).
+	// currentAtomicOperation is the entry-point step name (also computed in the scheduler layer).
+	UpsertJobAndSchedule(ctx context.Context, requestID string, contextJSON string, currentAtomicOperation string) (resourceInstanceID string, version int64, written bool, err error)
 	// SupercedeOlderRequests marks all unscheduled or scheduled requests for the given resource
 	// whose version is strictly less than version as superceded.
 	SupercedeOlderRequests(ctx context.Context, resourceInstanceID string, version int64) error
@@ -108,16 +110,13 @@ type AgentStateRepository interface {
 	UpdateMetrics(ctx context.Context, resourceInstanceID, agentName string, metrics []map[string]any) error
 	// GetAllForResource returns all agent states for a resource instance.
 	GetAllForResource(ctx context.Context, resourceInstanceID string) ([]*domain.AgentState, error)
-	// GetAllForRequest returns all agent states for the resource instance associated with a customer request.
-	// Used by the scheduler when building the initial job context.
-	GetAllForRequest(ctx context.Context, requestID string) ([]*domain.AgentState, error)
 	// Delete removes the agent state row entirely.
 	Delete(ctx context.Context, resourceInstanceID, agentName string) error
 }
 
 type CustomerRequestRepository interface {
 	Create(ctx context.Context, req *domain.CustomerRequest) error
-	Get(ctx context.Context, resourceInstanceID, id string) (*domain.CustomerRequest, error)
+	Get(ctx context.Context, id string) (*domain.CustomerRequest, error)
 	UpdateStatus(ctx context.Context, resourceInstanceID, id string, status domain.CustomerRequestStatus) error
 	// CompleteRequest sets the request status to completed and returns the full updated request.
 	CompleteRequest(ctx context.Context, id string) (*domain.CustomerRequest, error)

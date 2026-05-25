@@ -13,6 +13,15 @@ message WorkflowConfig {
   bool triggerable = 4;
 }
 
+enum WorkflowState {
+  WORKFLOW_STATE_CREATED  = 0;
+  WORKFLOW_STATE_ACTIVE   = 1;
+  WORKFLOW_STATE_PAUSED   = 2;
+  WORKFLOW_STATE_COOLDOWN = 3;
+  WORKFLOW_STATE_DISABLED = 4;
+  WORKFLOW_STATE_DELETED  = 5;
+}
+
 // ResourceInstance is an actual instance of a registered resource,
 // tied to a specific tenant. Managed via the ResourceLifecycleService.
 message ResourceInstance {
@@ -21,4 +30,5 @@ message ResourceInstance {
   google.protobuf.Timestamp created_at = 6;
   WorkflowConfig workflow_config = 8;
   string lifecycle_state = 9;
+  WorkflowState workflow_state = 10;
 }

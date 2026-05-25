@@ -301,7 +301,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 										ResourceType:   job.ResourceType,
 										Context:        contextStruct,
 										Name:           job.CurrentAtomicOperation,
-										TimeoutSeconds: int32(job.Policy.OperationTimeoutSeconds),
+										TimeoutSeconds: int32(job.RuntimeParams.OperationTimeoutSeconds),
 									},
 								},
 							},
@@ -358,7 +358,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 				state = ConnectedBusy
 
 			case ConnectedBusy:
-				ticker := time.NewTicker(time.Duration(currentJob.Policy.OperationTimeoutSeconds) * time.Second)
+				ticker := time.NewTicker(time.Duration(currentJob.RuntimeParams.OperationTimeoutSeconds) * time.Second)
 
 			ConnectedBusyLoop:
 				for {
@@ -396,7 +396,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 						state = ConnectedIdle
 						break ConnectedBusyLoop
 					case <-ticker.C:
-						log.Warn("job timed out, sending cancel", "request_id", currentJob.RequestID, "timeout_secs", currentJob.Policy.OperationTimeoutSeconds)
+						log.Warn("job timed out, sending cancel", "request_id", currentJob.RequestID, "timeout_secs", currentJob.RuntimeParams.OperationTimeoutSeconds)
 						err := cancelOperation(currentJob.RequestID)
 						if err != nil {
 							failOperation(cancelLease, currentJob)

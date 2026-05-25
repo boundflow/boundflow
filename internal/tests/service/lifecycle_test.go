@@ -26,7 +26,7 @@ func (m *mockRequestScheduler) ScheduleRequest(_ context.Context, _ string) erro
 }
 
 // policy used in all tests — non-zero so resolveJobPolicy returns immediately.
-var testPolicy = domain.JobPolicy{OperationTimeoutSeconds: 30}
+var testPolicy = domain.WorkflowRuntimeParams{InitialVersion: 1, OperationTimeoutSeconds: 30}
 
 func newSvc(ctrl *gomock.Controller) (*service.LifecycleService, *mocks.MockResourceInstanceRepository, *mocks.MockCustomerRequestRepository, *mocks.MockTenantRepository, *mocks.MockTenantGroupRepository, *mocks.MockAgentStateRepository) {
 	resourceInstanceRepo := mocks.NewMockResourceInstanceRepository(ctrl)
@@ -83,11 +83,19 @@ func TestCreateResource(t *testing.T) {
 
 func TestReconcileResource(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	svc, resourceInstanceRepo, customerRequestRepo, _, _, _ := newSvc(ctrl)
+	svc, resourceInstanceRepo, customerRequestRepo, _, _, agentStateRepo := newSvc(ctrl)
 
 	resourceInstanceRepo.EXPECT().
 		Get(gomock.Any(), "instance-1").
-		Return(&domain.ResourceInstance{ID: "instance-1", TenantID: "tenant-1"}, nil)
+		Return(&domain.ResourceInstance{
+			ID:             "instance-1",
+			TenantID:       "tenant-1",
+			WorkflowConfig: domain.WorkflowConfig{InitialVersion: 1, InvokeTimeoutSeconds: 60, Triggerable: true},
+		}, nil)
+
+	agentStateRepo.EXPECT().
+		GetAllForResource(gomock.Any(), "instance-1").
+		Return(nil, nil)
 
 	resourceInstanceRepo.EXPECT().
 		StartInvocationAndIncrementVersion(gomock.Any(), "instance-1",
@@ -103,8 +111,8 @@ func TestReconcileResource(t *testing.T) {
 			if r.Version != 2 {
 				t.Errorf("expected version 2 from incremented resource, got %d", r.Version)
 			}
-			if r.JobPolicy.OperationTimeoutSeconds != 30 {
-				t.Errorf("expected timeout 30, got %d", r.JobPolicy.OperationTimeoutSeconds)
+			if r.RequestInfo["operationTimeoutSeconds"] != 30 {
+				t.Errorf("expected timeout 30 in requestInfo, got %v", r.RequestInfo["operationTimeoutSeconds"])
 			}
 			return nil
 		})

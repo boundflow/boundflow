@@ -35,16 +35,23 @@ func newTestScheduler(ctrl *gomock.Controller) (
 
 // --- ScheduleRequest ---
 
+// testCustomerRequest is a minimal CustomerRequest used across ScheduleRequest tests.
+var testCustomerRequest = &domain.CustomerRequest{
+	ID:                 "req-1",
+	ResourceInstanceID: "resource-1",
+	RequestType:        domain.CustomerRequestTypeReconcile,
+	RequestInfo:        map[string]any{"correlationId": "corr-1", "operationTimeoutSeconds": 30},
+}
+
 func TestScheduleRequest_WrittenSupercedes(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, schedulerRepo, _, _, agentStates := newTestScheduler(ctrl)
+	s, _, schedulerRepo, requests, _, agentStates := newTestScheduler(ctrl)
 
-	agentStates.EXPECT().
-		GetAllForRequest(gomock.Any(), "req-1").
-		Return(nil, nil)
+	requests.EXPECT().Get(gomock.Any(), "req-1").Return(testCustomerRequest, nil)
+	agentStates.EXPECT().GetAllForResource(gomock.Any(), "resource-1").Return(nil, nil)
 
 	schedulerRepo.EXPECT().
-		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any()).
+		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any(), "reconcile_entry").
 		Return("resource-1", int64(3), true, nil)
 
 	schedulerRepo.EXPECT().
@@ -58,14 +65,13 @@ func TestScheduleRequest_WrittenSupercedes(t *testing.T) {
 
 func TestScheduleRequest_NotWritten_NoSupercede(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, schedulerRepo, _, _, agentStates := newTestScheduler(ctrl)
+	s, _, schedulerRepo, requests, _, agentStates := newTestScheduler(ctrl)
 
-	agentStates.EXPECT().
-		GetAllForRequest(gomock.Any(), "req-1").
-		Return(nil, nil)
+	requests.EXPECT().Get(gomock.Any(), "req-1").Return(testCustomerRequest, nil)
+	agentStates.EXPECT().GetAllForResource(gomock.Any(), "resource-1").Return(nil, nil)
 
 	schedulerRepo.EXPECT().
-		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any()).
+		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any(), "reconcile_entry").
 		Return("", int64(0), false, nil)
 
 	// SupercedeOlderRequests must NOT be called
@@ -76,14 +82,13 @@ func TestScheduleRequest_NotWritten_NoSupercede(t *testing.T) {
 
 func TestScheduleRequest_UpsertError(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, schedulerRepo, _, _, agentStates := newTestScheduler(ctrl)
+	s, _, schedulerRepo, requests, _, agentStates := newTestScheduler(ctrl)
 
-	agentStates.EXPECT().
-		GetAllForRequest(gomock.Any(), "req-1").
-		Return(nil, nil)
+	requests.EXPECT().Get(gomock.Any(), "req-1").Return(testCustomerRequest, nil)
+	agentStates.EXPECT().GetAllForResource(gomock.Any(), "resource-1").Return(nil, nil)
 
 	schedulerRepo.EXPECT().
-		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any()).
+		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any(), "reconcile_entry").
 		Return("", int64(0), false, errors.New("db error"))
 
 	if err := s.ScheduleRequest(context.Background(), "req-1"); err == nil {
@@ -93,14 +98,13 @@ func TestScheduleRequest_UpsertError(t *testing.T) {
 
 func TestScheduleRequest_SupercedeError(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, schedulerRepo, _, _, agentStates := newTestScheduler(ctrl)
+	s, _, schedulerRepo, requests, _, agentStates := newTestScheduler(ctrl)
 
-	agentStates.EXPECT().
-		GetAllForRequest(gomock.Any(), "req-1").
-		Return(nil, nil)
+	requests.EXPECT().Get(gomock.Any(), "req-1").Return(testCustomerRequest, nil)
+	agentStates.EXPECT().GetAllForResource(gomock.Any(), "resource-1").Return(nil, nil)
 
 	schedulerRepo.EXPECT().
-		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any()).
+		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any(), "reconcile_entry").
 		Return("resource-1", int64(3), true, nil)
 
 	schedulerRepo.EXPECT().
@@ -112,41 +116,52 @@ func TestScheduleRequest_SupercedeError(t *testing.T) {
 	}
 }
 
-func TestScheduleRequest_GetAgentStatesError(t *testing.T) {
+func TestScheduleRequest_GetRequestError(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, _, _, _, agentStates := newTestScheduler(ctrl)
+	s, _, _, requests, _, _ := newTestScheduler(ctrl)
 
-	agentStates.EXPECT().
-		GetAllForRequest(gomock.Any(), "req-1").
-		Return(nil, errors.New("db error"))
+	requests.EXPECT().Get(gomock.Any(), "req-1").Return(nil, errors.New("db error"))
 
 	if err := s.ScheduleRequest(context.Background(), "req-1"); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }
 
-// TestScheduleRequest_AgentStateIncludedInJSON verifies that agent state for a
-// request is serialised and forwarded to UpsertJobAndSchedule.
-func TestScheduleRequest_AgentStateIncludedInJSON(t *testing.T) {
+func TestScheduleRequest_GetAgentStatesError(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, schedulerRepo, _, _, agentStates := newTestScheduler(ctrl)
+	s, _, _, requests, _, agentStates := newTestScheduler(ctrl)
 
-	agentStates.EXPECT().
-		GetAllForRequest(gomock.Any(), "req-1").
-		Return([]*domain.AgentState{
-			{
-				AgentName:         "my_agent",
-				RuntimePolicy:     map[string]any{"model": "claude-sonnet-4-6"},
-				LifecyclePolicy:   map[string]any{},
-				InvocationMetrics: []map[string]any{},
-			},
-		}, nil)
+	requests.EXPECT().Get(gomock.Any(), "req-1").Return(testCustomerRequest, nil)
+	agentStates.EXPECT().GetAllForResource(gomock.Any(), "resource-1").Return(nil, errors.New("db error"))
+
+	if err := s.ScheduleRequest(context.Background(), "req-1"); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+// TestScheduleRequest_AgentStateInContext verifies that live agent lifecycle policy and metrics
+// are merged into the job context, and the entry operation name is derived from request type.
+func TestScheduleRequest_AgentStateInContext(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	s, _, schedulerRepo, requests, _, agentStates := newTestScheduler(ctrl)
+
+	requests.EXPECT().Get(gomock.Any(), "req-1").Return(testCustomerRequest, nil)
+	agentStates.EXPECT().GetAllForResource(gomock.Any(), "resource-1").Return([]*domain.AgentState{
+		{
+			AgentName:         "my_agent",
+			LifecyclePolicy:   map[string]any{"rules": []any{}},
+			InvocationMetrics: []map[string]any{{"tokens": float64(100)}},
+		},
+	}, nil)
 
 	schedulerRepo.EXPECT().
-		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.AssignableToTypeOf("")).
-		DoAndReturn(func(_ context.Context, _ string, json string) (string, int64, bool, error) {
-			if json == "" || json == "{}" {
-				t.Error("expected non-empty agent state JSON")
+		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.AssignableToTypeOf(""), "reconcile_entry").
+		DoAndReturn(func(_ context.Context, _ string, contextJSON string, op string) (string, int64, bool, error) {
+			if contextJSON == "" || contextJSON == "{}" {
+				t.Error("expected non-empty context JSON")
+			}
+			if op != "reconcile_entry" {
+				t.Errorf("expected op reconcile_entry, got %s", op)
 			}
 			return "resource-1", int64(1), true, nil
 		})

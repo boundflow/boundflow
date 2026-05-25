@@ -296,12 +296,10 @@ public class LifecyclePolicyEvaluatorTests
     {
         var stateNode = JsonNode.Parse("""
             {
-              "runtime_policy": {
-                "max_llm_calls": 5,
-                "max_cost_usd": 0.25,
-                "max_tokens_per_call": 2048,
-                "max_calls_per_tool": 3
-              }
+              "max_llm_calls": 5,
+              "max_cost_usd": 0.25,
+              "max_tokens_per_call": 2048,
+              "max_calls_per_tool": 3
             }
             """);
         var policy = LifecyclePolicyEvaluator.LoadRuntimePolicy(stateNode);

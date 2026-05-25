@@ -51,14 +51,20 @@ func (h *ResourceLifecycleHandler) ReconcileResource(ctx context.Context, req *c
 		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
 	}
 
-	if err := h.svc.ReconcileResource(ctx, req.CorrelationId, req.ResourceInstanceId, domain.JobPolicy{OperationTimeoutSeconds: int(req.OperationTimeoutSeconds)}); err != nil {
+	var params domain.WorkflowRuntimeParams
+	if req.RuntimeOverrides != nil {
+		params.InitialVersion = int(req.RuntimeOverrides.InitialVersion)
+		params.OperationTimeoutSeconds = int(req.RuntimeOverrides.OperationTimeoutSeconds)
+	}
+
+	if err := h.svc.ReconcileResource(ctx, req.CorrelationId, req.ResourceInstanceId, params); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Errorf(codes.NotFound, "resource instance not found")
 		}
 		if errors.Is(err, storage.ErrInvalidLifecycleState) {
 			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
 		}
-		if errors.Is(err, service.ErrMissingJobPolicy) {
+		if errors.Is(err, service.ErrMissingRuntimeParams) {
 			return nil, status.Errorf(codes.InvalidArgument, "%v", err)
 		}
 		return nil, status.Errorf(codes.Internal, "reconcile resource: %v", err)
@@ -145,4 +151,34 @@ func (h *ResourceLifecycleHandler) DeleteAgent(ctx context.Context, req *converg
 		return nil, status.Errorf(codes.Internal, "delete agent: %v", err)
 	}
 	return &convergeplanev1.DeleteAgentResponse{}, nil
+}
+
+func (h *ResourceLifecycleHandler) SetWorkflowLifecyclePolicy(ctx context.Context, req *convergeplanev1.SetWorkflowLifecyclePolicyRequest) (*convergeplanev1.SetWorkflowLifecyclePolicyResponse, error) {
+	if req.ResourceInstanceId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
+	}
+	policy := convert.WorkflowLifecyclePolicyFromProto(req.LifecyclePolicy)
+	if err := h.svc.SetWorkflowLifecyclePolicy(ctx, req.ResourceInstanceId, policy); err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Errorf(codes.NotFound, "resource instance not found")
+		}
+		return nil, status.Errorf(codes.Internal, "set workflow lifecycle policy: %v", err)
+	}
+	return &convergeplanev1.SetWorkflowLifecyclePolicyResponse{}, nil
+}
+
+func (h *ResourceLifecycleHandler) ApproveWorkflow(ctx context.Context, req *convergeplanev1.ApproveWorkflowRequest) (*convergeplanev1.ApproveWorkflowResponse, error) {
+	if req.ResourceInstanceId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
+	}
+	if err := h.svc.ApproveWorkflow(ctx, req.ResourceInstanceId); err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Errorf(codes.NotFound, "resource instance not found")
+		}
+		if errors.Is(err, storage.ErrInvalidLifecycleState) {
+			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
+		}
+		return nil, status.Errorf(codes.Internal, "approve workflow: %v", err)
+	}
+	return &convergeplanev1.ApproveWorkflowResponse{}, nil
 }

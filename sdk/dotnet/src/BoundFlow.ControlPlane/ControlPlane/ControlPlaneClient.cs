@@ -95,30 +95,32 @@ public sealed class ControlPlaneClient : IDisposable
                 },
             },
             cancellationToken: ct);
-        var retCfg = resp.WorkflowConfig;
+        var ri = resp.ResourceInstance;
         return new Workflow(
-            resp.ResourceInstance.Id,
-            resp.ResourceInstance.TenantId,
+            ri.Id,
+            ri.TenantId,
             new WorkflowConfig(
-                retCfg.InitialVersion,
-                retCfg.InvokeTimeoutSeconds,
-                retCfg.RepeatEverySeconds,
-                retCfg.Triggerable));
+                ri.WorkflowConfig?.InitialVersion ?? 0,
+                ri.WorkflowConfig?.InvokeTimeoutSeconds ?? 60,
+                ri.WorkflowConfig?.RepeatEverySeconds ?? 0,
+                ri.WorkflowConfig?.Triggerable ?? true));
     }
 
     public async Task InvokeWorkflowAsync(
         string workflowId,
-        JsonNode goalState,
-        int operationTimeoutSeconds,
+        RuntimeOverrides? overrides = null,
         string correlationId = "",
         CancellationToken ct = default) =>
         await _lifecycle.ReconcileResourceAsync(
             new ReconcileResourceRequest
             {
                 ResourceInstanceId = workflowId,
-                GoalState = ToStruct(goalState),
-                OperationTimeoutSeconds = operationTimeoutSeconds,
                 CorrelationId = correlationId,
+                RuntimeOverrides = overrides == null ? null : new Convergeplane.V1.RuntimeOverrides
+                {
+                    InitialVersion = overrides.InitialVersion,
+                    OperationTimeoutSeconds = overrides.OperationTimeoutSeconds,
+                },
             },
             cancellationToken: ct);
 
@@ -139,11 +141,25 @@ public sealed class ControlPlaneClient : IDisposable
         var resp = await _lifecycle.GetResourceStateAsync(
             new GetResourceStateRequest { ResourceInstanceId = workflowId },
             cancellationToken: ct);
-        return new WorkflowState(
-            FromStruct(resp.CurrentConfigState),
-            FromStruct(resp.GoalConfigState),
-            ParseLifecycleState(resp.LifecycleState));
+        return ParseWorkflowState(resp.ResourceInstance?.WorkflowState ?? Convergeplane.V1.WorkflowState.WorkflowStateCreated);
     }
+
+    public async Task SetWorkflowLifecyclePolicyAsync(
+        string workflowId,
+        WorkflowLifecyclePolicy policy,
+        CancellationToken ct = default) =>
+        await _lifecycle.SetWorkflowLifecyclePolicyAsync(
+            new SetWorkflowLifecyclePolicyRequest
+            {
+                ResourceInstanceId = workflowId,
+                LifecyclePolicy = ToWorkflowLifecyclePolicyProto(policy),
+            },
+            cancellationToken: ct);
+
+    public async Task ApproveWorkflowAsync(string workflowId, CancellationToken ct = default) =>
+        await _lifecycle.ApproveWorkflowAsync(
+            new ApproveWorkflowRequest { ResourceInstanceId = workflowId },
+            cancellationToken: ct);
 
     // ── Agent state ──────────────────────────────────────────────────────────
 
@@ -205,16 +221,41 @@ public sealed class ControlPlaneClient : IDisposable
     private static JsonNode? FromStruct(Struct? s) =>
         s is null ? null : JsonNode.Parse(JsonFormatter.Default.Format(s));
 
-    private static LifecycleState ParseLifecycleState(string s) => s switch
+    private static WorkflowState ParseWorkflowState(Convergeplane.V1.WorkflowState s) => s switch
     {
-        "creating"    => LifecycleState.Creating,
-        "active"      => LifecycleState.Active,
-        "reconciling" => LifecycleState.Invoking,
-        "deleting"    => LifecycleState.Deleting,
-        "deleted"     => LifecycleState.Deleted,
-        "failed"      => LifecycleState.Failed,
-        _             => LifecycleState.Unknown,
+        Convergeplane.V1.WorkflowState.WorkflowStateActive   => WorkflowState.Active,
+        Convergeplane.V1.WorkflowState.WorkflowStatePaused   => WorkflowState.Paused,
+        Convergeplane.V1.WorkflowState.WorkflowStateCooldown => WorkflowState.Cooldown,
+        Convergeplane.V1.WorkflowState.WorkflowStateDisabled => WorkflowState.Disabled,
+        Convergeplane.V1.WorkflowState.WorkflowStateDeleted  => WorkflowState.Deleted,
+        _                                                     => WorkflowState.Created,
     };
+
+    private static Convergeplane.V1.WorkflowLifecyclePolicy ToWorkflowLifecyclePolicyProto(WorkflowLifecyclePolicy policy)
+    {
+        var proto = new Convergeplane.V1.WorkflowLifecyclePolicy();
+        foreach (var rule in policy.Rules)
+        {
+            var protoRule = new WorkflowLifecyclePolicyRule
+            {
+                Metric    = (WorkflowMetric)rule.Metric,
+                Threshold = rule.Threshold,
+                Window    = rule.Window,
+                ToolName  = rule.ToolName ?? "",
+            };
+            if (rule.Action is { } a)
+            {
+                protoRule.Action = new WorkflowLifecyclePolicyAction
+                {
+                    Type            = (WorkflowPolicyActionType)a.Type,
+                    CooldownSeconds = a.CooldownSeconds,
+                    TargetVersion   = a.TargetVersion,
+                };
+            }
+            proto.Rules.Add(protoRule);
+        }
+        return proto;
+    }
 
     public void Dispose()
     {

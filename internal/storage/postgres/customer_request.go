@@ -18,6 +18,15 @@ func NewCustomerRequestRepo(pool *pgxpool.Pool) *CustomerRequestRepo {
 	return &CustomerRequestRepo{pool: pool}
 }
 
+func timeoutFromRequestInfo(info map[string]any) int {
+	if v, ok := info["operationTimeoutSeconds"]; ok {
+		if n, ok := v.(int); ok {
+			return n
+		}
+	}
+	return 0
+}
+
 func (r *CustomerRequestRepo) Create(ctx context.Context, req *domain.CustomerRequest) error {
 	requestInfo, err := json.Marshal(req.RequestInfo)
 	if err != nil {
@@ -28,7 +37,7 @@ func (r *CustomerRequestRepo) Create(ctx context.Context, req *domain.CustomerRe
 		`INSERT INTO customer_requests (id, resource_instance_id, status, request_type, request_info, version, operation_timeout_seconds, created_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 		req.ID, req.ResourceInstanceID,
-		req.Status, req.RequestType, requestInfo, req.Version, req.JobPolicy.OperationTimeoutSeconds, req.CreatedAt,
+		req.Status, req.RequestType, requestInfo, req.Version, timeoutFromRequestInfo(req.RequestInfo), req.CreatedAt,
 	)
 	if err != nil {
 		return handleError(err, "customer request")
@@ -36,14 +45,14 @@ func (r *CustomerRequestRepo) Create(ctx context.Context, req *domain.CustomerRe
 	return nil
 }
 
-func (r *CustomerRequestRepo) Get(ctx context.Context, resourceInstanceID, id string) (*domain.CustomerRequest, error) {
+func (r *CustomerRequestRepo) Get(ctx context.Context, id string) (*domain.CustomerRequest, error) {
 	var req domain.CustomerRequest
 	var requestInfoJSON []byte
 
 	err := r.pool.QueryRow(ctx,
 		`SELECT id, resource_instance_id, status, request_type, request_info, version, created_at
-		 FROM customer_requests WHERE resource_instance_id = $1 AND id = $2`,
-		resourceInstanceID, id,
+		 FROM customer_requests WHERE id = $1`,
+		id,
 	).Scan(&req.ID, &req.ResourceInstanceID, &req.Status, &req.RequestType, &requestInfoJSON, &req.Version, &req.CreatedAt)
 	if err != nil {
 		return nil, handleError(err, "customer request")
