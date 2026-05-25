@@ -498,9 +498,9 @@ func (mr *MockSchedulerRepositoryMockRecorder) SupercedeOlderRequests(ctx, resou
 }
 
 // UpsertJobAndSchedule mocks base method.
-func (m *MockSchedulerRepository) UpsertJobAndSchedule(ctx context.Context, requestID, contextJSON, currentAtomicOperation string) (string, int64, bool, error) {
+func (m *MockSchedulerRepository) UpsertJobAndSchedule(ctx context.Context, requestID, contextJSON, currentAtomicOperation string, timeoutSeconds, workflowVersion int) (string, int64, bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpsertJobAndSchedule", ctx, requestID, contextJSON, currentAtomicOperation)
+	ret := m.ctrl.Call(m, "UpsertJobAndSchedule", ctx, requestID, contextJSON, currentAtomicOperation, timeoutSeconds, workflowVersion)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(int64)
 	ret2, _ := ret[2].(bool)
@@ -509,9 +509,9 @@ func (m *MockSchedulerRepository) UpsertJobAndSchedule(ctx context.Context, requ
 }
 
 // UpsertJobAndSchedule indicates an expected call of UpsertJobAndSchedule.
-func (mr *MockSchedulerRepositoryMockRecorder) UpsertJobAndSchedule(ctx, requestID, contextJSON, currentAtomicOperation any) *gomock.Call {
+func (mr *MockSchedulerRepositoryMockRecorder) UpsertJobAndSchedule(ctx, requestID, contextJSON, currentAtomicOperation, timeoutSeconds, workflowVersion any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertJobAndSchedule", reflect.TypeOf((*MockSchedulerRepository)(nil).UpsertJobAndSchedule), ctx, requestID, contextJSON, currentAtomicOperation)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertJobAndSchedule", reflect.TypeOf((*MockSchedulerRepository)(nil).UpsertJobAndSchedule), ctx, requestID, contextJSON, currentAtomicOperation, timeoutSeconds, workflowVersion)
 }
 
 // MockJobRepository is a mock of JobRepository interface.

@@ -36,7 +36,7 @@ AgentDefinition AnalyseAgent() => new AgentDefinition(
 // ── Worker ───────────────────────────────────────────────────────────────────
 var worker = new BoundFlowWorker(workerAddress, llmApiKey, loggerFactory)
 
-    .RegisterWorkflowInvokeEntry("database_agent", async (ctx, ct) =>
+    .RegisterWorkflow("database_agent", 1, async (ctx, ct) =>
     {
         var boundFlowInfo = "BoundFlow is a tenant-aware control plane for safely scheduling and running agentic workflows.";
         ctx.AddLlmContext("Platform context", JsonValue.Create(boundFlowInfo));
@@ -86,17 +86,16 @@ Console.WriteLine("Lifecycle policy set.\n");
 Console.WriteLine("Invoke 1 (expect sonnet — no prior metrics)...");
 
 await cp.InvokeWorkflowAsync(
-    workflowId:              workflow.Id,
-    goalState:               JsonNode.Parse("{\"sku\": \"standard\"}")!,
-    operationTimeoutSeconds: 60);
+    workflowId: workflow.Id,
+    overrides:  new RuntimeOverrides(OperationTimeoutSeconds: 60));
 
-WorkflowState state;
+LifecycleState lifecycleState;
 do
 {
     await Task.Delay(500);
-    state = await cp.GetWorkflowStateAsync(workflow.Id);
+    lifecycleState = await cp.GetWorkflowLifecycleStateAsync(workflow.Id);
 }
-while (state.LifecycleState == LifecycleState.Invoking);
+while (lifecycleState == LifecycleState.Invoking);
 
 Console.WriteLine($"\nInvoke 1 complete. Expected: model_used={SonnetModel}\n");
 
@@ -104,16 +103,15 @@ Console.WriteLine($"\nInvoke 1 complete. Expected: model_used={SonnetModel}\n");
 Console.WriteLine("Invoke 2 (expect haiku — rule fires on invoke 1 metrics)...");
 
 await cp.InvokeWorkflowAsync(
-    workflowId:              workflow.Id,
-    goalState:               JsonNode.Parse("{\"sku\": \"standard\"}")!,
-    operationTimeoutSeconds: 60);
+    workflowId: workflow.Id,
+    overrides:  new RuntimeOverrides(OperationTimeoutSeconds: 60));
 
 do
 {
     await Task.Delay(500);
-    state = await cp.GetWorkflowStateAsync(workflow.Id);
+    lifecycleState = await cp.GetWorkflowLifecycleStateAsync(workflow.Id);
 }
-while (state.LifecycleState == LifecycleState.Invoking);
+while (lifecycleState == LifecycleState.Invoking);
 
 Console.WriteLine($"\nInvoke 2 complete. Expected: model_used={HaikuModel}");
 

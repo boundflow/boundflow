@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"maps"
 	"sync"
 	"time"
 
@@ -257,10 +258,7 @@ func (s *Scheduler) ScheduleRequest(ctx context.Context, req string) error {
 	// Build the full job context in memory: start from the snapshotted request info
 	// (which already carries agentRuntimePolicies, initialVersion, operationTimeoutSeconds)
 	// then layer in live agent lifecycle policies and metrics.
-	jobContext := make(map[string]any, len(request.RequestInfo)+1)
-	for k, v := range request.RequestInfo {
-		jobContext[k] = v
-	}
+	jobContext := maps.Clone(request.RequestInfo)
 	if len(agentStates) > 0 {
 		agentStateMap := make(map[string]any, len(agentStates))
 		for _, a := range agentStates {
@@ -279,7 +277,11 @@ func (s *Scheduler) ScheduleRequest(ctx context.Context, req string) error {
 
 	currentAtomicOperation := string(request.RequestType) + "_entry"
 
-	resourceID, ver, written, err := s.scheduler.UpsertJobAndSchedule(ctx, req, string(contextJSON), currentAtomicOperation)
+	// Both values are always float64 after JSON unmarshal from JSONB.
+	timeoutSeconds := int(request.RequestInfo["operationTimeoutSeconds"].(float64))
+	workflowVersion := int(request.RequestInfo["initialVersion"].(float64))
+
+	resourceID, ver, written, err := s.scheduler.UpsertJobAndSchedule(ctx, req, string(contextJSON), currentAtomicOperation, timeoutSeconds, workflowVersion)
 	if err != nil {
 		return fmt.Errorf("error scheduling request %s: %w", req, err)
 	}

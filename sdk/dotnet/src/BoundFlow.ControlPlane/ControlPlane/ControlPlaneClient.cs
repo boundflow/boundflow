@@ -141,7 +141,24 @@ public sealed class ControlPlaneClient : IDisposable
         var resp = await _lifecycle.GetResourceStateAsync(
             new GetResourceStateRequest { ResourceInstanceId = workflowId },
             cancellationToken: ct);
-        return ParseWorkflowState(resp.ResourceInstance?.WorkflowState ?? Convergeplane.V1.WorkflowState.WorkflowStateCreated);
+        return ParseWorkflowState(resp.ResourceInstance?.WorkflowState ?? Convergeplane.V1.WorkflowState.Created);
+    }
+
+    public async Task<LifecycleState> GetWorkflowLifecycleStateAsync(string workflowId, CancellationToken ct = default)
+    {
+        var resp = await _lifecycle.GetResourceStateAsync(
+            new GetResourceStateRequest { ResourceInstanceId = workflowId },
+            cancellationToken: ct);
+        return resp.ResourceInstance?.LifecycleState switch
+        {
+            "creating"    => LifecycleState.Creating,
+            "active"      => LifecycleState.Active,
+            "reconciling" => LifecycleState.Invoking,
+            "deleting"    => LifecycleState.Deleting,
+            "deleted"     => LifecycleState.Deleted,
+            "failed"      => LifecycleState.Failed,
+            _             => LifecycleState.Unknown,
+        };
     }
 
     public async Task SetWorkflowLifecyclePolicyAsync(
@@ -223,12 +240,12 @@ public sealed class ControlPlaneClient : IDisposable
 
     private static WorkflowState ParseWorkflowState(Convergeplane.V1.WorkflowState s) => s switch
     {
-        Convergeplane.V1.WorkflowState.WorkflowStateActive   => WorkflowState.Active,
-        Convergeplane.V1.WorkflowState.WorkflowStatePaused   => WorkflowState.Paused,
-        Convergeplane.V1.WorkflowState.WorkflowStateCooldown => WorkflowState.Cooldown,
-        Convergeplane.V1.WorkflowState.WorkflowStateDisabled => WorkflowState.Disabled,
-        Convergeplane.V1.WorkflowState.WorkflowStateDeleted  => WorkflowState.Deleted,
-        _                                                     => WorkflowState.Created,
+        Convergeplane.V1.WorkflowState.Active   => WorkflowState.Active,
+        Convergeplane.V1.WorkflowState.Paused   => WorkflowState.Paused,
+        Convergeplane.V1.WorkflowState.Cooldown => WorkflowState.Cooldown,
+        Convergeplane.V1.WorkflowState.Disabled => WorkflowState.Disabled,
+        Convergeplane.V1.WorkflowState.Deleted  => WorkflowState.Deleted,
+        _                                        => WorkflowState.Created,
     };
 
     private static Convergeplane.V1.WorkflowLifecyclePolicy ToWorkflowLifecyclePolicyProto(WorkflowLifecyclePolicy policy)
@@ -236,18 +253,18 @@ public sealed class ControlPlaneClient : IDisposable
         var proto = new Convergeplane.V1.WorkflowLifecyclePolicy();
         foreach (var rule in policy.Rules)
         {
-            var protoRule = new WorkflowLifecyclePolicyRule
+            var protoRule = new Convergeplane.V1.WorkflowLifecyclePolicyRule
             {
-                Metric    = (WorkflowMetric)rule.Metric,
+                Metric    = (Convergeplane.V1.WorkflowMetric)rule.Metric,
                 Threshold = rule.Threshold,
                 Window    = rule.Window,
                 ToolName  = rule.ToolName ?? "",
             };
             if (rule.Action is { } a)
             {
-                protoRule.Action = new WorkflowLifecyclePolicyAction
+                protoRule.Action = new Convergeplane.V1.WorkflowLifecyclePolicyAction
                 {
-                    Type            = (WorkflowPolicyActionType)a.Type,
+                    Type            = (Convergeplane.V1.WorkflowPolicyActionType)a.Type,
                     CooldownSeconds = a.CooldownSeconds,
                     TargetVersion   = a.TargetVersion,
                 };

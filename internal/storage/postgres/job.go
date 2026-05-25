@@ -48,12 +48,12 @@ func (r *JobRepo) AcquireJob(ctx context.Context, resourceInstanceID string, own
 		 WHERE resource_instance_id = $1
 		   AND status IN ('pending', 'awaiting_next')
 		   AND (owner IS NULL OR lease_expires_at < now())
-		 RETURNING resource_instance_id, request_id, version, current_atomic_operation, context, status, job_type, resource_type, timeout_seconds, owner, lease_expires_at, created_at`,
+		 RETURNING resource_instance_id, request_id, version, current_atomic_operation, context, status, job_type, resource_type, timeout_seconds, workflow_version, owner, lease_expires_at, created_at`,
 		resourceInstanceID, ownerID, leaseDuration.String(),
 	).Scan(
 		&job.ResourceInstanceID, &job.RequestID, &job.Version,
 		&job.CurrentAtomicOperation, &contextJSON, &job.Status,
-		&job.JobType, &job.ResourceType, &job.RuntimeParams.OperationTimeoutSeconds, &job.Owner, &job.LeaseExpiresAt, &job.CreatedAt,
+		&job.JobType, &job.ResourceType, &job.RuntimeParams.OperationTimeoutSeconds, &job.WorkflowVersion, &job.Owner, &job.LeaseExpiresAt, &job.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

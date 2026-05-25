@@ -48,20 +48,20 @@ func (r *SchedulerRepo) GetTopUnscheduledRequests(ctx context.Context, partition
 // (and that job is still pending). Atomically marks the request as scheduled if written.
 // Returns written=false (no error) if the existing job had an equal or higher version or the job has been started already.
 // contextJSON and currentAtomicOperation are assembled by the scheduler layer before calling.
-func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID string, contextJSON string, currentAtomicOperation string) (resourceInstanceID string, version int64, written bool, err error) {
+func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID string, contextJSON string, currentAtomicOperation string, timeoutSeconds int, workflowVersion int) (resourceInstanceID string, version int64, written bool, err error) {
 	err = r.pool.QueryRow(ctx,
 		`WITH candidate AS (
-		     SELECT cr.id, cr.resource_instance_id, cr.version, cr.request_type, cr.operation_timeout_seconds,
+		     SELECT cr.id, cr.resource_instance_id, cr.version, cr.request_type,
 		            ri.resource_type
 		     FROM customer_requests cr
 		     JOIN resource_instances ri ON ri.id = cr.resource_instance_id
 		     WHERE cr.id = $1
 		 ),
 		 upserted AS (
-		     INSERT INTO jobs (resource_instance_id, request_id, version, current_atomic_operation, context, status, job_type, resource_type, timeout_seconds)
+		     INSERT INTO jobs (resource_instance_id, request_id, version, current_atomic_operation, context, status, job_type, resource_type, timeout_seconds, workflow_version)
 		     SELECT c.resource_instance_id, c.id, c.version, $2,
 		            $3::jsonb,
-		            'pending', c.request_type, c.resource_type, c.operation_timeout_seconds
+		            'pending', c.request_type, c.resource_type, $4, $5
 		     FROM candidate c
 		     ON CONFLICT (resource_instance_id) DO UPDATE
 		         SET request_id               = EXCLUDED.request_id,
@@ -71,6 +71,7 @@ func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID stri
 		             job_type                 = EXCLUDED.job_type,
 		             resource_type            = EXCLUDED.resource_type,
 		             timeout_seconds          = EXCLUDED.timeout_seconds,
+		             workflow_version         = EXCLUDED.workflow_version,
 		             status                   = 'pending',
 		             owner                    = NULL,
 		             lease_expires_at         = NULL
@@ -84,7 +85,7 @@ func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID stri
 		 FROM upserted u
 		 WHERE cr.id = u.request_id
 		 RETURNING cr.resource_instance_id, cr.version`,
-		requestID, currentAtomicOperation, contextJSON,
+		requestID, currentAtomicOperation, contextJSON, timeoutSeconds, workflowVersion,
 	).Scan(&resourceInstanceID, &version)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

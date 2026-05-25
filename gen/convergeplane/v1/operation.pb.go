@@ -79,17 +79,18 @@ func (OperationStatus) EnumDescriptor() ([]byte, []int) {
 }
 
 type AtomicOperation struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ResourceId     string                 `protobuf:"bytes,2,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
-	OperationType  string                 `protobuf:"bytes,3,opt,name=operation_type,json=operationType,proto3" json:"operation_type,omitempty"`
-	Name           string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
-	Context        *structpb.Struct       `protobuf:"bytes,5,opt,name=context,proto3" json:"context,omitempty"`
-	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	TimeoutSeconds int32                  `protobuf:"varint,7,opt,name=timeout_seconds,json=timeoutSeconds,proto3" json:"timeout_seconds,omitempty"`
-	ResourceType   string                 `protobuf:"bytes,8,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ResourceId      string                 `protobuf:"bytes,2,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
+	OperationType   string                 `protobuf:"bytes,3,opt,name=operation_type,json=operationType,proto3" json:"operation_type,omitempty"`
+	Name            string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+	Context         *structpb.Struct       `protobuf:"bytes,5,opt,name=context,proto3" json:"context,omitempty"`
+	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	TimeoutSeconds  int32                  `protobuf:"varint,7,opt,name=timeout_seconds,json=timeoutSeconds,proto3" json:"timeout_seconds,omitempty"`
+	ResourceType    string                 `protobuf:"bytes,8,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
+	WorkflowVersion int32                  `protobuf:"varint,9,opt,name=workflow_version,json=workflowVersion,proto3" json:"workflow_version,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *AtomicOperation) Reset() {
@@ -178,6 +179,13 @@ func (x *AtomicOperation) GetResourceType() string {
 	return ""
 }
 
+func (x *AtomicOperation) GetWorkflowVersion() int32 {
+	if x != nil {
+		return x.WorkflowVersion
+	}
+	return 0
+}
+
 type AtomicOperationResult struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Status        OperationStatus        `protobuf:"varint,1,opt,name=status,proto3,enum=convergeplane.v1.OperationStatus" json:"status,omitempty"`
@@ -253,7 +261,7 @@ var File_convergeplane_v1_operation_proto protoreflect.FileDescriptor
 
 const file_convergeplane_v1_operation_proto_rawDesc = "" +
 	"\n" +
-	" convergeplane/v1/operation.proto\x12\x10convergeplane.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb9\x02\n" +
+	" convergeplane/v1/operation.proto\x12\x10convergeplane.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe4\x02\n" +
 	"\x0fAtomicOperation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vresource_id\x18\x02 \x01(\tR\n" +
@@ -264,7 +272,8 @@ const file_convergeplane_v1_operation_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12'\n" +
 	"\x0ftimeout_seconds\x18\a \x01(\x05R\x0etimeoutSeconds\x12#\n" +
-	"\rresource_type\x18\b \x01(\tR\fresourceType\"\xff\x01\n" +
+	"\rresource_type\x18\b \x01(\tR\fresourceType\x12)\n" +
+	"\x10workflow_version\x18\t \x01(\x05R\x0fworkflowVersion\"\xff\x01\n" +
 	"\x15AtomicOperationResult\x129\n" +
 	"\x06status\x18\x01 \x01(\x0e2!.convergeplane.v1.OperationStatusR\x06status\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12H\n" +

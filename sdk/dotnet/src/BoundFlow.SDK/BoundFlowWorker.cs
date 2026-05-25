@@ -15,7 +15,7 @@ namespace BoundFlow.SDK;
 public abstract record OperationResult
 {
     public static OperationResult Complete() => new CompletedResult();
-    public static OperationResult Next(string operationName, JsonNode context, int timeoutSeconds = 0)
+    public static OperationResult Next(string operationName, JsonNode context, int timeoutSeconds)
         => new NextOperationResult(operationName, context, timeoutSeconds);
 }
 
@@ -44,6 +44,9 @@ public sealed class OperationContext
 
     /// <summary>The name of the current operation.</summary>
     public string Name => _operation.Name;
+
+    /// <summary>The workflow version that triggered this invocation.</summary>
+    public int WorkflowVersion => _operation.WorkflowVersion;
 
     /// <summary>The context data attached to this operation by the server or the previous step.</summary>
     public readonly JsonNode Context;
@@ -137,7 +140,8 @@ public sealed class BoundFlowWorker
     private readonly AnthropicClient _anthropicClient;
     private readonly ILoggerFactory _loggerFactory;
     private readonly Dictionary<(string ResourceType, string OperationName), Func<OperationContext, CancellationToken, Task<OperationResult>>> _handlers = new();
-    private const string InvokeEntryHandlerName = "reconcile_entry";  
+    private readonly Dictionary<(string ResourceType, int Version), Func<OperationContext, CancellationToken, Task<OperationResult>>> _workflowHandlers = new();
+    private const string EntryOperationName = "reconcile_entry";
 
     public BoundFlowWorker(
         string serverAddress,
@@ -163,13 +167,15 @@ public sealed class BoundFlowWorker
 
 
     /// <summary>
-    /// Registers the entry operation for the workflow invocation 
+    /// Registers the entry handler for a specific version of the given workflow type.
+    /// Entry operations are dispatched by (resourceType, version); next operations by (resourceType, operationName).
     /// </summary>
-    public BoundFlowWorker RegisterWorkflowInvokeEntry(
+    public BoundFlowWorker RegisterWorkflow(
         string resourceType,
+        int version,
         Func<OperationContext, CancellationToken, Task<OperationResult>> handler)
     {
-        _handlers[(resourceType, InvokeEntryHandlerName)] = handler;
+        _workflowHandlers[(resourceType, version)] = handler;
         return this;
     }
 
@@ -182,8 +188,14 @@ public sealed class BoundFlowWorker
 
         OperationHandler operationHandler = async (op, ct) =>
         {
-            if (!_handlers.TryGetValue((op.ResourceType, op.Name), out var handler))
-                throw new InvalidOperationException($"No handler registered for resource type '{op.ResourceType}' operation '{op.Name}'.");
+            Func<OperationContext, CancellationToken, Task<OperationResult>>? handler = null;
+            if (op.Name == EntryOperationName)
+                _workflowHandlers.TryGetValue((op.ResourceType, op.WorkflowVersion), out handler);
+            else
+                _handlers.TryGetValue((op.ResourceType, op.Name), out handler);
+
+            if (handler is null)
+                throw new InvalidOperationException($"No handler registered for resource type '{op.ResourceType}' operation '{op.Name}' version {op.WorkflowVersion}.");
 
             // New Orchestrator per call — stateless, cheap to create.
             var orchestrator = new Orchestrator(

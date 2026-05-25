@@ -18,15 +18,6 @@ func NewCustomerRequestRepo(pool *pgxpool.Pool) *CustomerRequestRepo {
 	return &CustomerRequestRepo{pool: pool}
 }
 
-func timeoutFromRequestInfo(info map[string]any) int {
-	if v, ok := info["operationTimeoutSeconds"]; ok {
-		if n, ok := v.(int); ok {
-			return n
-		}
-	}
-	return 0
-}
-
 func (r *CustomerRequestRepo) Create(ctx context.Context, req *domain.CustomerRequest) error {
 	requestInfo, err := json.Marshal(req.RequestInfo)
 	if err != nil {
@@ -34,10 +25,10 @@ func (r *CustomerRequestRepo) Create(ctx context.Context, req *domain.CustomerRe
 	}
 
 	_, err = r.pool.Exec(ctx,
-		`INSERT INTO customer_requests (id, resource_instance_id, status, request_type, request_info, version, operation_timeout_seconds, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		`INSERT INTO customer_requests (id, resource_instance_id, status, request_type, request_info, version, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		req.ID, req.ResourceInstanceID,
-		req.Status, req.RequestType, requestInfo, req.Version, timeoutFromRequestInfo(req.RequestInfo), req.CreatedAt,
+		req.Status, req.RequestType, requestInfo, req.Version, req.CreatedAt,
 	)
 	if err != nil {
 		return handleError(err, "customer request")

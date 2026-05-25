@@ -64,7 +64,8 @@ type SchedulerRepository interface {
 	// written. Returns written=false if the existing job had an equal or higher version.
 	// contextJSON is the fully-assembled job context (built in the scheduler layer).
 	// currentAtomicOperation is the entry-point step name (also computed in the scheduler layer).
-	UpsertJobAndSchedule(ctx context.Context, requestID string, contextJSON string, currentAtomicOperation string) (resourceInstanceID string, version int64, written bool, err error)
+	// timeoutSeconds and workflowVersion are read from request info and passed directly to the jobs table.
+	UpsertJobAndSchedule(ctx context.Context, requestID string, contextJSON string, currentAtomicOperation string, timeoutSeconds int, workflowVersion int) (resourceInstanceID string, version int64, written bool, err error)
 	// SupercedeOlderRequests marks all unscheduled or scheduled requests for the given resource
 	// whose version is strictly less than version as superceded.
 	SupercedeOlderRequests(ctx context.Context, resourceInstanceID string, version int64) error

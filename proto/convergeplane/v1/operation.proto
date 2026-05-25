@@ -16,6 +16,7 @@ message AtomicOperation {
   google.protobuf.Timestamp created_at = 6;
   int32 timeout_seconds = 7;
   string resource_type = 8;
+  int32 workflow_version = 9;
 }
 
 message AtomicOperationResult {

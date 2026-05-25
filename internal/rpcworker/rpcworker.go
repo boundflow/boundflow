@@ -118,40 +118,44 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 		}
 	}
 
+	persistAgentMetrics := func(ctx context.Context, job *domain.Job, result *convergeplanev1.AtomicOperationResult) {
+		if result == nil || result.AgentStateUpdates == nil {
+			return
+		}
+		updates := make(map[string][]map[string]any)
+		for agentName, stateVal := range result.AgentStateUpdates.Fields {
+			stateMap, ok := stateVal.GetKind().(*structpb.Value_StructValue)
+			if !ok {
+				continue
+			}
+			metricsVal, ok := stateMap.StructValue.Fields["invocation_metrics"]
+			if !ok {
+				continue
+			}
+			listVal, ok := metricsVal.GetKind().(*structpb.Value_ListValue)
+			if !ok {
+				continue
+			}
+			var metrics []map[string]any
+			for _, entry := range listVal.ListValue.Values {
+				if sv, ok := entry.GetKind().(*structpb.Value_StructValue); ok {
+					metrics = append(metrics, sv.StructValue.AsMap())
+				}
+			}
+			updates[agentName] = metrics
+		}
+		if len(updates) > 0 {
+			if err := s.scheduler.UpdateAgentMetrics(ctx, job.ResourceInstanceID, updates); err != nil {
+				log.Warn("failed to persist agent metrics", "error", err)
+			}
+		}
+	}
+
 	completeOperation := func(cancelLease chan bool, job *domain.Job, result *convergeplanev1.AtomicOperationResult) error {
 		ctx := context.Background() // request completion doesnt depend on stream context
 		defer cancelLeaseIfExists(cancelLease)
 
-		// Persist any agent state metric updates from the SDK via the scheduler.
-		if result.AgentStateUpdates != nil {
-			updates := make(map[string][]map[string]any)
-			for agentName, stateVal := range result.AgentStateUpdates.Fields {
-				stateMap, ok := stateVal.GetKind().(*structpb.Value_StructValue)
-				if !ok {
-					continue
-				}
-				metricsVal, ok := stateMap.StructValue.Fields["invocation_metrics"]
-				if !ok {
-					continue
-				}
-				listVal, ok := metricsVal.GetKind().(*structpb.Value_ListValue)
-				if !ok {
-					continue
-				}
-				var metrics []map[string]any
-				for _, entry := range listVal.ListValue.Values {
-					if sv, ok := entry.GetKind().(*structpb.Value_StructValue); ok {
-						metrics = append(metrics, sv.StructValue.AsMap())
-					}
-				}
-				updates[agentName] = metrics
-			}
-			if len(updates) > 0 {
-				if err := s.scheduler.UpdateAgentMetrics(ctx, job.ResourceInstanceID, updates); err != nil {
-					log.Warn("failed to persist agent metrics", "error", err)
-				}
-			}
-		}
+		persistAgentMetrics(ctx, job, result)
 
 		if result.NextOperation == nil {
 			updated, err := s.jobs.UpdateJobStatus(ctx, job.ResourceInstanceID, s.id, domain.JobStatusCompleted)
@@ -174,7 +178,6 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 	}
 
 	failOperation := func(cancelLease chan bool, job *domain.Job) error {
-		// in the future maybe we have retry policies on the operation or something, but for now a fail is a request fail
 		ctx := context.Background()
 		defer cancelLeaseIfExists(cancelLease)
 
@@ -295,13 +298,14 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 							Payload: &convergeplanev1.ServerCommand_Launch{
 								Launch: &convergeplanev1.LaunchOperation{
 									Operation: &convergeplanev1.AtomicOperation{
-										Id:             job.RequestID,
-										ResourceId:     job.ResourceInstanceID,
-										OperationType:  job.JobType,
-										ResourceType:   job.ResourceType,
-										Context:        contextStruct,
-										Name:           job.CurrentAtomicOperation,
-										TimeoutSeconds: int32(job.RuntimeParams.OperationTimeoutSeconds),
+										Id:              job.RequestID,
+										ResourceId:      job.ResourceInstanceID,
+										OperationType:   job.JobType,
+										ResourceType:    job.ResourceType,
+										Context:         contextStruct,
+										Name:            job.CurrentAtomicOperation,
+										TimeoutSeconds:  int32(job.RuntimeParams.OperationTimeoutSeconds),
+										WorkflowVersion: int32(job.WorkflowVersion),
 									},
 								},
 							},

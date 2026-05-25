@@ -22,6 +22,7 @@ type Job struct {
 	JobType                string
 	ResourceType           string
 	RuntimeParams          WorkflowRuntimeParams
+	WorkflowVersion        int
 	Owner                  *string
 	LeaseExpiresAt         *time.Time
 	CreatedAt              time.Time
