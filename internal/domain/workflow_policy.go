@@ -39,12 +39,13 @@ type WorkflowLifecyclePolicy struct {
 }
 
 type WorkflowInvocationSnapshot struct {
-	CostUsd             float64 `json:"cost_usd"`
-	LlmCalls            int     `json:"llm_calls"`
-	LatencySeconds      float64 `json:"latency_seconds"`
-	Failures            int     `json:"failures"`
-	ApprovalRejections  int     `json:"approval_rejections"`
-	RanAt               int64   `json:"ran_at"` // unix ms
+	CostUsd             float64        `json:"cost_usd"`
+	LlmCalls            int            `json:"llm_calls"`
+	LatencySeconds      float64        `json:"latency_seconds"`
+	Failures            int            `json:"failures"`
+	ApprovalRejections  int            `json:"approval_rejections"`
+	ToolFailureCounts   map[string]int `json:"tool_failure_counts,omitempty"`
+	RanAt               int64          `json:"ran_at"` // unix ms
 }
 
 type WorkflowVersionMetrics struct {
