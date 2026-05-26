@@ -1,8 +1,9 @@
 package postgres
 
 import (
-	"errors"
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -25,12 +26,12 @@ func (r *ResourceInstanceRepo) Create(ctx context.Context, instance *domain.Reso
 	_, err := r.pool.Exec(ctx,
 		`INSERT INTO resource_instances
 		   (id, tenant_id, resource_type,
-		    initial_version, invoke_timeout_seconds, repeat_every_seconds, triggerable,
+		    initial_workflow_version, invoke_timeout_seconds, repeat_every_seconds, triggerable,
 		    lifecycle_state, scheduler_partition_id,
 		    target_version, current_version, last_completed_request_at, created_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
 		instance.ID, instance.TenantID, instance.ResourceType,
-		instance.WorkflowConfig.InitialVersion,
+		instance.WorkflowConfig.InitialWorkflowVersion,
 		instance.WorkflowConfig.InvokeTimeoutSeconds,
 		instance.WorkflowConfig.RepeatEverySeconds,
 		instance.WorkflowConfig.Triggerable,
@@ -46,25 +47,36 @@ func (r *ResourceInstanceRepo) Create(ctx context.Context, instance *domain.Reso
 
 func (r *ResourceInstanceRepo) Get(ctx context.Context, id string) (*domain.ResourceInstance, error) {
 	var instance domain.ResourceInstance
+	var lifecyclePolicyJSON, invocationMetricsJSON []byte
 
 	err := r.pool.QueryRow(ctx,
 		`SELECT id, tenant_id, resource_type,
-		        initial_version, invoke_timeout_seconds, repeat_every_seconds, triggerable,
-		        lifecycle_state, scheduler_partition_id,
+		        initial_workflow_version, invoke_timeout_seconds, repeat_every_seconds, triggerable,
+		        lifecycle_state, workflow_state, lifecycle_policy, invocation_metrics, cooldown_until,
+		        current_workflow_version, scheduler_partition_id,
 		        target_version, current_version, last_completed_request_at, created_at
 		 FROM resource_instances WHERE id = $1`, id,
 	).Scan(
 		&instance.ID, &instance.TenantID, &instance.ResourceType,
-		&instance.WorkflowConfig.InitialVersion,
+		&instance.WorkflowConfig.InitialWorkflowVersion,
 		&instance.WorkflowConfig.InvokeTimeoutSeconds,
 		&instance.WorkflowConfig.RepeatEverySeconds,
 		&instance.WorkflowConfig.Triggerable,
-		&instance.LifecycleState, &instance.SchedulerPartitionID,
+		&instance.LifecycleState, &instance.WorkflowState,
+		&lifecyclePolicyJSON, &invocationMetricsJSON, &instance.CooldownUntil,
+		&instance.CurrentWorkflowVersion, &instance.SchedulerPartitionID,
 		&instance.TargetVersion, &instance.CurrentVersion,
 		&instance.LastCompletedRequestAt, &instance.CreatedAt,
 	)
 	if err != nil {
 		return nil, handleError(err, "resource instance")
+	}
+
+	if err := json.Unmarshal(lifecyclePolicyJSON, &instance.LifecyclePolicy); err != nil {
+		return nil, fmt.Errorf("unmarshal lifecycle_policy: %w", err)
+	}
+	if err := json.Unmarshal(invocationMetricsJSON, &instance.InvocationMetrics); err != nil {
+		return nil, fmt.Errorf("unmarshal invocation_metrics: %w", err)
 	}
 
 	return &instance, nil

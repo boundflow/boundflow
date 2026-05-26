@@ -53,7 +53,7 @@ func (h *ResourceLifecycleHandler) ReconcileResource(ctx context.Context, req *c
 
 	var params domain.WorkflowRuntimeParams
 	if req.RuntimeOverrides != nil {
-		params.InitialVersion = int(req.RuntimeOverrides.InitialVersion)
+		params.InitialWorkflowVersion = int(req.RuntimeOverrides.InitialVersion)
 		params.OperationTimeoutSeconds = int(req.RuntimeOverrides.OperationTimeoutSeconds)
 	}
 

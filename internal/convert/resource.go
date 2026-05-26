@@ -41,7 +41,7 @@ func ResourceInstanceToProto(r *domain.ResourceInstance) *convergeplanev1.Resour
 		TenantId:  r.TenantID,
 		CreatedAt: timestamppb.New(r.CreatedAt),
 		WorkflowConfig: &convergeplanev1.WorkflowConfig{
-			InitialVersion:       r.WorkflowConfig.InitialVersion,
+			InitialVersion:       r.WorkflowConfig.InitialWorkflowVersion,
 			InvokeTimeoutSeconds: r.WorkflowConfig.InvokeTimeoutSeconds,
 			RepeatEverySeconds:   r.WorkflowConfig.RepeatEverySeconds,
 			Triggerable:          r.WorkflowConfig.Triggerable,
@@ -114,7 +114,7 @@ func WorkflowConfigFromProto(p *convergeplanev1.WorkflowConfig) domain.WorkflowC
 		return domain.WorkflowConfig{Triggerable: true}
 	}
 	return domain.WorkflowConfig{
-		InitialVersion:       p.InitialVersion,
+		InitialWorkflowVersion: p.InitialVersion,
 		InvokeTimeoutSeconds: p.InvokeTimeoutSeconds,
 		RepeatEverySeconds:   p.RepeatEverySeconds,
 		Triggerable:          p.Triggerable,

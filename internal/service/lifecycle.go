@@ -60,9 +60,9 @@ func (s *LifecycleService) resolveRuntimeParams(params domain.WorkflowRuntimePar
 		return fmt.Errorf("workflow is not triggerable")
 	}
 
-	version := params.InitialVersion
+	version := params.InitialWorkflowVersion
 	if version == 0 {
-		version = int(instance.WorkflowConfig.InitialVersion)
+		version = int(instance.WorkflowConfig.InitialWorkflowVersion)
 		if version == 0 {
 			return fmt.Errorf("no workflow version specified")
 		}

@@ -115,6 +115,20 @@ type AgentStateRepository interface {
 	Delete(ctx context.Context, resourceInstanceID, agentName string) error
 }
 
+type LifecycleResolverRepository interface {
+	// GetExpiredCooldownResources returns all resource instances in the given partition
+	// whose workflow_state is 'cooldown' and whose cooldown_until has passed.
+	GetExpiredCooldownResources(ctx context.Context, partitionID string) ([]*domain.ResourceInstance, error)
+	// GetCurrentVersionMetrics returns the metrics row with the highest epoch for the
+	// given resource instance and version. Returns nil if no row exists yet.
+	GetCurrentVersionMetrics(ctx context.Context, resourceInstanceID string, version int) (*domain.WorkflowVersionMetrics, error)
+	// TryWithResolverLock begins a transaction, acquires a transaction-level advisory lock for
+	// the given resource instance, and calls fn if the lock was obtained. Commits when fn returns,
+	// releasing the lock. Returns acquired=false (no error) if another holder already owns the lock.
+	// fn's DB calls may use the pool normally — the advisory lock guarantees mutual exclusion.
+	TryWithResolverLock(ctx context.Context, resourceInstanceID string, fn func() error) (acquired bool, err error)
+}
+
 type CustomerRequestRepository interface {
 	Create(ctx context.Context, req *domain.CustomerRequest) error
 	Get(ctx context.Context, id string) (*domain.CustomerRequest, error)

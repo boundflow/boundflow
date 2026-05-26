@@ -14,10 +14,10 @@ const (
 )
 
 type WorkflowConfig struct {
-	InitialVersion       int32
-	InvokeTimeoutSeconds int32
-	RepeatEverySeconds   int32
-	Triggerable          bool
+	InitialWorkflowVersion int32
+	InvokeTimeoutSeconds   int32
+	RepeatEverySeconds     int32
+	Triggerable            bool
 }
 
 type WorkflowState string
@@ -38,6 +38,10 @@ type ResourceInstance struct {
 	WorkflowConfig         WorkflowConfig
 	LifecycleState         LifecycleState
 	WorkflowState          WorkflowState
+	LifecyclePolicy        WorkflowLifecyclePolicy
+	InvocationMetrics      []WorkflowInvocationSnapshot
+	CooldownUntil          *time.Time
+	CurrentWorkflowVersion int
 	SchedulerPartitionID   string
 	TargetVersion          int64
 	CurrentVersion         int64
