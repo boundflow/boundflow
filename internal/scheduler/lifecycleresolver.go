@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/convergeplane/convergeplane/internal/domain"
 	"github.com/convergeplane/convergeplane/internal/storage"
 )
 
@@ -31,6 +30,7 @@ func (r *LifecycleResolver) Run(ctx context.Context) error {
 
 }
 
+// call this function once acquring resolver lock
 func (r *LifecycleResolver) ResolveLifecyclePolicy(ctx context.Context, resourceInstanceId string) error {
 
 	workflow, err := r.resource.Get(ctx, resourceInstanceId)
@@ -39,8 +39,4 @@ func (r *LifecycleResolver) ResolveLifecyclePolicy(ctx context.Context, resource
 	}
 
 	return nil
-}
-
-func (r *LifecycleResolver) resolvePolicy(rollingMetrics *domain.WorkflowInvocationSnapshot, policy *domain.WorkflowLifecyclePolicy, versionMetrics *domain.WorkflowVersionMetrics) {
-
 }
