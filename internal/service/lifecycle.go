@@ -60,12 +60,9 @@ func (s *LifecycleService) resolveRuntimeParams(params domain.WorkflowRuntimePar
 		return fmt.Errorf("workflow is not triggerable")
 	}
 
-	version := params.InitialWorkflowVersion
+	version := instance.CurrentWorkflowVersion
 	if version == 0 {
-		version = int(instance.WorkflowConfig.InitialWorkflowVersion)
-		if version == 0 {
-			return fmt.Errorf("no workflow version specified")
-		}
+		return fmt.Errorf("no workflow version specified")
 	}
 
 	timeout := params.OperationTimeoutSeconds
@@ -94,19 +91,20 @@ func (s *LifecycleService) resolveAgentRuntimeParams(ctx context.Context, resour
 	return nil
 }
 
-func (s *LifecycleService) CreateResource(ctx context.Context, correlationID, resourceType, tenantID string, cfg domain.WorkflowConfig) (*domain.ResourceInstance, error) {
+func (s *LifecycleService) CreateResource(ctx context.Context, correlationID, resourceType, tenantID string, cfg domain.WorkflowConfig, version int) (*domain.ResourceInstance, error) {
 	s.log.Info("creating resource", "correlation_id", correlationID, "resource_type", resourceType, "tenant_id", tenantID)
 
 	id := uuid.New().String()
 	resourceInstance := domain.ResourceInstance{
-		ID:                   id,
-		TenantID:             tenantID,
-		ResourceType:         resourceType,
-		WorkflowConfig:       cfg,
-		LifecycleState:       domain.LifecycleStateActive,
-		SchedulerPartitionID: partitionForID(id, s.numPartitions),
-		TargetVersion:        1,
-		CurrentVersion:       1,
+		ID:                     id,
+		TenantID:               tenantID,
+		ResourceType:           resourceType,
+		WorkflowConfig:         cfg,
+		LifecycleState:         domain.LifecycleStateActive,
+		CurrentWorkflowVersion: version,
+		SchedulerPartitionID:   partitionForID(id, s.numPartitions),
+		TargetVersion:          1,
+		CurrentVersion:         1,
 	}
 
 	if err := s.resourceInstances.Create(ctx, &resourceInstance); err != nil {

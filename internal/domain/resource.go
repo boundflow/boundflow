@@ -14,10 +14,9 @@ const (
 )
 
 type WorkflowConfig struct {
-	InitialWorkflowVersion int32
-	InvokeTimeoutSeconds   int32
-	RepeatEverySeconds     int32
-	Triggerable            bool
+	InvokeTimeoutSeconds int32
+	RepeatEverySeconds   int32
+	Triggerable          bool
 }
 
 type WorkflowState string

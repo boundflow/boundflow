@@ -260,7 +260,6 @@ func (x *CreateResourceResponse) GetResourceInstance() *ResourceInstance {
 
 type RuntimeOverrides struct {
 	state                   protoimpl.MessageState `protogen:"open.v1"`
-	InitialVersion          int32                  `protobuf:"varint,1,opt,name=initial_version,json=initialVersion,proto3" json:"initial_version,omitempty"`
 	OperationTimeoutSeconds int32                  `protobuf:"varint,2,opt,name=operation_timeout_seconds,json=operationTimeoutSeconds,proto3" json:"operation_timeout_seconds,omitempty"`
 	unknownFields           protoimpl.UnknownFields
 	sizeCache               protoimpl.SizeCache
@@ -294,13 +293,6 @@ func (x *RuntimeOverrides) ProtoReflect() protoreflect.Message {
 // Deprecated: Use RuntimeOverrides.ProtoReflect.Descriptor instead.
 func (*RuntimeOverrides) Descriptor() ([]byte, []int) {
 	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *RuntimeOverrides) GetInitialVersion() int32 {
-	if x != nil {
-		return x.InitialVersion
-	}
-	return 0
 }
 
 func (x *RuntimeOverrides) GetOperationTimeoutSeconds() int32 {
@@ -1253,9 +1245,8 @@ const file_convergeplane_v1_lifecycle_proto_rawDesc = "" +
 	"\x19operation_timeout_seconds\x18\x05 \x01(\x05R\x17operationTimeoutSeconds\x12I\n" +
 	"\x0fworkflow_config\x18\x06 \x01(\v2 .convergeplane.v1.WorkflowConfigR\x0eworkflowConfig\"i\n" +
 	"\x16CreateResourceResponse\x12O\n" +
-	"\x11resource_instance\x18\x01 \x01(\v2\".convergeplane.v1.ResourceInstanceR\x10resourceInstance\"w\n" +
-	"\x10RuntimeOverrides\x12'\n" +
-	"\x0finitial_version\x18\x01 \x01(\x05R\x0einitialVersion\x12:\n" +
+	"\x11resource_instance\x18\x01 \x01(\v2\".convergeplane.v1.ResourceInstanceR\x10resourceInstance\"N\n" +
+	"\x10RuntimeOverrides\x12:\n" +
 	"\x19operation_timeout_seconds\x18\x02 \x01(\x05R\x17operationTimeoutSeconds\"\xc4\x01\n" +
 	"\x18ReconcileResourceRequest\x12%\n" +
 	"\x0ecorrelation_id\x18\x01 \x01(\tR\rcorrelationId\x120\n" +

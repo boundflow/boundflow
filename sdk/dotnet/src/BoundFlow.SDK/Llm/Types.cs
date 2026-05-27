@@ -33,7 +33,7 @@ internal record AgentLifecycleRule(
 );
 
 internal record WorkflowConfig(
-    int InitialVersion,
+    int Version,
     double TimeoutSeconds,
     double RepeatEvery,
     bool Triggerable

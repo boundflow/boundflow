@@ -27,7 +27,7 @@ func NewLifecycleResolverRepo(pool *pgxpool.Pool) *LifecycleResolverRepo {
 func (r *LifecycleResolverRepo) GetExpiredCooldownResources(ctx context.Context, partitionID string) ([]*domain.ResourceInstance, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, tenant_id, resource_type,
-		       initial_workflow_version, invoke_timeout_seconds, repeat_every_seconds, triggerable,
+		       invoke_timeout_seconds, repeat_every_seconds, triggerable,
 		       lifecycle_state, workflow_state, lifecycle_policy, invocation_metrics, cooldown_until,
 		       current_workflow_version, scheduler_partition_id,
 		       target_version, current_version, last_completed_request_at, created_at
@@ -47,7 +47,6 @@ func (r *LifecycleResolverRepo) GetExpiredCooldownResources(ctx context.Context,
 		var lifecyclePolicyJSON, invocationMetricsJSON []byte
 		if err := rows.Scan(
 			&inst.ID, &inst.TenantID, &inst.ResourceType,
-			&inst.WorkflowConfig.InitialWorkflowVersion,
 			&inst.WorkflowConfig.InvokeTimeoutSeconds,
 			&inst.WorkflowConfig.RepeatEverySeconds,
 			&inst.WorkflowConfig.Triggerable,

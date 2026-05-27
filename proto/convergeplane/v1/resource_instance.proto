@@ -7,7 +7,7 @@ option go_package = "github.com/convergeplane/convergeplane/gen/convergeplane/v1
 import "google/protobuf/timestamp.proto";
 
 message WorkflowConfig {
-  int32 initial_version = 1;
+  int32 version = 1;
   int32 invoke_timeout_seconds = 2;
   int32 repeat_every_seconds = 3;
   bool triggerable = 4;

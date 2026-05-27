@@ -26,12 +26,12 @@ func (r *ResourceInstanceRepo) Create(ctx context.Context, instance *domain.Reso
 	_, err := r.pool.Exec(ctx,
 		`INSERT INTO resource_instances
 		   (id, tenant_id, resource_type,
-		    initial_workflow_version, invoke_timeout_seconds, repeat_every_seconds, triggerable,
+		    current_workflow_version, invoke_timeout_seconds, repeat_every_seconds, triggerable,
 		    lifecycle_state, scheduler_partition_id,
 		    target_version, current_version, last_completed_request_at, created_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
 		instance.ID, instance.TenantID, instance.ResourceType,
-		instance.WorkflowConfig.InitialWorkflowVersion,
+		instance.CurrentWorkflowVersion,
 		instance.WorkflowConfig.InvokeTimeoutSeconds,
 		instance.WorkflowConfig.RepeatEverySeconds,
 		instance.WorkflowConfig.Triggerable,
@@ -51,14 +51,13 @@ func (r *ResourceInstanceRepo) Get(ctx context.Context, id string) (*domain.Reso
 
 	err := r.pool.QueryRow(ctx,
 		`SELECT id, tenant_id, resource_type,
-		        initial_workflow_version, invoke_timeout_seconds, repeat_every_seconds, triggerable,
+		        invoke_timeout_seconds, repeat_every_seconds, triggerable,
 		        lifecycle_state, workflow_state, lifecycle_policy, invocation_metrics, cooldown_until,
 		        current_workflow_version, scheduler_partition_id,
 		        target_version, current_version, last_completed_request_at, created_at
 		 FROM resource_instances WHERE id = $1`, id,
 	).Scan(
 		&instance.ID, &instance.TenantID, &instance.ResourceType,
-		&instance.WorkflowConfig.InitialWorkflowVersion,
 		&instance.WorkflowConfig.InvokeTimeoutSeconds,
 		&instance.WorkflowConfig.RepeatEverySeconds,
 		&instance.WorkflowConfig.Triggerable,

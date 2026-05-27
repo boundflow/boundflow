@@ -32,8 +32,12 @@ func (h *ResourceLifecycleHandler) CreateResource(ctx context.Context, req *conv
 	}
 
 	cfg := convert.WorkflowConfigFromProto(req.WorkflowConfig)
+	version := 0
+	if req.WorkflowConfig != nil {
+		version = int(req.WorkflowConfig.Version)
+	}
 
-	instance, err := h.svc.CreateResource(ctx, req.CorrelationId, req.ResourceType, req.TenantId, cfg)
+	instance, err := h.svc.CreateResource(ctx, req.CorrelationId, req.ResourceType, req.TenantId, cfg, version)
 	if err != nil {
 		if errors.Is(err, storage.ErrAlreadyExists) {
 			return nil, status.Errorf(codes.AlreadyExists, "resource instance already exists")
@@ -53,7 +57,6 @@ func (h *ResourceLifecycleHandler) ReconcileResource(ctx context.Context, req *c
 
 	var params domain.WorkflowRuntimeParams
 	if req.RuntimeOverrides != nil {
-		params.InitialWorkflowVersion = int(req.RuntimeOverrides.InitialVersion)
 		params.OperationTimeoutSeconds = int(req.RuntimeOverrides.OperationTimeoutSeconds)
 	}
 

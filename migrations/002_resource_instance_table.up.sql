@@ -20,7 +20,6 @@ CREATE TABLE resource_instances (
     id                        TEXT PRIMARY KEY,
     tenant_id                 TEXT NOT NULL REFERENCES tenants(id),
     resource_type             TEXT NOT NULL,
-    initial_workflow_version  INTEGER NOT NULL DEFAULT 0,
     current_workflow_version  INTEGER NOT NULL DEFAULT 0,
     invoke_timeout_seconds    INTEGER NOT NULL DEFAULT 0,
     repeat_every_seconds      INTEGER NOT NULL DEFAULT 0,

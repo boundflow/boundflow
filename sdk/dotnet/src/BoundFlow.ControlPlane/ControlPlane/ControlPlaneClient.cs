@@ -88,7 +88,7 @@ public sealed class ControlPlaneClient : IDisposable
                 CorrelationId = correlationId,
                 WorkflowConfig = new Convergeplane.V1.WorkflowConfig
                 {
-                    InitialVersion       = cfg.InitialVersion,
+                    Version              = cfg.Version,
                     InvokeTimeoutSeconds = cfg.InvokeTimeoutSeconds,
                     RepeatEverySeconds   = cfg.RepeatEverySeconds,
                     Triggerable          = cfg.Triggerable,
@@ -100,7 +100,7 @@ public sealed class ControlPlaneClient : IDisposable
             ri.Id,
             ri.TenantId,
             new WorkflowConfig(
-                ri.WorkflowConfig?.InitialVersion ?? 0,
+                ri.WorkflowConfig?.Version ?? 0,
                 ri.WorkflowConfig?.InvokeTimeoutSeconds ?? 60,
                 ri.WorkflowConfig?.RepeatEverySeconds ?? 0,
                 ri.WorkflowConfig?.Triggerable ?? true));
@@ -118,7 +118,6 @@ public sealed class ControlPlaneClient : IDisposable
                 CorrelationId = correlationId,
                 RuntimeOverrides = overrides == null ? null : new Convergeplane.V1.RuntimeOverrides
                 {
-                    InitialVersion = overrides.InitialVersion,
                     OperationTimeoutSeconds = overrides.OperationTimeoutSeconds,
                 },
             },

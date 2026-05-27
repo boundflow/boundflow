@@ -26,28 +26,28 @@ namespace Convergeplane.V1 {
           string.Concat(
             "Cihjb252ZXJnZXBsYW5lL3YxL3Jlc291cmNlX2luc3RhbmNlLnByb3RvEhBj",
             "b252ZXJnZXBsYW5lLnYxGh9nb29nbGUvcHJvdG9idWYvdGltZXN0YW1wLnBy",
-            "b3RvIsMBCg5Xb3JrZmxvd0NvbmZpZxInCg9pbml0aWFsX3ZlcnNpb24YASAB",
-            "KAVSDmluaXRpYWxWZXJzaW9uEjQKFmludm9rZV90aW1lb3V0X3NlY29uZHMY",
-            "AiABKAVSFGludm9rZVRpbWVvdXRTZWNvbmRzEjAKFHJlcGVhdF9ldmVyeV9z",
-            "ZWNvbmRzGAMgASgFUhJyZXBlYXRFdmVyeVNlY29uZHMSIAoLdHJpZ2dlcmFi",
-            "bGUYBCABKAhSC3RyaWdnZXJhYmxlIrYCChBSZXNvdXJjZUluc3RhbmNlEg4K",
-            "AmlkGAEgASgJUgJpZBIbCgl0ZW5hbnRfaWQYAyABKAlSCHRlbmFudElkEjkK",
-            "CmNyZWF0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1w",
-            "UgljcmVhdGVkQXQSSQoPd29ya2Zsb3dfY29uZmlnGAggASgLMiAuY29udmVy",
-            "Z2VwbGFuZS52MS5Xb3JrZmxvd0NvbmZpZ1IOd29ya2Zsb3dDb25maWcSJwoP",
-            "bGlmZWN5Y2xlX3N0YXRlGAkgASgJUg5saWZlY3ljbGVTdGF0ZRJGCg53b3Jr",
-            "Zmxvd19zdGF0ZRgKIAEoDjIfLmNvbnZlcmdlcGxhbmUudjEuV29ya2Zsb3dT",
-            "dGF0ZVINd29ya2Zsb3dTdGF0ZSq3AQoNV29ya2Zsb3dTdGF0ZRIaChZXT1JL",
-            "RkxPV19TVEFURV9DUkVBVEVEEAASGQoVV09SS0ZMT1dfU1RBVEVfQUNUSVZF",
-            "EAESGQoVV09SS0ZMT1dfU1RBVEVfUEFVU0VEEAISGwoXV09SS0ZMT1dfU1RB",
-            "VEVfQ09PTERPV04QAxIbChdXT1JLRkxPV19TVEFURV9ESVNBQkxFRBAEEhoK",
-            "FldPUktGTE9XX1NUQVRFX0RFTEVURUQQBUJNWktnaXRodWIuY29tL2NvbnZl",
-            "cmdlcGxhbmUvY29udmVyZ2VwbGFuZS9nZW4vY29udmVyZ2VwbGFuZS92MTtj",
-            "b252ZXJnZXBsYW5ldjFiBnByb3RvMw=="));
+            "b3RvIrQBCg5Xb3JrZmxvd0NvbmZpZxIYCgd2ZXJzaW9uGAEgASgFUgd2ZXJz",
+            "aW9uEjQKFmludm9rZV90aW1lb3V0X3NlY29uZHMYAiABKAVSFGludm9rZVRp",
+            "bWVvdXRTZWNvbmRzEjAKFHJlcGVhdF9ldmVyeV9zZWNvbmRzGAMgASgFUhJy",
+            "ZXBlYXRFdmVyeVNlY29uZHMSIAoLdHJpZ2dlcmFibGUYBCABKAhSC3RyaWdn",
+            "ZXJhYmxlIrYCChBSZXNvdXJjZUluc3RhbmNlEg4KAmlkGAEgASgJUgJpZBIb",
+            "Cgl0ZW5hbnRfaWQYAyABKAlSCHRlbmFudElkEjkKCmNyZWF0ZWRfYXQYBiAB",
+            "KAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wUgljcmVhdGVkQXQSSQoP",
+            "d29ya2Zsb3dfY29uZmlnGAggASgLMiAuY29udmVyZ2VwbGFuZS52MS5Xb3Jr",
+            "Zmxvd0NvbmZpZ1IOd29ya2Zsb3dDb25maWcSJwoPbGlmZWN5Y2xlX3N0YXRl",
+            "GAkgASgJUg5saWZlY3ljbGVTdGF0ZRJGCg53b3JrZmxvd19zdGF0ZRgKIAEo",
+            "DjIfLmNvbnZlcmdlcGxhbmUudjEuV29ya2Zsb3dTdGF0ZVINd29ya2Zsb3dT",
+            "dGF0ZSq3AQoNV29ya2Zsb3dTdGF0ZRIaChZXT1JLRkxPV19TVEFURV9DUkVB",
+            "VEVEEAASGQoVV09SS0ZMT1dfU1RBVEVfQUNUSVZFEAESGQoVV09SS0ZMT1df",
+            "U1RBVEVfUEFVU0VEEAISGwoXV09SS0ZMT1dfU1RBVEVfQ09PTERPV04QAxIb",
+            "ChdXT1JLRkxPV19TVEFURV9ESVNBQkxFRBAEEhoKFldPUktGTE9XX1NUQVRF",
+            "X0RFTEVURUQQBUJNWktnaXRodWIuY29tL2NvbnZlcmdlcGxhbmUvY29udmVy",
+            "Z2VwbGFuZS9nZW4vY29udmVyZ2VwbGFuZS92MTtjb252ZXJnZXBsYW5ldjFi",
+            "BnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Convergeplane.V1.WorkflowState), }, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.WorkflowConfig), global::Convergeplane.V1.WorkflowConfig.Parser, new[]{ "InitialVersion", "InvokeTimeoutSeconds", "RepeatEverySeconds", "Triggerable" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.WorkflowConfig), global::Convergeplane.V1.WorkflowConfig.Parser, new[]{ "Version", "InvokeTimeoutSeconds", "RepeatEverySeconds", "Triggerable" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.ResourceInstance), global::Convergeplane.V1.ResourceInstance.Parser, new[]{ "Id", "TenantId", "CreatedAt", "WorkflowConfig", "LifecycleState", "WorkflowState" }, null, null, null, null)
           }));
     }
@@ -102,7 +102,7 @@ namespace Convergeplane.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public WorkflowConfig(WorkflowConfig other) : this() {
-      initialVersion_ = other.initialVersion_;
+      version_ = other.version_;
       invokeTimeoutSeconds_ = other.invokeTimeoutSeconds_;
       repeatEverySeconds_ = other.repeatEverySeconds_;
       triggerable_ = other.triggerable_;
@@ -115,15 +115,15 @@ namespace Convergeplane.V1 {
       return new WorkflowConfig(this);
     }
 
-    /// <summary>Field number for the "initial_version" field.</summary>
-    public const int InitialVersionFieldNumber = 1;
-    private int initialVersion_;
+    /// <summary>Field number for the "version" field.</summary>
+    public const int VersionFieldNumber = 1;
+    private int version_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public int InitialVersion {
-      get { return initialVersion_; }
+    public int Version {
+      get { return version_; }
       set {
-        initialVersion_ = value;
+        version_ = value;
       }
     }
 
@@ -178,7 +178,7 @@ namespace Convergeplane.V1 {
       if (ReferenceEquals(other, this)) {
         return true;
       }
-      if (InitialVersion != other.InitialVersion) return false;
+      if (Version != other.Version) return false;
       if (InvokeTimeoutSeconds != other.InvokeTimeoutSeconds) return false;
       if (RepeatEverySeconds != other.RepeatEverySeconds) return false;
       if (Triggerable != other.Triggerable) return false;
@@ -189,7 +189,7 @@ namespace Convergeplane.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override int GetHashCode() {
       int hash = 1;
-      if (InitialVersion != 0) hash ^= InitialVersion.GetHashCode();
+      if (Version != 0) hash ^= Version.GetHashCode();
       if (InvokeTimeoutSeconds != 0) hash ^= InvokeTimeoutSeconds.GetHashCode();
       if (RepeatEverySeconds != 0) hash ^= RepeatEverySeconds.GetHashCode();
       if (Triggerable != false) hash ^= Triggerable.GetHashCode();
@@ -211,9 +211,9 @@ namespace Convergeplane.V1 {
     #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       output.WriteRawMessage(this);
     #else
-      if (InitialVersion != 0) {
+      if (Version != 0) {
         output.WriteRawTag(8);
-        output.WriteInt32(InitialVersion);
+        output.WriteInt32(Version);
       }
       if (InvokeTimeoutSeconds != 0) {
         output.WriteRawTag(16);
@@ -237,9 +237,9 @@ namespace Convergeplane.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (InitialVersion != 0) {
+      if (Version != 0) {
         output.WriteRawTag(8);
-        output.WriteInt32(InitialVersion);
+        output.WriteInt32(Version);
       }
       if (InvokeTimeoutSeconds != 0) {
         output.WriteRawTag(16);
@@ -263,8 +263,8 @@ namespace Convergeplane.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int CalculateSize() {
       int size = 0;
-      if (InitialVersion != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeInt32Size(InitialVersion);
+      if (Version != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(Version);
       }
       if (InvokeTimeoutSeconds != 0) {
         size += 1 + pb::CodedOutputStream.ComputeInt32Size(InvokeTimeoutSeconds);
@@ -287,8 +287,8 @@ namespace Convergeplane.V1 {
       if (other == null) {
         return;
       }
-      if (other.InitialVersion != 0) {
-        InitialVersion = other.InitialVersion;
+      if (other.Version != 0) {
+        Version = other.Version;
       }
       if (other.InvokeTimeoutSeconds != 0) {
         InvokeTimeoutSeconds = other.InvokeTimeoutSeconds;
@@ -319,7 +319,7 @@ namespace Convergeplane.V1 {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
           case 8: {
-            InitialVersion = input.ReadInt32();
+            Version = input.ReadInt32();
             break;
           }
           case 16: {
@@ -354,7 +354,7 @@ namespace Convergeplane.V1 {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
           case 8: {
-            InitialVersion = input.ReadInt32();
+            Version = input.ReadInt32();
             break;
           }
           case 16: {

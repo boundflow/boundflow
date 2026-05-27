@@ -36,7 +36,6 @@ message CreateResourceResponse {
 }
 
 message RuntimeOverrides {
-  int32 initial_version = 1;
   int32 operation_timeout_seconds = 2;
 }
 

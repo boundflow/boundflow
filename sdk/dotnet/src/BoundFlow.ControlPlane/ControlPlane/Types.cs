@@ -19,7 +19,7 @@ public record Workflow(
     WorkflowConfig Config
 );
 public record WorkflowConfig(
-    int InitialVersion = 0,
+    int Version = 0,
     int InvokeTimeoutSeconds = 60,
     int RepeatEverySeconds = 0,
     bool Triggerable = true
@@ -38,7 +38,6 @@ public enum LifecycleState
 
 
 public record RuntimeOverrides(
-    int InitialVersion = 0,
     int OperationTimeoutSeconds = 0
 );
 

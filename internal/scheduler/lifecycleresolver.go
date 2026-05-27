@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/convergeplane/convergeplane/internal/domain"
 	"github.com/convergeplane/convergeplane/internal/storage"
 )
 
@@ -30,13 +31,27 @@ func (r *LifecycleResolver) Run(ctx context.Context) error {
 
 }
 
-// call this function once acquring resolver lock
+// call this function once acquiring resolver lock
 func (r *LifecycleResolver) ResolveLifecyclePolicy(ctx context.Context, resourceInstanceId string) error {
 
 	workflow, err := r.resource.Get(ctx, resourceInstanceId)
 	if err != nil {
 		return fmt.Errorf("get resource instance %s: %w", resourceInstanceId, err)
 	}
+
+	versionMetrics, err := r.resolver.GetCurrentVersionMetrics(ctx, resourceInstanceId, workflow.CurrentWorkflowVersion)
+	if err != nil {
+		return fmt.Errorf("get current version metrics instance %s: %w version %d:", resourceInstanceId, err, workflow.CurrentWorkflowVersion)
+	}
+
+	if versionMetrics == nil {
+		versionMetrics = &domain.WorkflowVersionMetrics{}
+	}
+
+	policy := workflow.LifecyclePolicy
+	rollingMetrics := workflow.InvocationMetrics
+
+	lifecyclePolicyEngine := NewLifecyclePolicyEngine(r.log)
 
 	return nil
 }

@@ -82,7 +82,7 @@ func (WorkflowState) EnumDescriptor() ([]byte, []int) {
 
 type WorkflowConfig struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
-	InitialVersion       int32                  `protobuf:"varint,1,opt,name=initial_version,json=initialVersion,proto3" json:"initial_version,omitempty"`
+	Version              int32                  `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
 	InvokeTimeoutSeconds int32                  `protobuf:"varint,2,opt,name=invoke_timeout_seconds,json=invokeTimeoutSeconds,proto3" json:"invoke_timeout_seconds,omitempty"`
 	RepeatEverySeconds   int32                  `protobuf:"varint,3,opt,name=repeat_every_seconds,json=repeatEverySeconds,proto3" json:"repeat_every_seconds,omitempty"`
 	Triggerable          bool                   `protobuf:"varint,4,opt,name=triggerable,proto3" json:"triggerable,omitempty"`
@@ -120,9 +120,9 @@ func (*WorkflowConfig) Descriptor() ([]byte, []int) {
 	return file_convergeplane_v1_resource_instance_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *WorkflowConfig) GetInitialVersion() int32 {
+func (x *WorkflowConfig) GetVersion() int32 {
 	if x != nil {
-		return x.InitialVersion
+		return x.Version
 	}
 	return 0
 }
@@ -238,9 +238,9 @@ var File_convergeplane_v1_resource_instance_proto protoreflect.FileDescriptor
 
 const file_convergeplane_v1_resource_instance_proto_rawDesc = "" +
 	"\n" +
-	"(convergeplane/v1/resource_instance.proto\x12\x10convergeplane.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc3\x01\n" +
-	"\x0eWorkflowConfig\x12'\n" +
-	"\x0finitial_version\x18\x01 \x01(\x05R\x0einitialVersion\x124\n" +
+	"(convergeplane/v1/resource_instance.proto\x12\x10convergeplane.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb4\x01\n" +
+	"\x0eWorkflowConfig\x12\x18\n" +
+	"\aversion\x18\x01 \x01(\x05R\aversion\x124\n" +
 	"\x16invoke_timeout_seconds\x18\x02 \x01(\x05R\x14invokeTimeoutSeconds\x120\n" +
 	"\x14repeat_every_seconds\x18\x03 \x01(\x05R\x12repeatEverySeconds\x12 \n" +
 	"\vtriggerable\x18\x04 \x01(\bR\vtriggerable\"\xb6\x02\n" +
