@@ -29,7 +29,7 @@ type WorkflowGoalState struct {
 	versionChange bool
 }
 
-func (e *LifecyclePolicyEngine) ResolvePolicy(rollingMetrics *[]domain.WorkflowInvocationSnapshot, policy *domain.WorkflowLifecyclePolicy, versionMetrics *domain.WorkflowVersionMetrics) (bool, WorkflowGoalState, error) {
+func (e *LifecyclePolicyEngine) ResolvePolicy(lastResolved int64, rollingMetrics *[]domain.WorkflowInvocationSnapshot, policy *domain.WorkflowLifecyclePolicy, versionMetrics *domain.WorkflowVersionMetrics) (bool, WorkflowGoalState, error) {
 
 	// order of precedence of actiontype:
 	// pause, cooldown, setversion
@@ -46,6 +46,12 @@ func (e *LifecyclePolicyEngine) ResolvePolicy(rollingMetrics *[]domain.WorkflowI
 
 		switch rule.Action.Type {
 		case domain.WorkflowPolicyActionSetVersion:
+
+			if versionMetrics.LastMeasured <= lastResolved {
+				e.log.Debug("no change of underlying metric for rule, skipping", "metric", rule.Metric, "lastMeasured", versionMetrics.LastMeasured)
+				continue
+			}
+
 			var val float64
 			switch rule.Metric {
 			case domain.WorkflowMetricNumFailures:
@@ -77,33 +83,66 @@ func (e *LifecyclePolicyEngine) ResolvePolicy(rollingMetrics *[]domain.WorkflowI
 
 		case domain.WorkflowPolicyActionCooldown, domain.WorkflowPolicyActionPause:
 
-			if len(*rollingMetrics) < rule.Window {
-				e.log.Debug("insufficient rolling metrics for rule window, skipping", "have", len(*rollingMetrics), "need", rule.Window, "metric", rule.Metric)
+			// Filter to snapshots where this metric was actually observed.
+			var observed []domain.WorkflowInvocationSnapshot
+			for _, m := range *rollingMetrics {
+				switch rule.Metric {
+				case domain.WorkflowMetricNumFailures:
+					if m.Failures != nil {
+						observed = append(observed, m)
+					}
+				case domain.WorkflowMetricCost:
+					if m.CostUsd != nil {
+						observed = append(observed, m)
+					}
+				case domain.WorkflowMetricNumLLMCalls:
+					if m.LlmCalls != nil {
+						observed = append(observed, m)
+					}
+				case domain.WorkflowMetricLatency:
+					if m.LatencySeconds != nil {
+						observed = append(observed, m)
+					}
+				case domain.WorkflowMetricApprovalRejections:
+					if m.ApprovalRejections != nil {
+						observed = append(observed, m)
+					}
+				case domain.WorkflowMetricToolFailureRate:
+					if _, ok := m.ToolFailureCounts[rule.ToolName]; ok {
+						observed = append(observed, m)
+					}
+				}
+			}
+
+			if len(observed) < rule.Window {
+				e.log.Debug("insufficient observed metrics for rule window, skipping", "have", len(observed), "need", rule.Window, "metric", rule.Metric)
 				continue
 			}
 
-			lastN := (*rollingMetrics)[len(*rollingMetrics)-rule.Window:]
+			lastMeasured := observed[len(observed)-1].LastMeasured
+			if lastMeasured <= lastResolved {
+				e.log.Debug("no change of underlying metric for rule, skipping", "metric", rule.Metric, "lastMeasured", lastMeasured)
+				continue
+			}
+
+			lastN := observed[len(observed)-rule.Window:]
 			total := 0.0
 
 			for _, metric := range lastN {
 				var val float64
 				switch rule.Metric {
 				case domain.WorkflowMetricNumFailures:
-					val = float64(metric.Failures)
+					val = float64(*metric.Failures)
 				case domain.WorkflowMetricCost:
-					val = metric.CostUsd
+					val = *metric.CostUsd
 				case domain.WorkflowMetricNumLLMCalls:
-					val = float64(metric.LlmCalls)
+					val = float64(*metric.LlmCalls)
 				case domain.WorkflowMetricLatency:
-					val = metric.LatencySeconds
+					val = *metric.LatencySeconds
 				case domain.WorkflowMetricApprovalRejections:
-					val = float64(metric.ApprovalRejections)
+					val = float64(*metric.ApprovalRejections)
 				case domain.WorkflowMetricToolFailureRate:
-					intVal, ok := metric.ToolFailureCounts[rule.ToolName]
-					if !ok {
-						intVal = 0
-					}
-					val = float64(intVal)
+					val = float64(metric.ToolFailureCounts[rule.ToolName])
 				}
 				total += val
 			}

@@ -29,6 +29,7 @@ CREATE TABLE resource_instances (
     lifecycle_policy          JSONB NOT NULL DEFAULT '[]',
     invocation_metrics        JSONB NOT NULL DEFAULT '[]',
     cooldown_until            TIMESTAMPTZ,
+    lifecycle_last_resolved   BIGINT NOT NULL DEFAULT 0,
     scheduler_partition_id    TEXT,
     target_version            BIGINT NOT NULL DEFAULT 0,
     current_version           BIGINT NOT NULL DEFAULT 0,

@@ -29,7 +29,7 @@ type Scheduler struct {
 // 2. Schedules unscheduled requests onto the job queue (picking priority by version number)
 // 3. Checks for completed jobs, and updates current config state of the resource and lifecycle state, then deletes the job
 
-func New(id string, interval int, parts storage.SchedulerPartitionRepository, scheduler storage.SchedulerRepository, requests storage.CustomerRequestRepository, resource storage.ResourceInstanceRepository, agentStates storage.AgentStateRepository, log *slog.Logger) *Scheduler {
+func NewScheduler(id string, interval int, parts storage.SchedulerPartitionRepository, scheduler storage.SchedulerRepository, requests storage.CustomerRequestRepository, resource storage.ResourceInstanceRepository, agentStates storage.AgentStateRepository, log *slog.Logger) *Scheduler {
 	return &Scheduler{
 		id:          id,
 		interval:    interval,

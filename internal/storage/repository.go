@@ -122,11 +122,11 @@ type LifecycleResolverRepository interface {
 	// GetCurrentVersionMetrics returns the metrics row with the highest epoch for the
 	// given resource instance and version. Returns nil if no row exists yet.
 	GetCurrentVersionMetrics(ctx context.Context, resourceInstanceID string, version int) (*domain.WorkflowVersionMetrics, error)
-	// TryWithResolverLock begins a transaction, acquires a transaction-level advisory lock for
-	// the given resource instance, and calls fn if the lock was obtained. Commits when fn returns,
-	// releasing the lock. Returns acquired=false (no error) if another holder already owns the lock.
-	// fn's DB calls may use the pool normally — the advisory lock guarantees mutual exclusion.
-	TryWithResolverLock(ctx context.Context, resourceInstanceID string, fn func() error) (acquired bool, err error)
+	// TryApplyPolicyResolution atomically updates lifecycle_last_resolved,
+	// current_workflow_version, workflow_state, and cooldown_until only if the stored
+	// lifecycle_last_resolved is less than lastMeasured. Returns true if the update was applied.
+	// cooldownUntil should be non-nil only when workflowState is WorkflowStateCooldown.
+	TryApplyPolicyResolution(ctx context.Context, resourceInstanceID string, resolved int64, workflowVersion int, workflowState domain.WorkflowState, cooldownUntil *time.Time) (bool, error)
 }
 
 type CustomerRequestRepository interface {

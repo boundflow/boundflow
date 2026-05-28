@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -53,7 +54,7 @@ func (r *ResourceInstanceRepo) Get(ctx context.Context, id string) (*domain.Reso
 		`SELECT id, tenant_id, resource_type,
 		        invoke_timeout_seconds, repeat_every_seconds, triggerable,
 		        lifecycle_state, workflow_state, lifecycle_policy, invocation_metrics, cooldown_until,
-		        current_workflow_version, scheduler_partition_id,
+		        lifecycle_last_resolved, current_workflow_version, scheduler_partition_id,
 		        target_version, current_version, last_completed_request_at, created_at
 		 FROM resource_instances WHERE id = $1`, id,
 	).Scan(
@@ -63,7 +64,7 @@ func (r *ResourceInstanceRepo) Get(ctx context.Context, id string) (*domain.Reso
 		&instance.WorkflowConfig.Triggerable,
 		&instance.LifecycleState, &instance.WorkflowState,
 		&lifecyclePolicyJSON, &invocationMetricsJSON, &instance.CooldownUntil,
-		&instance.CurrentWorkflowVersion, &instance.SchedulerPartitionID,
+		&instance.LifecycleLastResolved, &instance.CurrentWorkflowVersion, &instance.SchedulerPartitionID,
 		&instance.TargetVersion, &instance.CurrentVersion,
 		&instance.LastCompletedRequestAt, &instance.CreatedAt,
 	)
@@ -77,6 +78,9 @@ func (r *ResourceInstanceRepo) Get(ctx context.Context, id string) (*domain.Reso
 	if err := json.Unmarshal(invocationMetricsJSON, &instance.InvocationMetrics); err != nil {
 		return nil, fmt.Errorf("unmarshal invocation_metrics: %w", err)
 	}
+	sort.Slice(instance.InvocationMetrics, func(i, j int) bool {
+		return instance.InvocationMetrics[i].LastMeasured < instance.InvocationMetrics[j].LastMeasured
+	})
 
 	return &instance, nil
 }

@@ -40,6 +40,7 @@ type ResourceInstance struct {
 	LifecyclePolicy        WorkflowLifecyclePolicy
 	InvocationMetrics      []WorkflowInvocationSnapshot
 	CooldownUntil          *time.Time
+	LifecycleLastResolved  int64
 	CurrentWorkflowVersion int
 	SchedulerPartitionID   string
 	TargetVersion          int64

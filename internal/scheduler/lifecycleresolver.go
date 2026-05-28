@@ -31,7 +31,6 @@ func (r *LifecycleResolver) Run(ctx context.Context) error {
 
 }
 
-// call this function once acquiring resolver lock
 func (r *LifecycleResolver) ResolveLifecyclePolicy(ctx context.Context, resourceInstanceId string) error {
 
 	workflow, err := r.resource.Get(ctx, resourceInstanceId)
@@ -50,8 +49,34 @@ func (r *LifecycleResolver) ResolveLifecyclePolicy(ctx context.Context, resource
 
 	policy := workflow.LifecyclePolicy
 	rollingMetrics := workflow.InvocationMetrics
-
 	lifecyclePolicyEngine := NewLifecyclePolicyEngine(r.log)
+
+	updated, goalState, err := lifecyclePolicyEngine.ResolvePolicy(workflow.LifecycleLastResolved, &rollingMetrics, &policy, versionMetrics)
+
+	if err != nil {
+		return fmt.Errorf("Policy resolution failed with error %w", err)
+	}
+
+	if !updated {
+		// log this
+		return nil
+	}
+
+	version := workflow.CurrentWorkflowVersion
+	state := workflow.WorkflowState
+	cooldown := workflow.CooldownUntil
+
+	if goalState.versionChange {
+		version = goalState.version
+	} else {
+		state = goalState.state
+		if state == domain.WorkflowStateCooldown {
+			t := time.Now().Add(time.Duration(goalState.cooldown) * time.Second)
+			cooldown = &t
+		}
+	}
+
+	r.resolver.TryApplyPolicyResolution(ctx, resourceInstanceId)
 
 	return nil
 }
