@@ -124,7 +124,7 @@ type LifecycleResolverRepository interface {
 	GetCurrentVersionMetrics(ctx context.Context, resourceInstanceID string, version int) (*domain.WorkflowVersionMetrics, error)
 	// TryApplyPolicyResolution atomically updates lifecycle_last_resolved,
 	// current_workflow_version, workflow_state, and cooldown_until only if the stored
-	// lifecycle_last_resolved is less than lastMeasured. Returns true if the update was applied.
+	// lifecycle_last_resolved is less than resolved. Returns true if the update was applied.
 	// cooldownUntil should be non-nil only when workflowState is WorkflowStateCooldown.
 	TryApplyPolicyResolution(ctx context.Context, resourceInstanceID string, resolved int64, workflowVersion int, workflowState domain.WorkflowState, cooldownUntil *time.Time) (bool, error)
 }

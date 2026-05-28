@@ -46,7 +46,6 @@ type WorkflowInvocationSnapshot struct {
 	ApprovalRejections *int           `json:"approval_rejections,omitempty"`
 	ToolFailureCounts  map[string]int `json:"tool_failure_counts,omitempty"`
 	RanAt              int64          `json:"ran_at"`
-	LastMeasured       int64          `json:"last_measured"`
 }
 
 type WorkflowVersionMetrics struct {
@@ -60,5 +59,7 @@ type WorkflowVersionMetrics struct {
 	TotalLatencySeconds     float64
 	TotalApprovalRejections int
 	ToolFailureCounts       map[string]int
-	LastMeasured            int64
+	// EmittedMetrics lists which metrics were actually observed in the last run.
+	// SetVersion rules are skipped for metrics not present in this list.
+	EmittedMetrics []WorkflowMetric
 }

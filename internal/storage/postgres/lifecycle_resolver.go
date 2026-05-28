@@ -63,14 +63,14 @@ func (r *LifecycleResolverRepo) GetExpiredCooldownResources(ctx context.Context,
 			return nil, fmt.Errorf("unmarshal invocation_metrics: %w", err)
 		}
 		sort.Slice(inst.InvocationMetrics, func(i, j int) bool {
-			return inst.InvocationMetrics[i].LastMeasured < inst.InvocationMetrics[j].LastMeasured
+			return inst.InvocationMetrics[i].RanAt < inst.InvocationMetrics[j].RanAt
 		})
 		instances = append(instances, &inst)
 	}
 	return instances, rows.Err()
 }
 
-func (r *LifecycleResolverRepo) TryApplyPolicyResolution(ctx context.Context, resourceInstanceID string, lastMeasured int64, workflowVersion int, workflowState domain.WorkflowState, cooldownUntil *time.Time) (bool, error) {
+func (r *LifecycleResolverRepo) TryApplyPolicyResolution(ctx context.Context, resourceInstanceID string, resolved int64, workflowVersion int, workflowState domain.WorkflowState, cooldownUntil *time.Time) (bool, error) {
 	var updatedID string
 	err := r.pool.QueryRow(ctx, `
 		UPDATE resource_instances
@@ -81,7 +81,7 @@ func (r *LifecycleResolverRepo) TryApplyPolicyResolution(ctx context.Context, re
 		WHERE id = $1
 		  AND lifecycle_last_resolved < $2
 		RETURNING id
-	`, resourceInstanceID, lastMeasured, workflowVersion, workflowState, cooldownUntil).Scan(&updatedID)
+	`, resourceInstanceID, resolved, workflowVersion, workflowState, cooldownUntil).Scan(&updatedID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil
@@ -93,13 +93,13 @@ func (r *LifecycleResolverRepo) TryApplyPolicyResolution(ctx context.Context, re
 
 func (r *LifecycleResolverRepo) GetCurrentVersionMetrics(ctx context.Context, resourceInstanceID string, version int) (*domain.WorkflowVersionMetrics, error) {
 	var m domain.WorkflowVersionMetrics
-	var toolFailureCountsRaw []byte
+	var toolFailureCountsRaw, emittedMetricsRaw []byte
 
 	err := r.pool.QueryRow(ctx, `
 		SELECT resource_instance_id, version, epoch,
 		       total_cost, run_count, total_failures, total_llm_calls,
 		       total_latency_seconds, total_approval_rejections, tool_failure_counts,
-		       last_measured
+		       emitted_metrics
 		FROM workflow_version_metrics
 		WHERE resource_instance_id = $1 AND version = $2
 		ORDER BY epoch DESC
@@ -108,7 +108,7 @@ func (r *LifecycleResolverRepo) GetCurrentVersionMetrics(ctx context.Context, re
 		&m.ResourceInstanceID, &m.Version, &m.Epoch,
 		&m.TotalCost, &m.RunCount, &m.TotalFailures, &m.TotalLLMCalls,
 		&m.TotalLatencySeconds, &m.TotalApprovalRejections, &toolFailureCountsRaw,
-		&m.LastMeasured,
+		&emittedMetricsRaw,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -119,6 +119,9 @@ func (r *LifecycleResolverRepo) GetCurrentVersionMetrics(ctx context.Context, re
 
 	if err := json.Unmarshal(toolFailureCountsRaw, &m.ToolFailureCounts); err != nil {
 		return nil, fmt.Errorf("unmarshal tool_failure_counts: %w", err)
+	}
+	if err := json.Unmarshal(emittedMetricsRaw, &m.EmittedMetrics); err != nil {
+		return nil, fmt.Errorf("unmarshal emitted_metrics: %w", err)
 	}
 
 	return &m, nil

@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"log/slog"
+	"slices"
 
 	"github.com/convergeplane/convergeplane/internal/domain"
 )
@@ -29,7 +30,7 @@ type WorkflowGoalState struct {
 	versionChange bool
 }
 
-func (e *LifecyclePolicyEngine) ResolvePolicy(lastResolved int64, rollingMetrics *[]domain.WorkflowInvocationSnapshot, policy *domain.WorkflowLifecyclePolicy, versionMetrics *domain.WorkflowVersionMetrics) (bool, WorkflowGoalState, error) {
+func (e *LifecyclePolicyEngine) ResolvePolicy(rollingMetrics *[]domain.WorkflowInvocationSnapshot, policy *domain.WorkflowLifecyclePolicy, versionMetrics *domain.WorkflowVersionMetrics) (bool, WorkflowGoalState, error) {
 
 	// order of precedence of actiontype:
 	// pause, cooldown, setversion
@@ -47,8 +48,8 @@ func (e *LifecyclePolicyEngine) ResolvePolicy(lastResolved int64, rollingMetrics
 		switch rule.Action.Type {
 		case domain.WorkflowPolicyActionSetVersion:
 
-			if versionMetrics.LastMeasured <= lastResolved {
-				e.log.Debug("no change of underlying metric for rule, skipping", "metric", rule.Metric, "lastMeasured", versionMetrics.LastMeasured)
+			if !slices.Contains(versionMetrics.EmittedMetrics, rule.Metric) {
+				e.log.Debug("metric not emitted in last run, skipping set_version rule", "metric", rule.Metric)
 				continue
 			}
 
@@ -83,6 +84,32 @@ func (e *LifecyclePolicyEngine) ResolvePolicy(lastResolved int64, rollingMetrics
 
 		case domain.WorkflowPolicyActionCooldown, domain.WorkflowPolicyActionPause:
 
+			if len(*rollingMetrics) == 0 {
+				continue
+			}
+
+			// Skip if the metric was not emitted in the most recent run.
+			last := (*rollingMetrics)[len(*rollingMetrics)-1]
+			lastEmitted := false
+			switch rule.Metric {
+			case domain.WorkflowMetricNumFailures:
+				lastEmitted = last.Failures != nil
+			case domain.WorkflowMetricCost:
+				lastEmitted = last.CostUsd != nil
+			case domain.WorkflowMetricNumLLMCalls:
+				lastEmitted = last.LlmCalls != nil
+			case domain.WorkflowMetricLatency:
+				lastEmitted = last.LatencySeconds != nil
+			case domain.WorkflowMetricApprovalRejections:
+				lastEmitted = last.ApprovalRejections != nil
+			case domain.WorkflowMetricToolFailureRate:
+				_, lastEmitted = last.ToolFailureCounts[rule.ToolName]
+			}
+			if !lastEmitted {
+				e.log.Debug("metric not emitted in last run, skipping rolling rule", "metric", rule.Metric)
+				continue
+			}
+
 			// Filter to snapshots where this metric was actually observed.
 			var observed []domain.WorkflowInvocationSnapshot
 			for _, m := range *rollingMetrics {
@@ -116,12 +143,6 @@ func (e *LifecyclePolicyEngine) ResolvePolicy(lastResolved int64, rollingMetrics
 
 			if len(observed) < rule.Window {
 				e.log.Debug("insufficient observed metrics for rule window, skipping", "have", len(observed), "need", rule.Window, "metric", rule.Metric)
-				continue
-			}
-
-			lastMeasured := observed[len(observed)-1].LastMeasured
-			if lastMeasured <= lastResolved {
-				e.log.Debug("no change of underlying metric for rule, skipping", "metric", rule.Metric, "lastMeasured", lastMeasured)
 				continue
 			}
 

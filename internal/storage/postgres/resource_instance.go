@@ -79,7 +79,7 @@ func (r *ResourceInstanceRepo) Get(ctx context.Context, id string) (*domain.Reso
 		return nil, fmt.Errorf("unmarshal invocation_metrics: %w", err)
 	}
 	sort.Slice(instance.InvocationMetrics, func(i, j int) bool {
-		return instance.InvocationMetrics[i].LastMeasured < instance.InvocationMetrics[j].LastMeasured
+		return instance.InvocationMetrics[i].RanAt < instance.InvocationMetrics[j].RanAt
 	})
 
 	return &instance, nil
