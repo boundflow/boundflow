@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
 	"github.com/convergeplane/convergeplane/internal/domain"
 )
 
@@ -95,9 +96,15 @@ type JobRepository interface {
 	// UpdateJobStatus updates the status of a job only if ownerID is the current owner.
 	// Returns false if the ownership check failed (job taken by another worker or released).
 	UpdateJobStatus(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus) (bool, error)
+	// UpdateJobStatusWithMetrics is UpdateJobStatus plus an atomic write of the accumulated
+	// per-agent metrics into agent_metrics. Used when finalizing a job.
+	UpdateJobStatusWithMetrics(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics) (bool, error)
 	// UpdateJob updates status, current_atomic_operation, timeout_seconds, and context only if ownerID is the current owner.
 	// Returns false if the ownership check failed (job taken by another worker or released).
 	UpdateJob(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any) (bool, error)
+	// UpdateJobWithMetrics is UpdateJob plus an atomic write of the accumulated per-agent
+	// metrics into agent_metrics. Used when advancing to the next operation.
+	UpdateJobWithMetrics(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics) (bool, error)
 	// ReleaseJob clears the owner and lease on a job, only if currently owned by ownerID.
 	ReleaseJob(ctx context.Context, resourceInstanceID string, ownerID string) error
 }
@@ -108,9 +115,9 @@ type AgentStateRepository interface {
 	// UpsertLifecyclePolicy sets the lifecycle policy for an agent, creating the row if needed.
 	UpsertLifecyclePolicy(ctx context.Context, resourceInstanceID, agentName string, policy map[string]any) error
 	// UpdateMetrics persists updated invocation metrics for an agent.
-	UpdateMetrics(ctx context.Context, resourceInstanceID, agentName string, metrics []map[string]any) error
-	// GetAllForResource returns all agent states for a resource instance.
-	GetAllForResource(ctx context.Context, resourceInstanceID string) ([]*domain.AgentState, error)
+	UpdateMetrics(ctx context.Context, resourceInstanceID, agentName string, metrics []*convergeplanev1.AgentInvocationMetrics) error
+	// GetAllForResource returns all agent states for a resource instance, keyed by agent name.
+	GetAllForResource(ctx context.Context, resourceInstanceID string) (map[string]*domain.AgentState, error)
 	// Delete removes the agent state row entirely.
 	Delete(ctx context.Context, resourceInstanceID, agentName string) error
 }
@@ -119,14 +126,24 @@ type LifecycleResolverRepository interface {
 	// GetExpiredCooldownResources returns all resource instances in the given partition
 	// whose workflow_state is 'cooldown' and whose cooldown_until has passed.
 	GetExpiredCooldownResources(ctx context.Context, partitionID string) ([]*domain.ResourceInstance, error)
-	// GetCurrentVersionMetrics returns the metrics row with the highest epoch for the
-	// given resource instance and version. Returns nil if no row exists yet.
-	GetCurrentVersionMetrics(ctx context.Context, resourceInstanceID string, version int) (*domain.WorkflowVersionMetrics, error)
 	// TryApplyPolicyResolution atomically updates lifecycle_last_resolved,
 	// current_workflow_version, workflow_state, and cooldown_until only if the stored
 	// lifecycle_last_resolved is less than resolved. Returns true if the update was applied.
 	// cooldownUntil should be non-nil only when workflowState is WorkflowStateCooldown.
 	TryApplyPolicyResolution(ctx context.Context, resourceInstanceID string, resolved int64, workflowVersion int, workflowState domain.WorkflowState, cooldownUntil *time.Time) (bool, error)
+}
+
+type MetricsRepository interface {
+	// EmitMetrics atomically appends the rolling snapshot, upserts version-metric totals,
+	// and upserts each agent's metrics history — only if metrics_emitted_at < emittedVersion.
+	// Returns false if the gate fails (metrics already emitted for this run).
+	EmitMetrics(ctx context.Context, resourceInstanceID string, emittedVersion int64, rolling domain.WorkflowInvocationSnapshot, versionMetrics *domain.WorkflowVersionMetrics, agentMetrics map[string][]*convergeplanev1.AgentInvocationMetrics) (bool, error)
+}
+
+type VersionMetricsRepository interface {
+	// GetCurrentVersionMetrics returns the metrics row with the highest epoch for the
+	// given resource instance and version. Returns nil if no row exists yet.
+	GetCurrentVersionMetrics(ctx context.Context, resourceInstanceID string, version int) (*domain.WorkflowVersionMetrics, error)
 }
 
 type CustomerRequestRepository interface {

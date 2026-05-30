@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
 	"github.com/convergeplane/convergeplane/internal/domain"
 )
 
@@ -40,7 +41,7 @@ func (r *JobRepo) GetAvailableJob(ctx context.Context) (*string, error) {
 
 func (r *JobRepo) AcquireJob(ctx context.Context, resourceInstanceID string, ownerID string, leaseDuration time.Duration) (*domain.Job, error) {
 	var job domain.Job
-	var contextJSON []byte
+	var contextJSON, agentMetricsJSON []byte
 
 	err := r.pool.QueryRow(ctx,
 		`UPDATE jobs
@@ -48,12 +49,12 @@ func (r *JobRepo) AcquireJob(ctx context.Context, resourceInstanceID string, own
 		 WHERE resource_instance_id = $1
 		   AND status IN ('pending', 'awaiting_next')
 		   AND (owner IS NULL OR lease_expires_at < now())
-		 RETURNING resource_instance_id, request_id, version, current_atomic_operation, context, status, job_type, resource_type, timeout_seconds, workflow_version, owner, lease_expires_at, created_at`,
+		 RETURNING resource_instance_id, request_id, version, current_atomic_operation, context, status, job_type, resource_type, timeout_seconds, workflow_version, agent_metrics, owner, lease_expires_at, created_at`,
 		resourceInstanceID, ownerID, leaseDuration.String(),
 	).Scan(
 		&job.ResourceInstanceID, &job.RequestID, &job.Version,
 		&job.CurrentAtomicOperation, &contextJSON, &job.Status,
-		&job.JobType, &job.ResourceType, &job.RuntimeParams.OperationTimeoutSeconds, &job.WorkflowVersion, &job.Owner, &job.LeaseExpiresAt, &job.CreatedAt,
+		&job.JobType, &job.ResourceType, &job.RuntimeParams.OperationTimeoutSeconds, &job.WorkflowVersion, &agentMetricsJSON, &job.Owner, &job.LeaseExpiresAt, &job.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -64,6 +65,9 @@ func (r *JobRepo) AcquireJob(ctx context.Context, resourceInstanceID string, own
 
 	if err := json.Unmarshal(contextJSON, &job.Context); err != nil {
 		return nil, fmt.Errorf("unmarshal job context: %w", err)
+	}
+	if err := json.Unmarshal(agentMetricsJSON, &job.AgentMetrics); err != nil {
+		return nil, fmt.Errorf("unmarshal agent metrics: %w", err)
 	}
 
 	return &job, nil
@@ -90,6 +94,22 @@ func (r *JobRepo) UpdateJobStatus(ctx context.Context, resourceInstanceID string
 	)
 	if err != nil {
 		return false, fmt.Errorf("update job status: %w", err)
+	}
+	return tag.RowsAffected() == 1, nil
+}
+
+func (r *JobRepo) UpdateJobStatusWithMetrics(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics) (bool, error) {
+	agentMetricsJSON, err := json.Marshal(agentMetrics)
+	if err != nil {
+		return false, fmt.Errorf("marshal agent metrics: %w", err)
+	}
+	tag, err := r.pool.Exec(ctx,
+		`UPDATE jobs SET status = $3, agent_metrics = $4
+		 WHERE resource_instance_id = $1 AND owner = $2`,
+		resourceInstanceID, ownerID, status, agentMetricsJSON,
+	)
+	if err != nil {
+		return false, fmt.Errorf("update job status with metrics: %w", err)
 	}
 	return tag.RowsAffected() == 1, nil
 }
@@ -121,6 +141,28 @@ func (r *JobRepo) UpdateJob(ctx context.Context, resourceInstanceID string, owne
 	)
 	if err != nil {
 		return false, fmt.Errorf("update job: %w", err)
+	}
+	return tag.RowsAffected() == 1, nil
+}
+
+func (r *JobRepo) UpdateJobWithMetrics(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics) (bool, error) {
+	contextJSON, err := json.Marshal(jobContext)
+	if err != nil {
+		return false, fmt.Errorf("marshal job context: %w", err)
+	}
+	agentMetricsJSON, err := json.Marshal(agentMetrics)
+	if err != nil {
+		return false, fmt.Errorf("marshal agent metrics: %w", err)
+	}
+
+	tag, err := r.pool.Exec(ctx,
+		`UPDATE jobs
+		 SET status = $3, current_atomic_operation = $4, timeout_seconds = $5, context = $6, agent_metrics = $7
+		 WHERE resource_instance_id = $1 AND owner = $2`,
+		resourceInstanceID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, contextJSON, agentMetricsJSON,
+	)
+	if err != nil {
+		return false, fmt.Errorf("update job with metrics: %w", err)
 	}
 	return tag.RowsAffected() == 1, nil
 }

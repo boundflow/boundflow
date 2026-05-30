@@ -34,24 +34,42 @@ namespace Convergeplane.V1 {
             "Gi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wUgljcmVhdGVkQXQSJwoPdGlt",
             "ZW91dF9zZWNvbmRzGAcgASgFUg50aW1lb3V0U2Vjb25kcxIjCg1yZXNvdXJj",
             "ZV90eXBlGAggASgJUgxyZXNvdXJjZVR5cGUSKQoQd29ya2Zsb3dfdmVyc2lv",
-            "bhgJIAEoBVIPd29ya2Zsb3dWZXJzaW9uIv8BChVBdG9taWNPcGVyYXRpb25S",
+            "bhgJIAEoBVIPd29ya2Zsb3dWZXJzaW9uIpYDChVBdG9taWNPcGVyYXRpb25S",
             "ZXN1bHQSOQoGc3RhdHVzGAEgASgOMiEuY29udmVyZ2VwbGFuZS52MS5PcGVy",
             "YXRpb25TdGF0dXNSBnN0YXR1cxIYCgdtZXNzYWdlGAIgASgJUgdtZXNzYWdl",
             "EkgKDm5leHRfb3BlcmF0aW9uGAMgASgLMiEuY29udmVyZ2VwbGFuZS52MS5B",
-            "dG9taWNPcGVyYXRpb25SDW5leHRPcGVyYXRpb24SRwoTYWdlbnRfc3RhdGVf",
-            "dXBkYXRlcxgEIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RSEWFnZW50",
-            "U3RhdGVVcGRhdGVzKrIBCg9PcGVyYXRpb25TdGF0dXMSIAocT1BFUkFUSU9O",
-            "X1NUQVRVU19VTlNQRUNJRklFRBAAEiAKHE9QRVJBVElPTl9TVEFUVVNfSU5f",
-            "UFJPR1JFU1MQARIeChpPUEVSQVRJT05fU1RBVFVTX0NPTVBMRVRFRBACEhsK",
-            "F09QRVJBVElPTl9TVEFUVVNfRkFJTEVEEAMSHgoaT1BFUkFUSU9OX1NUQVRV",
-            "U19DQU5DRUxMRUQQBEJNWktnaXRodWIuY29tL2NvbnZlcmdlcGxhbmUvY29u",
-            "dmVyZ2VwbGFuZS9nZW4vY29udmVyZ2VwbGFuZS92MTtjb252ZXJnZXBsYW5l",
-            "djFiBnByb3RvMw=="));
+            "dG9taWNPcGVyYXRpb25SDW5leHRPcGVyYXRpb24SbgoTYWdlbnRfc3RhdGVf",
+            "dXBkYXRlcxgEIAMoCzI+LmNvbnZlcmdlcGxhbmUudjEuQXRvbWljT3BlcmF0",
+            "aW9uUmVzdWx0LkFnZW50U3RhdGVVcGRhdGVzRW50cnlSEWFnZW50U3RhdGVV",
+            "cGRhdGVzGm4KFkFnZW50U3RhdGVVcGRhdGVzRW50cnkSEAoDa2V5GAEgASgJ",
+            "UgNrZXkSPgoFdmFsdWUYAiABKAsyKC5jb252ZXJnZXBsYW5lLnYxLkFnZW50",
+            "SW52b2NhdGlvbk1ldHJpY3NSBXZhbHVlOgI4ASL1BAoWQWdlbnRJbnZvY2F0",
+            "aW9uTWV0cmljcxIeCghjb3N0X3VzZBgBIAEoAUgAUgdjb3N0VXNkiAEBEiAK",
+            "CWxsbV9jYWxscxgCIAEoBUgBUghsbG1DYWxsc4gBARIkCgt0b2tlbnNfdXNl",
+            "ZBgDIAEoBUgCUgp0b2tlbnNVc2VkiAEBEikKDmNhbGxzX3Blcl90b29sGAQg",
+            "ASgFSANSDGNhbGxzUGVyVG9vbIgBARIsCg9sYXRlbmN5X3NlY29uZHMYBSAB",
+            "KAFIBFIObGF0ZW5jeVNlY29uZHOIAQESHwoIZmFpbHVyZXMYBiABKAVIBVII",
+            "ZmFpbHVyZXOIAQESNAoTYXBwcm92YWxfcmVqZWN0aW9ucxgHIAEoBUgGUhJh",
+            "cHByb3ZhbFJlamVjdGlvbnOIAQESbwoTdG9vbF9mYWlsdXJlX2NvdW50cxgI",
+            "IAMoCzI/LmNvbnZlcmdlcGxhbmUudjEuQWdlbnRJbnZvY2F0aW9uTWV0cmlj",
+            "cy5Ub29sRmFpbHVyZUNvdW50c0VudHJ5UhF0b29sRmFpbHVyZUNvdW50cxIV",
+            "CgZyYW5fYXQYCSABKANSBXJhbkF0GkQKFlRvb2xGYWlsdXJlQ291bnRzRW50",
+            "cnkSEAoDa2V5GAEgASgJUgNrZXkSFAoFdmFsdWUYAiABKAVSBXZhbHVlOgI4",
+            "AUILCglfY29zdF91c2RCDAoKX2xsbV9jYWxsc0IOCgxfdG9rZW5zX3VzZWRC",
+            "EQoPX2NhbGxzX3Blcl90b29sQhIKEF9sYXRlbmN5X3NlY29uZHNCCwoJX2Zh",
+            "aWx1cmVzQhYKFF9hcHByb3ZhbF9yZWplY3Rpb25zKrIBCg9PcGVyYXRpb25T",
+            "dGF0dXMSIAocT1BFUkFUSU9OX1NUQVRVU19VTlNQRUNJRklFRBAAEiAKHE9Q",
+            "RVJBVElPTl9TVEFUVVNfSU5fUFJPR1JFU1MQARIeChpPUEVSQVRJT05fU1RB",
+            "VFVTX0NPTVBMRVRFRBACEhsKF09QRVJBVElPTl9TVEFUVVNfRkFJTEVEEAMS",
+            "HgoaT1BFUkFUSU9OX1NUQVRVU19DQU5DRUxMRUQQBEJNWktnaXRodWIuY29t",
+            "L2NvbnZlcmdlcGxhbmUvY29udmVyZ2VwbGFuZS9nZW4vY29udmVyZ2VwbGFu",
+            "ZS92MTtjb252ZXJnZXBsYW5ldjFiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.StructReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Convergeplane.V1.OperationStatus), }, null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.AtomicOperation), global::Convergeplane.V1.AtomicOperation.Parser, new[]{ "Id", "ResourceId", "OperationType", "Name", "Context", "CreatedAt", "TimeoutSeconds", "ResourceType", "WorkflowVersion" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.AtomicOperationResult), global::Convergeplane.V1.AtomicOperationResult.Parser, new[]{ "Status", "Message", "NextOperation", "AgentStateUpdates" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.AtomicOperationResult), global::Convergeplane.V1.AtomicOperationResult.Parser, new[]{ "Status", "Message", "NextOperation", "AgentStateUpdates" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, }),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.AgentInvocationMetrics), global::Convergeplane.V1.AgentInvocationMetrics.Parser, new[]{ "CostUsd", "LlmCalls", "TokensUsed", "CallsPerTool", "LatencySeconds", "Failures", "ApprovalRejections", "ToolFailureCounts", "RanAt" }, new[]{ "CostUsd", "LlmCalls", "TokensUsed", "CallsPerTool", "LatencySeconds", "Failures", "ApprovalRejections" }, null, null, new pbr::GeneratedClrTypeInfo[] { null, })
           }));
     }
     #endregion
@@ -619,7 +637,7 @@ namespace Convergeplane.V1 {
       status_ = other.status_;
       message_ = other.message_;
       nextOperation_ = other.nextOperation_ != null ? other.nextOperation_.Clone() : null;
-      agentStateUpdates_ = other.agentStateUpdates_ != null ? other.agentStateUpdates_.Clone() : null;
+      agentStateUpdates_ = other.agentStateUpdates_.Clone();
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -667,19 +685,18 @@ namespace Convergeplane.V1 {
 
     /// <summary>Field number for the "agent_state_updates" field.</summary>
     public const int AgentStateUpdatesFieldNumber = 4;
-    private global::Google.Protobuf.WellKnownTypes.Struct agentStateUpdates_;
+    private static readonly pbc::MapField<string, global::Convergeplane.V1.AgentInvocationMetrics>.Codec _map_agentStateUpdates_codec
+        = new pbc::MapField<string, global::Convergeplane.V1.AgentInvocationMetrics>.Codec(pb::FieldCodec.ForString(10, ""), pb::FieldCodec.ForMessage(18, global::Convergeplane.V1.AgentInvocationMetrics.Parser), 34);
+    private readonly pbc::MapField<string, global::Convergeplane.V1.AgentInvocationMetrics> agentStateUpdates_ = new pbc::MapField<string, global::Convergeplane.V1.AgentInvocationMetrics>();
     /// <summary>
-    /// Agent state updates to persist after this operation completes.
-    /// Keys are agent names; values are updated agent state objects
-    /// (runtime_policy, lifecycle_policy, invocation_metrics).
+    /// Per-agent invocation metrics observed during this operation, keyed by agent name.
+    /// The server aggregates these across agents and operations and fills workflow-only
+    /// metrics (e.g. num_failures) server-side when building the stored snapshot.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Google.Protobuf.WellKnownTypes.Struct AgentStateUpdates {
+    public pbc::MapField<string, global::Convergeplane.V1.AgentInvocationMetrics> AgentStateUpdates {
       get { return agentStateUpdates_; }
-      set {
-        agentStateUpdates_ = value;
-      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -700,7 +717,7 @@ namespace Convergeplane.V1 {
       if (Status != other.Status) return false;
       if (Message != other.Message) return false;
       if (!object.Equals(NextOperation, other.NextOperation)) return false;
-      if (!object.Equals(AgentStateUpdates, other.AgentStateUpdates)) return false;
+      if (!AgentStateUpdates.Equals(other.AgentStateUpdates)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -711,7 +728,7 @@ namespace Convergeplane.V1 {
       if (Status != global::Convergeplane.V1.OperationStatus.Unspecified) hash ^= Status.GetHashCode();
       if (Message.Length != 0) hash ^= Message.GetHashCode();
       if (nextOperation_ != null) hash ^= NextOperation.GetHashCode();
-      if (agentStateUpdates_ != null) hash ^= AgentStateUpdates.GetHashCode();
+      hash ^= AgentStateUpdates.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -742,10 +759,7 @@ namespace Convergeplane.V1 {
         output.WriteRawTag(26);
         output.WriteMessage(NextOperation);
       }
-      if (agentStateUpdates_ != null) {
-        output.WriteRawTag(34);
-        output.WriteMessage(AgentStateUpdates);
-      }
+      agentStateUpdates_.WriteTo(output, _map_agentStateUpdates_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -768,10 +782,7 @@ namespace Convergeplane.V1 {
         output.WriteRawTag(26);
         output.WriteMessage(NextOperation);
       }
-      if (agentStateUpdates_ != null) {
-        output.WriteRawTag(34);
-        output.WriteMessage(AgentStateUpdates);
-      }
+      agentStateUpdates_.WriteTo(ref output, _map_agentStateUpdates_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -791,9 +802,7 @@ namespace Convergeplane.V1 {
       if (nextOperation_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(NextOperation);
       }
-      if (agentStateUpdates_ != null) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(AgentStateUpdates);
-      }
+      size += agentStateUpdates_.CalculateSize(_map_agentStateUpdates_codec);
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -818,12 +827,7 @@ namespace Convergeplane.V1 {
         }
         NextOperation.MergeFrom(other.NextOperation);
       }
-      if (other.agentStateUpdates_ != null) {
-        if (agentStateUpdates_ == null) {
-          AgentStateUpdates = new global::Google.Protobuf.WellKnownTypes.Struct();
-        }
-        AgentStateUpdates.MergeFrom(other.AgentStateUpdates);
-      }
+      agentStateUpdates_.MergeFrom(other.agentStateUpdates_);
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -859,10 +863,7 @@ namespace Convergeplane.V1 {
             break;
           }
           case 34: {
-            if (agentStateUpdates_ == null) {
-              AgentStateUpdates = new global::Google.Protobuf.WellKnownTypes.Struct();
-            }
-            input.ReadMessage(AgentStateUpdates);
+            agentStateUpdates_.AddEntriesFrom(input, _map_agentStateUpdates_codec);
             break;
           }
         }
@@ -900,10 +901,605 @@ namespace Convergeplane.V1 {
             break;
           }
           case 34: {
-            if (agentStateUpdates_ == null) {
-              AgentStateUpdates = new global::Google.Protobuf.WellKnownTypes.Struct();
-            }
-            input.ReadMessage(AgentStateUpdates);
+            agentStateUpdates_.AddEntriesFrom(ref input, _map_agentStateUpdates_codec);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// AgentInvocationMetrics holds the metrics a single agent emitted during one operation.
+  /// Every field is optional: a null value means the agent did not emit that metric this run
+  /// (distinct from emitting a zero), so windowed policy evaluation can skip non-emitting runs.
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class AgentInvocationMetrics : pb::IMessage<AgentInvocationMetrics>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<AgentInvocationMetrics> _parser = new pb::MessageParser<AgentInvocationMetrics>(() => new AgentInvocationMetrics());
+    private pb::UnknownFieldSet _unknownFields;
+    private int _hasBits0;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<AgentInvocationMetrics> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Convergeplane.V1.OperationReflection.Descriptor.MessageTypes[2]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public AgentInvocationMetrics() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public AgentInvocationMetrics(AgentInvocationMetrics other) : this() {
+      _hasBits0 = other._hasBits0;
+      costUsd_ = other.costUsd_;
+      llmCalls_ = other.llmCalls_;
+      tokensUsed_ = other.tokensUsed_;
+      callsPerTool_ = other.callsPerTool_;
+      latencySeconds_ = other.latencySeconds_;
+      failures_ = other.failures_;
+      approvalRejections_ = other.approvalRejections_;
+      toolFailureCounts_ = other.toolFailureCounts_.Clone();
+      ranAt_ = other.ranAt_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public AgentInvocationMetrics Clone() {
+      return new AgentInvocationMetrics(this);
+    }
+
+    /// <summary>Field number for the "cost_usd" field.</summary>
+    public const int CostUsdFieldNumber = 1;
+    private readonly static double CostUsdDefaultValue = 0D;
+
+    private double costUsd_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public double CostUsd {
+      get { if ((_hasBits0 & 1) != 0) { return costUsd_; } else { return CostUsdDefaultValue; } }
+      set {
+        _hasBits0 |= 1;
+        costUsd_ = value;
+      }
+    }
+    /// <summary>Gets whether the "cost_usd" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasCostUsd {
+      get { return (_hasBits0 & 1) != 0; }
+    }
+    /// <summary>Clears the value of the "cost_usd" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearCostUsd() {
+      _hasBits0 &= ~1;
+    }
+
+    /// <summary>Field number for the "llm_calls" field.</summary>
+    public const int LlmCallsFieldNumber = 2;
+    private readonly static int LlmCallsDefaultValue = 0;
+
+    private int llmCalls_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int LlmCalls {
+      get { if ((_hasBits0 & 2) != 0) { return llmCalls_; } else { return LlmCallsDefaultValue; } }
+      set {
+        _hasBits0 |= 2;
+        llmCalls_ = value;
+      }
+    }
+    /// <summary>Gets whether the "llm_calls" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasLlmCalls {
+      get { return (_hasBits0 & 2) != 0; }
+    }
+    /// <summary>Clears the value of the "llm_calls" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearLlmCalls() {
+      _hasBits0 &= ~2;
+    }
+
+    /// <summary>Field number for the "tokens_used" field.</summary>
+    public const int TokensUsedFieldNumber = 3;
+    private readonly static int TokensUsedDefaultValue = 0;
+
+    private int tokensUsed_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int TokensUsed {
+      get { if ((_hasBits0 & 4) != 0) { return tokensUsed_; } else { return TokensUsedDefaultValue; } }
+      set {
+        _hasBits0 |= 4;
+        tokensUsed_ = value;
+      }
+    }
+    /// <summary>Gets whether the "tokens_used" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasTokensUsed {
+      get { return (_hasBits0 & 4) != 0; }
+    }
+    /// <summary>Clears the value of the "tokens_used" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearTokensUsed() {
+      _hasBits0 &= ~4;
+    }
+
+    /// <summary>Field number for the "calls_per_tool" field.</summary>
+    public const int CallsPerToolFieldNumber = 4;
+    private readonly static int CallsPerToolDefaultValue = 0;
+
+    private int callsPerTool_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CallsPerTool {
+      get { if ((_hasBits0 & 8) != 0) { return callsPerTool_; } else { return CallsPerToolDefaultValue; } }
+      set {
+        _hasBits0 |= 8;
+        callsPerTool_ = value;
+      }
+    }
+    /// <summary>Gets whether the "calls_per_tool" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasCallsPerTool {
+      get { return (_hasBits0 & 8) != 0; }
+    }
+    /// <summary>Clears the value of the "calls_per_tool" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearCallsPerTool() {
+      _hasBits0 &= ~8;
+    }
+
+    /// <summary>Field number for the "latency_seconds" field.</summary>
+    public const int LatencySecondsFieldNumber = 5;
+    private readonly static double LatencySecondsDefaultValue = 0D;
+
+    private double latencySeconds_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public double LatencySeconds {
+      get { if ((_hasBits0 & 16) != 0) { return latencySeconds_; } else { return LatencySecondsDefaultValue; } }
+      set {
+        _hasBits0 |= 16;
+        latencySeconds_ = value;
+      }
+    }
+    /// <summary>Gets whether the "latency_seconds" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasLatencySeconds {
+      get { return (_hasBits0 & 16) != 0; }
+    }
+    /// <summary>Clears the value of the "latency_seconds" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearLatencySeconds() {
+      _hasBits0 &= ~16;
+    }
+
+    /// <summary>Field number for the "failures" field.</summary>
+    public const int FailuresFieldNumber = 6;
+    private readonly static int FailuresDefaultValue = 0;
+
+    private int failures_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int Failures {
+      get { if ((_hasBits0 & 32) != 0) { return failures_; } else { return FailuresDefaultValue; } }
+      set {
+        _hasBits0 |= 32;
+        failures_ = value;
+      }
+    }
+    /// <summary>Gets whether the "failures" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasFailures {
+      get { return (_hasBits0 & 32) != 0; }
+    }
+    /// <summary>Clears the value of the "failures" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearFailures() {
+      _hasBits0 &= ~32;
+    }
+
+    /// <summary>Field number for the "approval_rejections" field.</summary>
+    public const int ApprovalRejectionsFieldNumber = 7;
+    private readonly static int ApprovalRejectionsDefaultValue = 0;
+
+    private int approvalRejections_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int ApprovalRejections {
+      get { if ((_hasBits0 & 64) != 0) { return approvalRejections_; } else { return ApprovalRejectionsDefaultValue; } }
+      set {
+        _hasBits0 |= 64;
+        approvalRejections_ = value;
+      }
+    }
+    /// <summary>Gets whether the "approval_rejections" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasApprovalRejections {
+      get { return (_hasBits0 & 64) != 0; }
+    }
+    /// <summary>Clears the value of the "approval_rejections" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearApprovalRejections() {
+      _hasBits0 &= ~64;
+    }
+
+    /// <summary>Field number for the "tool_failure_counts" field.</summary>
+    public const int ToolFailureCountsFieldNumber = 8;
+    private static readonly pbc::MapField<string, int>.Codec _map_toolFailureCounts_codec
+        = new pbc::MapField<string, int>.Codec(pb::FieldCodec.ForString(10, ""), pb::FieldCodec.ForInt32(16, 0), 66);
+    private readonly pbc::MapField<string, int> toolFailureCounts_ = new pbc::MapField<string, int>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::MapField<string, int> ToolFailureCounts {
+      get { return toolFailureCounts_; }
+    }
+
+    /// <summary>Field number for the "ran_at" field.</summary>
+    public const int RanAtFieldNumber = 9;
+    private long ranAt_;
+    /// <summary>
+    /// Unix milliseconds when this agent run occurred. Always set (used to order history).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public long RanAt {
+      get { return ranAt_; }
+      set {
+        ranAt_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as AgentInvocationMetrics);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(AgentInvocationMetrics other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (!pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.Equals(CostUsd, other.CostUsd)) return false;
+      if (LlmCalls != other.LlmCalls) return false;
+      if (TokensUsed != other.TokensUsed) return false;
+      if (CallsPerTool != other.CallsPerTool) return false;
+      if (!pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.Equals(LatencySeconds, other.LatencySeconds)) return false;
+      if (Failures != other.Failures) return false;
+      if (ApprovalRejections != other.ApprovalRejections) return false;
+      if (!ToolFailureCounts.Equals(other.ToolFailureCounts)) return false;
+      if (RanAt != other.RanAt) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (HasCostUsd) hash ^= pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.GetHashCode(CostUsd);
+      if (HasLlmCalls) hash ^= LlmCalls.GetHashCode();
+      if (HasTokensUsed) hash ^= TokensUsed.GetHashCode();
+      if (HasCallsPerTool) hash ^= CallsPerTool.GetHashCode();
+      if (HasLatencySeconds) hash ^= pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.GetHashCode(LatencySeconds);
+      if (HasFailures) hash ^= Failures.GetHashCode();
+      if (HasApprovalRejections) hash ^= ApprovalRejections.GetHashCode();
+      hash ^= ToolFailureCounts.GetHashCode();
+      if (RanAt != 0L) hash ^= RanAt.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (HasCostUsd) {
+        output.WriteRawTag(9);
+        output.WriteDouble(CostUsd);
+      }
+      if (HasLlmCalls) {
+        output.WriteRawTag(16);
+        output.WriteInt32(LlmCalls);
+      }
+      if (HasTokensUsed) {
+        output.WriteRawTag(24);
+        output.WriteInt32(TokensUsed);
+      }
+      if (HasCallsPerTool) {
+        output.WriteRawTag(32);
+        output.WriteInt32(CallsPerTool);
+      }
+      if (HasLatencySeconds) {
+        output.WriteRawTag(41);
+        output.WriteDouble(LatencySeconds);
+      }
+      if (HasFailures) {
+        output.WriteRawTag(48);
+        output.WriteInt32(Failures);
+      }
+      if (HasApprovalRejections) {
+        output.WriteRawTag(56);
+        output.WriteInt32(ApprovalRejections);
+      }
+      toolFailureCounts_.WriteTo(output, _map_toolFailureCounts_codec);
+      if (RanAt != 0L) {
+        output.WriteRawTag(72);
+        output.WriteInt64(RanAt);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (HasCostUsd) {
+        output.WriteRawTag(9);
+        output.WriteDouble(CostUsd);
+      }
+      if (HasLlmCalls) {
+        output.WriteRawTag(16);
+        output.WriteInt32(LlmCalls);
+      }
+      if (HasTokensUsed) {
+        output.WriteRawTag(24);
+        output.WriteInt32(TokensUsed);
+      }
+      if (HasCallsPerTool) {
+        output.WriteRawTag(32);
+        output.WriteInt32(CallsPerTool);
+      }
+      if (HasLatencySeconds) {
+        output.WriteRawTag(41);
+        output.WriteDouble(LatencySeconds);
+      }
+      if (HasFailures) {
+        output.WriteRawTag(48);
+        output.WriteInt32(Failures);
+      }
+      if (HasApprovalRejections) {
+        output.WriteRawTag(56);
+        output.WriteInt32(ApprovalRejections);
+      }
+      toolFailureCounts_.WriteTo(ref output, _map_toolFailureCounts_codec);
+      if (RanAt != 0L) {
+        output.WriteRawTag(72);
+        output.WriteInt64(RanAt);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (HasCostUsd) {
+        size += 1 + 8;
+      }
+      if (HasLlmCalls) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(LlmCalls);
+      }
+      if (HasTokensUsed) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(TokensUsed);
+      }
+      if (HasCallsPerTool) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(CallsPerTool);
+      }
+      if (HasLatencySeconds) {
+        size += 1 + 8;
+      }
+      if (HasFailures) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(Failures);
+      }
+      if (HasApprovalRejections) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(ApprovalRejections);
+      }
+      size += toolFailureCounts_.CalculateSize(_map_toolFailureCounts_codec);
+      if (RanAt != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(RanAt);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(AgentInvocationMetrics other) {
+      if (other == null) {
+        return;
+      }
+      if (other.HasCostUsd) {
+        CostUsd = other.CostUsd;
+      }
+      if (other.HasLlmCalls) {
+        LlmCalls = other.LlmCalls;
+      }
+      if (other.HasTokensUsed) {
+        TokensUsed = other.TokensUsed;
+      }
+      if (other.HasCallsPerTool) {
+        CallsPerTool = other.CallsPerTool;
+      }
+      if (other.HasLatencySeconds) {
+        LatencySeconds = other.LatencySeconds;
+      }
+      if (other.HasFailures) {
+        Failures = other.Failures;
+      }
+      if (other.HasApprovalRejections) {
+        ApprovalRejections = other.ApprovalRejections;
+      }
+      toolFailureCounts_.MergeFrom(other.toolFailureCounts_);
+      if (other.RanAt != 0L) {
+        RanAt = other.RanAt;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 9: {
+            CostUsd = input.ReadDouble();
+            break;
+          }
+          case 16: {
+            LlmCalls = input.ReadInt32();
+            break;
+          }
+          case 24: {
+            TokensUsed = input.ReadInt32();
+            break;
+          }
+          case 32: {
+            CallsPerTool = input.ReadInt32();
+            break;
+          }
+          case 41: {
+            LatencySeconds = input.ReadDouble();
+            break;
+          }
+          case 48: {
+            Failures = input.ReadInt32();
+            break;
+          }
+          case 56: {
+            ApprovalRejections = input.ReadInt32();
+            break;
+          }
+          case 66: {
+            toolFailureCounts_.AddEntriesFrom(input, _map_toolFailureCounts_codec);
+            break;
+          }
+          case 72: {
+            RanAt = input.ReadInt64();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 9: {
+            CostUsd = input.ReadDouble();
+            break;
+          }
+          case 16: {
+            LlmCalls = input.ReadInt32();
+            break;
+          }
+          case 24: {
+            TokensUsed = input.ReadInt32();
+            break;
+          }
+          case 32: {
+            CallsPerTool = input.ReadInt32();
+            break;
+          }
+          case 41: {
+            LatencySeconds = input.ReadDouble();
+            break;
+          }
+          case 48: {
+            Failures = input.ReadInt32();
+            break;
+          }
+          case 56: {
+            ApprovalRejections = input.ReadInt32();
+            break;
+          }
+          case 66: {
+            toolFailureCounts_.AddEntriesFrom(ref input, _map_toolFailureCounts_codec);
+            break;
+          }
+          case 72: {
+            RanAt = input.ReadInt64();
             break;
           }
         }

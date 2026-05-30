@@ -16,17 +16,19 @@ type LifecycleResolver struct {
 	log                   *slog.Logger
 	resolver              storage.LifecycleResolverRepository
 	resource              storage.ResourceInstanceRepository
+	versionMetrics        storage.VersionMetricsRepository
 	partitionId           string
 	lifecyclePolicyEngine *LifecyclePolicyEngine
 }
 
-func NewLifecycleResolver(interval int, log *slog.Logger, partitionId string, resolver storage.LifecycleResolverRepository, resource storage.ResourceInstanceRepository) *LifecycleResolver {
+func NewLifecycleResolver(interval int, log *slog.Logger, partitionId string, resolver storage.LifecycleResolverRepository, resource storage.ResourceInstanceRepository, versionMetrics storage.VersionMetricsRepository) *LifecycleResolver {
 	return &LifecycleResolver{
 		interval:              interval,
 		log:                   log.With("component", "lifecycle_resolver"),
 		partitionId:           partitionId,
 		resolver:              resolver,
 		resource:              resource,
+		versionMetrics:        versionMetrics,
 		lifecyclePolicyEngine: NewLifecyclePolicyEngine(log),
 	}
 }
@@ -85,7 +87,7 @@ func (r *LifecycleResolver) resolveLifecyclePolicy(ctx context.Context, workflow
 
 	resourceInstanceId := workflow.ID
 
-	versionMetrics, err := r.resolver.GetCurrentVersionMetrics(ctx, resourceInstanceId, workflow.CurrentWorkflowVersion)
+	versionMetrics, err := r.versionMetrics.GetCurrentVersionMetrics(ctx, resourceInstanceId, workflow.CurrentWorkflowVersion)
 	if err != nil {
 		return fmt.Errorf("get current version metrics instance %s: %w version %d:", resourceInstanceId, err, workflow.CurrentWorkflowVersion)
 	}

@@ -59,7 +59,4 @@ type WorkflowVersionMetrics struct {
 	TotalLatencySeconds     float64
 	TotalApprovalRejections int
 	ToolFailureCounts       map[string]int
-	// EmittedMetrics lists which metrics were actually observed in the last run.
-	// SetVersion rules are skipped for metrics not present in this list.
-	EmittedMetrics []WorkflowMetric
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
 	"github.com/convergeplane/convergeplane/internal/domain"
 )
 
@@ -48,7 +49,7 @@ func (r *AgentStateRepo) UpsertLifecyclePolicy(ctx context.Context, resourceInst
 	return err
 }
 
-func (r *AgentStateRepo) UpdateMetrics(ctx context.Context, resourceInstanceID, agentName string, metrics []map[string]any) error {
+func (r *AgentStateRepo) UpdateMetrics(ctx context.Context, resourceInstanceID, agentName string, metrics []*convergeplanev1.AgentInvocationMetrics) error {
 	metricsJSON, err := json.Marshal(metrics)
 	if err != nil {
 		return fmt.Errorf("marshal metrics: %w", err)
@@ -63,7 +64,7 @@ func (r *AgentStateRepo) UpdateMetrics(ctx context.Context, resourceInstanceID, 
 	return err
 }
 
-func (r *AgentStateRepo) GetAllForResource(ctx context.Context, resourceInstanceID string) ([]*domain.AgentState, error) {
+func (r *AgentStateRepo) GetAllForResource(ctx context.Context, resourceInstanceID string) (map[string]*domain.AgentState, error) {
 	rows, err := r.pool.Query(ctx,
 		`SELECT agent_name, runtime_policy, lifecycle_policy, invocation_metrics, updated_at
 		 FROM agent_state WHERE resource_instance_id = $1`,
@@ -74,7 +75,7 @@ func (r *AgentStateRepo) GetAllForResource(ctx context.Context, resourceInstance
 	}
 	defer rows.Close()
 
-	var states []*domain.AgentState
+	states := make(map[string]*domain.AgentState)
 	for rows.Next() {
 		var s domain.AgentState
 		var runtimeJSON, lifecycleJSON, metricsJSON []byte
@@ -91,7 +92,7 @@ func (r *AgentStateRepo) GetAllForResource(ctx context.Context, resourceInstance
 		if err := json.Unmarshal(metricsJSON, &s.InvocationMetrics); err != nil {
 			return nil, fmt.Errorf("unmarshal invocation metrics: %w", err)
 		}
-		states = append(states, &s)
+		states[s.AgentName] = &s
 	}
 	return states, rows.Err()
 }

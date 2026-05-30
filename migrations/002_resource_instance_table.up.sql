@@ -33,6 +33,7 @@ CREATE TABLE resource_instances (
     scheduler_partition_id    TEXT,
     target_version            BIGINT NOT NULL DEFAULT 0,
     current_version           BIGINT NOT NULL DEFAULT 0,
+    metrics_emitted_at        BIGINT NOT NULL DEFAULT 0,
     last_completed_request_at TIMESTAMPTZ,
     created_at                TIMESTAMPTZ NOT NULL DEFAULT now()
 );

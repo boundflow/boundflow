@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 	time "time"
 
+	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
 	domain "github.com/convergeplane/convergeplane/internal/domain"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -666,10 +667,10 @@ func (mr *MockAgentStateRepositoryMockRecorder) Delete(ctx, resourceInstanceID, 
 }
 
 // GetAllForResource mocks base method.
-func (m *MockAgentStateRepository) GetAllForResource(ctx context.Context, resourceInstanceID string) ([]*domain.AgentState, error) {
+func (m *MockAgentStateRepository) GetAllForResource(ctx context.Context, resourceInstanceID string) (map[string]*domain.AgentState, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAllForResource", ctx, resourceInstanceID)
-	ret0, _ := ret[0].([]*domain.AgentState)
+	ret0, _ := ret[0].(map[string]*domain.AgentState)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -681,7 +682,7 @@ func (mr *MockAgentStateRepositoryMockRecorder) GetAllForResource(ctx, resourceI
 }
 
 // UpdateMetrics mocks base method.
-func (m *MockAgentStateRepository) UpdateMetrics(ctx context.Context, resourceInstanceID, agentName string, metrics []map[string]any) error {
+func (m *MockAgentStateRepository) UpdateMetrics(ctx context.Context, resourceInstanceID, agentName string, metrics []*convergeplanev1.AgentInvocationMetrics) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateMetrics", ctx, resourceInstanceID, agentName, metrics)
 	ret0, _ := ret[0].(error)

@@ -17,6 +17,7 @@ CREATE TABLE jobs (
     resource_type           TEXT NOT NULL,
     timeout_seconds         INTEGER NOT NULL,
     workflow_version        INTEGER NOT NULL DEFAULT 0,
+    agent_metrics           JSONB NOT NULL DEFAULT '{}',
     owner                   TEXT,
     lease_expires_at        TIMESTAMPTZ,
     created_at              TIMESTAMPTZ NOT NULL DEFAULT now()

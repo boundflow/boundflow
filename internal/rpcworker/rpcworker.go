@@ -16,7 +16,7 @@ import (
 type RequestScheduler interface {
 	CompleteRequest(ctx context.Context, req string) (bool, error)
 	FailRequest(ctx context.Context, req string) (bool, error)
-	UpdateAgentMetrics(ctx context.Context, resourceInstanceID string, updates map[string][]map[string]any) error
+	UpdateAgentMetrics(ctx context.Context, resourceInstanceID string, updates map[string][]*convergeplanev1.AgentInvocationMetrics) error
 }
 
 type RpcWorker struct {
@@ -118,47 +118,14 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 		}
 	}
 
-	persistAgentMetrics := func(ctx context.Context, job *domain.Job, result *convergeplanev1.AtomicOperationResult) {
-		if result == nil || result.AgentStateUpdates == nil {
-			return
-		}
-		updates := make(map[string][]map[string]any)
-		for agentName, stateVal := range result.AgentStateUpdates.Fields {
-			stateMap, ok := stateVal.GetKind().(*structpb.Value_StructValue)
-			if !ok {
-				continue
-			}
-			metricsVal, ok := stateMap.StructValue.Fields["invocation_metrics"]
-			if !ok {
-				continue
-			}
-			listVal, ok := metricsVal.GetKind().(*structpb.Value_ListValue)
-			if !ok {
-				continue
-			}
-			var metrics []map[string]any
-			for _, entry := range listVal.ListValue.Values {
-				if sv, ok := entry.GetKind().(*structpb.Value_StructValue); ok {
-					metrics = append(metrics, sv.StructValue.AsMap())
-				}
-			}
-			updates[agentName] = metrics
-		}
-		if len(updates) > 0 {
-			if err := s.scheduler.UpdateAgentMetrics(ctx, job.ResourceInstanceID, updates); err != nil {
-				log.Warn("failed to persist agent metrics", "error", err)
-			}
-		}
-	}
-
 	completeOperation := func(cancelLease chan bool, job *domain.Job, result *convergeplanev1.AtomicOperationResult) error {
 		ctx := context.Background() // request completion doesnt depend on stream context
 		defer cancelLeaseIfExists(cancelLease)
 
-		persistAgentMetrics(ctx, job, result)
+		MergeAgentMetrics(log, result.AgentStateUpdates, &job.AgentMetrics)
 
 		if result.NextOperation == nil {
-			updated, err := s.jobs.UpdateJobStatus(ctx, job.ResourceInstanceID, s.id, domain.JobStatusCompleted)
+			updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.ResourceInstanceID, s.id, domain.JobStatusCompleted, job.AgentMetrics)
 			if err != nil {
 				log.Error("failed to mark job completed", "request_id", job.RequestID, "resource_id", job.ResourceInstanceID, "error", err)
 				return err
@@ -170,8 +137,8 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 			return nil
 		}
 		log.Info("operation completed with next operation, advancing job", "request_id", job.RequestID, "next_operation", result.NextOperation.Name)
-		_, err := s.jobs.UpdateJob(ctx, job.ResourceInstanceID, s.id, domain.JobStatusAwaitingNext,
-			result.NextOperation.Name, int(result.NextOperation.TimeoutSeconds), result.NextOperation.Context.AsMap())
+		_, err := s.jobs.UpdateJobWithMetrics(ctx, job.ResourceInstanceID, s.id, domain.JobStatusAwaitingNext,
+			result.NextOperation.Name, int(result.NextOperation.TimeoutSeconds), result.NextOperation.Context.AsMap(), job.AgentMetrics)
 
 		// consider returning error for ownership failure, for now the return isnt used for anything
 		return err

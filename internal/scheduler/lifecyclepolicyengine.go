@@ -2,7 +2,6 @@ package scheduler
 
 import (
 	"log/slog"
-	"slices"
 
 	"github.com/convergeplane/convergeplane/internal/domain"
 )
@@ -45,13 +44,18 @@ func (e *LifecyclePolicyEngine) ResolvePolicy(rollingMetrics *[]domain.WorkflowI
 		var targetGoalState WorkflowGoalState
 		ruleEnforced := false
 
+		if len(*rollingMetrics) == 0 {
+			continue
+		}
+
+		// Skip if the metric was not emitted in the most recent run.
+		if !metricEmitted((*rollingMetrics)[len(*rollingMetrics)-1], rule.Metric, rule.ToolName) {
+			e.log.Debug("metric not emitted in last run, skipping rule", "metric", rule.Metric)
+			continue
+		}
+
 		switch rule.Action.Type {
 		case domain.WorkflowPolicyActionSetVersion:
-
-			if !slices.Contains(versionMetrics.EmittedMetrics, rule.Metric) {
-				e.log.Debug("metric not emitted in last run, skipping set_version rule", "metric", rule.Metric)
-				continue
-			}
 
 			var val float64
 			switch rule.Metric {
@@ -84,60 +88,11 @@ func (e *LifecyclePolicyEngine) ResolvePolicy(rollingMetrics *[]domain.WorkflowI
 
 		case domain.WorkflowPolicyActionCooldown, domain.WorkflowPolicyActionPause:
 
-			if len(*rollingMetrics) == 0 {
-				continue
-			}
-
-			// Skip if the metric was not emitted in the most recent run.
-			last := (*rollingMetrics)[len(*rollingMetrics)-1]
-			lastEmitted := false
-			switch rule.Metric {
-			case domain.WorkflowMetricNumFailures:
-				lastEmitted = last.Failures != nil
-			case domain.WorkflowMetricCost:
-				lastEmitted = last.CostUsd != nil
-			case domain.WorkflowMetricNumLLMCalls:
-				lastEmitted = last.LlmCalls != nil
-			case domain.WorkflowMetricLatency:
-				lastEmitted = last.LatencySeconds != nil
-			case domain.WorkflowMetricApprovalRejections:
-				lastEmitted = last.ApprovalRejections != nil
-			case domain.WorkflowMetricToolFailureRate:
-				_, lastEmitted = last.ToolFailureCounts[rule.ToolName]
-			}
-			if !lastEmitted {
-				e.log.Debug("metric not emitted in last run, skipping rolling rule", "metric", rule.Metric)
-				continue
-			}
-
 			// Filter to snapshots where this metric was actually observed.
 			var observed []domain.WorkflowInvocationSnapshot
 			for _, m := range *rollingMetrics {
-				switch rule.Metric {
-				case domain.WorkflowMetricNumFailures:
-					if m.Failures != nil {
-						observed = append(observed, m)
-					}
-				case domain.WorkflowMetricCost:
-					if m.CostUsd != nil {
-						observed = append(observed, m)
-					}
-				case domain.WorkflowMetricNumLLMCalls:
-					if m.LlmCalls != nil {
-						observed = append(observed, m)
-					}
-				case domain.WorkflowMetricLatency:
-					if m.LatencySeconds != nil {
-						observed = append(observed, m)
-					}
-				case domain.WorkflowMetricApprovalRejections:
-					if m.ApprovalRejections != nil {
-						observed = append(observed, m)
-					}
-				case domain.WorkflowMetricToolFailureRate:
-					if _, ok := m.ToolFailureCounts[rule.ToolName]; ok {
-						observed = append(observed, m)
-					}
+				if metricEmitted(m, rule.Metric, rule.ToolName) {
+					observed = append(observed, m)
 				}
 			}
 
@@ -206,4 +161,25 @@ func (e *LifecyclePolicyEngine) ResolvePolicy(rollingMetrics *[]domain.WorkflowI
 
 func (e *LifecyclePolicyEngine) getActionPriority(actionType domain.WorkflowPolicyActionType) int {
 	return e.actionPriorities[actionType]
+}
+
+// metricEmitted reports whether the given metric was observed in the snapshot.
+// A nil scalar field (or absent tool key) means the metric was not emitted that run.
+func metricEmitted(snapshot domain.WorkflowInvocationSnapshot, metric domain.WorkflowMetric, toolName string) bool {
+	switch metric {
+	case domain.WorkflowMetricNumFailures:
+		return snapshot.Failures != nil
+	case domain.WorkflowMetricCost:
+		return snapshot.CostUsd != nil
+	case domain.WorkflowMetricNumLLMCalls:
+		return snapshot.LlmCalls != nil
+	case domain.WorkflowMetricLatency:
+		return snapshot.LatencySeconds != nil
+	case domain.WorkflowMetricApprovalRejections:
+		return snapshot.ApprovalRejections != nil
+	case domain.WorkflowMetricToolFailureRate:
+		_, ok := snapshot.ToolFailureCounts[toolName]
+		return ok
+	}
+	return false
 }

@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
 	"github.com/convergeplane/convergeplane/internal/domain"
 	"github.com/convergeplane/convergeplane/internal/storage"
 )
@@ -261,8 +262,8 @@ func (s *Scheduler) ScheduleRequest(ctx context.Context, req string) error {
 	jobContext := maps.Clone(request.RequestInfo)
 	if len(agentStates) > 0 {
 		agentStateMap := make(map[string]any, len(agentStates))
-		for _, a := range agentStates {
-			agentStateMap[a.AgentName] = map[string]any{
+		for name, a := range agentStates {
+			agentStateMap[name] = map[string]any{
 				"lifecycle_policy":   a.LifecyclePolicy,
 				"invocation_metrics": a.InvocationMetrics,
 			}
@@ -301,7 +302,7 @@ func (s *Scheduler) ScheduleRequest(ctx context.Context, req string) error {
 	return nil
 }
 
-func (s *Scheduler) UpdateAgentMetrics(ctx context.Context, resourceInstanceID string, updates map[string][]map[string]any) error {
+func (s *Scheduler) UpdateAgentMetrics(ctx context.Context, resourceInstanceID string, updates map[string][]*convergeplanev1.AgentInvocationMetrics) error {
 	for agentName, metrics := range updates {
 		if err := s.agentStates.UpdateMetrics(ctx, resourceInstanceID, agentName, metrics); err != nil {
 			s.log.Warn("failed to update agent metrics", "resource_id", resourceInstanceID, "agent", agentName, "error", err)

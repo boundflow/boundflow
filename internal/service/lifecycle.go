@@ -84,8 +84,8 @@ func (s *LifecycleService) resolveAgentRuntimeParams(ctx context.Context, resour
 		return fmt.Errorf("get agent states: %w", err)
 	}
 	policies := make(map[string]any, len(agents))
-	for _, a := range agents {
-		policies[a.AgentName] = a.RuntimePolicy
+	for name, a := range agents {
+		policies[name] = a.RuntimePolicy
 	}
 	requestInfo["agentRuntimePolicies"] = policies
 	return nil

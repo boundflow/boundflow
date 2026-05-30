@@ -23,10 +23,26 @@ message AtomicOperationResult {
   OperationStatus status = 1;
   string message = 2;
   AtomicOperation next_operation = 3;
-  // Agent state updates to persist after this operation completes.
-  // Keys are agent names; values are updated agent state objects
-  // (runtime_policy, lifecycle_policy, invocation_metrics).
-  google.protobuf.Struct agent_state_updates = 4;
+  // Per-agent invocation metrics observed during this operation, keyed by agent name.
+  // The server aggregates these across agents and operations and fills workflow-only
+  // metrics (e.g. num_failures) server-side when building the stored snapshot.
+  map<string, AgentInvocationMetrics> agent_state_updates = 4;
+}
+
+// AgentInvocationMetrics holds the metrics a single agent emitted during one operation.
+// Every field is optional: a null value means the agent did not emit that metric this run
+// (distinct from emitting a zero), so windowed policy evaluation can skip non-emitting runs.
+message AgentInvocationMetrics {
+  optional double cost_usd            = 1;
+  optional int32  llm_calls           = 2;
+  optional int32  tokens_used         = 3;
+  optional int32  calls_per_tool      = 4;
+  optional double latency_seconds     = 5;
+  optional int32  failures            = 6;
+  optional int32  approval_rejections = 7;
+  map<string, int32> tool_failure_counts = 8;
+  // Unix milliseconds when this agent run occurred. Always set (used to order history).
+  int64 ran_at = 9;
 }
 
 enum OperationStatus {

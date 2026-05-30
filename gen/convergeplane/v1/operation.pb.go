@@ -191,10 +191,10 @@ type AtomicOperationResult struct {
 	Status        OperationStatus        `protobuf:"varint,1,opt,name=status,proto3,enum=convergeplane.v1.OperationStatus" json:"status,omitempty"`
 	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	NextOperation *AtomicOperation       `protobuf:"bytes,3,opt,name=next_operation,json=nextOperation,proto3" json:"next_operation,omitempty"`
-	// Agent state updates to persist after this operation completes.
-	// Keys are agent names; values are updated agent state objects
-	// (runtime_policy, lifecycle_policy, invocation_metrics).
-	AgentStateUpdates *structpb.Struct `protobuf:"bytes,4,opt,name=agent_state_updates,json=agentStateUpdates,proto3" json:"agent_state_updates,omitempty"`
+	// Per-agent invocation metrics observed during this operation, keyed by agent name.
+	// The server aggregates these across agents and operations and fills workflow-only
+	// metrics (e.g. num_failures) server-side when building the stored snapshot.
+	AgentStateUpdates map[string]*AgentInvocationMetrics `protobuf:"bytes,4,rep,name=agent_state_updates,json=agentStateUpdates,proto3" json:"agent_state_updates,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -250,11 +250,123 @@ func (x *AtomicOperationResult) GetNextOperation() *AtomicOperation {
 	return nil
 }
 
-func (x *AtomicOperationResult) GetAgentStateUpdates() *structpb.Struct {
+func (x *AtomicOperationResult) GetAgentStateUpdates() map[string]*AgentInvocationMetrics {
 	if x != nil {
 		return x.AgentStateUpdates
 	}
 	return nil
+}
+
+// AgentInvocationMetrics holds the metrics a single agent emitted during one operation.
+// Every field is optional: a null value means the agent did not emit that metric this run
+// (distinct from emitting a zero), so windowed policy evaluation can skip non-emitting runs.
+type AgentInvocationMetrics struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	CostUsd            *float64               `protobuf:"fixed64,1,opt,name=cost_usd,json=costUsd,proto3,oneof" json:"cost_usd,omitempty"`
+	LlmCalls           *int32                 `protobuf:"varint,2,opt,name=llm_calls,json=llmCalls,proto3,oneof" json:"llm_calls,omitempty"`
+	TokensUsed         *int32                 `protobuf:"varint,3,opt,name=tokens_used,json=tokensUsed,proto3,oneof" json:"tokens_used,omitempty"`
+	CallsPerTool       *int32                 `protobuf:"varint,4,opt,name=calls_per_tool,json=callsPerTool,proto3,oneof" json:"calls_per_tool,omitempty"`
+	LatencySeconds     *float64               `protobuf:"fixed64,5,opt,name=latency_seconds,json=latencySeconds,proto3,oneof" json:"latency_seconds,omitempty"`
+	Failures           *int32                 `protobuf:"varint,6,opt,name=failures,proto3,oneof" json:"failures,omitempty"`
+	ApprovalRejections *int32                 `protobuf:"varint,7,opt,name=approval_rejections,json=approvalRejections,proto3,oneof" json:"approval_rejections,omitempty"`
+	ToolFailureCounts  map[string]int32       `protobuf:"bytes,8,rep,name=tool_failure_counts,json=toolFailureCounts,proto3" json:"tool_failure_counts,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	// Unix milliseconds when this agent run occurred. Always set (used to order history).
+	RanAt         int64 `protobuf:"varint,9,opt,name=ran_at,json=ranAt,proto3" json:"ran_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AgentInvocationMetrics) Reset() {
+	*x = AgentInvocationMetrics{}
+	mi := &file_convergeplane_v1_operation_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentInvocationMetrics) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentInvocationMetrics) ProtoMessage() {}
+
+func (x *AgentInvocationMetrics) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_operation_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentInvocationMetrics.ProtoReflect.Descriptor instead.
+func (*AgentInvocationMetrics) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_operation_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *AgentInvocationMetrics) GetCostUsd() float64 {
+	if x != nil && x.CostUsd != nil {
+		return *x.CostUsd
+	}
+	return 0
+}
+
+func (x *AgentInvocationMetrics) GetLlmCalls() int32 {
+	if x != nil && x.LlmCalls != nil {
+		return *x.LlmCalls
+	}
+	return 0
+}
+
+func (x *AgentInvocationMetrics) GetTokensUsed() int32 {
+	if x != nil && x.TokensUsed != nil {
+		return *x.TokensUsed
+	}
+	return 0
+}
+
+func (x *AgentInvocationMetrics) GetCallsPerTool() int32 {
+	if x != nil && x.CallsPerTool != nil {
+		return *x.CallsPerTool
+	}
+	return 0
+}
+
+func (x *AgentInvocationMetrics) GetLatencySeconds() float64 {
+	if x != nil && x.LatencySeconds != nil {
+		return *x.LatencySeconds
+	}
+	return 0
+}
+
+func (x *AgentInvocationMetrics) GetFailures() int32 {
+	if x != nil && x.Failures != nil {
+		return *x.Failures
+	}
+	return 0
+}
+
+func (x *AgentInvocationMetrics) GetApprovalRejections() int32 {
+	if x != nil && x.ApprovalRejections != nil {
+		return *x.ApprovalRejections
+	}
+	return 0
+}
+
+func (x *AgentInvocationMetrics) GetToolFailureCounts() map[string]int32 {
+	if x != nil {
+		return x.ToolFailureCounts
+	}
+	return nil
+}
+
+func (x *AgentInvocationMetrics) GetRanAt() int64 {
+	if x != nil {
+		return x.RanAt
+	}
+	return 0
 }
 
 var File_convergeplane_v1_operation_proto protoreflect.FileDescriptor
@@ -273,12 +385,37 @@ const file_convergeplane_v1_operation_proto_rawDesc = "" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12'\n" +
 	"\x0ftimeout_seconds\x18\a \x01(\x05R\x0etimeoutSeconds\x12#\n" +
 	"\rresource_type\x18\b \x01(\tR\fresourceType\x12)\n" +
-	"\x10workflow_version\x18\t \x01(\x05R\x0fworkflowVersion\"\xff\x01\n" +
+	"\x10workflow_version\x18\t \x01(\x05R\x0fworkflowVersion\"\x96\x03\n" +
 	"\x15AtomicOperationResult\x129\n" +
 	"\x06status\x18\x01 \x01(\x0e2!.convergeplane.v1.OperationStatusR\x06status\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12H\n" +
-	"\x0enext_operation\x18\x03 \x01(\v2!.convergeplane.v1.AtomicOperationR\rnextOperation\x12G\n" +
-	"\x13agent_state_updates\x18\x04 \x01(\v2\x17.google.protobuf.StructR\x11agentStateUpdates*\xb2\x01\n" +
+	"\x0enext_operation\x18\x03 \x01(\v2!.convergeplane.v1.AtomicOperationR\rnextOperation\x12n\n" +
+	"\x13agent_state_updates\x18\x04 \x03(\v2>.convergeplane.v1.AtomicOperationResult.AgentStateUpdatesEntryR\x11agentStateUpdates\x1an\n" +
+	"\x16AgentStateUpdatesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12>\n" +
+	"\x05value\x18\x02 \x01(\v2(.convergeplane.v1.AgentInvocationMetricsR\x05value:\x028\x01\"\xf5\x04\n" +
+	"\x16AgentInvocationMetrics\x12\x1e\n" +
+	"\bcost_usd\x18\x01 \x01(\x01H\x00R\acostUsd\x88\x01\x01\x12 \n" +
+	"\tllm_calls\x18\x02 \x01(\x05H\x01R\bllmCalls\x88\x01\x01\x12$\n" +
+	"\vtokens_used\x18\x03 \x01(\x05H\x02R\n" +
+	"tokensUsed\x88\x01\x01\x12)\n" +
+	"\x0ecalls_per_tool\x18\x04 \x01(\x05H\x03R\fcallsPerTool\x88\x01\x01\x12,\n" +
+	"\x0flatency_seconds\x18\x05 \x01(\x01H\x04R\x0elatencySeconds\x88\x01\x01\x12\x1f\n" +
+	"\bfailures\x18\x06 \x01(\x05H\x05R\bfailures\x88\x01\x01\x124\n" +
+	"\x13approval_rejections\x18\a \x01(\x05H\x06R\x12approvalRejections\x88\x01\x01\x12o\n" +
+	"\x13tool_failure_counts\x18\b \x03(\v2?.convergeplane.v1.AgentInvocationMetrics.ToolFailureCountsEntryR\x11toolFailureCounts\x12\x15\n" +
+	"\x06ran_at\x18\t \x01(\x03R\x05ranAt\x1aD\n" +
+	"\x16ToolFailureCountsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01B\v\n" +
+	"\t_cost_usdB\f\n" +
+	"\n" +
+	"_llm_callsB\x0e\n" +
+	"\f_tokens_usedB\x11\n" +
+	"\x0f_calls_per_toolB\x12\n" +
+	"\x10_latency_secondsB\v\n" +
+	"\t_failuresB\x16\n" +
+	"\x14_approval_rejections*\xb2\x01\n" +
 	"\x0fOperationStatus\x12 \n" +
 	"\x1cOPERATION_STATUS_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cOPERATION_STATUS_IN_PROGRESS\x10\x01\x12\x1e\n" +
@@ -299,25 +436,30 @@ func file_convergeplane_v1_operation_proto_rawDescGZIP() []byte {
 }
 
 var file_convergeplane_v1_operation_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_convergeplane_v1_operation_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_convergeplane_v1_operation_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_convergeplane_v1_operation_proto_goTypes = []any{
-	(OperationStatus)(0),          // 0: convergeplane.v1.OperationStatus
-	(*AtomicOperation)(nil),       // 1: convergeplane.v1.AtomicOperation
-	(*AtomicOperationResult)(nil), // 2: convergeplane.v1.AtomicOperationResult
-	(*structpb.Struct)(nil),       // 3: google.protobuf.Struct
-	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
+	(OperationStatus)(0),           // 0: convergeplane.v1.OperationStatus
+	(*AtomicOperation)(nil),        // 1: convergeplane.v1.AtomicOperation
+	(*AtomicOperationResult)(nil),  // 2: convergeplane.v1.AtomicOperationResult
+	(*AgentInvocationMetrics)(nil), // 3: convergeplane.v1.AgentInvocationMetrics
+	nil,                            // 4: convergeplane.v1.AtomicOperationResult.AgentStateUpdatesEntry
+	nil,                            // 5: convergeplane.v1.AgentInvocationMetrics.ToolFailureCountsEntry
+	(*structpb.Struct)(nil),        // 6: google.protobuf.Struct
+	(*timestamppb.Timestamp)(nil),  // 7: google.protobuf.Timestamp
 }
 var file_convergeplane_v1_operation_proto_depIdxs = []int32{
-	3, // 0: convergeplane.v1.AtomicOperation.context:type_name -> google.protobuf.Struct
-	4, // 1: convergeplane.v1.AtomicOperation.created_at:type_name -> google.protobuf.Timestamp
+	6, // 0: convergeplane.v1.AtomicOperation.context:type_name -> google.protobuf.Struct
+	7, // 1: convergeplane.v1.AtomicOperation.created_at:type_name -> google.protobuf.Timestamp
 	0, // 2: convergeplane.v1.AtomicOperationResult.status:type_name -> convergeplane.v1.OperationStatus
 	1, // 3: convergeplane.v1.AtomicOperationResult.next_operation:type_name -> convergeplane.v1.AtomicOperation
-	3, // 4: convergeplane.v1.AtomicOperationResult.agent_state_updates:type_name -> google.protobuf.Struct
-	5, // [5:5] is the sub-list for method output_type
-	5, // [5:5] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	4, // 4: convergeplane.v1.AtomicOperationResult.agent_state_updates:type_name -> convergeplane.v1.AtomicOperationResult.AgentStateUpdatesEntry
+	5, // 5: convergeplane.v1.AgentInvocationMetrics.tool_failure_counts:type_name -> convergeplane.v1.AgentInvocationMetrics.ToolFailureCountsEntry
+	3, // 6: convergeplane.v1.AtomicOperationResult.AgentStateUpdatesEntry.value:type_name -> convergeplane.v1.AgentInvocationMetrics
+	7, // [7:7] is the sub-list for method output_type
+	7, // [7:7] is the sub-list for method input_type
+	7, // [7:7] is the sub-list for extension type_name
+	7, // [7:7] is the sub-list for extension extendee
+	0, // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_convergeplane_v1_operation_proto_init() }
@@ -325,13 +467,14 @@ func file_convergeplane_v1_operation_proto_init() {
 	if File_convergeplane_v1_operation_proto != nil {
 		return
 	}
+	file_convergeplane_v1_operation_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_convergeplane_v1_operation_proto_rawDesc), len(file_convergeplane_v1_operation_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   2,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

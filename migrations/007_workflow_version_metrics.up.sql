@@ -11,6 +11,5 @@ CREATE TABLE workflow_version_metrics (
     total_latency_seconds NUMERIC(12, 3) NOT NULL DEFAULT 0,
     total_approval_rejections INTEGER NOT NULL DEFAULT 0,
     tool_failure_counts   JSONB NOT NULL DEFAULT '{}',
-    emitted_metrics       JSONB NOT NULL DEFAULT '[]',
     PRIMARY KEY (resource_instance_id, version, epoch)
 );
