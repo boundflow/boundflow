@@ -46,9 +46,12 @@ func (r *SchedulerRepo) GetTopUnscheduledRequests(ctx context.Context, partition
 // UpsertJobAndSchedule writes or overwrites the job for the resource associated with requestID,
 // but only if the request's version is strictly higher than the job currently in the table
 // (and that job is still pending). Atomically marks the request as scheduled if written.
-// Returns written=false (no error) if the existing job had an equal or higher version or the job has been started already.
+// The write is additionally guarded on the resource's current_version still equaling
+// expectedCurrentVersion — the run the caller validated against — so a stale validation
+// (a newer run completed in between) results in written=false rather than scheduling.
+// Returns written=false (no error) if any guard fails.
 // contextJSON and currentAtomicOperation are assembled by the scheduler layer before calling.
-func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID string, contextJSON string, currentAtomicOperation string, timeoutSeconds int, workflowVersion int) (resourceInstanceID string, version int64, written bool, err error) {
+func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID string, contextJSON string, currentAtomicOperation string, timeoutSeconds int, workflowVersion int, expectedCurrentVersion int64) (resourceInstanceID string, version int64, written bool, err error) {
 	err = r.pool.QueryRow(ctx,
 		`WITH candidate AS (
 		     SELECT cr.id, cr.resource_instance_id, cr.version, cr.request_type,
@@ -56,6 +59,7 @@ func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID stri
 		     FROM customer_requests cr
 		     JOIN resource_instances ri ON ri.id = cr.resource_instance_id
 		     WHERE cr.id = $1
+		       AND ri.current_version = $6
 		 ),
 		 upserted AS (
 		     INSERT INTO jobs (resource_instance_id, request_id, version, current_atomic_operation, context, status, job_type, resource_type, timeout_seconds, workflow_version)
@@ -85,7 +89,7 @@ func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID stri
 		 FROM upserted u
 		 WHERE cr.id = u.request_id
 		 RETURNING cr.resource_instance_id, cr.version`,
-		requestID, currentAtomicOperation, contextJSON, timeoutSeconds, workflowVersion,
+		requestID, currentAtomicOperation, contextJSON, timeoutSeconds, workflowVersion, expectedCurrentVersion,
 	).Scan(&resourceInstanceID, &version)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

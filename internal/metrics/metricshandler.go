@@ -1,4 +1,4 @@
-package rpcworker
+package metrics
 
 import (
 	"context"
@@ -19,17 +19,24 @@ type MetricsHandler struct {
 	log            *slog.Logger
 }
 
-func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, invocationMetrics map[string]*convergeplanev1.AgentInvocationMetrics, workFlowId string) error {
-	workflow, err := m.workflow.Get(ctx, workFlowId)
-	if err != nil {
-		m.log.Error("get resource instance", "resource_id", workFlowId, "error", err)
-		return err
+func NewMetricsHandler(workflow storage.ResourceInstanceRepository, agentState storage.AgentStateRepository, versionMetrics storage.VersionMetricsRepository, metrics storage.MetricsRepository, log *slog.Logger) *MetricsHandler {
+	return &MetricsHandler{
+		workflow:       workflow,
+		agentState:     agentState,
+		versionMetrics: versionMetrics,
+		metrics:        metrics,
+		log:            log.With("component", "metrics_handler"),
 	}
+}
+
+func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, invocationMetrics map[string]*convergeplanev1.AgentInvocationMetrics, workflow *domain.ResourceInstance) (error, *domain.WorkflowVersionMetrics) {
+
+	workFlowId := workflow.ID
 
 	versionMetrics, err := m.versionMetrics.GetCurrentVersionMetrics(ctx, workFlowId, workflow.CurrentWorkflowVersion)
 	if err != nil {
 		m.log.Error("get current version metrics", "resource_id", workFlowId, "error", err)
-		return err
+		return err, nil
 	}
 	if versionMetrics == nil {
 		versionMetrics = &domain.WorkflowVersionMetrics{
@@ -46,7 +53,7 @@ func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, invocationMetri
 	agentStates, err := m.agentState.GetAllForResource(ctx, workFlowId)
 	if err != nil {
 		m.log.Error("get agent states", "resource_id", workFlowId, "error", err)
-		return err
+		return err, nil
 	}
 
 	// Build the workflow-level snapshot for this run as the sum across all agents.
@@ -73,23 +80,23 @@ func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, invocationMetri
 		// tokens_used / calls_per_tool are agent-only and don't roll up to the workflow.
 		if metrics.CostUsd != nil {
 			versionMetrics.TotalCost += *metrics.CostUsd
-			accF64(&snapshot.CostUsd, *metrics.CostUsd)
+			m.accF64(&snapshot.CostUsd, *metrics.CostUsd)
 		}
 		if metrics.LlmCalls != nil {
 			versionMetrics.TotalLLMCalls += int(*metrics.LlmCalls)
-			accInt(&snapshot.LlmCalls, int(*metrics.LlmCalls))
+			m.accInt(&snapshot.LlmCalls, int(*metrics.LlmCalls))
 		}
 		if metrics.LatencySeconds != nil {
 			versionMetrics.TotalLatencySeconds += *metrics.LatencySeconds
-			accF64(&snapshot.LatencySeconds, *metrics.LatencySeconds)
+			m.accF64(&snapshot.LatencySeconds, *metrics.LatencySeconds)
 		}
 		if metrics.Failures != nil {
 			versionMetrics.TotalFailures += int(*metrics.Failures)
-			accInt(&snapshot.Failures, int(*metrics.Failures))
+			m.accInt(&snapshot.Failures, int(*metrics.Failures))
 		}
 		if metrics.ApprovalRejections != nil {
 			versionMetrics.TotalApprovalRejections += int(*metrics.ApprovalRejections)
-			accInt(&snapshot.ApprovalRejections, int(*metrics.ApprovalRejections))
+			m.accInt(&snapshot.ApprovalRejections, int(*metrics.ApprovalRejections))
 		}
 		for tool, failCount := range metrics.ToolFailureCounts {
 			versionMetrics.ToolFailureCounts[tool] += int(failCount)
@@ -106,19 +113,21 @@ func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, invocationMetri
 		agentMetrics[agent] = agentStates[agent].InvocationMetrics
 	}
 
-	applied, err := m.metrics.EmitMetrics(ctx, workFlowId, workflow.CurrentVersion, snapshot, versionMetrics, agentMetrics)
+	workflow.InvocationMetrics = append(workflow.InvocationMetrics, snapshot)
+
+	applied, err := m.metrics.EmitMetrics(ctx, workFlowId, workflow.CurrentVersion, workflow.InvocationMetrics, versionMetrics, agentMetrics)
 	if err != nil {
 		m.log.Error("emit metrics", "resource_id", workFlowId, "error", err)
-		return err
+		return err, nil
 	}
 	if !applied {
 		m.log.Debug("metrics already emitted for this run, skipping", "resource_id", workFlowId, "version", workflow.CurrentVersion)
 	}
-	return nil
+	return nil, versionMetrics
 }
 
 // accF64 adds v into the domain snapshot field, allocating it on first emit (nil = not emitted).
-func accF64(dst **float64, v float64) {
+func (m *MetricsHandler) accF64(dst **float64, v float64) {
 	if *dst == nil {
 		x := v
 		*dst = &x
@@ -128,7 +137,7 @@ func accF64(dst **float64, v float64) {
 }
 
 // accInt adds v into the domain snapshot field, allocating it on first emit (nil = not emitted).
-func accInt(dst **int, v int) {
+func (m *MetricsHandler) accInt(dst **int, v int) {
 	if *dst == nil {
 		x := v
 		*dst = &x
@@ -137,29 +146,29 @@ func accInt(dst **int, v int) {
 	**dst += v
 }
 
-func MergeAgentMetrics(log *slog.Logger, opMetrics map[string]*convergeplanev1.AgentInvocationMetrics, jobMetrics *map[string]*convergeplanev1.AgentInvocationMetrics) {
-	log.Debug("merging operation agent metrics into job accumulator", "agents_in_operation", len(opMetrics), "agents_in_job", len(*jobMetrics))
+func (m *MetricsHandler) MergeAgentMetrics(opMetrics map[string]*convergeplanev1.AgentInvocationMetrics, jobMetrics *map[string]*convergeplanev1.AgentInvocationMetrics) {
+	m.log.Debug("merging operation agent metrics into job accumulator", "agents_in_operation", len(opMetrics), "agents_in_job", len(*jobMetrics))
 	for agent, opMetric := range opMetrics {
 		if opMetric == nil {
-			log.Debug("skipping nil agent metrics", "agent", agent)
+			m.log.Debug("skipping nil agent metrics", "agent", agent)
 			continue
 		}
 		jobMetric, ok := (*jobMetrics)[agent]
 		if !ok {
-			log.Debug("carrying agent metrics over fresh", "agent", agent)
+			m.log.Debug("carrying agent metrics over fresh", "agent", agent)
 			(*jobMetrics)[agent] = opMetric
 			continue
 		}
-		log.Debug("summing agent metrics into existing accumulator", "agent", agent)
+		m.log.Debug("summing agent metrics into existing accumulator", "agent", agent)
 		// For every metric the operation emitted: sum it into the existing job
 		// metric if that field already exists, otherwise carry it over fresh.
-		addF64(&jobMetric.CostUsd, opMetric.CostUsd)
-		addI32(&jobMetric.LlmCalls, opMetric.LlmCalls)
-		addI32(&jobMetric.TokensUsed, opMetric.TokensUsed)
-		addI32(&jobMetric.CallsPerTool, opMetric.CallsPerTool)
-		addF64(&jobMetric.LatencySeconds, opMetric.LatencySeconds)
-		addI32(&jobMetric.Failures, opMetric.Failures)
-		addI32(&jobMetric.ApprovalRejections, opMetric.ApprovalRejections)
+		m.addF64(&jobMetric.CostUsd, opMetric.CostUsd)
+		m.addI32(&jobMetric.LlmCalls, opMetric.LlmCalls)
+		m.addI32(&jobMetric.TokensUsed, opMetric.TokensUsed)
+		m.addI32(&jobMetric.CallsPerTool, opMetric.CallsPerTool)
+		m.addF64(&jobMetric.LatencySeconds, opMetric.LatencySeconds)
+		m.addI32(&jobMetric.Failures, opMetric.Failures)
+		m.addI32(&jobMetric.ApprovalRejections, opMetric.ApprovalRejections)
 		if len(opMetric.ToolFailureCounts) > 0 {
 			if jobMetric.ToolFailureCounts == nil {
 				jobMetric.ToolFailureCounts = make(map[string]int32, len(opMetric.ToolFailureCounts))
@@ -172,7 +181,7 @@ func MergeAgentMetrics(log *slog.Logger, opMetrics map[string]*convergeplanev1.A
 }
 
 // addF64 sums src into *dst. If src is nil it's a no-op; if *dst is nil the value is carried over fresh.
-func addF64(dst **float64, src *float64) {
+func (m *MetricsHandler) addF64(dst **float64, src *float64) {
 	if src == nil {
 		return
 	}
@@ -186,7 +195,7 @@ func addF64(dst **float64, src *float64) {
 }
 
 // addI32 sums src into *dst. If src is nil it's a no-op; if *dst is nil the value is carried over fresh.
-func addI32(dst **int32, src *int32) {
+func (m *MetricsHandler) addI32(dst **int32, src *int32) {
 	if src == nil {
 		return
 	}

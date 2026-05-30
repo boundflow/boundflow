@@ -66,7 +66,9 @@ type SchedulerRepository interface {
 	// contextJSON is the fully-assembled job context (built in the scheduler layer).
 	// currentAtomicOperation is the entry-point step name (also computed in the scheduler layer).
 	// timeoutSeconds and workflowVersion are read from request info and passed directly to the jobs table.
-	UpsertJobAndSchedule(ctx context.Context, requestID string, contextJSON string, currentAtomicOperation string, timeoutSeconds int, workflowVersion int) (resourceInstanceID string, version int64, written bool, err error)
+	// expectedCurrentVersion guards the write: it only proceeds if the resource's current_version
+	// still equals it (the run the caller validated against), else written=false.
+	UpsertJobAndSchedule(ctx context.Context, requestID string, contextJSON string, currentAtomicOperation string, timeoutSeconds int, workflowVersion int, expectedCurrentVersion int64) (resourceInstanceID string, version int64, written bool, err error)
 	// SupercedeOlderRequests marks all unscheduled or scheduled requests for the given resource
 	// whose version is strictly less than version as superceded.
 	SupercedeOlderRequests(ctx context.Context, resourceInstanceID string, version int64) error
@@ -105,6 +107,9 @@ type JobRepository interface {
 	// UpdateJobWithMetrics is UpdateJob plus an atomic write of the accumulated per-agent
 	// metrics into agent_metrics. Used when advancing to the next operation.
 	UpdateJobWithMetrics(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics) (bool, error)
+	// GetAgentMetrics returns the accumulated per-agent metrics stored on the job
+	// for the given resource and request. Returns nil if no such job exists.
+	GetAgentMetrics(ctx context.Context, resourceInstanceID string, requestID string) (map[string]*convergeplanev1.AgentInvocationMetrics, error)
 	// ReleaseJob clears the owner and lease on a job, only if currently owned by ownerID.
 	ReleaseJob(ctx context.Context, resourceInstanceID string, ownerID string) error
 }
@@ -137,7 +142,7 @@ type MetricsRepository interface {
 	// EmitMetrics atomically appends the rolling snapshot, upserts version-metric totals,
 	// and upserts each agent's metrics history — only if metrics_emitted_at < emittedVersion.
 	// Returns false if the gate fails (metrics already emitted for this run).
-	EmitMetrics(ctx context.Context, resourceInstanceID string, emittedVersion int64, rolling domain.WorkflowInvocationSnapshot, versionMetrics *domain.WorkflowVersionMetrics, agentMetrics map[string][]*convergeplanev1.AgentInvocationMetrics) (bool, error)
+	EmitMetrics(ctx context.Context, resourceInstanceID string, emittedVersion int64, rollingMetrics []domain.WorkflowInvocationSnapshot, versionMetrics *domain.WorkflowVersionMetrics, agentMetrics map[string][]*convergeplanev1.AgentInvocationMetrics) (bool, error)
 }
 
 type VersionMetricsRepository interface {

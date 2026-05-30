@@ -31,13 +31,13 @@ func (r *MetricsRepo) EmitMetrics(
 	ctx context.Context,
 	resourceInstanceID string,
 	emittedVersion int64,
-	rolling domain.WorkflowInvocationSnapshot,
+	rollingMetrics []domain.WorkflowInvocationSnapshot,
 	versionMetrics *domain.WorkflowVersionMetrics,
 	agentMetrics map[string][]*convergeplanev1.AgentInvocationMetrics,
 ) (bool, error) {
-	rollingJSON, err := json.Marshal(rolling)
+	rollingJSON, err := json.Marshal(rollingMetrics)
 	if err != nil {
-		return false, fmt.Errorf("marshal rolling snapshot: %w", err)
+		return false, fmt.Errorf("marshal rolling metrics: %w", err)
 	}
 	toolFailureJSON, err := json.Marshal(versionMetrics.ToolFailureCounts)
 	if err != nil {
@@ -55,7 +55,7 @@ func (r *MetricsRepo) EmitMetrics(
 	err = tx.QueryRow(ctx, `
 		UPDATE resource_instances
 		SET metrics_emitted_at = $2,
-		    invocation_metrics = invocation_metrics || $3::jsonb
+		    invocation_metrics = $3::jsonb
 		WHERE id = $1 AND metrics_emitted_at < $2
 		RETURNING id
 	`, resourceInstanceID, emittedVersion, rollingJSON).Scan(&gatedID)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"sync"
 	"time"
 
 	"github.com/convergeplane/convergeplane/internal/domain"
@@ -37,7 +36,7 @@ func NewLifecycleResolver(interval int, log *slog.Logger, partitionId string, re
 // A: Every other state is self-healing, for example: transitions from created, paused, and disabled
 // are all control plane induced, and the control plane call will fail unless they happen
 // From active, we know that on the next run there will be a necessary resolution via scheduler (see invariant below)
-func (r *LifecycleResolver) Run(ctx context.Context) error {
+/*func (r *LifecycleResolver) Run(ctx context.Context) error {
 	r.log.Info("lifecycle resolver starting")
 
 	ticker := time.NewTicker(time.Duration(r.interval) * time.Second)
@@ -68,29 +67,16 @@ func (r *LifecycleResolver) Run(ctx context.Context) error {
 		}
 	}
 
-}
-
-func (r *LifecycleResolver) ResolveLifecyclePolicy(ctx context.Context, resourceInstanceId string) error {
-	workflow, err := r.resource.Get(ctx, resourceInstanceId)
-	if err != nil {
-		return fmt.Errorf("get resource instance %s: %w", resourceInstanceId, err)
-	}
-	return r.resolveLifecyclePolicy(ctx, workflow)
-}
+}*/
 
 // One very critical invariant: the resolver assumes that all prior runs except potentially the latest have been resolved
 // This is enforced via the scheduler refusing to schedule an event until it has resolved succesfully for the current version
 // This means a more correct name for this function is "Resolve Lifecycle Policy for latest run"
 // Example: if version 2 wasn't resolved, version 3's resolution may not necessarily fix it (if metric wasnt emitted in latest run),
 // but again this should be an impossible case due to invariant
-func (r *LifecycleResolver) resolveLifecyclePolicy(ctx context.Context, workflow *domain.ResourceInstance) error {
+func (r *LifecycleResolver) ResolveLifecyclePolicy(ctx context.Context, workflow *domain.ResourceInstance, versionMetrics *domain.WorkflowVersionMetrics) error {
 
 	resourceInstanceId := workflow.ID
-
-	versionMetrics, err := r.versionMetrics.GetCurrentVersionMetrics(ctx, resourceInstanceId, workflow.CurrentWorkflowVersion)
-	if err != nil {
-		return fmt.Errorf("get current version metrics instance %s: %w version %d:", resourceInstanceId, err, workflow.CurrentWorkflowVersion)
-	}
 
 	if versionMetrics == nil {
 		versionMetrics = &domain.WorkflowVersionMetrics{}

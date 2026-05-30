@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/convergeplane/convergeplane/internal/config"
+	"github.com/convergeplane/convergeplane/internal/metrics"
 	"github.com/convergeplane/convergeplane/internal/rpcworker"
 	internalscheduler "github.com/convergeplane/convergeplane/internal/scheduler"
 	"github.com/convergeplane/convergeplane/internal/server"
@@ -73,7 +74,13 @@ func runServer(sigCh <-chan os.Signal) {
 	agentStateRepo := postgres.NewAgentStateRepo(pool)
 	schedulerRepo := postgres.NewSchedulerRepo(pool)
 	partitionRepo := postgres.NewSchedulerPartitionRepo(pool)
-	sched := internalscheduler.New("server", 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, agentStateRepo, logger)
+	jobRepo := postgres.NewJobRepo(pool)
+	versionMetricsRepo := postgres.NewVersionMetricsRepo(pool)
+	metricsRepo := postgres.NewMetricsRepo(pool)
+	lifecycleResolverRepo := postgres.NewLifecycleResolverRepo(pool)
+	metricsHandler := metrics.NewMetricsHandler(resourceInstanceRepo, agentStateRepo, versionMetricsRepo, metricsRepo, logger)
+	policyResolver := internalscheduler.NewLifecycleResolver(30, logger, "", lifecycleResolverRepo, resourceInstanceRepo, versionMetricsRepo)
+	sched := internalscheduler.NewScheduler("server", 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, agentStateRepo, jobRepo, metricsHandler, policyResolver, logger)
 
 	regSvc := service.NewRegistrationService(tenantGroupRepo, tenantRepo)
 	lifecycleSvc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, sched, cfg.NumPartitions, logger)
@@ -106,13 +113,19 @@ func runScheduler(sigCh <-chan os.Signal) {
 	resourceInstanceRepo := postgres.NewResourceInstanceRepo(pool)
 	agentStateRepo := postgres.NewAgentStateRepo(pool)
 	schedulerRepo := postgres.NewSchedulerRepo(pool)
+	jobRepo := postgres.NewJobRepo(pool)
+	versionMetricsRepo := postgres.NewVersionMetricsRepo(pool)
+	metricsRepo := postgres.NewMetricsRepo(pool)
+	lifecycleResolverRepo := postgres.NewLifecycleResolverRepo(pool)
+	metricsHandler := metrics.NewMetricsHandler(resourceInstanceRepo, agentStateRepo, versionMetricsRepo, metricsRepo, logger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	errCh := make(chan error, 1)
 	for i := range cfg.NumPartitions {
 		schedulerID := uuid.NewString()
-		sched := internalscheduler.New(schedulerID, 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, agentStateRepo, logger)
+		policyResolver := internalscheduler.NewLifecycleResolver(30, logger, "", lifecycleResolverRepo, resourceInstanceRepo, versionMetricsRepo)
+		sched := internalscheduler.NewScheduler(schedulerID, 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, agentStateRepo, jobRepo, metricsHandler, policyResolver, logger)
 		logger.Info("starting scheduler partition worker", "index", i, "scheduler_id", schedulerID)
 		go func() { errCh <- sched.Run(ctx) }()
 	}
@@ -145,10 +158,16 @@ func runWorker(sigCh <-chan os.Signal) {
 	agentStateRepo := postgres.NewAgentStateRepo(pool)
 	schedulerRepo := postgres.NewSchedulerRepo(pool)
 
-	workerID := uuid.NewString()
-	sched := internalscheduler.New(workerID, 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, agentStateRepo, logger)
+	versionMetricsRepo := postgres.NewVersionMetricsRepo(pool)
+	metricsRepo := postgres.NewMetricsRepo(pool)
+	lifecycleResolverRepo := postgres.NewLifecycleResolverRepo(pool)
+	metricsHandler := metrics.NewMetricsHandler(resourceInstanceRepo, agentStateRepo, versionMetricsRepo, metricsRepo, logger)
 
-	worker := rpcworker.NewRpcWorker(jobRepo, workerID, cfg.JobTimeoutSecs, sched, logger)
+	workerID := uuid.NewString()
+	policyResolver := internalscheduler.NewLifecycleResolver(30, logger, "", lifecycleResolverRepo, resourceInstanceRepo, versionMetricsRepo)
+	sched := internalscheduler.NewScheduler(workerID, 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, agentStateRepo, jobRepo, metricsHandler, policyResolver, logger)
+
+	worker := rpcworker.NewRpcWorker(jobRepo, workerID, cfg.JobTimeoutSecs, sched, metricsHandler, logger)
 	srv := server.NewWorkerServer(cfg, worker)
 
 	errCh := make(chan error, 1)

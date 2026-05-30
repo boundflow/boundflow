@@ -114,6 +114,26 @@ func (r *JobRepo) UpdateJobStatusWithMetrics(ctx context.Context, resourceInstan
 	return tag.RowsAffected() == 1, nil
 }
 
+func (r *JobRepo) GetAgentMetrics(ctx context.Context, resourceInstanceID string, requestID string) (map[string]*convergeplanev1.AgentInvocationMetrics, error) {
+	var agentMetricsJSON []byte
+	err := r.pool.QueryRow(ctx,
+		`SELECT agent_metrics FROM jobs WHERE resource_instance_id = $1 AND request_id = $2`,
+		resourceInstanceID, requestID,
+	).Scan(&agentMetricsJSON)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get job agent metrics: %w", err)
+	}
+
+	var metrics map[string]*convergeplanev1.AgentInvocationMetrics
+	if err := json.Unmarshal(agentMetricsJSON, &metrics); err != nil {
+		return nil, fmt.Errorf("unmarshal agent metrics: %w", err)
+	}
+	return metrics, nil
+}
+
 func (r *JobRepo) ReleaseJob(ctx context.Context, resourceInstanceID string, ownerID string) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE jobs

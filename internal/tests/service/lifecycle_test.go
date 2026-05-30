@@ -26,7 +26,7 @@ func (m *mockRequestScheduler) ScheduleRequest(_ context.Context, _ string) erro
 }
 
 // policy used in all tests — non-zero so resolveJobPolicy returns immediately.
-var testPolicy = domain.WorkflowRuntimeParams{InitialVersion: 1, OperationTimeoutSeconds: 30}
+var testPolicy = domain.WorkflowRuntimeParams{OperationTimeoutSeconds: 30}
 
 func newSvc(ctrl *gomock.Controller) (*service.LifecycleService, *mocks.MockResourceInstanceRepository, *mocks.MockCustomerRequestRepository, *mocks.MockTenantRepository, *mocks.MockTenantGroupRepository, *mocks.MockAgentStateRepository) {
 	resourceInstanceRepo := mocks.NewMockResourceInstanceRepository(ctrl)
@@ -43,7 +43,7 @@ func TestCreateResource(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	svc, resourceInstanceRepo, _, _, _, _ := newSvc(ctrl)
 
-	cfg := domain.WorkflowConfig{InitialVersion: 1, Triggerable: true}
+	cfg := domain.WorkflowConfig{Triggerable: true}
 
 	resourceInstanceRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any()).
@@ -63,6 +63,9 @@ func TestCreateResource(t *testing.T) {
 			if r.WorkflowConfig != cfg {
 				t.Errorf("expected workflow config %+v, got %+v", cfg, r.WorkflowConfig)
 			}
+			if r.CurrentWorkflowVersion != 1 {
+				t.Errorf("expected current_workflow_version 1, got %d", r.CurrentWorkflowVersion)
+			}
 			if r.TargetVersion != 1 {
 				t.Errorf("expected target_version 1, got %d", r.TargetVersion)
 			}
@@ -72,7 +75,7 @@ func TestCreateResource(t *testing.T) {
 			return nil
 		})
 
-	instance, err := svc.CreateResource(context.Background(), "corr-1", "database", "tenant-1", cfg)
+	instance, err := svc.CreateResource(context.Background(), "corr-1", "database", "tenant-1", cfg, 1)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -88,9 +91,10 @@ func TestReconcileResource(t *testing.T) {
 	resourceInstanceRepo.EXPECT().
 		Get(gomock.Any(), "instance-1").
 		Return(&domain.ResourceInstance{
-			ID:             "instance-1",
-			TenantID:       "tenant-1",
-			WorkflowConfig: domain.WorkflowConfig{InitialVersion: 1, InvokeTimeoutSeconds: 60, Triggerable: true},
+			ID:                     "instance-1",
+			TenantID:               "tenant-1",
+			CurrentWorkflowVersion: 1,
+			WorkflowConfig:         domain.WorkflowConfig{InvokeTimeoutSeconds: 60, Triggerable: true},
 		}, nil)
 
 	agentStateRepo.EXPECT().
@@ -144,11 +148,12 @@ func TestGetResourceState(t *testing.T) {
 	svc, resourceInstanceRepo, _, _, _, _ := newSvc(ctrl)
 
 	expected := &domain.ResourceInstance{
-		ID:             "instance-1",
-		TenantID:       "tenant-1",
-		ResourceType:   "database",
-		WorkflowConfig: domain.WorkflowConfig{InitialVersion: 2, Triggerable: true},
-		LifecycleState: domain.LifecycleStateReconciling,
+		ID:                     "instance-1",
+		TenantID:               "tenant-1",
+		ResourceType:           "database",
+		CurrentWorkflowVersion: 2,
+		WorkflowConfig:         domain.WorkflowConfig{Triggerable: true},
+		LifecycleState:         domain.LifecycleStateReconciling,
 	}
 
 	resourceInstanceRepo.EXPECT().
@@ -162,8 +167,8 @@ func TestGetResourceState(t *testing.T) {
 	if instance.LifecycleState != domain.LifecycleStateReconciling {
 		t.Errorf("expected lifecycle_state reconciling, got %s", instance.LifecycleState)
 	}
-	if instance.WorkflowConfig.InitialVersion != 2 {
-		t.Errorf("expected initial_version 2, got %d", instance.WorkflowConfig.InitialVersion)
+	if instance.CurrentWorkflowVersion != 2 {
+		t.Errorf("expected current_workflow_version 2, got %d", instance.CurrentWorkflowVersion)
 	}
 }
 

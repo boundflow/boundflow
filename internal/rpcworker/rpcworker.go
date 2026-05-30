@@ -16,7 +16,10 @@ import (
 type RequestScheduler interface {
 	CompleteRequest(ctx context.Context, req string) (bool, error)
 	FailRequest(ctx context.Context, req string) (bool, error)
-	UpdateAgentMetrics(ctx context.Context, resourceInstanceID string, updates map[string][]*convergeplanev1.AgentInvocationMetrics) error
+}
+
+type MetricsHandler interface {
+	MergeAgentMetrics(opMetrics map[string]*convergeplanev1.AgentInvocationMetrics, jobMetrics *map[string]*convergeplanev1.AgentInvocationMetrics)
 }
 
 type RpcWorker struct {
@@ -26,6 +29,7 @@ type RpcWorker struct {
 	id                string
 	defaultJobTimeout int
 	log               *slog.Logger
+	metrics           MetricsHandler
 }
 
 type State int
@@ -37,12 +41,13 @@ const (
 	CancelRequested
 )
 
-func NewRpcWorker(jobs storage.JobRepository, id string, jobTimeout int, scheduler RequestScheduler, log *slog.Logger) *RpcWorker {
+func NewRpcWorker(jobs storage.JobRepository, id string, jobTimeout int, scheduler RequestScheduler, metrics MetricsHandler, log *slog.Logger) *RpcWorker {
 	return &RpcWorker{
 		jobs:              jobs,
 		id:                id,
 		defaultJobTimeout: jobTimeout,
 		scheduler:         scheduler,
+		metrics:           metrics,
 		log:               log.With("component", "rpcworker", "worker_id", id),
 	}
 }
@@ -122,7 +127,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 		ctx := context.Background() // request completion doesnt depend on stream context
 		defer cancelLeaseIfExists(cancelLease)
 
-		MergeAgentMetrics(log, result.AgentStateUpdates, &job.AgentMetrics)
+		s.metrics.MergeAgentMetrics(result.AgentStateUpdates, &job.AgentMetrics)
 
 		if result.NextOperation == nil {
 			updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.ResourceInstanceID, s.id, domain.JobStatusCompleted, job.AgentMetrics)

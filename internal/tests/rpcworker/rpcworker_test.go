@@ -108,8 +108,17 @@ func (m *mockScheduler) FailRequest(_ context.Context, req string) (bool, error)
 	return true, nil
 }
 
-func (m *mockScheduler) UpdateAgentMetrics(_ context.Context, _ string, _ map[string][]map[string]any) error {
-	return nil
+// ---- metrics handler mock ----
+
+type mockMetrics struct{}
+
+func (m *mockMetrics) MergeAgentMetrics(opMetrics map[string]*convergeplanev1.AgentInvocationMetrics, jobMetrics *map[string]*convergeplanev1.AgentInvocationMetrics) {
+	if *jobMetrics == nil {
+		*jobMetrics = map[string]*convergeplanev1.AgentInvocationMetrics{}
+	}
+	for k, v := range opMetrics {
+		(*jobMetrics)[k] = v
+	}
 }
 
 // ---- constants and helpers ----
@@ -124,7 +133,7 @@ func newTestWorker(ctrl *gomock.Controller) (*rpcworker.RpcWorker, *mocks.MockJo
 	jobRepo := mocks.NewMockJobRepository(ctrl)
 	sched := newMockScheduler()
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return rpcworker.NewRpcWorker(jobRepo, testWorkerID, 60, sched, log), jobRepo, sched
+	return rpcworker.NewRpcWorker(jobRepo, testWorkerID, 60, sched, &mockMetrics{}, log), jobRepo, sched
 }
 
 func testJob() *domain.Job {
@@ -297,7 +306,7 @@ func TestWorkerSession_CompleteOperation(t *testing.T) {
 	worker, jobRepo, sched := newTestWorker(ctrl)
 	expectJobAcquired(jobRepo)
 	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testResourceID, testWorkerID, domain.JobStatusRunning).Return(true, nil)
-	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testResourceID, testWorkerID, domain.JobStatusCompleted).Return(true, nil)
+	jobRepo.EXPECT().UpdateJobStatusWithMetrics(gomock.Any(), testResourceID, testWorkerID, domain.JobStatusCompleted, gomock.Any()).Return(true, nil)
 
 	stream := newMockStream(ctx)
 	errCh := runSession(worker, stream)

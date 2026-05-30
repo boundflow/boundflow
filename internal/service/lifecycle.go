@@ -60,8 +60,10 @@ func (s *LifecycleService) resolveRuntimeParams(params domain.WorkflowRuntimePar
 		return fmt.Errorf("workflow is not triggerable")
 	}
 
-	version := instance.CurrentWorkflowVersion
-	if version == 0 {
+	// The workflow version to run is resolved dynamically at schedule time from the live
+	// resource (CurrentWorkflowVersion); it is intentionally not snapshotted here. This is
+	// just a validation that a runnable version is configured.
+	if instance.CurrentWorkflowVersion == 0 {
 		return fmt.Errorf("no workflow version specified")
 	}
 
@@ -73,7 +75,6 @@ func (s *LifecycleService) resolveRuntimeParams(params domain.WorkflowRuntimePar
 		}
 	}
 
-	requestInfo["initialVersion"] = version
 	requestInfo["operationTimeoutSeconds"] = timeout
 	return nil
 }

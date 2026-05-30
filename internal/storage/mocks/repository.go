@@ -499,9 +499,9 @@ func (mr *MockSchedulerRepositoryMockRecorder) SupercedeOlderRequests(ctx, resou
 }
 
 // UpsertJobAndSchedule mocks base method.
-func (m *MockSchedulerRepository) UpsertJobAndSchedule(ctx context.Context, requestID, contextJSON, currentAtomicOperation string, timeoutSeconds, workflowVersion int) (string, int64, bool, error) {
+func (m *MockSchedulerRepository) UpsertJobAndSchedule(ctx context.Context, requestID, contextJSON, currentAtomicOperation string, timeoutSeconds, workflowVersion int, expectedCurrentVersion int64) (string, int64, bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpsertJobAndSchedule", ctx, requestID, contextJSON, currentAtomicOperation, timeoutSeconds, workflowVersion)
+	ret := m.ctrl.Call(m, "UpsertJobAndSchedule", ctx, requestID, contextJSON, currentAtomicOperation, timeoutSeconds, workflowVersion, expectedCurrentVersion)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(int64)
 	ret2, _ := ret[2].(bool)
@@ -510,9 +510,9 @@ func (m *MockSchedulerRepository) UpsertJobAndSchedule(ctx context.Context, requ
 }
 
 // UpsertJobAndSchedule indicates an expected call of UpsertJobAndSchedule.
-func (mr *MockSchedulerRepositoryMockRecorder) UpsertJobAndSchedule(ctx, requestID, contextJSON, currentAtomicOperation, timeoutSeconds, workflowVersion any) *gomock.Call {
+func (mr *MockSchedulerRepositoryMockRecorder) UpsertJobAndSchedule(ctx, requestID, contextJSON, currentAtomicOperation, timeoutSeconds, workflowVersion, expectedCurrentVersion any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertJobAndSchedule", reflect.TypeOf((*MockSchedulerRepository)(nil).UpsertJobAndSchedule), ctx, requestID, contextJSON, currentAtomicOperation, timeoutSeconds, workflowVersion)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertJobAndSchedule", reflect.TypeOf((*MockSchedulerRepository)(nil).UpsertJobAndSchedule), ctx, requestID, contextJSON, currentAtomicOperation, timeoutSeconds, workflowVersion, expectedCurrentVersion)
 }
 
 // MockJobRepository is a mock of JobRepository interface.
@@ -552,6 +552,21 @@ func (m *MockJobRepository) AcquireJob(ctx context.Context, resourceInstanceID, 
 func (mr *MockJobRepositoryMockRecorder) AcquireJob(ctx, resourceInstanceID, ownerID, leaseDuration any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AcquireJob", reflect.TypeOf((*MockJobRepository)(nil).AcquireJob), ctx, resourceInstanceID, ownerID, leaseDuration)
+}
+
+// GetAgentMetrics mocks base method.
+func (m *MockJobRepository) GetAgentMetrics(ctx context.Context, resourceInstanceID, requestID string) (map[string]*convergeplanev1.AgentInvocationMetrics, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAgentMetrics", ctx, resourceInstanceID, requestID)
+	ret0, _ := ret[0].(map[string]*convergeplanev1.AgentInvocationMetrics)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAgentMetrics indicates an expected call of GetAgentMetrics.
+func (mr *MockJobRepositoryMockRecorder) GetAgentMetrics(ctx, resourceInstanceID, requestID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAgentMetrics", reflect.TypeOf((*MockJobRepository)(nil).GetAgentMetrics), ctx, resourceInstanceID, requestID)
 }
 
 // GetAvailableJob mocks base method.
@@ -626,6 +641,36 @@ func (m *MockJobRepository) UpdateJobStatus(ctx context.Context, resourceInstanc
 func (mr *MockJobRepositoryMockRecorder) UpdateJobStatus(ctx, resourceInstanceID, ownerID, status any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateJobStatus", reflect.TypeOf((*MockJobRepository)(nil).UpdateJobStatus), ctx, resourceInstanceID, ownerID, status)
+}
+
+// UpdateJobStatusWithMetrics mocks base method.
+func (m *MockJobRepository) UpdateJobStatusWithMetrics(ctx context.Context, resourceInstanceID, ownerID string, status domain.JobStatus, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateJobStatusWithMetrics", ctx, resourceInstanceID, ownerID, status, agentMetrics)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateJobStatusWithMetrics indicates an expected call of UpdateJobStatusWithMetrics.
+func (mr *MockJobRepositoryMockRecorder) UpdateJobStatusWithMetrics(ctx, resourceInstanceID, ownerID, status, agentMetrics any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateJobStatusWithMetrics", reflect.TypeOf((*MockJobRepository)(nil).UpdateJobStatusWithMetrics), ctx, resourceInstanceID, ownerID, status, agentMetrics)
+}
+
+// UpdateJobWithMetrics mocks base method.
+func (m *MockJobRepository) UpdateJobWithMetrics(ctx context.Context, resourceInstanceID, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateJobWithMetrics", ctx, resourceInstanceID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, jobContext, agentMetrics)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateJobWithMetrics indicates an expected call of UpdateJobWithMetrics.
+func (mr *MockJobRepositoryMockRecorder) UpdateJobWithMetrics(ctx, resourceInstanceID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, jobContext, agentMetrics any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateJobWithMetrics", reflect.TypeOf((*MockJobRepository)(nil).UpdateJobWithMetrics), ctx, resourceInstanceID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, jobContext, agentMetrics)
 }
 
 // MockAgentStateRepository is a mock of AgentStateRepository interface.
@@ -721,6 +766,138 @@ func (m *MockAgentStateRepository) UpsertRuntimePolicy(ctx context.Context, reso
 func (mr *MockAgentStateRepositoryMockRecorder) UpsertRuntimePolicy(ctx, resourceInstanceID, agentName, policy any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertRuntimePolicy", reflect.TypeOf((*MockAgentStateRepository)(nil).UpsertRuntimePolicy), ctx, resourceInstanceID, agentName, policy)
+}
+
+// MockLifecycleResolverRepository is a mock of LifecycleResolverRepository interface.
+type MockLifecycleResolverRepository struct {
+	ctrl     *gomock.Controller
+	recorder *MockLifecycleResolverRepositoryMockRecorder
+	isgomock struct{}
+}
+
+// MockLifecycleResolverRepositoryMockRecorder is the mock recorder for MockLifecycleResolverRepository.
+type MockLifecycleResolverRepositoryMockRecorder struct {
+	mock *MockLifecycleResolverRepository
+}
+
+// NewMockLifecycleResolverRepository creates a new mock instance.
+func NewMockLifecycleResolverRepository(ctrl *gomock.Controller) *MockLifecycleResolverRepository {
+	mock := &MockLifecycleResolverRepository{ctrl: ctrl}
+	mock.recorder = &MockLifecycleResolverRepositoryMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockLifecycleResolverRepository) EXPECT() *MockLifecycleResolverRepositoryMockRecorder {
+	return m.recorder
+}
+
+// GetExpiredCooldownResources mocks base method.
+func (m *MockLifecycleResolverRepository) GetExpiredCooldownResources(ctx context.Context, partitionID string) ([]*domain.ResourceInstance, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetExpiredCooldownResources", ctx, partitionID)
+	ret0, _ := ret[0].([]*domain.ResourceInstance)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetExpiredCooldownResources indicates an expected call of GetExpiredCooldownResources.
+func (mr *MockLifecycleResolverRepositoryMockRecorder) GetExpiredCooldownResources(ctx, partitionID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExpiredCooldownResources", reflect.TypeOf((*MockLifecycleResolverRepository)(nil).GetExpiredCooldownResources), ctx, partitionID)
+}
+
+// TryApplyPolicyResolution mocks base method.
+func (m *MockLifecycleResolverRepository) TryApplyPolicyResolution(ctx context.Context, resourceInstanceID string, resolved int64, workflowVersion int, workflowState domain.WorkflowState, cooldownUntil *time.Time) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TryApplyPolicyResolution", ctx, resourceInstanceID, resolved, workflowVersion, workflowState, cooldownUntil)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TryApplyPolicyResolution indicates an expected call of TryApplyPolicyResolution.
+func (mr *MockLifecycleResolverRepositoryMockRecorder) TryApplyPolicyResolution(ctx, resourceInstanceID, resolved, workflowVersion, workflowState, cooldownUntil any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryApplyPolicyResolution", reflect.TypeOf((*MockLifecycleResolverRepository)(nil).TryApplyPolicyResolution), ctx, resourceInstanceID, resolved, workflowVersion, workflowState, cooldownUntil)
+}
+
+// MockMetricsRepository is a mock of MetricsRepository interface.
+type MockMetricsRepository struct {
+	ctrl     *gomock.Controller
+	recorder *MockMetricsRepositoryMockRecorder
+	isgomock struct{}
+}
+
+// MockMetricsRepositoryMockRecorder is the mock recorder for MockMetricsRepository.
+type MockMetricsRepositoryMockRecorder struct {
+	mock *MockMetricsRepository
+}
+
+// NewMockMetricsRepository creates a new mock instance.
+func NewMockMetricsRepository(ctrl *gomock.Controller) *MockMetricsRepository {
+	mock := &MockMetricsRepository{ctrl: ctrl}
+	mock.recorder = &MockMetricsRepositoryMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockMetricsRepository) EXPECT() *MockMetricsRepositoryMockRecorder {
+	return m.recorder
+}
+
+// EmitMetrics mocks base method.
+func (m *MockMetricsRepository) EmitMetrics(ctx context.Context, resourceInstanceID string, emittedVersion int64, rollingMetrics []domain.WorkflowInvocationSnapshot, versionMetrics *domain.WorkflowVersionMetrics, agentMetrics map[string][]*convergeplanev1.AgentInvocationMetrics) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EmitMetrics", ctx, resourceInstanceID, emittedVersion, rollingMetrics, versionMetrics, agentMetrics)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EmitMetrics indicates an expected call of EmitMetrics.
+func (mr *MockMetricsRepositoryMockRecorder) EmitMetrics(ctx, resourceInstanceID, emittedVersion, rollingMetrics, versionMetrics, agentMetrics any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitMetrics", reflect.TypeOf((*MockMetricsRepository)(nil).EmitMetrics), ctx, resourceInstanceID, emittedVersion, rollingMetrics, versionMetrics, agentMetrics)
+}
+
+// MockVersionMetricsRepository is a mock of VersionMetricsRepository interface.
+type MockVersionMetricsRepository struct {
+	ctrl     *gomock.Controller
+	recorder *MockVersionMetricsRepositoryMockRecorder
+	isgomock struct{}
+}
+
+// MockVersionMetricsRepositoryMockRecorder is the mock recorder for MockVersionMetricsRepository.
+type MockVersionMetricsRepositoryMockRecorder struct {
+	mock *MockVersionMetricsRepository
+}
+
+// NewMockVersionMetricsRepository creates a new mock instance.
+func NewMockVersionMetricsRepository(ctrl *gomock.Controller) *MockVersionMetricsRepository {
+	mock := &MockVersionMetricsRepository{ctrl: ctrl}
+	mock.recorder = &MockVersionMetricsRepositoryMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockVersionMetricsRepository) EXPECT() *MockVersionMetricsRepositoryMockRecorder {
+	return m.recorder
+}
+
+// GetCurrentVersionMetrics mocks base method.
+func (m *MockVersionMetricsRepository) GetCurrentVersionMetrics(ctx context.Context, resourceInstanceID string, version int) (*domain.WorkflowVersionMetrics, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCurrentVersionMetrics", ctx, resourceInstanceID, version)
+	ret0, _ := ret[0].(*domain.WorkflowVersionMetrics)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCurrentVersionMetrics indicates an expected call of GetCurrentVersionMetrics.
+func (mr *MockVersionMetricsRepositoryMockRecorder) GetCurrentVersionMetrics(ctx, resourceInstanceID, version any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCurrentVersionMetrics", reflect.TypeOf((*MockVersionMetricsRepository)(nil).GetCurrentVersionMetrics), ctx, resourceInstanceID, version)
 }
 
 // MockCustomerRequestRepository is a mock of CustomerRequestRepository interface.
