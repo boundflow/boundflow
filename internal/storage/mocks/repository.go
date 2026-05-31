@@ -792,6 +792,21 @@ func (m *MockLifecycleResolverRepository) EXPECT() *MockLifecycleResolverReposit
 	return m.recorder
 }
 
+// ExpireCooldowns mocks base method.
+func (m *MockLifecycleResolverRepository) ExpireCooldowns(ctx context.Context, partitionID string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExpireCooldowns", ctx, partitionID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExpireCooldowns indicates an expected call of ExpireCooldowns.
+func (mr *MockLifecycleResolverRepositoryMockRecorder) ExpireCooldowns(ctx, partitionID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExpireCooldowns", reflect.TypeOf((*MockLifecycleResolverRepository)(nil).ExpireCooldowns), ctx, partitionID)
+}
+
 // GetExpiredCooldownResources mocks base method.
 func (m *MockLifecycleResolverRepository) GetExpiredCooldownResources(ctx context.Context, partitionID string) ([]*domain.ResourceInstance, error) {
 	m.ctrl.T.Helper()

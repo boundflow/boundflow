@@ -131,6 +131,9 @@ type LifecycleResolverRepository interface {
 	// GetExpiredCooldownResources returns all resource instances in the given partition
 	// whose workflow_state is 'cooldown' and whose cooldown_until has passed.
 	GetExpiredCooldownResources(ctx context.Context, partitionID string) ([]*domain.ResourceInstance, error)
+	// ExpireCooldowns atomically flips all expired-cooldown workflows in the partition back to
+	// active and returns the IDs that were resumed.
+	ExpireCooldowns(ctx context.Context, partitionID string) ([]string, error)
 	// TryApplyPolicyResolution atomically updates lifecycle_last_resolved,
 	// current_workflow_version, workflow_state, and cooldown_until only if the stored
 	// lifecycle_last_resolved is less than resolved. Returns true if the update was applied.

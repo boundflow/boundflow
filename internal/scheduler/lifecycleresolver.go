@@ -32,12 +32,8 @@ func NewLifecycleResolver(interval int, log *slog.Logger, partitionId string, re
 	}
 }
 
-// Q: Why does the resolver component only check for workflows in cooldown?
-// A: Every other state is self-healing, for example: transitions from created, paused, and disabled
-// are all control plane induced, and the control plane call will fail unless they happen
-// From active, we know that on the next run there will be a necessary resolution via scheduler (see invariant below)
-/*func (r *LifecycleResolver) Run(ctx context.Context) error {
-	r.log.Info("lifecycle resolver starting")
+func (r *LifecycleResolver) Run(ctx context.Context) error {
+	r.log.Info("lifecycle resolver starting", "partition_id", r.partitionId)
 
 	ticker := time.NewTicker(time.Duration(r.interval) * time.Second)
 	defer ticker.Stop()
@@ -45,29 +41,20 @@ func NewLifecycleResolver(interval int, log *slog.Logger, partitionId string, re
 	for {
 		select {
 		case <-ticker.C:
-			expiredCooldownWorkflows, err := r.resolver.GetExpiredCooldownResources(ctx, r.partitionId)
+			resumed, err := r.resolver.ExpireCooldowns(ctx, r.partitionId)
 			if err != nil {
-				r.log.Error("failed to get expired cooldown resources", "partition_id", r.partitionId, "error", err)
-			} else {
-				var wg sync.WaitGroup
-				for _, wf := range expiredCooldownWorkflows {
-					wg.Add(1)
-					go func(wf *domain.ResourceInstance) {
-						defer wg.Done()
-						if err := r.resolveLifecyclePolicy(ctx, wf); err != nil {
-							r.log.Error("failed to resolve lifecycle policy", "resource_id", wf.ID, "error", err)
-						}
-					}(wf)
-				}
-				wg.Wait()
+				r.log.Error("failed to expire cooldowns", "partition_id", r.partitionId, "error", err)
+				continue
+			}
+			if len(resumed) > 0 {
+				r.log.Info("resumed workflows from expired cooldown", "partition_id", r.partitionId, "count", len(resumed), "resource_ids", resumed)
 			}
 		case <-ctx.Done():
 			r.log.Info("lifecycle resolver stopping", "partition_id", r.partitionId)
 			return nil
 		}
 	}
-
-}*/
+}
 
 // One very critical invariant: the resolver assumes that all prior runs except potentially the latest have been resolved
 // This is enforced via the scheduler refusing to schedule an event until it has resolved succesfully for the current version

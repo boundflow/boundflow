@@ -70,6 +70,35 @@ func (r *LifecycleResolverRepo) GetExpiredCooldownResources(ctx context.Context,
 	return instances, rows.Err()
 }
 
+// ExpireCooldowns flips every cooldown workflow in the partition whose cooldown has elapsed
+// back to active in a single atomic statement. The WHERE clause is the guard: a row that is
+// no longer in cooldown (or not yet expired) at write time is skipped. Returns the IDs resumed.
+func (r *LifecycleResolverRepo) ExpireCooldowns(ctx context.Context, partitionID string) ([]string, error) {
+	rows, err := r.pool.Query(ctx, `
+		UPDATE resource_instances
+		SET workflow_state = 'active',
+		    cooldown_until = NULL
+		WHERE scheduler_partition_id = $1
+		  AND workflow_state = 'cooldown'
+		  AND cooldown_until <= now()
+		RETURNING id
+	`, partitionID)
+	if err != nil {
+		return nil, fmt.Errorf("expire cooldowns: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan resumed id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
 func (r *LifecycleResolverRepo) TryApplyPolicyResolution(ctx context.Context, resourceInstanceID string, resolved int64, workflowVersion int, workflowState domain.WorkflowState, cooldownUntil *time.Time) (bool, error) {
 	var updatedID string
 	err := r.pool.QueryRow(ctx, `
