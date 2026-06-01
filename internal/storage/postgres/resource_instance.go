@@ -183,7 +183,9 @@ func (r *ResourceInstanceRepo) ApplyCompletedJob(ctx context.Context, id string,
 	var updatedID string
 	err := r.pool.QueryRow(ctx,
 		`UPDATE resource_instances
-		 SET lifecycle_state = $2, current_version = $3, last_completed_request_at = now()
+		 SET current_version = $3,
+		     last_completed_request_at = now(),
+		     lifecycle_state = CASE WHEN target_version = $3 THEN $2::lifecycle_state ELSE lifecycle_state END
 		 WHERE id = $1 AND current_version < $3
 		 RETURNING id`,
 		id, lifecycleState, version,
