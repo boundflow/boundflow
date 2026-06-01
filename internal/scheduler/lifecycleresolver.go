@@ -85,12 +85,12 @@ func (r *LifecycleResolver) ResolveLifecyclePolicy(ctx context.Context, workflow
 	state := workflow.WorkflowState
 	cooldown := workflow.CooldownUntil
 
-	if goalState.versionChange {
-		version = goalState.version
+	if goalState.VersionChange {
+		version = goalState.Version
 	} else {
-		state = goalState.state
+		state = goalState.State
 		if state == domain.WorkflowStateCooldown {
-			t := time.Now().Add(time.Duration(goalState.cooldown) * time.Second)
+			t := time.Now().Add(time.Duration(goalState.Cooldown) * time.Second)
 			cooldown = &t
 		}
 	}
@@ -106,6 +106,6 @@ func (r *LifecycleResolver) ResolveLifecyclePolicy(ctx context.Context, workflow
 		return nil
 	}
 
-	r.log.Info("lifecycle policy applied", "resource_id", resourceInstanceId, "version", version, "state", state, "version_change", goalState.versionChange)
+	r.log.Info("lifecycle policy applied", "resource_id", resourceInstanceId, "version", version, "state", state, "version_change", goalState.VersionChange)
 	return nil
 }

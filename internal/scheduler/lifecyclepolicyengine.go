@@ -23,10 +23,10 @@ func NewLifecyclePolicyEngine(log *slog.Logger) *LifecyclePolicyEngine {
 }
 
 type WorkflowGoalState struct {
-	version       int
-	state         domain.WorkflowState
-	cooldown      int
-	versionChange bool
+	Version       int
+	State         domain.WorkflowState
+	Cooldown      int
+	VersionChange bool
 }
 
 func (e *LifecyclePolicyEngine) ResolvePolicy(rollingMetrics *[]domain.WorkflowInvocationSnapshot, policy *domain.WorkflowLifecyclePolicy, versionMetrics *domain.WorkflowVersionMetrics) (bool, WorkflowGoalState, error) {
@@ -49,7 +49,7 @@ func (e *LifecyclePolicyEngine) ResolvePolicy(rollingMetrics *[]domain.WorkflowI
 		}
 
 		// Skip if the metric was not emitted in the most recent run.
-		if !metricEmitted((*rollingMetrics)[len(*rollingMetrics)-1], rule.Metric, rule.ToolName) {
+		if !MetricEmitted((*rollingMetrics)[len(*rollingMetrics)-1], rule.Metric, rule.ToolName) {
 			e.log.Debug("metric not emitted in last run, skipping rule", "metric", rule.Metric)
 			continue
 		}
@@ -82,8 +82,8 @@ func (e *LifecyclePolicyEngine) ResolvePolicy(rollingMetrics *[]domain.WorkflowI
 
 			if val >= rule.Threshold {
 				ruleEnforced = true
-				targetGoalState.version = rule.Action.TargetVersion
-				targetGoalState.versionChange = true
+				targetGoalState.Version = rule.Action.TargetVersion
+				targetGoalState.VersionChange = true
 			}
 
 		case domain.WorkflowPolicyActionCooldown, domain.WorkflowPolicyActionPause:
@@ -91,7 +91,7 @@ func (e *LifecyclePolicyEngine) ResolvePolicy(rollingMetrics *[]domain.WorkflowI
 			// Filter to snapshots where this metric was actually observed.
 			var observed []domain.WorkflowInvocationSnapshot
 			for _, m := range *rollingMetrics {
-				if metricEmitted(m, rule.Metric, rule.ToolName) {
+				if MetricEmitted(m, rule.Metric, rule.ToolName) {
 					observed = append(observed, m)
 				}
 			}
@@ -127,13 +127,13 @@ func (e *LifecyclePolicyEngine) ResolvePolicy(rollingMetrics *[]domain.WorkflowI
 
 			if total >= rule.Threshold {
 				ruleEnforced = true
-				targetGoalState.versionChange = false
+				targetGoalState.VersionChange = false
 				switch rule.Action.Type {
 				case domain.WorkflowPolicyActionCooldown:
-					targetGoalState.cooldown = rule.Action.CooldownSeconds
-					targetGoalState.state = domain.WorkflowStateCooldown
+					targetGoalState.Cooldown = rule.Action.CooldownSeconds
+					targetGoalState.State = domain.WorkflowStateCooldown
 				case domain.WorkflowPolicyActionPause:
-					targetGoalState.state = domain.WorkflowStatePaused
+					targetGoalState.State = domain.WorkflowStatePaused
 				}
 			}
 		}
@@ -153,7 +153,7 @@ func (e *LifecyclePolicyEngine) ResolvePolicy(rollingMetrics *[]domain.WorkflowI
 	if winningActionPriority == -1 {
 		e.log.Debug("no rules fired, no state change")
 	} else {
-		e.log.Info("lifecycle policy fired", "action", workflowGoalState.state, "version_change", workflowGoalState.versionChange, "target_version", workflowGoalState.version, "cooldown_seconds", workflowGoalState.cooldown)
+		e.log.Info("lifecycle policy fired", "action", workflowGoalState.State, "version_change", workflowGoalState.VersionChange, "target_version", workflowGoalState.Version, "cooldown_seconds", workflowGoalState.Cooldown)
 	}
 
 	return (winningActionPriority != -1), workflowGoalState, nil
@@ -165,7 +165,7 @@ func (e *LifecyclePolicyEngine) getActionPriority(actionType domain.WorkflowPoli
 
 // metricEmitted reports whether the given metric was observed in the snapshot.
 // A nil scalar field (or absent tool key) means the metric was not emitted that run.
-func metricEmitted(snapshot domain.WorkflowInvocationSnapshot, metric domain.WorkflowMetric, toolName string) bool {
+func MetricEmitted(snapshot domain.WorkflowInvocationSnapshot, metric domain.WorkflowMetric, toolName string) bool {
 	switch metric {
 	case domain.WorkflowMetricNumFailures:
 		return snapshot.Failures != nil

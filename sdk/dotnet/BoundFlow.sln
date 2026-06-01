@@ -8,7 +8,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BoundFlow.ControlPlane", "s
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BoundFlow.SDK.Tests", "tests\BoundFlow.SDK.Tests\BoundFlow.SDK.Tests.csproj", "{B2C3D4E5-F6A7-8901-BCDE-F01234567891}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BoundFlow.TestApp", "src\BoundFlow.TestApp\BoundFlow.TestApp.csproj", "{C3D4E5F6-A7B8-9012-CDEF-012345678902}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BoundFlow.TestApp", "tests\BoundFlow.TestApp\BoundFlow.TestApp.csproj", "{C3D4E5F6-A7B8-9012-CDEF-012345678902}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

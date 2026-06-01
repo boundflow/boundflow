@@ -1,4 +1,4 @@
-package metrics
+package metrics_test
 
 import (
 	"io"
@@ -6,13 +6,14 @@ import (
 	"testing"
 
 	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
+	"github.com/convergeplane/convergeplane/internal/metrics"
 )
 
 func i32(v int32) *int32     { return &v }
 func f64(v float64) *float64 { return &v }
 
-func newTestHandler() *MetricsHandler {
-	return &MetricsHandler{log: slog.New(slog.NewTextHandler(io.Discard, nil))}
+func newTestHandler() *metrics.MetricsHandler {
+	return metrics.NewMetricsHandler(nil, nil, nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 }
 
 func TestMergeAgentMetrics_CarriesFreshIntoEmpty(t *testing.T) {

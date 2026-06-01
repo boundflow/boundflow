@@ -1,4 +1,4 @@
-package scheduler
+package scheduler_test
 
 import (
 	"io"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/convergeplane/convergeplane/internal/domain"
+	"github.com/convergeplane/convergeplane/internal/scheduler"
 )
 
 var engineLogger = slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -39,8 +40,8 @@ func setVersionRule(metric domain.WorkflowMetric, threshold float64, target int)
 	}
 }
 
-func resolve(rolling []domain.WorkflowInvocationSnapshot, rules []domain.WorkflowLifecyclePolicyRule, vm *domain.WorkflowVersionMetrics) (bool, WorkflowGoalState) {
-	e := NewLifecyclePolicyEngine(engineLogger)
+func resolve(rolling []domain.WorkflowInvocationSnapshot, rules []domain.WorkflowLifecyclePolicyRule, vm *domain.WorkflowVersionMetrics) (bool, scheduler.WorkflowGoalState) {
+	e := scheduler.NewLifecyclePolicyEngine(engineLogger)
 	if vm == nil {
 		vm = &domain.WorkflowVersionMetrics{}
 	}
@@ -76,13 +77,13 @@ func TestResolvePolicy_Cooldown_FiresOnWindowedSum(t *testing.T) {
 	if !updated {
 		t.Fatal("expected cooldown rule to fire (3 failures >= threshold 3)")
 	}
-	if gs.state != domain.WorkflowStateCooldown {
-		t.Errorf("expected state cooldown, got %s", gs.state)
+	if gs.State != domain.WorkflowStateCooldown {
+		t.Errorf("expected state cooldown, got %s", gs.State)
 	}
-	if gs.cooldown != 90 {
-		t.Errorf("expected cooldown 90, got %d", gs.cooldown)
+	if gs.Cooldown != 90 {
+		t.Errorf("expected cooldown 90, got %d", gs.Cooldown)
 	}
-	if gs.versionChange {
+	if gs.VersionChange {
 		t.Error("cooldown should not be a version change")
 	}
 }
@@ -136,8 +137,8 @@ func TestResolvePolicy_OnlyCountsEmittedSnapshotsInWindow(t *testing.T) {
 	if !updated {
 		t.Fatal("expected fire: cost 4+5=9 >= 9 over the two emitting runs")
 	}
-	if gs.state != domain.WorkflowStateCooldown {
-		t.Errorf("expected cooldown, got %s", gs.state)
+	if gs.State != domain.WorkflowStateCooldown {
+		t.Errorf("expected cooldown, got %s", gs.State)
 	}
 }
 
@@ -152,11 +153,11 @@ func TestResolvePolicy_SetVersion_UsesVersionTotals(t *testing.T) {
 	if !updated {
 		t.Fatal("expected set_version to fire (total failures 10 >= 10)")
 	}
-	if !gs.versionChange {
-		t.Error("expected versionChange=true")
+	if !gs.VersionChange {
+		t.Error("expected VersionChange=true")
 	}
-	if gs.version != 7 {
-		t.Errorf("expected target version 7, got %d", gs.version)
+	if gs.Version != 7 {
+		t.Errorf("expected target version 7, got %d", gs.Version)
 	}
 }
 
@@ -173,8 +174,8 @@ func TestResolvePolicy_PauseBeatsCooldownAndSetVersion(t *testing.T) {
 	if !updated {
 		t.Fatal("expected a rule to fire")
 	}
-	if gs.state != domain.WorkflowStatePaused {
-		t.Errorf("expected pause to win precedence, got state %s versionChange=%v", gs.state, gs.versionChange)
+	if gs.State != domain.WorkflowStatePaused {
+		t.Errorf("expected pause to win precedence, got state %s VersionChange=%v", gs.State, gs.VersionChange)
 	}
 }
 
@@ -192,8 +193,8 @@ func TestResolvePolicy_ToolFailureRate_Cooldown(t *testing.T) {
 			Action:    domain.WorkflowLifecyclePolicyAction{Type: domain.WorkflowPolicyActionCooldown, CooldownSeconds: 45},
 		},
 	}, nil)
-	if !updated || gs.cooldown != 45 {
-		t.Fatalf("expected tool failure cooldown to fire with cooldown 45, got updated=%v cooldown=%d", updated, gs.cooldown)
+	if !updated || gs.Cooldown != 45 {
+		t.Fatalf("expected tool failure cooldown to fire with cooldown 45, got updated=%v cooldown=%d", updated, gs.Cooldown)
 	}
 }
 
@@ -220,10 +221,10 @@ func TestMetricEmitted(t *testing.T) {
 		{domain.WorkflowMetricToolFailureRate, "t"},
 	}
 	for _, c := range cases {
-		if !metricEmitted(full, c.metric, c.tool) {
+		if !scheduler.MetricEmitted(full, c.metric, c.tool) {
 			t.Errorf("expected %s emitted in full snapshot", c.metric)
 		}
-		if metricEmitted(empty, c.metric, c.tool) {
+		if scheduler.MetricEmitted(empty, c.metric, c.tool) {
 			t.Errorf("expected %s not emitted in empty snapshot", c.metric)
 		}
 	}
