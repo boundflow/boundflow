@@ -58,6 +58,9 @@ type SchedulerRepository interface {
 	// GetTopUnscheduledRequests returns the IDs of the highest-version unscheduled customer
 	// request for each resource instance belonging to the given partition.
 	GetTopUnscheduledRequests(ctx context.Context, partitionID string) ([]string, error)
+	// GetDuePeriodicResources returns the active periodic resources in the partition whose next
+	// invocation is due (repeat_every_seconds elapsed since last completion / creation).
+	GetDuePeriodicResources(ctx context.Context, partitionID string) ([]*domain.ResourceInstance, error)
 	// UpsertJobAndSchedule writes or overwrites the job for a resource only if the incoming
 	// request has a strictly higher version than what's currently in the jobs table.
 	// If the write happens it also atomically marks the customer request as scheduled.
@@ -156,6 +159,14 @@ type VersionMetricsRepository interface {
 
 type CustomerRequestRepository interface {
 	Create(ctx context.Context, req *domain.CustomerRequest) error
+	// CreateInvocationRequest atomically bumps the resource's target_version, flips lifecycle_state
+	// to reconciling, and inserts req with the allocated version (one statement). Fails with
+	// ErrInvalidLifecycleState if the resource is in one of invalidStates. Sets req.Version.
+	CreateInvocationRequest(ctx context.Context, req *domain.CustomerRequest, invalidStates []domain.LifecycleState) (int64, error)
+	// CreateDuePeriodicRequest is CreateInvocationRequest gated by the periodic guards (no
+	// non-terminal request in flight, last terminal completion at least minGap ago). Returns
+	// created=false (no error) when a guard rejects. One atomic statement.
+	CreateDuePeriodicRequest(ctx context.Context, req *domain.CustomerRequest, minGap time.Duration, invalidStates []domain.LifecycleState) (int64, bool, error)
 	Get(ctx context.Context, id string) (*domain.CustomerRequest, error)
 	UpdateStatus(ctx context.Context, resourceInstanceID, id string, status domain.CustomerRequestStatus) error
 	// CompleteRequest sets the request status to completed and returns the full updated request.

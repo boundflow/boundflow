@@ -101,24 +101,17 @@ func TestReconcileResource(t *testing.T) {
 		GetAllForResource(gomock.Any(), "instance-1").
 		Return(nil, nil)
 
-	resourceInstanceRepo.EXPECT().
-		StartInvocationAndIncrementVersion(gomock.Any(), "instance-1",
-			domain.LifecycleStateDeleting, domain.LifecycleStateDeleted).
-		Return(int64(2), nil)
-
 	customerRequestRepo.EXPECT().
-		Create(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, r *domain.CustomerRequest) error {
+		CreateInvocationRequest(gomock.Any(), gomock.Any(),
+			[]domain.LifecycleState{domain.LifecycleStateDeleting, domain.LifecycleStateDeleted}).
+		DoAndReturn(func(_ context.Context, r *domain.CustomerRequest, _ []domain.LifecycleState) (int64, error) {
 			if r.RequestType != domain.CustomerRequestTypeReconcile {
 				t.Errorf("expected request_type reconcile, got %s", r.RequestType)
-			}
-			if r.Version != 2 {
-				t.Errorf("expected version 2 from incremented resource, got %d", r.Version)
 			}
 			if r.RequestInfo["operationTimeoutSeconds"] != 30 {
 				t.Errorf("expected timeout 30 in requestInfo, got %v", r.RequestInfo["operationTimeoutSeconds"])
 			}
-			return nil
+			return 2, nil
 		})
 
 	if err := svc.ReconcileResource(context.Background(), "corr-2", "instance-1", testPolicy); err != nil {

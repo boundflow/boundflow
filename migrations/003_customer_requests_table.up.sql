@@ -14,5 +14,6 @@ CREATE TABLE customer_requests (
     request_type          TEXT NOT NULL,
     request_info          JSONB NOT NULL DEFAULT '{}',
     version               BIGINT NOT NULL,
-    created_at               TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
+    completed_at             TIMESTAMPTZ
 );

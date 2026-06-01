@@ -57,6 +57,7 @@ func newTestScheduler(ctrl *gomock.Controller) (
 		CurrentVersion:         1,
 		LifecycleLastResolved:  1,
 		LifecycleState:         domain.LifecycleStateActive,
+		WorkflowState:          domain.WorkflowStateActive,
 	}, nil).AnyTimes()
 	s := scheduler.NewScheduler("test", 30, partitions, schedulerRepo, requests, resource, agentStates, jobs, noopMetricsHandler{}, noopPolicyResolver{}, discardLogger)
 	return s, partitions, schedulerRepo, requests, resource, agentStates

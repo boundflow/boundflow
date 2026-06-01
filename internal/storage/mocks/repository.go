@@ -454,6 +454,21 @@ func (mr *MockSchedulerRepositoryMockRecorder) GetCompletedJobRequestIDs(ctx, pa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCompletedJobRequestIDs", reflect.TypeOf((*MockSchedulerRepository)(nil).GetCompletedJobRequestIDs), ctx, partitionID)
 }
 
+// GetDuePeriodicResources mocks base method.
+func (m *MockSchedulerRepository) GetDuePeriodicResources(ctx context.Context, partitionID string) ([]*domain.ResourceInstance, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDuePeriodicResources", ctx, partitionID)
+	ret0, _ := ret[0].([]*domain.ResourceInstance)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDuePeriodicResources indicates an expected call of GetDuePeriodicResources.
+func (mr *MockSchedulerRepositoryMockRecorder) GetDuePeriodicResources(ctx, partitionID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDuePeriodicResources", reflect.TypeOf((*MockSchedulerRepository)(nil).GetDuePeriodicResources), ctx, partitionID)
+}
+
 // GetFailedJobRequestIDs mocks base method.
 func (m *MockSchedulerRepository) GetFailedJobRequestIDs(ctx context.Context, partitionID string) ([]string, error) {
 	m.ctrl.T.Helper()
@@ -966,6 +981,37 @@ func (m *MockCustomerRequestRepository) Create(ctx context.Context, req *domain.
 func (mr *MockCustomerRequestRepositoryMockRecorder) Create(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockCustomerRequestRepository)(nil).Create), ctx, req)
+}
+
+// CreateDuePeriodicRequest mocks base method.
+func (m *MockCustomerRequestRepository) CreateDuePeriodicRequest(ctx context.Context, req *domain.CustomerRequest, minGap time.Duration, invalidStates []domain.LifecycleState) (int64, bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateDuePeriodicRequest", ctx, req, minGap, invalidStates)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// CreateDuePeriodicRequest indicates an expected call of CreateDuePeriodicRequest.
+func (mr *MockCustomerRequestRepositoryMockRecorder) CreateDuePeriodicRequest(ctx, req, minGap, invalidStates any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDuePeriodicRequest", reflect.TypeOf((*MockCustomerRequestRepository)(nil).CreateDuePeriodicRequest), ctx, req, minGap, invalidStates)
+}
+
+// CreateInvocationRequest mocks base method.
+func (m *MockCustomerRequestRepository) CreateInvocationRequest(ctx context.Context, req *domain.CustomerRequest, invalidStates []domain.LifecycleState) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateInvocationRequest", ctx, req, invalidStates)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateInvocationRequest indicates an expected call of CreateInvocationRequest.
+func (mr *MockCustomerRequestRepositoryMockRecorder) CreateInvocationRequest(ctx, req, invalidStates any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInvocationRequest", reflect.TypeOf((*MockCustomerRequestRepository)(nil).CreateInvocationRequest), ctx, req, invalidStates)
 }
 
 // FailRequest mocks base method.

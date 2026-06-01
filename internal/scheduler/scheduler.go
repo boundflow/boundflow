@@ -288,7 +288,7 @@ func (s *Scheduler) scheduleJobs(ctx context.Context, partitionID string) error 
 
 func (s *Scheduler) validateWorkflowState(workflow *domain.ResourceInstance) bool {
 
-	if workflow.LifecycleState != domain.LifecycleStateActive {
+	if workflow.WorkflowState != domain.WorkflowStateActive {
 		// log
 		return false
 	}

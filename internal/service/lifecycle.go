@@ -55,7 +55,7 @@ func NewLifecycleService(
 	}
 }
 
-func (s *LifecycleService) resolveRuntimeParams(params domain.WorkflowRuntimeParams, instance *domain.ResourceInstance, userTriggered bool, requestInfo map[string]any) error {
+func (s *LifecycleService) ResolveRuntimeParams(params domain.WorkflowRuntimeParams, instance *domain.ResourceInstance, userTriggered bool, requestInfo map[string]any) error {
 	if !instance.WorkflowConfig.Triggerable && userTriggered {
 		return fmt.Errorf("workflow is not triggerable")
 	}
@@ -79,7 +79,7 @@ func (s *LifecycleService) resolveRuntimeParams(params domain.WorkflowRuntimePar
 	return nil
 }
 
-func (s *LifecycleService) resolveAgentRuntimeParams(ctx context.Context, resourceInstanceID string, requestInfo map[string]any) error {
+func (s *LifecycleService) ResolveAgentRuntimeParams(ctx context.Context, resourceInstanceID string, requestInfo map[string]any) error {
 	agents, err := s.agentStates.GetAllForResource(ctx, resourceInstanceID)
 	if err != nil {
 		return fmt.Errorf("get agent states: %w", err)
@@ -129,18 +129,11 @@ func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID,
 		"correlationId": correlationID,
 	}
 
-	if err := s.resolveRuntimeParams(params, instance, true, requestInfo); err != nil {
+	if err := s.ResolveRuntimeParams(params, instance, true, requestInfo); err != nil {
 		return err
 	}
-	if err := s.resolveAgentRuntimeParams(ctx, resourceInstanceID, requestInfo); err != nil {
+	if err := s.ResolveAgentRuntimeParams(ctx, resourceInstanceID, requestInfo); err != nil {
 		return err
-	}
-
-	ver, err := s.resourceInstances.StartInvocationAndIncrementVersion(ctx, resourceInstanceID,
-		domain.LifecycleStateDeleting, domain.LifecycleStateDeleted)
-	if err != nil {
-		s.log.Error("failed to start invocation", "correlation_id", correlationID, "resource_id", resourceInstanceID, "error", err)
-		return fmt.Errorf("start invocation: %w", err)
 	}
 
 	request := domain.CustomerRequest{
@@ -149,12 +142,14 @@ func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID,
 		Status:             domain.CustomerRequestStatusUnscheduled,
 		RequestType:        domain.CustomerRequestTypeReconcile,
 		RequestInfo:        requestInfo,
-		Version:            ver,
 	}
 
-	if err := s.customerRequests.Create(ctx, &request); err != nil {
+	// Atomically allocates the version, flips to reconciling, and inserts the request.
+	ver, err := s.customerRequests.CreateInvocationRequest(ctx, &request,
+		[]domain.LifecycleState{domain.LifecycleStateDeleting, domain.LifecycleStateDeleted})
+	if err != nil {
 		s.log.Error("failed to create reconcile request", "correlation_id", correlationID, "resource_id", resourceInstanceID, "error", err)
-		return fmt.Errorf("reconcile customer request: %w", err)
+		return fmt.Errorf("create invocation request: %w", err)
 	}
 
 	s.log.Info("reconcile request created, attempting immediate schedule", "correlation_id", correlationID, "resource_id", resourceInstanceID, "request_id", request.ID, "version", ver)
