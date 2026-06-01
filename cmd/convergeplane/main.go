@@ -79,7 +79,7 @@ func runServer(sigCh <-chan os.Signal) {
 	metricsRepo := postgres.NewMetricsRepo(pool)
 	lifecycleResolverRepo := postgres.NewLifecycleResolverRepo(pool)
 	metricsHandler := metrics.NewMetricsHandler(resourceInstanceRepo, agentStateRepo, versionMetricsRepo, metricsRepo, logger)
-	policyResolver := internalscheduler.NewLifecycleResolver(30, logger, "", lifecycleResolverRepo, resourceInstanceRepo, versionMetricsRepo)
+	policyResolver := internalscheduler.NewLifecycleResolver(30, logger, lifecycleResolverRepo, resourceInstanceRepo, versionMetricsRepo)
 	sched := internalscheduler.NewScheduler("server", 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, agentStateRepo, jobRepo, metricsHandler, policyResolver, logger)
 
 	regSvc := service.NewRegistrationService(tenantGroupRepo, tenantRepo)
@@ -117,6 +117,8 @@ func runScheduler(sigCh <-chan os.Signal) {
 	versionMetricsRepo := postgres.NewVersionMetricsRepo(pool)
 	metricsRepo := postgres.NewMetricsRepo(pool)
 	lifecycleResolverRepo := postgres.NewLifecycleResolverRepo(pool)
+	tenantRepo := postgres.NewTenantRepo(pool)
+	tenantGroupRepo := postgres.NewTenantGroupRepo(pool)
 	metricsHandler := metrics.NewMetricsHandler(resourceInstanceRepo, agentStateRepo, versionMetricsRepo, metricsRepo, logger)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -124,8 +126,14 @@ func runScheduler(sigCh <-chan os.Signal) {
 	errCh := make(chan error, 1)
 	for i := range cfg.NumPartitions {
 		schedulerID := uuid.NewString()
-		policyResolver := internalscheduler.NewLifecycleResolver(30, logger, "", lifecycleResolverRepo, resourceInstanceRepo, versionMetricsRepo)
-		sched := internalscheduler.NewScheduler(schedulerID, 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, agentStateRepo, jobRepo, metricsHandler, policyResolver, logger)
+		resolver := internalscheduler.NewLifecycleResolver(30, logger, lifecycleResolverRepo, resourceInstanceRepo, versionMetricsRepo)
+		sched := internalscheduler.NewScheduler(schedulerID, 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, agentStateRepo, jobRepo, metricsHandler, resolver, logger)
+		// The periodic handler reconciles due workflows via the scheduler + lifecycle service.
+		lifecycleSvc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, sched, cfg.NumPartitions, logger)
+		periodic := internalscheduler.NewPeriodicWorkflowHandler(30, logger, sched, lifecycleSvc, schedulerRepo, customerRequestRepo)
+		// Resolver (cooldown expiry) and periodic handler are partition-scoped: the scheduler
+		// starts them when it acquires a partition and cancels them when it loses it.
+		sched.SetPartitionWorkers(resolver, periodic)
 		logger.Info("starting scheduler partition worker", "index", i, "scheduler_id", schedulerID)
 		go func() { errCh <- sched.Run(ctx) }()
 	}
@@ -164,7 +172,7 @@ func runWorker(sigCh <-chan os.Signal) {
 	metricsHandler := metrics.NewMetricsHandler(resourceInstanceRepo, agentStateRepo, versionMetricsRepo, metricsRepo, logger)
 
 	workerID := uuid.NewString()
-	policyResolver := internalscheduler.NewLifecycleResolver(30, logger, "", lifecycleResolverRepo, resourceInstanceRepo, versionMetricsRepo)
+	policyResolver := internalscheduler.NewLifecycleResolver(30, logger, lifecycleResolverRepo, resourceInstanceRepo, versionMetricsRepo)
 	sched := internalscheduler.NewScheduler(workerID, 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, agentStateRepo, jobRepo, metricsHandler, policyResolver, logger)
 
 	worker := rpcworker.NewRpcWorker(jobRepo, workerID, cfg.JobTimeoutSecs, sched, metricsHandler, logger)

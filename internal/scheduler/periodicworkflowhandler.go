@@ -16,7 +16,6 @@ import (
 type PeriodicWorkflowHandler struct {
 	interval      int
 	log           *slog.Logger
-	partitionId   string
 	scheduler     *Scheduler
 	lifecycle     *service.LifecycleService
 	schedulerRepo storage.SchedulerRepository
@@ -26,7 +25,6 @@ type PeriodicWorkflowHandler struct {
 func NewPeriodicWorkflowHandler(
 	interval int,
 	log *slog.Logger,
-	partitionId string,
 	scheduler *Scheduler,
 	lifecycle *service.LifecycleService,
 	schedulerRepo storage.SchedulerRepository,
@@ -35,7 +33,6 @@ func NewPeriodicWorkflowHandler(
 	return &PeriodicWorkflowHandler{
 		interval:      interval,
 		log:           log.With("component", "periodic_workflow_handler"),
-		partitionId:   partitionId,
 		scheduler:     scheduler,
 		lifecycle:     lifecycle,
 		schedulerRepo: schedulerRepo,
@@ -43,16 +40,17 @@ func NewPeriodicWorkflowHandler(
 	}
 }
 
-func (r *PeriodicWorkflowHandler) Run(ctx context.Context) error {
+func (r *PeriodicWorkflowHandler) Run(ctx context.Context, partitionID string) error {
+	r.log.Info("periodic workflow handler starting", "partition_id", partitionID)
 	ticker := time.NewTicker(time.Duration(r.interval) * time.Second)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			workflows, err := r.schedulerRepo.GetDuePeriodicResources(ctx, r.partitionId)
+			workflows, err := r.schedulerRepo.GetDuePeriodicResources(ctx, partitionID)
 			if err != nil {
-				r.log.Error("failed to get due periodic resources", "partition_id", r.partitionId, "error", err)
+				r.log.Error("failed to get due periodic resources", "partition_id", partitionID, "error", err)
 				continue
 			}
 			var wg sync.WaitGroup

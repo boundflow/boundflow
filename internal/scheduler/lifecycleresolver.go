@@ -16,15 +16,13 @@ type LifecycleResolver struct {
 	resolver              storage.LifecycleResolverRepository
 	resource              storage.ResourceInstanceRepository
 	versionMetrics        storage.VersionMetricsRepository
-	partitionId           string
 	lifecyclePolicyEngine *LifecyclePolicyEngine
 }
 
-func NewLifecycleResolver(interval int, log *slog.Logger, partitionId string, resolver storage.LifecycleResolverRepository, resource storage.ResourceInstanceRepository, versionMetrics storage.VersionMetricsRepository) *LifecycleResolver {
+func NewLifecycleResolver(interval int, log *slog.Logger, resolver storage.LifecycleResolverRepository, resource storage.ResourceInstanceRepository, versionMetrics storage.VersionMetricsRepository) *LifecycleResolver {
 	return &LifecycleResolver{
 		interval:              interval,
 		log:                   log.With("component", "lifecycle_resolver"),
-		partitionId:           partitionId,
 		resolver:              resolver,
 		resource:              resource,
 		versionMetrics:        versionMetrics,
@@ -32,8 +30,8 @@ func NewLifecycleResolver(interval int, log *slog.Logger, partitionId string, re
 	}
 }
 
-func (r *LifecycleResolver) Run(ctx context.Context) error {
-	r.log.Info("lifecycle resolver starting", "partition_id", r.partitionId)
+func (r *LifecycleResolver) Run(ctx context.Context, partitionID string) error {
+	r.log.Info("lifecycle resolver starting", "partition_id", partitionID)
 
 	ticker := time.NewTicker(time.Duration(r.interval) * time.Second)
 	defer ticker.Stop()
@@ -41,16 +39,16 @@ func (r *LifecycleResolver) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ticker.C:
-			resumed, err := r.resolver.ExpireCooldowns(ctx, r.partitionId)
+			resumed, err := r.resolver.ExpireCooldowns(ctx, partitionID)
 			if err != nil {
-				r.log.Error("failed to expire cooldowns", "partition_id", r.partitionId, "error", err)
+				r.log.Error("failed to expire cooldowns", "partition_id", partitionID, "error", err)
 				continue
 			}
 			if len(resumed) > 0 {
-				r.log.Info("resumed workflows from expired cooldown", "partition_id", r.partitionId, "count", len(resumed), "resource_ids", resumed)
+				r.log.Info("resumed workflows from expired cooldown", "partition_id", partitionID, "count", len(resumed), "resource_ids", resumed)
 			}
 		case <-ctx.Done():
-			r.log.Info("lifecycle resolver stopping", "partition_id", r.partitionId)
+			r.log.Info("lifecycle resolver stopping", "partition_id", partitionID)
 			return nil
 		}
 	}

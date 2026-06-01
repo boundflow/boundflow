@@ -22,6 +22,12 @@ type PolicyResolver interface {
 	ResolveLifecyclePolicy(ctx context.Context, workflow *domain.ResourceInstance, versionMetrics *domain.WorkflowVersionMetrics) error
 }
 
+// PartitionWorker is a partition-scoped loop the scheduler owns. The scheduler starts each worker
+// when it acquires a partition and cancels them when it loses it (see Run).
+type PartitionWorker interface {
+	Run(ctx context.Context, partitionID string) error
+}
+
 type Scheduler struct {
 	id             string
 	interval       int
@@ -31,9 +37,10 @@ type Scheduler struct {
 	resource       storage.ResourceInstanceRepository
 	agentStates    storage.AgentStateRepository
 	log            *slog.Logger
-	metricsHandler MetricsHandler
-	jobs           storage.JobRepository
-	policyResolver PolicyResolver
+	metricsHandler   MetricsHandler
+	jobs             storage.JobRepository
+	policyResolver   PolicyResolver
+	partitionWorkers []PartitionWorker
 }
 
 // Functions of the scheduler:
@@ -57,6 +64,13 @@ func NewScheduler(id string, interval int, parts storage.SchedulerPartitionRepos
 	}
 }
 
+// SetPartitionWorkers registers the partition-scoped workers the scheduler starts/stops as it
+// gains/loses its partition. Set after construction to break the scheduler↔worker reference cycle
+// (e.g. the periodic handler needs a *Scheduler to schedule requests).
+func (s *Scheduler) SetPartitionWorkers(workers ...PartitionWorker) {
+	s.partitionWorkers = workers
+}
+
 func (s *Scheduler) Run(ctx context.Context) error {
 	s.log.Info("scheduler starting", "interval_seconds", s.interval)
 
@@ -69,49 +83,73 @@ func (s *Scheduler) Run(ctx context.Context) error {
 			s.log.Error("failed to acquire partition", "error", err)
 		} else if partition != nil {
 			s.log.Info("partition acquired", "partition_id", partition.ID)
-			ticker.Reset(time.Duration(s.interval) * time.Second)
-
-		partitionLoop:
-			for {
-				select {
-				case <-ctx.Done():
-					s.log.Info("context cancelled, releasing partition", "partition_id", partition.ID)
-					s.partitions.Release(ctx, partition.ID, s.id)
-					return nil
-				case <-ticker.C:
-					s.log.Debug("tick", "partition_id", partition.ID)
-
-					var wg sync.WaitGroup
-					wg.Add(2)
-					go func() {
-						defer wg.Done()
-						s.failJobs(ctx, partition.ID)
-					}()
-					go func() {
-						defer wg.Done()
-						s.completeJobs(ctx, partition.ID)
-					}()
-					wg.Wait()
-					s.scheduleJobs(ctx, partition.ID)
-
-					renewed, err := s.partitions.Renew(ctx, partition.ID, s.id, leaseTime)
-					if err != nil {
-						s.log.Error("error renewing partition lease, releasing", "partition_id", partition.ID, "error", err)
-						break partitionLoop
-					}
-					if !renewed {
-						s.log.Warn("partition lease not renewed, another scheduler may have taken it", "partition_id", partition.ID)
-						break partitionLoop
-					}
-					s.log.Debug("partition lease renewed", "partition_id", partition.ID)
-					ticker.Reset(time.Duration(s.interval) * time.Second)
-				}
+			if cancelled := s.runPartition(ctx, partition, ticker, leaseTime); cancelled {
+				return nil
 			}
 		} else {
 			s.log.Debug("no partition available, retrying in 10s")
 		}
 
 		time.Sleep(time.Second * 10)
+	}
+}
+
+// runPartition owns an acquired partition: it starts the partition-scoped workers (lifecycle
+// resolver, periodic handler) under a child context, runs the scheduling tick until the lease is
+// lost or ctx is cancelled, then cancels the workers and waits for them to stop. Returns true if
+// ctx was cancelled (caller should terminate), false if the lease was lost (caller should retry).
+func (s *Scheduler) runPartition(ctx context.Context, partition *domain.SchedulerPartition, ticker *time.Ticker, leaseTime time.Duration) (cancelled bool) {
+	workerCtx, cancelWorkers := context.WithCancel(ctx)
+	var workerWg sync.WaitGroup
+	for _, w := range s.partitionWorkers {
+		workerWg.Add(1)
+		go func(w PartitionWorker) {
+			defer workerWg.Done()
+			if err := w.Run(workerCtx, partition.ID); err != nil {
+				s.log.Error("partition worker exited with error", "partition_id", partition.ID, "error", err)
+			}
+		}(w)
+	}
+	defer func() {
+		cancelWorkers()
+		workerWg.Wait()
+	}()
+
+	ticker.Reset(time.Duration(s.interval) * time.Second)
+	for {
+		select {
+		case <-ctx.Done():
+			s.log.Info("context cancelled, releasing partition", "partition_id", partition.ID)
+			s.partitions.Release(ctx, partition.ID, s.id)
+			return true
+		case <-ticker.C:
+			s.log.Debug("tick", "partition_id", partition.ID)
+
+			var wg sync.WaitGroup
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				s.failJobs(ctx, partition.ID)
+			}()
+			go func() {
+				defer wg.Done()
+				s.completeJobs(ctx, partition.ID)
+			}()
+			wg.Wait()
+			s.scheduleJobs(ctx, partition.ID)
+
+			renewed, err := s.partitions.Renew(ctx, partition.ID, s.id, leaseTime)
+			if err != nil {
+				s.log.Error("error renewing partition lease, releasing", "partition_id", partition.ID, "error", err)
+				return false
+			}
+			if !renewed {
+				s.log.Warn("partition lease not renewed, another scheduler may have taken it", "partition_id", partition.ID)
+				return false
+			}
+			s.log.Debug("partition lease renewed", "partition_id", partition.ID)
+			ticker.Reset(time.Duration(s.interval) * time.Second)
+		}
 	}
 }
 
@@ -289,12 +327,12 @@ func (s *Scheduler) scheduleJobs(ctx context.Context, partitionID string) error 
 func (s *Scheduler) validateWorkflowState(workflow *domain.ResourceInstance) bool {
 
 	if workflow.WorkflowState != domain.WorkflowStateActive {
-		// log
+		s.log.Debug("skipping schedule: workflow not active", "resource_id", workflow.ID, "workflow_state", workflow.WorkflowState)
 		return false
 	}
 
 	if workflow.LifecycleLastResolved != workflow.CurrentVersion {
-		// log
+		s.log.Debug("skipping schedule: metrics not resolved up to current run", "resource_id", workflow.ID, "lifecycle_last_resolved", workflow.LifecycleLastResolved, "current_version", workflow.CurrentVersion)
 		return false
 	}
 
@@ -311,13 +349,13 @@ func (s *Scheduler) ScheduleRequest(ctx context.Context, req string) error {
 
 	workflow, err := s.resource.Get(ctx, request.ResourceInstanceID)
 	if err != nil {
-		// log error
-		return err
+		s.log.Error("failed to get resource instance for scheduling", "request_id", req, "resource_id", request.ResourceInstanceID, "error", err)
+		return fmt.Errorf("get resource instance %s: %w", request.ResourceInstanceID, err)
 	}
 
-	if s.validateWorkflowState(workflow) == false {
-		// log error
-		return fmt.Errorf("Workflow validation failed")
+	if !s.validateWorkflowState(workflow) {
+		s.log.Debug("request not scheduled, workflow state validation failed", "request_id", req, "resource_id", request.ResourceInstanceID)
+		return fmt.Errorf("workflow validation failed")
 	}
 
 	agentStates, err := s.agentStates.GetAllForResource(ctx, request.ResourceInstanceID)
