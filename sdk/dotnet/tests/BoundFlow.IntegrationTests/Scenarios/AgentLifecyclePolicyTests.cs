@@ -24,7 +24,7 @@ public class AgentLifecyclePolicyTests : IntegrationTestBase
     [Fact]
     public async Task ModelSwitchesToHaikuAfterFirstInvocation()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(3));
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
         var modelResults = new ConcurrentQueue<string>();
 
         AgentDefinition AnalyseAgent() => new(
@@ -47,7 +47,8 @@ public class AgentLifecyclePolicyTests : IntegrationTestBase
         var workerTask = worker.RunAsync(cts.Token);
 
         var (_, tenant) = await CreateIsolatedTenantAsync("agent-policy");
-        var workflow = await ControlPlane.CreateWorkflowAsync("database_agent", tenant.Id);
+        var workflow = await ControlPlane.CreateWorkflowAsync("database_agent", tenant.Id,
+            workflowConfig: new WorkflowConfig(Version: 1));
 
         await ControlPlane.SetAgentLifecyclePolicyAsync(
             workflow.Id,
@@ -65,14 +66,14 @@ public class AgentLifecyclePolicyTests : IntegrationTestBase
         await ControlPlane.ActivateWorkflowAsync(workflow.Id);
 
         // Invoke 1 — no prior metrics, rule does not fire → Sonnet
-        await ControlPlane.InvokeWorkflowAsync(workflow.Id, new RuntimeOverrides(OperationTimeoutSeconds: 60));
+        await ControlPlane.InvokeWorkflowAsync(workflow.Id, new RuntimeOverrides(OperationTimeoutSeconds: 30));
         await WaitForCompletionAsync(workflow.Id, cts.Token);
 
         Assert.True(modelResults.TryDequeue(out var model1), "Invoke 1 did not produce a result.");
         Assert.Equal(SonnetModel, model1);
 
         // Invoke 2 — invoke-1 metrics trigger the rule → Haiku
-        await ControlPlane.InvokeWorkflowAsync(workflow.Id, new RuntimeOverrides(OperationTimeoutSeconds: 60));
+        await ControlPlane.InvokeWorkflowAsync(workflow.Id, new RuntimeOverrides(OperationTimeoutSeconds: 30));
         await WaitForCompletionAsync(workflow.Id, cts.Token);
 
         Assert.True(modelResults.TryDequeue(out var model2), "Invoke 2 did not produce a result.");
