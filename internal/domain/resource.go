@@ -22,7 +22,6 @@ type WorkflowConfig struct {
 type WorkflowState string
 
 const (
-	WorkflowStateCreated  WorkflowState = "created"
 	WorkflowStateActive   WorkflowState = "active"
 	WorkflowStatePaused   WorkflowState = "paused"
 	WorkflowStateCooldown WorkflowState = "cooldown"

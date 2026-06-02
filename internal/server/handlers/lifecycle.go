@@ -160,6 +160,14 @@ func (h *ResourceLifecycleHandler) SetWorkflowLifecyclePolicy(ctx context.Contex
 	if req.ResourceInstanceId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
 	}
+	for i, rule := range req.GetLifecyclePolicy().GetRules() {
+		if rule.Action == nil {
+			return nil, status.Errorf(codes.InvalidArgument, "rule %d: action is required", i)
+		}
+		if rule.Action.Type != convergeplanev1.WorkflowPolicyActionType_WORKFLOW_POLICY_ACTION_SET_VERSION && rule.Window <= 0 {
+			return nil, status.Errorf(codes.InvalidArgument, "rule %d: window must be > 0 for %s actions", i, rule.Action.Type)
+		}
+	}
 	policy := convert.WorkflowLifecyclePolicyFromProto(req.LifecyclePolicy)
 	if err := h.svc.SetWorkflowLifecyclePolicy(ctx, req.ResourceInstanceId, policy); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
@@ -168,6 +176,19 @@ func (h *ResourceLifecycleHandler) SetWorkflowLifecyclePolicy(ctx context.Contex
 		return nil, status.Errorf(codes.Internal, "set workflow lifecycle policy: %v", err)
 	}
 	return &convergeplanev1.SetWorkflowLifecyclePolicyResponse{}, nil
+}
+
+func (h *ResourceLifecycleHandler) ActivateWorkflow(ctx context.Context, req *convergeplanev1.ActivateWorkflowRequest) (*convergeplanev1.ActivateWorkflowResponse, error) {
+	if req.ResourceInstanceId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
+	}
+	if err := h.svc.ActivateWorkflow(ctx, req.ResourceInstanceId); err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Errorf(codes.NotFound, "resource instance not found")
+		}
+		return nil, status.Errorf(codes.Internal, "activate workflow: %v", err)
+	}
+	return &convergeplanev1.ActivateWorkflowResponse{}, nil
 }
 
 func (h *ResourceLifecycleHandler) ApproveWorkflow(ctx context.Context, req *convergeplanev1.ApproveWorkflowRequest) (*convergeplanev1.ApproveWorkflowResponse, error) {

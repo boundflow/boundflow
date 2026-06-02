@@ -140,8 +140,13 @@ public sealed class ControlPlaneClient : IDisposable
         var resp = await _lifecycle.GetResourceStateAsync(
             new GetResourceStateRequest { ResourceInstanceId = workflowId },
             cancellationToken: ct);
-        return ParseWorkflowState(resp.ResourceInstance?.WorkflowState ?? Convergeplane.V1.WorkflowState.Created);
+        return ParseWorkflowState(resp.ResourceInstance?.WorkflowState ?? Convergeplane.V1.WorkflowState.Unspecified);
     }
+
+    public async Task ActivateWorkflowAsync(string workflowId, CancellationToken ct = default) =>
+        await _lifecycle.ActivateWorkflowAsync(
+            new ActivateWorkflowRequest { ResourceInstanceId = workflowId },
+            cancellationToken: ct);
 
     public async Task<LifecycleState> GetWorkflowLifecycleStateAsync(string workflowId, CancellationToken ct = default)
     {
@@ -163,7 +168,8 @@ public sealed class ControlPlaneClient : IDisposable
     public async Task SetWorkflowLifecyclePolicyAsync(
         string workflowId,
         WorkflowLifecyclePolicy policy,
-        CancellationToken ct = default) =>
+        CancellationToken ct = default)
+    {
         await _lifecycle.SetWorkflowLifecyclePolicyAsync(
             new SetWorkflowLifecyclePolicyRequest
             {
@@ -171,6 +177,7 @@ public sealed class ControlPlaneClient : IDisposable
                 LifecyclePolicy = ToWorkflowLifecyclePolicyProto(policy),
             },
             cancellationToken: ct);
+    }
 
     public async Task ApproveWorkflowAsync(string workflowId, CancellationToken ct = default) =>
         await _lifecycle.ApproveWorkflowAsync(
@@ -244,7 +251,7 @@ public sealed class ControlPlaneClient : IDisposable
         Convergeplane.V1.WorkflowState.Cooldown => WorkflowState.Cooldown,
         Convergeplane.V1.WorkflowState.Disabled => WorkflowState.Disabled,
         Convergeplane.V1.WorkflowState.Deleted  => WorkflowState.Deleted,
-        _                                        => WorkflowState.Created,
+        _                                        => WorkflowState.Unspecified,
     };
 
     private static Convergeplane.V1.WorkflowLifecyclePolicy ToWorkflowLifecyclePolicyProto(WorkflowLifecyclePolicy policy)
@@ -254,20 +261,34 @@ public sealed class ControlPlaneClient : IDisposable
         {
             var protoRule = new Convergeplane.V1.WorkflowLifecyclePolicyRule
             {
-                Metric    = (Convergeplane.V1.WorkflowMetric)rule.Metric,
+                Metric   = (Convergeplane.V1.WorkflowMetric)rule.Metric,
                 Threshold = rule.Threshold,
-                Window    = rule.Window,
                 ToolName  = rule.ToolName ?? "",
             };
-            if (rule.Action is { } a)
+            protoRule.Action = rule.Action switch
             {
-                protoRule.Action = new Convergeplane.V1.WorkflowLifecyclePolicyAction
+                PauseAction p => new Convergeplane.V1.WorkflowLifecyclePolicyAction
                 {
-                    Type            = (Convergeplane.V1.WorkflowPolicyActionType)a.Type,
-                    CooldownSeconds = a.CooldownSeconds,
-                    TargetVersion   = a.TargetVersion,
-                };
-            }
+                    Type = Convergeplane.V1.WorkflowPolicyActionType.WorkflowPolicyActionPause,
+                },
+                CooldownAction c => new Convergeplane.V1.WorkflowLifecyclePolicyAction
+                {
+                    Type            = Convergeplane.V1.WorkflowPolicyActionType.WorkflowPolicyActionCooldown,
+                    CooldownSeconds = c.CooldownSeconds,
+                },
+                SetVersionAction s => new Convergeplane.V1.WorkflowLifecyclePolicyAction
+                {
+                    Type          = Convergeplane.V1.WorkflowPolicyActionType.WorkflowPolicyActionSetVersion,
+                    TargetVersion = s.TargetVersion,
+                },
+                _ => throw new ArgumentException($"Unknown action type: {rule.Action.GetType().Name}"),
+            };
+            protoRule.Window = rule.Action switch
+            {
+                PauseAction p    => p.Window,
+                CooldownAction c => c.Window,
+                _                => 0,
+            };
             proto.Rules.Add(protoRule);
         }
         return proto;

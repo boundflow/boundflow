@@ -28,15 +28,15 @@ func (r *ResourceInstanceRepo) Create(ctx context.Context, instance *domain.Reso
 		`INSERT INTO resource_instances
 		   (id, tenant_id, resource_type,
 		    current_workflow_version, invoke_timeout_seconds, repeat_every_seconds, triggerable,
-		    lifecycle_state, scheduler_partition_id,
+		    lifecycle_state, workflow_state, scheduler_partition_id,
 		    target_version, current_version, last_completed_request_at, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
 		instance.ID, instance.TenantID, instance.ResourceType,
 		instance.CurrentWorkflowVersion,
 		instance.WorkflowConfig.InvokeTimeoutSeconds,
 		instance.WorkflowConfig.RepeatEverySeconds,
 		instance.WorkflowConfig.Triggerable,
-		instance.LifecycleState, instance.SchedulerPartitionID,
+		instance.LifecycleState, instance.WorkflowState, instance.SchedulerPartitionID,
 		instance.TargetVersion, instance.CurrentVersion,
 		instance.LastCompletedRequestAt, instance.CreatedAt,
 	)
@@ -92,6 +92,32 @@ func (r *ResourceInstanceRepo) UpdateLifecycleState(ctx context.Context, id stri
 	)
 	if err != nil {
 		return fmt.Errorf("update lifecycle state: %w", err)
+	}
+	return nil
+}
+
+func (r *ResourceInstanceRepo) UpdateLifecyclePolicy(ctx context.Context, id string, policy domain.WorkflowLifecyclePolicy) error {
+	data, err := json.Marshal(policy)
+	if err != nil {
+		return fmt.Errorf("marshal lifecycle policy: %w", err)
+	}
+	_, err = r.pool.Exec(ctx,
+		`UPDATE resource_instances SET lifecycle_policy = $1 WHERE id = $2`,
+		data, id,
+	)
+	if err != nil {
+		return fmt.Errorf("update lifecycle policy: %w", err)
+	}
+	return nil
+}
+
+func (r *ResourceInstanceRepo) UpdateWorkflowState(ctx context.Context, id string, state domain.WorkflowState) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE resource_instances SET workflow_state = $1 WHERE id = $2`,
+		state, id,
+	)
+	if err != nil {
+		return fmt.Errorf("update workflow state: %w", err)
 	}
 	return nil
 }

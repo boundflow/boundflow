@@ -49,7 +49,7 @@ public record AgentRuntimePolicy(
     string? Model = null
 );
 
-public enum WorkflowState { Created, Active, Paused, Cooldown, Disabled, Deleted }
+public enum WorkflowState { Unspecified, Active, Paused, Cooldown, Disabled, Deleted }
 
 public enum WorkflowMetric
 {
@@ -61,20 +61,16 @@ public enum WorkflowMetric
     ToolFailureRate,
 }
 
-public enum WorkflowPolicyActionType { Pause, Cooldown, SetVersion }
-
-public record WorkflowLifecyclePolicyAction(
-    WorkflowPolicyActionType Type,
-    int CooldownSeconds = 0,
-    int TargetVersion = 0
-);
+public abstract record WorkflowLifecyclePolicyAction;
+public record PauseAction(int Window) : WorkflowLifecyclePolicyAction;
+public record CooldownAction(int Window, int CooldownSeconds) : WorkflowLifecyclePolicyAction;
+public record SetVersionAction(int TargetVersion) : WorkflowLifecyclePolicyAction;
 
 public record WorkflowLifecyclePolicyRule(
     WorkflowMetric Metric,
     double Threshold,
-    int Window = 0,
-    string? ToolName = null,
-    WorkflowLifecyclePolicyAction? Action = null
+    WorkflowLifecyclePolicyAction Action,
+    string? ToolName = null
 );
 
 public record WorkflowLifecyclePolicy(IReadOnlyList<WorkflowLifecyclePolicyRule> Rules);

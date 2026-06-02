@@ -31,8 +31,8 @@ public sealed class OperationContext
     private readonly AtomicOperation _operation;
     private readonly Orchestrator _orchestrator;
     private readonly List<(string Key, LlmContextEntry Entry)> _llmContext = [];
-    // Pending agent state updates to be written back via AtomicOperationResult.
-    internal readonly Dictionary<string, JsonNode> AgentStateUpdates = [];
+    // Per-agent metrics from this operation, sent back to the server via AtomicOperationResult.
+    internal readonly Dictionary<string, AgentInvocationMetrics> AgentStateUpdates = [];
 
     internal OperationContext(AtomicOperation operation, Orchestrator orchestrator)
     {
@@ -120,9 +120,12 @@ public sealed class OperationContext
         while (updatedHistory.Count > Math.Max(maxWindow, 1))
             updatedHistory.RemoveAt(0);
 
-        AgentStateUpdates[agent.Name] = new JsonObject
+        AgentStateUpdates[agent.Name] = new AgentInvocationMetrics
         {
-            ["invocation_metrics"] = LifecyclePolicyEvaluator.SerializeMetricsHistory(updatedHistory),
+            CostUsd    = (double)result.CostUsd,
+            LlmCalls   = result.LlmCallsUsed,
+            TokensUsed = result.TokensUsed,
+            RanAt      = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         };
 
         return result;
@@ -205,13 +208,8 @@ public sealed class BoundFlowWorker
             var customerContext = new OperationContext(op, orchestrator);
             var result = await handler(customerContext, ct);
             var proto = MapToProto(result);
-            if (customerContext.AgentStateUpdates.Count > 0)
-            {
-                var updatesObj = new JsonObject();
-                foreach (var (name, state) in customerContext.AgentStateUpdates)
-                    updatesObj[name] = state.DeepClone();
-                proto.AgentStateUpdates = JsonParser.Default.Parse<Struct>(updatesObj.ToJsonString());
-            }
+            foreach (var (name, metrics) in customerContext.AgentStateUpdates)
+                proto.AgentStateUpdates.Add(name, metrics);
             return proto;
         };
 

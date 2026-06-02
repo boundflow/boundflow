@@ -102,6 +102,7 @@ func (s *LifecycleService) CreateResource(ctx context.Context, correlationID, re
 		ResourceType:           resourceType,
 		WorkflowConfig:         cfg,
 		LifecycleState:         domain.LifecycleStateActive,
+		WorkflowState:          domain.WorkflowStatePaused,
 		CurrentWorkflowVersion: version,
 		SchedulerPartitionID:   partitionForID(id, s.numPartitions),
 		TargetVersion:          1,
@@ -113,7 +114,7 @@ func (s *LifecycleService) CreateResource(ctx context.Context, correlationID, re
 		return nil, fmt.Errorf("create resource: %w", err)
 	}
 
-	s.log.Info("resource created and active", "correlation_id", correlationID, "resource_id", resourceInstance.ID)
+	s.log.Info("resource created and paused", "correlation_id", correlationID, "resource_id", resourceInstance.ID)
 	return &resourceInstance, nil
 }
 
@@ -207,7 +208,21 @@ func (s *LifecycleService) DeleteAgent(ctx context.Context, resourceInstanceID, 
 
 func (s *LifecycleService) SetWorkflowLifecyclePolicy(ctx context.Context, resourceInstanceID string, policy domain.WorkflowLifecyclePolicy) error {
 	s.log.Info("setting workflow lifecycle policy", "resource_id", resourceInstanceID)
-	return fmt.Errorf("not implemented")
+	if err := s.resourceInstances.UpdateLifecyclePolicy(ctx, resourceInstanceID, policy); err != nil {
+		return fmt.Errorf("set workflow lifecycle policy: %w", err)
+	}
+	return nil
+}
+
+func (s *LifecycleService) ActivateWorkflow(ctx context.Context, resourceInstanceID string) error {
+	s.log.Info("activating workflow", "resource_id", resourceInstanceID)
+	if err := s.resourceInstances.UpdateWorkflowState(ctx, resourceInstanceID, domain.WorkflowStateActive); err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return err
+		}
+		return fmt.Errorf("activate workflow: %w", err)
+	}
+	return nil
 }
 
 func (s *LifecycleService) ApproveWorkflow(ctx context.Context, resourceInstanceID string) error {

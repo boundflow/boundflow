@@ -37,13 +37,13 @@ namespace Convergeplane.V1 {
             "Zmxvd0NvbmZpZ1IOd29ya2Zsb3dDb25maWcSJwoPbGlmZWN5Y2xlX3N0YXRl",
             "GAkgASgJUg5saWZlY3ljbGVTdGF0ZRJGCg53b3JrZmxvd19zdGF0ZRgKIAEo",
             "DjIfLmNvbnZlcmdlcGxhbmUudjEuV29ya2Zsb3dTdGF0ZVINd29ya2Zsb3dT",
-            "dGF0ZSq3AQoNV29ya2Zsb3dTdGF0ZRIaChZXT1JLRkxPV19TVEFURV9DUkVB",
-            "VEVEEAASGQoVV09SS0ZMT1dfU1RBVEVfQUNUSVZFEAESGQoVV09SS0ZMT1df",
-            "U1RBVEVfUEFVU0VEEAISGwoXV09SS0ZMT1dfU1RBVEVfQ09PTERPV04QAxIb",
-            "ChdXT1JLRkxPV19TVEFURV9ESVNBQkxFRBAEEhoKFldPUktGTE9XX1NUQVRF",
-            "X0RFTEVURUQQBUJNWktnaXRodWIuY29tL2NvbnZlcmdlcGxhbmUvY29udmVy",
-            "Z2VwbGFuZS9nZW4vY29udmVyZ2VwbGFuZS92MTtjb252ZXJnZXBsYW5ldjFi",
-            "BnByb3RvMw=="));
+            "dGF0ZSq7AQoNV29ya2Zsb3dTdGF0ZRIeChpXT1JLRkxPV19TVEFURV9VTlNQ",
+            "RUNJRklFRBAAEhkKFVdPUktGTE9XX1NUQVRFX0FDVElWRRABEhkKFVdPUktG",
+            "TE9XX1NUQVRFX1BBVVNFRBACEhsKF1dPUktGTE9XX1NUQVRFX0NPT0xET1dO",
+            "EAMSGwoXV09SS0ZMT1dfU1RBVEVfRElTQUJMRUQQBBIaChZXT1JLRkxPV19T",
+            "VEFURV9ERUxFVEVEEAVCTVpLZ2l0aHViLmNvbS9jb252ZXJnZXBsYW5lL2Nv",
+            "bnZlcmdlcGxhbmUvZ2VuL2NvbnZlcmdlcGxhbmUvdjE7Y29udmVyZ2VwbGFu",
+            "ZXYxYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Convergeplane.V1.WorkflowState), }, null, new pbr::GeneratedClrTypeInfo[] {
@@ -56,7 +56,7 @@ namespace Convergeplane.V1 {
   }
   #region Enums
   public enum WorkflowState {
-    [pbr::OriginalName("WORKFLOW_STATE_CREATED")] Created = 0,
+    [pbr::OriginalName("WORKFLOW_STATE_UNSPECIFIED")] Unspecified = 0,
     [pbr::OriginalName("WORKFLOW_STATE_ACTIVE")] Active = 1,
     [pbr::OriginalName("WORKFLOW_STATE_PAUSED")] Paused = 2,
     [pbr::OriginalName("WORKFLOW_STATE_COOLDOWN")] Cooldown = 3,
@@ -492,7 +492,7 @@ namespace Convergeplane.V1 {
 
     /// <summary>Field number for the "workflow_state" field.</summary>
     public const int WorkflowStateFieldNumber = 10;
-    private global::Convergeplane.V1.WorkflowState workflowState_ = global::Convergeplane.V1.WorkflowState.Created;
+    private global::Convergeplane.V1.WorkflowState workflowState_ = global::Convergeplane.V1.WorkflowState.Unspecified;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public global::Convergeplane.V1.WorkflowState WorkflowState {
@@ -535,7 +535,7 @@ namespace Convergeplane.V1 {
       if (createdAt_ != null) hash ^= CreatedAt.GetHashCode();
       if (workflowConfig_ != null) hash ^= WorkflowConfig.GetHashCode();
       if (LifecycleState.Length != 0) hash ^= LifecycleState.GetHashCode();
-      if (WorkflowState != global::Convergeplane.V1.WorkflowState.Created) hash ^= WorkflowState.GetHashCode();
+      if (WorkflowState != global::Convergeplane.V1.WorkflowState.Unspecified) hash ^= WorkflowState.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -574,7 +574,7 @@ namespace Convergeplane.V1 {
         output.WriteRawTag(74);
         output.WriteString(LifecycleState);
       }
-      if (WorkflowState != global::Convergeplane.V1.WorkflowState.Created) {
+      if (WorkflowState != global::Convergeplane.V1.WorkflowState.Unspecified) {
         output.WriteRawTag(80);
         output.WriteEnum((int) WorkflowState);
       }
@@ -608,7 +608,7 @@ namespace Convergeplane.V1 {
         output.WriteRawTag(74);
         output.WriteString(LifecycleState);
       }
-      if (WorkflowState != global::Convergeplane.V1.WorkflowState.Created) {
+      if (WorkflowState != global::Convergeplane.V1.WorkflowState.Unspecified) {
         output.WriteRawTag(80);
         output.WriteEnum((int) WorkflowState);
       }
@@ -637,7 +637,7 @@ namespace Convergeplane.V1 {
       if (LifecycleState.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(LifecycleState);
       }
-      if (WorkflowState != global::Convergeplane.V1.WorkflowState.Created) {
+      if (WorkflowState != global::Convergeplane.V1.WorkflowState.Unspecified) {
         size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) WorkflowState);
       }
       if (_unknownFields != null) {
@@ -673,7 +673,7 @@ namespace Convergeplane.V1 {
       if (other.LifecycleState.Length != 0) {
         LifecycleState = other.LifecycleState;
       }
-      if (other.WorkflowState != global::Convergeplane.V1.WorkflowState.Created) {
+      if (other.WorkflowState != global::Convergeplane.V1.WorkflowState.Unspecified) {
         WorkflowState = other.WorkflowState;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);

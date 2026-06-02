@@ -7,12 +7,11 @@ namespace BoundFlow.SDK.Llm;
 /// Server-stored values (loaded from agent_state context) take precedence over these.
 /// </summary>
 internal record InvocationSnapshot(
-    double? CostUsd,
-    int? LlmCalls,
-    double? LatencySeconds,
-    Dictionary<string, int>? ToolFailureCounts,
-    long RanAt,
-    long LastMeasured
+    int TokensUsed,
+    double CostUsd,
+    int LlmCalls,
+    int CallsPerTool,
+    long RanAt
 );
 
 internal record AgentRuntimePolicy(

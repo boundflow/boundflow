@@ -284,6 +284,20 @@ func (mr *MockResourceInstanceRepositoryMockRecorder) UpdateLastCompletedRequest
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateLastCompletedRequestAt", reflect.TypeOf((*MockResourceInstanceRepository)(nil).UpdateLastCompletedRequestAt), ctx, id, t)
 }
 
+// UpdateLifecyclePolicy mocks base method.
+func (m *MockResourceInstanceRepository) UpdateLifecyclePolicy(ctx context.Context, id string, policy domain.WorkflowLifecyclePolicy) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateLifecyclePolicy", ctx, id, policy)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateLifecyclePolicy indicates an expected call of UpdateLifecyclePolicy.
+func (mr *MockResourceInstanceRepositoryMockRecorder) UpdateLifecyclePolicy(ctx, id, policy any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateLifecyclePolicy", reflect.TypeOf((*MockResourceInstanceRepository)(nil).UpdateLifecyclePolicy), ctx, id, policy)
+}
+
 // UpdateLifecycleState mocks base method.
 func (m *MockResourceInstanceRepository) UpdateLifecycleState(ctx context.Context, id string, state domain.LifecycleState) error {
 	m.ctrl.T.Helper()
@@ -330,6 +344,20 @@ func (m *MockResourceInstanceRepository) UpdateSchedulerPartition(ctx context.Co
 func (mr *MockResourceInstanceRepositoryMockRecorder) UpdateSchedulerPartition(ctx, id, partitionID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateSchedulerPartition", reflect.TypeOf((*MockResourceInstanceRepository)(nil).UpdateSchedulerPartition), ctx, id, partitionID)
+}
+
+// UpdateWorkflowState mocks base method.
+func (m *MockResourceInstanceRepository) UpdateWorkflowState(ctx context.Context, id string, state domain.WorkflowState) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateWorkflowState", ctx, id, state)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateWorkflowState indicates an expected call of UpdateWorkflowState.
+func (mr *MockResourceInstanceRepositoryMockRecorder) UpdateWorkflowState(ctx, id, state any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateWorkflowState", reflect.TypeOf((*MockResourceInstanceRepository)(nil).UpdateWorkflowState), ctx, id, state)
 }
 
 // MockSchedulerPartitionRepository is a mock of SchedulerPartitionRepository interface.

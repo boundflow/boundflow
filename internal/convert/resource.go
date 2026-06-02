@@ -24,7 +24,6 @@ func ResourceStateToProto(s domain.ResourceState) *structpb.Struct {
 }
 
 var workflowStateToProto = map[domain.WorkflowState]convergeplanev1.WorkflowState{
-	domain.WorkflowStateCreated:  convergeplanev1.WorkflowState_WORKFLOW_STATE_CREATED,
 	domain.WorkflowStateActive:   convergeplanev1.WorkflowState_WORKFLOW_STATE_ACTIVE,
 	domain.WorkflowStatePaused:   convergeplanev1.WorkflowState_WORKFLOW_STATE_PAUSED,
 	domain.WorkflowStateCooldown: convergeplanev1.WorkflowState_WORKFLOW_STATE_COOLDOWN,

@@ -24,6 +24,8 @@ type ResourceInstanceRepository interface {
 	Create(ctx context.Context, instance *domain.ResourceInstance) error
 	Get(ctx context.Context, id string) (*domain.ResourceInstance, error)
 	UpdateLifecycleState(ctx context.Context, id string, state domain.LifecycleState) error
+	UpdateWorkflowState(ctx context.Context, id string, state domain.WorkflowState) error
+	UpdateLifecyclePolicy(ctx context.Context, id string, policy domain.WorkflowLifecyclePolicy) error
 	// UpdateLifecycleStateAndIncrementVersion atomically sets the lifecycle state and bumps the target version.
 	// Optionally pass lifecycle states that should cause the call to fail with ErrInvalidLifecycleState.
 	UpdateLifecycleStateAndIncrementVersion(ctx context.Context, id string, state domain.LifecycleState, invalidStates ...domain.LifecycleState) (newTargetVersion int64, err error)

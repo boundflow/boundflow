@@ -28,6 +28,7 @@ const (
 	ResourceLifecycleService_DeleteAgent_FullMethodName                = "/convergeplane.v1.ResourceLifecycleService/DeleteAgent"
 	ResourceLifecycleService_SetWorkflowLifecyclePolicy_FullMethodName = "/convergeplane.v1.ResourceLifecycleService/SetWorkflowLifecyclePolicy"
 	ResourceLifecycleService_ApproveWorkflow_FullMethodName            = "/convergeplane.v1.ResourceLifecycleService/ApproveWorkflow"
+	ResourceLifecycleService_ActivateWorkflow_FullMethodName           = "/convergeplane.v1.ResourceLifecycleService/ActivateWorkflow"
 )
 
 // ResourceLifecycleServiceClient is the client API for ResourceLifecycleService service.
@@ -43,6 +44,7 @@ type ResourceLifecycleServiceClient interface {
 	DeleteAgent(ctx context.Context, in *DeleteAgentRequest, opts ...grpc.CallOption) (*DeleteAgentResponse, error)
 	SetWorkflowLifecyclePolicy(ctx context.Context, in *SetWorkflowLifecyclePolicyRequest, opts ...grpc.CallOption) (*SetWorkflowLifecyclePolicyResponse, error)
 	ApproveWorkflow(ctx context.Context, in *ApproveWorkflowRequest, opts ...grpc.CallOption) (*ApproveWorkflowResponse, error)
+	ActivateWorkflow(ctx context.Context, in *ActivateWorkflowRequest, opts ...grpc.CallOption) (*ActivateWorkflowResponse, error)
 }
 
 type resourceLifecycleServiceClient struct {
@@ -143,6 +145,16 @@ func (c *resourceLifecycleServiceClient) ApproveWorkflow(ctx context.Context, in
 	return out, nil
 }
 
+func (c *resourceLifecycleServiceClient) ActivateWorkflow(ctx context.Context, in *ActivateWorkflowRequest, opts ...grpc.CallOption) (*ActivateWorkflowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ActivateWorkflowResponse)
+	err := c.cc.Invoke(ctx, ResourceLifecycleService_ActivateWorkflow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ResourceLifecycleServiceServer is the server API for ResourceLifecycleService service.
 // All implementations must embed UnimplementedResourceLifecycleServiceServer
 // for forward compatibility.
@@ -156,6 +168,7 @@ type ResourceLifecycleServiceServer interface {
 	DeleteAgent(context.Context, *DeleteAgentRequest) (*DeleteAgentResponse, error)
 	SetWorkflowLifecyclePolicy(context.Context, *SetWorkflowLifecyclePolicyRequest) (*SetWorkflowLifecyclePolicyResponse, error)
 	ApproveWorkflow(context.Context, *ApproveWorkflowRequest) (*ApproveWorkflowResponse, error)
+	ActivateWorkflow(context.Context, *ActivateWorkflowRequest) (*ActivateWorkflowResponse, error)
 	mustEmbedUnimplementedResourceLifecycleServiceServer()
 }
 
@@ -192,6 +205,9 @@ func (UnimplementedResourceLifecycleServiceServer) SetWorkflowLifecyclePolicy(co
 }
 func (UnimplementedResourceLifecycleServiceServer) ApproveWorkflow(context.Context, *ApproveWorkflowRequest) (*ApproveWorkflowResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ApproveWorkflow not implemented")
+}
+func (UnimplementedResourceLifecycleServiceServer) ActivateWorkflow(context.Context, *ActivateWorkflowRequest) (*ActivateWorkflowResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ActivateWorkflow not implemented")
 }
 func (UnimplementedResourceLifecycleServiceServer) mustEmbedUnimplementedResourceLifecycleServiceServer() {
 }
@@ -377,6 +393,24 @@ func _ResourceLifecycleService_ApproveWorkflow_Handler(srv interface{}, ctx cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ResourceLifecycleService_ActivateWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ActivateWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ResourceLifecycleServiceServer).ActivateWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ResourceLifecycleService_ActivateWorkflow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ResourceLifecycleServiceServer).ActivateWorkflow(ctx, req.(*ActivateWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ResourceLifecycleService_ServiceDesc is the grpc.ServiceDesc for ResourceLifecycleService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -419,6 +453,10 @@ var ResourceLifecycleService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ApproveWorkflow",
 			Handler:    _ResourceLifecycleService_ApproveWorkflow_Handler,
+		},
+		{
+			MethodName: "ActivateWorkflow",
+			Handler:    _ResourceLifecycleService_ActivateWorkflow_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
