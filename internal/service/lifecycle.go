@@ -15,6 +15,7 @@ import (
 )
 
 var ErrMissingRuntimeParams = errors.New("operation_timeout_seconds must be set on the request, tenant policy, or tenant group policy")
+var ErrInvalidWorkflowState = errors.New("workflow cannot be invoked in its current state")
 
 // RequestScheduler is the scheduling capability the lifecycle service needs.
 // Satisfied by *scheduler.Scheduler.
@@ -103,10 +104,11 @@ func (s *LifecycleService) CreateResource(ctx context.Context, correlationID, re
 		WorkflowConfig:         cfg,
 		LifecycleState:         domain.LifecycleStateActive,
 		WorkflowState:          domain.WorkflowStatePaused,
+		LifecyclePolicy:        domain.WorkflowLifecyclePolicy{Rules: []domain.WorkflowLifecyclePolicyRule{}},
 		CurrentWorkflowVersion: version,
 		SchedulerPartitionID:   partitionForID(id, s.numPartitions),
-		TargetVersion:          1,
-		CurrentVersion:         1,
+		TargetVersion:          0,
+		CurrentVersion:         0,
 	}
 
 	if err := s.resourceInstances.Create(ctx, &resourceInstance); err != nil {
@@ -124,6 +126,10 @@ func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID,
 	instance, err := s.resourceInstances.Get(ctx, resourceInstanceID)
 	if err != nil {
 		return fmt.Errorf("get resource instance: %w", err)
+	}
+
+	if instance.WorkflowState != domain.WorkflowStateActive {
+		return fmt.Errorf("%w: workflow is in state %s", ErrInvalidWorkflowState, instance.WorkflowState)
 	}
 
 	requestInfo := map[string]any{

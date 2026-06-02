@@ -76,29 +76,25 @@ func (r *LifecycleResolver) ResolveLifecyclePolicy(ctx context.Context, workflow
 		return fmt.Errorf("Policy resolution failed with error %w", err)
 	}
 
-	if !updated {
-		r.log.Debug("no lifecycle policy change", "resource_id", resourceInstanceId)
-		return nil
-	}
-
 	version := workflow.CurrentWorkflowVersion
 	state := workflow.WorkflowState
 	cooldown := workflow.CooldownUntil
 
-	if goalState.VersionChange {
-		version = goalState.Version
-	} else {
-		state = goalState.State
-		if state == domain.WorkflowStateCooldown {
-			t := time.Now().Add(time.Duration(goalState.Cooldown) * time.Second)
-			cooldown = &t
+	if updated {
+		if goalState.VersionChange {
+			version = goalState.Version
+		} else {
+			state = goalState.State
+			if state == domain.WorkflowStateCooldown {
+				t := time.Now().Add(time.Duration(goalState.Cooldown) * time.Second)
+				cooldown = &t
+			}
 		}
 	}
 
 	resolved, err := r.resolver.TryApplyPolicyResolution(ctx, resourceInstanceId, workflow.CurrentVersion, version, state, cooldown)
-
 	if err != nil {
-		return fmt.Errorf("Applying resolved polocy failed with error %w", err)
+		return fmt.Errorf("Applying resolved policy failed with error %w", err)
 	}
 
 	if !resolved {
@@ -106,6 +102,10 @@ func (r *LifecycleResolver) ResolveLifecyclePolicy(ctx context.Context, workflow
 		return nil
 	}
 
-	r.log.Info("lifecycle policy applied", "resource_id", resourceInstanceId, "version", version, "state", state, "version_change", goalState.VersionChange)
+	if updated {
+		r.log.Info("lifecycle policy applied", "resource_id", resourceInstanceId, "version", version, "state", state, "version_change", goalState.VersionChange)
+	} else {
+		r.log.Debug("lifecycle policy resolved, no change", "resource_id", resourceInstanceId)
+	}
 	return nil
 }

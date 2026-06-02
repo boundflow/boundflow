@@ -8,7 +8,6 @@ CREATE TYPE lifecycle_state AS ENUM (
 );
 
 CREATE TYPE workflow_state AS ENUM (
-    'created',
     'active',
     'paused',
     'cooldown',
@@ -25,7 +24,7 @@ CREATE TABLE resource_instances (
     repeat_every_seconds      INTEGER NOT NULL DEFAULT 0,
     triggerable               BOOLEAN NOT NULL DEFAULT true,
     lifecycle_state           lifecycle_state NOT NULL,
-    workflow_state            workflow_state NOT NULL DEFAULT 'created',
+    workflow_state            workflow_state NOT NULL DEFAULT 'paused',
     lifecycle_policy          JSONB NOT NULL DEFAULT '[]',
     invocation_metrics        JSONB NOT NULL DEFAULT '[]',
     cooldown_until            TIMESTAMPTZ,

@@ -24,20 +24,23 @@ func NewResourceInstanceRepo(pool *pgxpool.Pool) *ResourceInstanceRepo {
 }
 
 func (r *ResourceInstanceRepo) Create(ctx context.Context, instance *domain.ResourceInstance) error {
-	_, err := r.pool.Exec(ctx,
+	lifecyclePolicyJSON, err := json.Marshal(instance.LifecyclePolicy)
+	if err != nil {
+		return fmt.Errorf("marshal lifecycle policy: %w", err)
+	}
+	_, err = r.pool.Exec(ctx,
 		`INSERT INTO resource_instances
 		   (id, tenant_id, resource_type,
 		    current_workflow_version, invoke_timeout_seconds, repeat_every_seconds, triggerable,
-		    lifecycle_state, workflow_state, scheduler_partition_id,
-		    target_version, current_version, last_completed_request_at, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+		    lifecycle_state, workflow_state, lifecycle_policy, scheduler_partition_id,
+		    last_completed_request_at, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
 		instance.ID, instance.TenantID, instance.ResourceType,
 		instance.CurrentWorkflowVersion,
 		instance.WorkflowConfig.InvokeTimeoutSeconds,
 		instance.WorkflowConfig.RepeatEverySeconds,
 		instance.WorkflowConfig.Triggerable,
-		instance.LifecycleState, instance.WorkflowState, instance.SchedulerPartitionID,
-		instance.TargetVersion, instance.CurrentVersion,
+		instance.LifecycleState, instance.WorkflowState, lifecyclePolicyJSON, instance.SchedulerPartitionID,
 		instance.LastCompletedRequestAt, instance.CreatedAt,
 	)
 	if err != nil {

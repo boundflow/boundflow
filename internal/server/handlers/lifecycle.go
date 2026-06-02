@@ -70,6 +70,9 @@ func (h *ResourceLifecycleHandler) ReconcileResource(ctx context.Context, req *c
 		if errors.Is(err, service.ErrMissingRuntimeParams) {
 			return nil, status.Errorf(codes.InvalidArgument, "%v", err)
 		}
+		if errors.Is(err, service.ErrInvalidWorkflowState) {
+			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
+		}
 		return nil, status.Errorf(codes.Internal, "reconcile resource: %v", err)
 	}
 

@@ -43,6 +43,18 @@ public abstract class IntegrationTestBase : IAsyncLifetime
         return state;
     }
 
+    protected async Task<WorkflowState> WaitForWorkflowStateAsync(string workflowId, WorkflowState expected, CancellationToken ct = default)
+    {
+        WorkflowState state;
+        do
+        {
+            await Task.Delay(500, ct);
+            state = await ControlPlane.GetWorkflowStateAsync(workflowId, ct);
+        }
+        while (state != expected);
+        return state;
+    }
+
     public virtual Task InitializeAsync() => Task.CompletedTask;
 
     public virtual async Task DisposeAsync()
