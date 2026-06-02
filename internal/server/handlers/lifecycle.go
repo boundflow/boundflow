@@ -106,7 +106,6 @@ func (h *ResourceLifecycleHandler) GetResourceState(ctx context.Context, req *co
 		}
 		return nil, status.Errorf(codes.Internal, "get resource state: %v", err)
 	}
-
 	return &convergeplanev1.GetResourceStateResponse{
 		ResourceInstance: convert.ResourceInstanceToProto(instance),
 	}, nil

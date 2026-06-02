@@ -36,6 +36,7 @@ func (r *SchedulerRepo) GetDuePeriodicResources(ctx context.Context, partitionID
 		 WHERE scheduler_partition_id = $1
 		   AND repeat_every_seconds > 0
 		   AND workflow_state = 'active'
+		   AND lifecycle_state = 'active'
 		   AND COALESCE(last_completed_request_at, created_at) + make_interval(secs => repeat_every_seconds) < now()`,
 		partitionID,
 	)

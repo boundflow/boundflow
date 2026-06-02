@@ -26,7 +26,6 @@ const (
 	WorkflowStatePaused   WorkflowState = "paused"
 	WorkflowStateCooldown WorkflowState = "cooldown"
 	WorkflowStateDisabled WorkflowState = "disabled"
-	WorkflowStateDeleted  WorkflowState = "deleted"
 )
 
 type ResourceInstance struct {

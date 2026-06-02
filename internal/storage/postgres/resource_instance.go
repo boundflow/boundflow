@@ -114,6 +114,17 @@ func (r *ResourceInstanceRepo) UpdateLifecyclePolicy(ctx context.Context, id str
 	return nil
 }
 
+func (r *ResourceInstanceRepo) MarkDeleted(ctx context.Context, id string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE resource_instances SET lifecycle_state = $1, workflow_state = $2 WHERE id = $3`,
+		domain.LifecycleStateDeleted, domain.WorkflowStateDisabled, id,
+	)
+	if err != nil {
+		return fmt.Errorf("mark deleted: %w", err)
+	}
+	return nil
+}
+
 func (r *ResourceInstanceRepo) UpdateWorkflowState(ctx context.Context, id string, state domain.WorkflowState) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE resource_instances SET workflow_state = $1 WHERE id = $2`,

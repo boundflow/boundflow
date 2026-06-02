@@ -28,7 +28,6 @@ var workflowStateToProto = map[domain.WorkflowState]convergeplanev1.WorkflowStat
 	domain.WorkflowStatePaused:   convergeplanev1.WorkflowState_WORKFLOW_STATE_PAUSED,
 	domain.WorkflowStateCooldown: convergeplanev1.WorkflowState_WORKFLOW_STATE_COOLDOWN,
 	domain.WorkflowStateDisabled: convergeplanev1.WorkflowState_WORKFLOW_STATE_DISABLED,
-	domain.WorkflowStateDeleted:  convergeplanev1.WorkflowState_WORKFLOW_STATE_DELETED,
 }
 
 func ResourceInstanceToProto(r *domain.ResourceInstance) *convergeplanev1.ResourceInstance {

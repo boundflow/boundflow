@@ -236,6 +236,20 @@ func (mr *MockResourceInstanceRepositoryMockRecorder) IncrementTargetVersion(ctx
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IncrementTargetVersion", reflect.TypeOf((*MockResourceInstanceRepository)(nil).IncrementTargetVersion), ctx, id)
 }
 
+// MarkDeleted mocks base method.
+func (m *MockResourceInstanceRepository) MarkDeleted(ctx context.Context, id string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkDeleted", ctx, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MarkDeleted indicates an expected call of MarkDeleted.
+func (mr *MockResourceInstanceRepositoryMockRecorder) MarkDeleted(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkDeleted", reflect.TypeOf((*MockResourceInstanceRepository)(nil).MarkDeleted), ctx, id)
+}
+
 // StartInvocationAndIncrementVersion mocks base method.
 func (m *MockResourceInstanceRepository) StartInvocationAndIncrementVersion(ctx context.Context, id string, invalidStates ...domain.LifecycleState) (int64, error) {
 	m.ctrl.T.Helper()

@@ -19,7 +19,6 @@ enum WorkflowState {
   WORKFLOW_STATE_PAUSED   = 2;
   WORKFLOW_STATE_COOLDOWN = 3;
   WORKFLOW_STATE_DISABLED = 4;
-  WORKFLOW_STATE_DELETED  = 5;
 }
 
 // ResourceInstance is an actual instance of a registered resource,

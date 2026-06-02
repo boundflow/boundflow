@@ -49,7 +49,7 @@ public record AgentRuntimePolicy(
     string? Model = null
 );
 
-public enum WorkflowState { Unspecified, Active, Paused, Cooldown, Disabled, Deleted }
+public enum WorkflowState { Unspecified, Active, Paused, Cooldown, Disabled }
 
 public enum WorkflowMetric
 {

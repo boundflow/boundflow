@@ -25,6 +25,7 @@ type ResourceInstanceRepository interface {
 	Get(ctx context.Context, id string) (*domain.ResourceInstance, error)
 	UpdateLifecycleState(ctx context.Context, id string, state domain.LifecycleState) error
 	UpdateWorkflowState(ctx context.Context, id string, state domain.WorkflowState) error
+	MarkDeleted(ctx context.Context, id string) error
 	UpdateLifecyclePolicy(ctx context.Context, id string, policy domain.WorkflowLifecyclePolicy) error
 	// UpdateLifecycleStateAndIncrementVersion atomically sets the lifecycle state and bumps the target version.
 	// Optionally pass lifecycle states that should cause the call to fail with ErrInvalidLifecycleState.

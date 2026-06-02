@@ -11,8 +11,7 @@ CREATE TYPE workflow_state AS ENUM (
     'active',
     'paused',
     'cooldown',
-    'disabled',
-    'deleted'
+    'disabled'
 );
 
 CREATE TABLE resource_instances (

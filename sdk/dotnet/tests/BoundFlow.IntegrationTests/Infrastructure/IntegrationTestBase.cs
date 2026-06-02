@@ -45,14 +45,14 @@ public abstract class IntegrationTestBase : IAsyncLifetime
 
     protected async Task<WorkflowState> WaitForWorkflowStateAsync(string workflowId, WorkflowState expected, CancellationToken ct = default)
     {
-        WorkflowState state;
+        WorkflowState? state;
         do
         {
             await Task.Delay(500, ct);
             state = await ControlPlane.GetWorkflowStateAsync(workflowId, ct);
         }
         while (state != expected);
-        return state;
+        return state!.Value;
     }
 
     public virtual Task InitializeAsync() => Task.CompletedTask;

@@ -174,7 +174,7 @@ func (s *LifecycleService) DeleteResource(ctx context.Context, correlationID, re
 		return fmt.Errorf("get resource instance: %w", err)
 	}
 
-	if err := s.resourceInstances.UpdateLifecycleState(ctx, resourceInstanceID, domain.LifecycleStateDeleted); err != nil {
+	if err := s.resourceInstances.MarkDeleted(ctx, resourceInstanceID); err != nil {
 		s.log.Error("failed to delete resource", "correlation_id", correlationID, "resource_id", resourceInstanceID, "error", err)
 		return fmt.Errorf("delete resource: %w", err)
 	}

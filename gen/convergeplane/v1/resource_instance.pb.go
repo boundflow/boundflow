@@ -30,7 +30,6 @@ const (
 	WorkflowState_WORKFLOW_STATE_PAUSED      WorkflowState = 2
 	WorkflowState_WORKFLOW_STATE_COOLDOWN    WorkflowState = 3
 	WorkflowState_WORKFLOW_STATE_DISABLED    WorkflowState = 4
-	WorkflowState_WORKFLOW_STATE_DELETED     WorkflowState = 5
 )
 
 // Enum value maps for WorkflowState.
@@ -41,7 +40,6 @@ var (
 		2: "WORKFLOW_STATE_PAUSED",
 		3: "WORKFLOW_STATE_COOLDOWN",
 		4: "WORKFLOW_STATE_DISABLED",
-		5: "WORKFLOW_STATE_DELETED",
 	}
 	WorkflowState_value = map[string]int32{
 		"WORKFLOW_STATE_UNSPECIFIED": 0,
@@ -49,7 +47,6 @@ var (
 		"WORKFLOW_STATE_PAUSED":      2,
 		"WORKFLOW_STATE_COOLDOWN":    3,
 		"WORKFLOW_STATE_DISABLED":    4,
-		"WORKFLOW_STATE_DELETED":     5,
 	}
 )
 
@@ -252,14 +249,13 @@ const file_convergeplane_v1_resource_instance_proto_rawDesc = "" +
 	"\x0fworkflow_config\x18\b \x01(\v2 .convergeplane.v1.WorkflowConfigR\x0eworkflowConfig\x12'\n" +
 	"\x0flifecycle_state\x18\t \x01(\tR\x0elifecycleState\x12F\n" +
 	"\x0eworkflow_state\x18\n" +
-	" \x01(\x0e2\x1f.convergeplane.v1.WorkflowStateR\rworkflowState*\xbb\x01\n" +
+	" \x01(\x0e2\x1f.convergeplane.v1.WorkflowStateR\rworkflowState*\x9f\x01\n" +
 	"\rWorkflowState\x12\x1e\n" +
 	"\x1aWORKFLOW_STATE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15WORKFLOW_STATE_ACTIVE\x10\x01\x12\x19\n" +
 	"\x15WORKFLOW_STATE_PAUSED\x10\x02\x12\x1b\n" +
 	"\x17WORKFLOW_STATE_COOLDOWN\x10\x03\x12\x1b\n" +
-	"\x17WORKFLOW_STATE_DISABLED\x10\x04\x12\x1a\n" +
-	"\x16WORKFLOW_STATE_DELETED\x10\x05BMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
+	"\x17WORKFLOW_STATE_DISABLED\x10\x04BMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
 
 var (
 	file_convergeplane_v1_resource_instance_proto_rawDescOnce sync.Once

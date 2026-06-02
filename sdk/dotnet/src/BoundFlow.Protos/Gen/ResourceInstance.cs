@@ -37,13 +37,12 @@ namespace Convergeplane.V1 {
             "Zmxvd0NvbmZpZ1IOd29ya2Zsb3dDb25maWcSJwoPbGlmZWN5Y2xlX3N0YXRl",
             "GAkgASgJUg5saWZlY3ljbGVTdGF0ZRJGCg53b3JrZmxvd19zdGF0ZRgKIAEo",
             "DjIfLmNvbnZlcmdlcGxhbmUudjEuV29ya2Zsb3dTdGF0ZVINd29ya2Zsb3dT",
-            "dGF0ZSq7AQoNV29ya2Zsb3dTdGF0ZRIeChpXT1JLRkxPV19TVEFURV9VTlNQ",
+            "dGF0ZSqfAQoNV29ya2Zsb3dTdGF0ZRIeChpXT1JLRkxPV19TVEFURV9VTlNQ",
             "RUNJRklFRBAAEhkKFVdPUktGTE9XX1NUQVRFX0FDVElWRRABEhkKFVdPUktG",
             "TE9XX1NUQVRFX1BBVVNFRBACEhsKF1dPUktGTE9XX1NUQVRFX0NPT0xET1dO",
-            "EAMSGwoXV09SS0ZMT1dfU1RBVEVfRElTQUJMRUQQBBIaChZXT1JLRkxPV19T",
-            "VEFURV9ERUxFVEVEEAVCTVpLZ2l0aHViLmNvbS9jb252ZXJnZXBsYW5lL2Nv",
-            "bnZlcmdlcGxhbmUvZ2VuL2NvbnZlcmdlcGxhbmUvdjE7Y29udmVyZ2VwbGFu",
-            "ZXYxYgZwcm90bzM="));
+            "EAMSGwoXV09SS0ZMT1dfU1RBVEVfRElTQUJMRUQQBEJNWktnaXRodWIuY29t",
+            "L2NvbnZlcmdlcGxhbmUvY29udmVyZ2VwbGFuZS9nZW4vY29udmVyZ2VwbGFu",
+            "ZS92MTtjb252ZXJnZXBsYW5ldjFiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Convergeplane.V1.WorkflowState), }, null, new pbr::GeneratedClrTypeInfo[] {
@@ -61,7 +60,6 @@ namespace Convergeplane.V1 {
     [pbr::OriginalName("WORKFLOW_STATE_PAUSED")] Paused = 2,
     [pbr::OriginalName("WORKFLOW_STATE_COOLDOWN")] Cooldown = 3,
     [pbr::OriginalName("WORKFLOW_STATE_DISABLED")] Disabled = 4,
-    [pbr::OriginalName("WORKFLOW_STATE_DELETED")] Deleted = 5,
   }
 
   #endregion

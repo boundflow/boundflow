@@ -135,11 +135,13 @@ public sealed class ControlPlaneClient : IDisposable
             },
             cancellationToken: ct);
 
-    public async Task<WorkflowState> GetWorkflowStateAsync(string workflowId, CancellationToken ct = default)
+    public async Task<WorkflowState?> GetWorkflowStateAsync(string workflowId, CancellationToken ct = default)
     {
         var resp = await _lifecycle.GetResourceStateAsync(
             new GetResourceStateRequest { ResourceInstanceId = workflowId },
             cancellationToken: ct);
+        if (resp.ResourceInstance?.LifecycleState == "deleted")
+            return null;
         return ParseWorkflowState(resp.ResourceInstance?.WorkflowState ?? Convergeplane.V1.WorkflowState.Unspecified);
     }
 
@@ -250,7 +252,6 @@ public sealed class ControlPlaneClient : IDisposable
         Convergeplane.V1.WorkflowState.Paused   => WorkflowState.Paused,
         Convergeplane.V1.WorkflowState.Cooldown => WorkflowState.Cooldown,
         Convergeplane.V1.WorkflowState.Disabled => WorkflowState.Disabled,
-        Convergeplane.V1.WorkflowState.Deleted  => WorkflowState.Deleted,
         _                                        => WorkflowState.Unspecified,
     };
 
