@@ -9,11 +9,14 @@ import (
 type JobStatus string
 
 const (
-	JobStatusPending      JobStatus = "pending"
-	JobStatusRunning      JobStatus = "running"
-	JobStatusAwaitingNext JobStatus = "awaiting_next"
-	JobStatusCompleted    JobStatus = "completed"
-	JobStatusFailed       JobStatus = "failed"
+	JobStatusPending          JobStatus = "pending"
+	JobStatusRunning          JobStatus = "running"
+	JobStatusAwaitingNext     JobStatus = "awaiting_next"
+	JobStatusAwaitingApproval JobStatus = "awaiting_approval"
+	JobStatusApproved         JobStatus = "approved"
+	JobStatusRejected         JobStatus = "rejected"
+	JobStatusCompleted        JobStatus = "completed"
+	JobStatusFailed           JobStatus = "failed"
 )
 
 type Job struct {
@@ -32,4 +35,29 @@ type Job struct {
 	Owner                  *string
 	LeaseExpiresAt         *time.Time
 	CreatedAt              time.Time
+	// Server-internal metadata for this job.
+	JobMetadata JobMetadata
+	// Approval gate — only populated when Status == JobStatusAwaitingApproval/Approved/Rejected.
+	ApprovalID        *string
+	ApprovalTimeoutAt *time.Time
+}
+
+// OperationMetadata holds server-internal state for the current job operation.
+// Serialized as JSONB in the jobs table.
+type JobMetadata struct {
+	ApprovalGate *ApprovalGateMetadata `json:"approval_gate,omitempty"`
+}
+
+// ApprovalGateMetadata stores the two possible continuations of an approval gate.
+// A nil branch means that path completes the job with no further operation.
+type ApprovalGateMetadata struct {
+	OnApprove *ApprovalBranch `json:"on_approve,omitempty"`
+	OnReject  *ApprovalBranch `json:"on_reject,omitempty"`
+}
+
+// ApprovalBranch is the operation to dispatch when an approval gate resolves.
+type ApprovalBranch struct {
+	OperationName  string         `json:"name"`
+	Context        map[string]any `json:"context"`
+	TimeoutSeconds int            `json:"timeout_seconds"`
 }

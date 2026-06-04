@@ -8,9 +8,10 @@ const (
 	LifecycleStateCreating    LifecycleState = "creating"
 	LifecycleStateActive      LifecycleState = "active"
 	LifecycleStateReconciling LifecycleState = "reconciling"
-	LifecycleStateDeleting    LifecycleState = "deleting"
-	LifecycleStateDeleted     LifecycleState = "deleted"
-	LifecycleStateFailed      LifecycleState = "failed"
+	LifecycleStateAwaitingApproval LifecycleState = "awaiting_approval"
+	LifecycleStateDeleting         LifecycleState = "deleting"
+	LifecycleStateDeleted          LifecycleState = "deleted"
+	LifecycleStateFailed           LifecycleState = "failed"
 )
 
 type WorkflowConfig struct {

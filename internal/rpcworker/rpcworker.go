@@ -129,7 +129,33 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 
 		s.metrics.MergeAgentMetrics(result.AgentStateUpdates, &job.AgentMetrics)
 
-		if result.NextOperation == nil {
+		if result.NextOperation != nil {
+			log.Info("operation completed with next operation, advancing job", "request_id", job.RequestID, "next_operation", result.NextOperation.Name)
+			_, err := s.jobs.UpdateJobWithMetrics(ctx, job.ResourceInstanceID, s.id, domain.JobStatusAwaitingNext,
+				result.NextOperation.Name, int(result.NextOperation.TimeoutSeconds), result.NextOperation.Context.AsMap(), job.AgentMetrics)
+
+			return err
+		} else if result.ApprovalGate != nil {
+
+			// mark the job as awaiting approval, set timeout and set approval id
+
+			jobMetadata := domain.JobMetadata {
+				ApprovalGate: &domain.ApprovalGateMetadata{
+					OnApproval: &domain.ApprovalBranch {
+						OperationName: result.ApprovalGate.OnApprove.Name,
+						Context: result.ApprovalGate.OnApprove.Context.AsMap(),
+						TimeoutSeconds: int(result.ApprovalGate.OnApprove.TimeoutSeconds),
+					},
+					OnReject: &domain.ApprovalBranch {
+						OperationName: result.ApprovalGate.OnReject.Name,
+						Context: result.ApprovalGate.OnReject.Context.AsMap(),
+						TimeoutSeconds: int(result.ApprovalGate.OnReject.TimeoutSeconds),
+					},
+				},
+			},
+
+
+		} else {
 			updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.ResourceInstanceID, s.id, domain.JobStatusCompleted, job.AgentMetrics)
 			if err != nil {
 				log.Error("failed to mark job completed", "request_id", job.RequestID, "resource_id", job.ResourceInstanceID, "error", err)
@@ -141,12 +167,8 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 			}
 			return nil
 		}
-		log.Info("operation completed with next operation, advancing job", "request_id", job.RequestID, "next_operation", result.NextOperation.Name)
-		_, err := s.jobs.UpdateJobWithMetrics(ctx, job.ResourceInstanceID, s.id, domain.JobStatusAwaitingNext,
-			result.NextOperation.Name, int(result.NextOperation.TimeoutSeconds), result.NextOperation.Context.AsMap(), job.AgentMetrics)
-
 		// consider returning error for ownership failure, for now the return isnt used for anything
-		return err
+		return nil
 	}
 
 	failOperation := func(cancelLease chan bool, job *domain.Job) error {

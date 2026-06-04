@@ -116,6 +116,10 @@ type JobRepository interface {
 	// GetAgentMetrics returns the accumulated per-agent metrics stored on the job
 	// for the given resource and request. Returns nil if no such job exists.
 	GetAgentMetrics(ctx context.Context, resourceInstanceID string, requestID string) (map[string]*convergeplanev1.AgentInvocationMetrics, error)
+	// ParkForApproval transitions a job to awaiting_approval, storing the approval ID,
+	// timeout, and job metadata. Only succeeds if ownerID holds the job.
+	// Returns false if ownership check fails.
+	ParkForApproval(ctx context.Context, resourceInstanceID string, ownerID string, approvalID string, timeoutAt time.Time, metadata domain.JobMetadata) (bool, error)
 	// ReleaseJob clears the owner and lease on a job, only if currently owned by ownerID.
 	ReleaseJob(ctx context.Context, resourceInstanceID string, ownerID string) error
 }

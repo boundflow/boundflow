@@ -134,6 +134,23 @@ func (r *JobRepo) GetAgentMetrics(ctx context.Context, resourceInstanceID string
 	return metrics, nil
 }
 
+func (r *JobRepo) ParkForApproval(ctx context.Context, resourceInstanceID string, ownerID string, approvalID string, timeoutAt time.Time, metadata domain.JobMetadata) (bool, error) {
+	metadataJSON, err := json.Marshal(metadata)
+	if err != nil {
+		return false, fmt.Errorf("marshal job metadata: %w", err)
+	}
+	tag, err := r.pool.Exec(ctx,
+		`UPDATE jobs
+		 SET status = $3, approval_id = $4, approval_timeout_at = $5, job_metadata = $6
+		 WHERE resource_instance_id = $1 AND owner = $2`,
+		resourceInstanceID, ownerID, domain.JobStatusAwaitingApproval, approvalID, timeoutAt, metadataJSON,
+	)
+	if err != nil {
+		return false, fmt.Errorf("park job for approval: %w", err)
+	}
+	return tag.RowsAffected() == 1, nil
+}
+
 func (r *JobRepo) ReleaseJob(ctx context.Context, resourceInstanceID string, ownerID string) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE jobs

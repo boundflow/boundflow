@@ -2,6 +2,7 @@ CREATE TYPE lifecycle_state AS ENUM (
     'creating',
     'active',
     'reconciling',
+    'awaiting_approval',
     'deleting',
     'deleted',
     'failed'
