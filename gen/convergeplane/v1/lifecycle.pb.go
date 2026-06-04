@@ -1155,6 +1155,7 @@ func (*SetWorkflowLifecyclePolicyResponse) Descriptor() ([]byte, []int) {
 type ApproveWorkflowRequest struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	ResourceInstanceId string                 `protobuf:"bytes,1,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
+	ApprovalId         string                 `protobuf:"bytes,2,opt,name=approval_id,json=approvalId,proto3" json:"approval_id,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -1196,6 +1197,13 @@ func (x *ApproveWorkflowRequest) GetResourceInstanceId() string {
 	return ""
 }
 
+func (x *ApproveWorkflowRequest) GetApprovalId() string {
+	if x != nil {
+		return x.ApprovalId
+	}
+	return ""
+}
+
 type ApproveWorkflowResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -1232,6 +1240,94 @@ func (*ApproveWorkflowResponse) Descriptor() ([]byte, []int) {
 	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{21}
 }
 
+type RejectWorkflowRequest struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	ResourceInstanceId string                 `protobuf:"bytes,1,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
+	ApprovalId         string                 `protobuf:"bytes,2,opt,name=approval_id,json=approvalId,proto3" json:"approval_id,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *RejectWorkflowRequest) Reset() {
+	*x = RejectWorkflowRequest{}
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RejectWorkflowRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RejectWorkflowRequest) ProtoMessage() {}
+
+func (x *RejectWorkflowRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RejectWorkflowRequest.ProtoReflect.Descriptor instead.
+func (*RejectWorkflowRequest) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *RejectWorkflowRequest) GetResourceInstanceId() string {
+	if x != nil {
+		return x.ResourceInstanceId
+	}
+	return ""
+}
+
+func (x *RejectWorkflowRequest) GetApprovalId() string {
+	if x != nil {
+		return x.ApprovalId
+	}
+	return ""
+}
+
+type RejectWorkflowResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RejectWorkflowResponse) Reset() {
+	*x = RejectWorkflowResponse{}
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RejectWorkflowResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RejectWorkflowResponse) ProtoMessage() {}
+
+func (x *RejectWorkflowResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RejectWorkflowResponse.ProtoReflect.Descriptor instead.
+func (*RejectWorkflowResponse) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{23}
+}
+
 type ActivateWorkflowRequest struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	ResourceInstanceId string                 `protobuf:"bytes,1,opt,name=resource_instance_id,json=resourceInstanceId,proto3" json:"resource_instance_id,omitempty"`
@@ -1241,7 +1337,7 @@ type ActivateWorkflowRequest struct {
 
 func (x *ActivateWorkflowRequest) Reset() {
 	*x = ActivateWorkflowRequest{}
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[22]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1253,7 +1349,7 @@ func (x *ActivateWorkflowRequest) String() string {
 func (*ActivateWorkflowRequest) ProtoMessage() {}
 
 func (x *ActivateWorkflowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[22]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1266,7 +1362,7 @@ func (x *ActivateWorkflowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ActivateWorkflowRequest.ProtoReflect.Descriptor instead.
 func (*ActivateWorkflowRequest) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{22}
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ActivateWorkflowRequest) GetResourceInstanceId() string {
@@ -1284,7 +1380,7 @@ type ActivateWorkflowResponse struct {
 
 func (x *ActivateWorkflowResponse) Reset() {
 	*x = ActivateWorkflowResponse{}
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[23]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1296,7 +1392,7 @@ func (x *ActivateWorkflowResponse) String() string {
 func (*ActivateWorkflowResponse) ProtoMessage() {}
 
 func (x *ActivateWorkflowResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[23]
+	mi := &file_convergeplane_v1_lifecycle_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1309,7 +1405,7 @@ func (x *ActivateWorkflowResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ActivateWorkflowResponse.ProtoReflect.Descriptor instead.
 func (*ActivateWorkflowResponse) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{23}
+	return file_convergeplane_v1_lifecycle_proto_rawDescGZIP(), []int{25}
 }
 
 var File_convergeplane_v1_lifecycle_proto protoreflect.FileDescriptor
@@ -1378,10 +1474,17 @@ const file_convergeplane_v1_lifecycle_proto_rawDesc = "" +
 	"!SetWorkflowLifecyclePolicyRequest\x120\n" +
 	"\x14resource_instance_id\x18\x01 \x01(\tR\x12resourceInstanceId\x12T\n" +
 	"\x10lifecycle_policy\x18\x02 \x01(\v2).convergeplane.v1.WorkflowLifecyclePolicyR\x0flifecyclePolicy\"$\n" +
-	"\"SetWorkflowLifecyclePolicyResponse\"J\n" +
+	"\"SetWorkflowLifecyclePolicyResponse\"k\n" +
 	"\x16ApproveWorkflowRequest\x120\n" +
-	"\x14resource_instance_id\x18\x01 \x01(\tR\x12resourceInstanceId\"\x19\n" +
-	"\x17ApproveWorkflowResponse\"K\n" +
+	"\x14resource_instance_id\x18\x01 \x01(\tR\x12resourceInstanceId\x12\x1f\n" +
+	"\vapproval_id\x18\x02 \x01(\tR\n" +
+	"approvalId\"\x19\n" +
+	"\x17ApproveWorkflowResponse\"j\n" +
+	"\x15RejectWorkflowRequest\x120\n" +
+	"\x14resource_instance_id\x18\x01 \x01(\tR\x12resourceInstanceId\x12\x1f\n" +
+	"\vapproval_id\x18\x02 \x01(\tR\n" +
+	"approvalId\"\x18\n" +
+	"\x16RejectWorkflowResponse\"K\n" +
 	"\x17ActivateWorkflowRequest\x120\n" +
 	"\x14resource_instance_id\x18\x01 \x01(\tR\x12resourceInstanceId\"\x1a\n" +
 	"\x18ActivateWorkflowResponse*\xdc\x01\n" +
@@ -1395,7 +1498,7 @@ const file_convergeplane_v1_lifecycle_proto_rawDesc = "" +
 	"\x18WorkflowPolicyActionType\x12 \n" +
 	"\x1cWORKFLOW_POLICY_ACTION_PAUSE\x10\x00\x12#\n" +
 	"\x1fWORKFLOW_POLICY_ACTION_COOLDOWN\x10\x01\x12&\n" +
-	"\"WORKFLOW_POLICY_ACTION_SET_VERSION\x10\x022\xf0\b\n" +
+	"\"WORKFLOW_POLICY_ACTION_SET_VERSION\x10\x022\xd5\t\n" +
 	"\x18ResourceLifecycleService\x12c\n" +
 	"\x0eCreateResource\x12'.convergeplane.v1.CreateResourceRequest\x1a(.convergeplane.v1.CreateResourceResponse\x12l\n" +
 	"\x11ReconcileResource\x12*.convergeplane.v1.ReconcileResourceRequest\x1a+.convergeplane.v1.ReconcileResourceResponse\x12c\n" +
@@ -1405,7 +1508,8 @@ const file_convergeplane_v1_lifecycle_proto_rawDesc = "" +
 	"\x17SetAgentLifecyclePolicy\x120.convergeplane.v1.SetAgentLifecyclePolicyRequest\x1a1.convergeplane.v1.SetAgentLifecyclePolicyResponse\x12Z\n" +
 	"\vDeleteAgent\x12$.convergeplane.v1.DeleteAgentRequest\x1a%.convergeplane.v1.DeleteAgentResponse\x12\x87\x01\n" +
 	"\x1aSetWorkflowLifecyclePolicy\x123.convergeplane.v1.SetWorkflowLifecyclePolicyRequest\x1a4.convergeplane.v1.SetWorkflowLifecyclePolicyResponse\x12f\n" +
-	"\x0fApproveWorkflow\x12(.convergeplane.v1.ApproveWorkflowRequest\x1a).convergeplane.v1.ApproveWorkflowResponse\x12i\n" +
+	"\x0fApproveWorkflow\x12(.convergeplane.v1.ApproveWorkflowRequest\x1a).convergeplane.v1.ApproveWorkflowResponse\x12c\n" +
+	"\x0eRejectWorkflow\x12'.convergeplane.v1.RejectWorkflowRequest\x1a(.convergeplane.v1.RejectWorkflowResponse\x12i\n" +
 	"\x10ActivateWorkflow\x12).convergeplane.v1.ActivateWorkflowRequest\x1a*.convergeplane.v1.ActivateWorkflowResponseBMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
 
 var (
@@ -1421,7 +1525,7 @@ func file_convergeplane_v1_lifecycle_proto_rawDescGZIP() []byte {
 }
 
 var file_convergeplane_v1_lifecycle_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_convergeplane_v1_lifecycle_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
+var file_convergeplane_v1_lifecycle_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_convergeplane_v1_lifecycle_proto_goTypes = []any{
 	(WorkflowMetric)(0),                        // 0: convergeplane.v1.WorkflowMetric
 	(WorkflowPolicyActionType)(0),              // 1: convergeplane.v1.WorkflowPolicyActionType
@@ -1447,20 +1551,22 @@ var file_convergeplane_v1_lifecycle_proto_goTypes = []any{
 	(*SetWorkflowLifecyclePolicyResponse)(nil), // 21: convergeplane.v1.SetWorkflowLifecyclePolicyResponse
 	(*ApproveWorkflowRequest)(nil),             // 22: convergeplane.v1.ApproveWorkflowRequest
 	(*ApproveWorkflowResponse)(nil),            // 23: convergeplane.v1.ApproveWorkflowResponse
-	(*ActivateWorkflowRequest)(nil),            // 24: convergeplane.v1.ActivateWorkflowRequest
-	(*ActivateWorkflowResponse)(nil),           // 25: convergeplane.v1.ActivateWorkflowResponse
-	(*structpb.Struct)(nil),                    // 26: google.protobuf.Struct
-	(*WorkflowConfig)(nil),                     // 27: convergeplane.v1.WorkflowConfig
-	(*ResourceInstance)(nil),                   // 28: convergeplane.v1.ResourceInstance
+	(*RejectWorkflowRequest)(nil),              // 24: convergeplane.v1.RejectWorkflowRequest
+	(*RejectWorkflowResponse)(nil),             // 25: convergeplane.v1.RejectWorkflowResponse
+	(*ActivateWorkflowRequest)(nil),            // 26: convergeplane.v1.ActivateWorkflowRequest
+	(*ActivateWorkflowResponse)(nil),           // 27: convergeplane.v1.ActivateWorkflowResponse
+	(*structpb.Struct)(nil),                    // 28: google.protobuf.Struct
+	(*WorkflowConfig)(nil),                     // 29: convergeplane.v1.WorkflowConfig
+	(*ResourceInstance)(nil),                   // 30: convergeplane.v1.ResourceInstance
 }
 var file_convergeplane_v1_lifecycle_proto_depIdxs = []int32{
-	26, // 0: convergeplane.v1.CreateResourceRequest.initial_state:type_name -> google.protobuf.Struct
-	27, // 1: convergeplane.v1.CreateResourceRequest.workflow_config:type_name -> convergeplane.v1.WorkflowConfig
-	28, // 2: convergeplane.v1.CreateResourceResponse.resource_instance:type_name -> convergeplane.v1.ResourceInstance
+	28, // 0: convergeplane.v1.CreateResourceRequest.initial_state:type_name -> google.protobuf.Struct
+	29, // 1: convergeplane.v1.CreateResourceRequest.workflow_config:type_name -> convergeplane.v1.WorkflowConfig
+	30, // 2: convergeplane.v1.CreateResourceResponse.resource_instance:type_name -> convergeplane.v1.ResourceInstance
 	4,  // 3: convergeplane.v1.ReconcileResourceRequest.runtime_overrides:type_name -> convergeplane.v1.RuntimeOverrides
-	28, // 4: convergeplane.v1.GetResourceStateResponse.resource_instance:type_name -> convergeplane.v1.ResourceInstance
-	26, // 5: convergeplane.v1.SetAgentRuntimePolicyRequest.runtime_policy:type_name -> google.protobuf.Struct
-	26, // 6: convergeplane.v1.SetAgentLifecyclePolicyRequest.lifecycle_policy:type_name -> google.protobuf.Struct
+	30, // 4: convergeplane.v1.GetResourceStateResponse.resource_instance:type_name -> convergeplane.v1.ResourceInstance
+	28, // 5: convergeplane.v1.SetAgentRuntimePolicyRequest.runtime_policy:type_name -> google.protobuf.Struct
+	28, // 6: convergeplane.v1.SetAgentLifecyclePolicyRequest.lifecycle_policy:type_name -> google.protobuf.Struct
 	1,  // 7: convergeplane.v1.WorkflowLifecyclePolicyAction.type:type_name -> convergeplane.v1.WorkflowPolicyActionType
 	0,  // 8: convergeplane.v1.WorkflowLifecyclePolicyRule.metric:type_name -> convergeplane.v1.WorkflowMetric
 	17, // 9: convergeplane.v1.WorkflowLifecyclePolicyRule.action:type_name -> convergeplane.v1.WorkflowLifecyclePolicyAction
@@ -1475,19 +1581,21 @@ var file_convergeplane_v1_lifecycle_proto_depIdxs = []int32{
 	15, // 18: convergeplane.v1.ResourceLifecycleService.DeleteAgent:input_type -> convergeplane.v1.DeleteAgentRequest
 	20, // 19: convergeplane.v1.ResourceLifecycleService.SetWorkflowLifecyclePolicy:input_type -> convergeplane.v1.SetWorkflowLifecyclePolicyRequest
 	22, // 20: convergeplane.v1.ResourceLifecycleService.ApproveWorkflow:input_type -> convergeplane.v1.ApproveWorkflowRequest
-	24, // 21: convergeplane.v1.ResourceLifecycleService.ActivateWorkflow:input_type -> convergeplane.v1.ActivateWorkflowRequest
-	3,  // 22: convergeplane.v1.ResourceLifecycleService.CreateResource:output_type -> convergeplane.v1.CreateResourceResponse
-	6,  // 23: convergeplane.v1.ResourceLifecycleService.ReconcileResource:output_type -> convergeplane.v1.ReconcileResourceResponse
-	8,  // 24: convergeplane.v1.ResourceLifecycleService.DeleteResource:output_type -> convergeplane.v1.DeleteResourceResponse
-	10, // 25: convergeplane.v1.ResourceLifecycleService.GetResourceState:output_type -> convergeplane.v1.GetResourceStateResponse
-	12, // 26: convergeplane.v1.ResourceLifecycleService.SetAgentRuntimePolicy:output_type -> convergeplane.v1.SetAgentRuntimePolicyResponse
-	14, // 27: convergeplane.v1.ResourceLifecycleService.SetAgentLifecyclePolicy:output_type -> convergeplane.v1.SetAgentLifecyclePolicyResponse
-	16, // 28: convergeplane.v1.ResourceLifecycleService.DeleteAgent:output_type -> convergeplane.v1.DeleteAgentResponse
-	21, // 29: convergeplane.v1.ResourceLifecycleService.SetWorkflowLifecyclePolicy:output_type -> convergeplane.v1.SetWorkflowLifecyclePolicyResponse
-	23, // 30: convergeplane.v1.ResourceLifecycleService.ApproveWorkflow:output_type -> convergeplane.v1.ApproveWorkflowResponse
-	25, // 31: convergeplane.v1.ResourceLifecycleService.ActivateWorkflow:output_type -> convergeplane.v1.ActivateWorkflowResponse
-	22, // [22:32] is the sub-list for method output_type
-	12, // [12:22] is the sub-list for method input_type
+	24, // 21: convergeplane.v1.ResourceLifecycleService.RejectWorkflow:input_type -> convergeplane.v1.RejectWorkflowRequest
+	26, // 22: convergeplane.v1.ResourceLifecycleService.ActivateWorkflow:input_type -> convergeplane.v1.ActivateWorkflowRequest
+	3,  // 23: convergeplane.v1.ResourceLifecycleService.CreateResource:output_type -> convergeplane.v1.CreateResourceResponse
+	6,  // 24: convergeplane.v1.ResourceLifecycleService.ReconcileResource:output_type -> convergeplane.v1.ReconcileResourceResponse
+	8,  // 25: convergeplane.v1.ResourceLifecycleService.DeleteResource:output_type -> convergeplane.v1.DeleteResourceResponse
+	10, // 26: convergeplane.v1.ResourceLifecycleService.GetResourceState:output_type -> convergeplane.v1.GetResourceStateResponse
+	12, // 27: convergeplane.v1.ResourceLifecycleService.SetAgentRuntimePolicy:output_type -> convergeplane.v1.SetAgentRuntimePolicyResponse
+	14, // 28: convergeplane.v1.ResourceLifecycleService.SetAgentLifecyclePolicy:output_type -> convergeplane.v1.SetAgentLifecyclePolicyResponse
+	16, // 29: convergeplane.v1.ResourceLifecycleService.DeleteAgent:output_type -> convergeplane.v1.DeleteAgentResponse
+	21, // 30: convergeplane.v1.ResourceLifecycleService.SetWorkflowLifecyclePolicy:output_type -> convergeplane.v1.SetWorkflowLifecyclePolicyResponse
+	23, // 31: convergeplane.v1.ResourceLifecycleService.ApproveWorkflow:output_type -> convergeplane.v1.ApproveWorkflowResponse
+	25, // 32: convergeplane.v1.ResourceLifecycleService.RejectWorkflow:output_type -> convergeplane.v1.RejectWorkflowResponse
+	27, // 33: convergeplane.v1.ResourceLifecycleService.ActivateWorkflow:output_type -> convergeplane.v1.ActivateWorkflowResponse
+	23, // [23:34] is the sub-list for method output_type
+	12, // [12:23] is the sub-list for method input_type
 	12, // [12:12] is the sub-list for extension type_name
 	12, // [12:12] is the sub-list for extension extendee
 	0,  // [0:12] is the sub-list for field type_name
@@ -1505,7 +1613,7 @@ func file_convergeplane_v1_lifecycle_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_convergeplane_v1_lifecycle_proto_rawDesc), len(file_convergeplane_v1_lifecycle_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   24,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

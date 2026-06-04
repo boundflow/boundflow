@@ -159,8 +159,9 @@ public sealed class ControlPlaneClient : IDisposable
         {
             "creating"    => LifecycleState.Creating,
             "active"      => LifecycleState.Active,
-            "reconciling" => LifecycleState.Invoking,
-            "deleting"    => LifecycleState.Deleting,
+            "reconciling"        => LifecycleState.Invoking,
+            "awaiting_approval"  => LifecycleState.AwaitingApproval,
+            "deleting"           => LifecycleState.Deleting,
             "deleted"     => LifecycleState.Deleted,
             "failed"      => LifecycleState.Failed,
             _             => LifecycleState.Unknown,
@@ -181,9 +182,14 @@ public sealed class ControlPlaneClient : IDisposable
             cancellationToken: ct);
     }
 
-    public async Task ApproveWorkflowAsync(string workflowId, CancellationToken ct = default) =>
+    public async Task ApproveWorkflowAsync(string workflowId, string approvalId, CancellationToken ct = default) =>
         await _lifecycle.ApproveWorkflowAsync(
-            new ApproveWorkflowRequest { ResourceInstanceId = workflowId },
+            new ApproveWorkflowRequest { ResourceInstanceId = workflowId, ApprovalId = approvalId },
+            cancellationToken: ct);
+
+    public async Task RejectWorkflowAsync(string workflowId, string approvalId, CancellationToken ct = default) =>
+        await _lifecycle.RejectWorkflowAsync(
+            new RejectWorkflowRequest { ResourceInstanceId = workflowId, ApprovalId = approvalId },
             cancellationToken: ct);
 
     // ── Agent state ──────────────────────────────────────────────────────────

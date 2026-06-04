@@ -17,10 +17,24 @@ public abstract record OperationResult
     public static OperationResult Complete() => new CompletedResult();
     public static OperationResult Next(string operationName, JsonNode context, int timeoutSeconds)
         => new NextOperationResult(operationName, context, timeoutSeconds);
+    public static OperationResult AwaitApproval(OperationResult onApprove, OperationResult onReject, int timeoutSeconds, string? justification = null)
+        => new AwaitApprovalResult(onApprove, onReject, timeoutSeconds, justification);
 }
 
 public sealed record CompletedResult : OperationResult;
 public sealed record NextOperationResult(string OperationName, JsonNode Context, int TimeoutSeconds) : OperationResult;
+public sealed record AwaitApprovalResult(OperationResult OnApprove, OperationResult OnReject, int TimeoutSeconds, string? Justification = null) : OperationResult
+{
+    internal string ApprovalId { get; } = Guid.NewGuid().ToString();
+}
+
+public sealed record ApprovalRequest(
+    string  WorkflowId,
+    string  OperationName,
+    int     TimeoutSeconds,
+    string  ApprovalId,
+    string? Justification = null
+);
 
 /// <summary>
 /// Passed into every operation handler. Provides access to the operation data
@@ -144,6 +158,7 @@ public sealed class BoundFlowWorker
     private readonly ILoggerFactory _loggerFactory;
     private readonly Dictionary<(string ResourceType, string OperationName), Func<OperationContext, CancellationToken, Task<OperationResult>>> _handlers = new();
     private readonly Dictionary<(string ResourceType, int Version), Func<OperationContext, CancellationToken, Task<OperationResult>>> _workflowHandlers = new();
+    private Func<ApprovalRequest, CancellationToken, Task>? _approvalHandler;
     private const string EntryOperationName = "reconcile_entry";
 
     public BoundFlowWorker(
@@ -183,6 +198,18 @@ public sealed class BoundFlowWorker
     }
 
     /// <summary>
+    /// Registers a callback invoked when any operation returns AwaitApproval.
+    /// Use this to send notifications (Slack, email, etc.) to the approver.
+    /// Exceptions in the callback are swallowed — a failed notification does not
+    /// prevent the job from being parked awaiting approval.
+    /// </summary>
+    public BoundFlowWorker OnApprovalRequested(Func<ApprovalRequest, CancellationToken, Task> handler)
+    {
+        _approvalHandler = handler;
+        return this;
+    }
+
+    /// <summary>
     /// Connects to the server and processes jobs until cancellation.
     /// </summary>
     public Task RunAsync(CancellationToken ct = default)
@@ -207,6 +234,20 @@ public sealed class BoundFlowWorker
 
             var customerContext = new OperationContext(op, orchestrator);
             var result = await handler(customerContext, ct);
+
+            if (result is AwaitApprovalResult approval && _approvalHandler is not null)
+            {
+                try
+                {
+                    await _approvalHandler(new ApprovalRequest(op.ResourceId, op.Name, approval.TimeoutSeconds, approval.ApprovalId, approval.Justification), ct);
+                }
+                catch (Exception ex)
+                {
+                    _loggerFactory.CreateLogger<BoundFlowWorker>()
+                        .LogWarning(ex, "Approval notification callback threw. WorkflowId={WorkflowId}", op.ResourceId);
+                }
+            }
+
             var proto = MapToProto(result);
             foreach (var (name, metrics) in customerContext.AgentStateUpdates)
                 proto.AgentStateUpdates.Add(name, metrics);
@@ -229,6 +270,29 @@ public sealed class BoundFlowWorker
                 Context = JsonParser.Default.Parse<Struct>(next.Context.ToJsonString())
             }
         },
+        AwaitApprovalResult approval => new AtomicOperationResult
+        {
+            Status = OperationStatus.AwaitingApproval,
+            ApprovalGate = new ApprovalGate
+            {
+                OnApprove      = ToApprovalBranch(approval.OnApprove),
+                OnReject       = ToApprovalBranch(approval.OnReject),
+                TimeoutSeconds = approval.TimeoutSeconds,
+                ApprovalId     = approval.ApprovalId ?? "",
+            }
+        },
         _ => throw new InvalidOperationException($"Unknown OperationResult type: {result.GetType().Name}")
+    };
+
+    private static AtomicOperation? ToApprovalBranch(OperationResult branch) => branch switch
+    {
+        CompletedResult       => null,
+        NextOperationResult n => new AtomicOperation
+        {
+            Name           = n.OperationName,
+            TimeoutSeconds = n.TimeoutSeconds,
+            Context        = JsonParser.Default.Parse<Struct>(n.Context.ToJsonString())
+        },
+        _ => throw new InvalidOperationException($"Unsupported approval branch type: {branch.GetType().Name}")
     };
 }

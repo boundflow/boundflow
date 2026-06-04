@@ -31,6 +31,7 @@ public enum LifecycleState
     Creating,
     Active,
     Invoking,
+    AwaitingApproval,
     Deleting,
     Deleted,
     Failed,

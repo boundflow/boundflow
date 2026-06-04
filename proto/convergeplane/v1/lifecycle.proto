@@ -19,6 +19,7 @@ service ResourceLifecycleService {
 
   rpc SetWorkflowLifecyclePolicy(SetWorkflowLifecyclePolicyRequest) returns (SetWorkflowLifecyclePolicyResponse);
   rpc ApproveWorkflow(ApproveWorkflowRequest) returns (ApproveWorkflowResponse);
+  rpc RejectWorkflow(RejectWorkflowRequest) returns (RejectWorkflowResponse);
   rpc ActivateWorkflow(ActivateWorkflowRequest) returns (ActivateWorkflowResponse);
 }
 
@@ -141,9 +142,17 @@ message SetWorkflowLifecyclePolicyResponse {}
 
 message ApproveWorkflowRequest {
   string resource_instance_id = 1;
+  string approval_id          = 2;
 }
 
 message ApproveWorkflowResponse {}
+
+message RejectWorkflowRequest {
+  string resource_instance_id = 1;
+  string approval_id          = 2;
+}
+
+message RejectWorkflowResponse {}
 
 message ActivateWorkflowRequest {
   string resource_instance_id = 1;

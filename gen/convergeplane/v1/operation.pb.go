@@ -26,11 +26,12 @@ const (
 type OperationStatus int32
 
 const (
-	OperationStatus_OPERATION_STATUS_UNSPECIFIED OperationStatus = 0
-	OperationStatus_OPERATION_STATUS_IN_PROGRESS OperationStatus = 1
-	OperationStatus_OPERATION_STATUS_COMPLETED   OperationStatus = 2
-	OperationStatus_OPERATION_STATUS_FAILED      OperationStatus = 3
-	OperationStatus_OPERATION_STATUS_CANCELLED   OperationStatus = 4
+	OperationStatus_OPERATION_STATUS_UNSPECIFIED       OperationStatus = 0
+	OperationStatus_OPERATION_STATUS_IN_PROGRESS       OperationStatus = 1
+	OperationStatus_OPERATION_STATUS_COMPLETED         OperationStatus = 2
+	OperationStatus_OPERATION_STATUS_FAILED            OperationStatus = 3
+	OperationStatus_OPERATION_STATUS_CANCELLED         OperationStatus = 4
+	OperationStatus_OPERATION_STATUS_AWAITING_APPROVAL OperationStatus = 5
 )
 
 // Enum value maps for OperationStatus.
@@ -41,13 +42,15 @@ var (
 		2: "OPERATION_STATUS_COMPLETED",
 		3: "OPERATION_STATUS_FAILED",
 		4: "OPERATION_STATUS_CANCELLED",
+		5: "OPERATION_STATUS_AWAITING_APPROVAL",
 	}
 	OperationStatus_value = map[string]int32{
-		"OPERATION_STATUS_UNSPECIFIED": 0,
-		"OPERATION_STATUS_IN_PROGRESS": 1,
-		"OPERATION_STATUS_COMPLETED":   2,
-		"OPERATION_STATUS_FAILED":      3,
-		"OPERATION_STATUS_CANCELLED":   4,
+		"OPERATION_STATUS_UNSPECIFIED":       0,
+		"OPERATION_STATUS_IN_PROGRESS":       1,
+		"OPERATION_STATUS_COMPLETED":         2,
+		"OPERATION_STATUS_FAILED":            3,
+		"OPERATION_STATUS_CANCELLED":         4,
+		"OPERATION_STATUS_AWAITING_APPROVAL": 5,
 	}
 )
 
@@ -186,6 +189,75 @@ func (x *AtomicOperation) GetWorkflowVersion() int32 {
 	return 0
 }
 
+type ApprovalGate struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// null means Complete (terminal) for that branch.
+	OnApprove      *AtomicOperation `protobuf:"bytes,1,opt,name=on_approve,json=onApprove,proto3" json:"on_approve,omitempty"`
+	OnReject       *AtomicOperation `protobuf:"bytes,2,opt,name=on_reject,json=onReject,proto3" json:"on_reject,omitempty"`
+	TimeoutSeconds int32            `protobuf:"varint,3,opt,name=timeout_seconds,json=timeoutSeconds,proto3" json:"timeout_seconds,omitempty"`
+	ApprovalId     string           `protobuf:"bytes,4,opt,name=approval_id,json=approvalId,proto3" json:"approval_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ApprovalGate) Reset() {
+	*x = ApprovalGate{}
+	mi := &file_convergeplane_v1_operation_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApprovalGate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApprovalGate) ProtoMessage() {}
+
+func (x *ApprovalGate) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_operation_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApprovalGate.ProtoReflect.Descriptor instead.
+func (*ApprovalGate) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_operation_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ApprovalGate) GetOnApprove() *AtomicOperation {
+	if x != nil {
+		return x.OnApprove
+	}
+	return nil
+}
+
+func (x *ApprovalGate) GetOnReject() *AtomicOperation {
+	if x != nil {
+		return x.OnReject
+	}
+	return nil
+}
+
+func (x *ApprovalGate) GetTimeoutSeconds() int32 {
+	if x != nil {
+		return x.TimeoutSeconds
+	}
+	return 0
+}
+
+func (x *ApprovalGate) GetApprovalId() string {
+	if x != nil {
+		return x.ApprovalId
+	}
+	return ""
+}
+
 type AtomicOperationResult struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Status        OperationStatus        `protobuf:"varint,1,opt,name=status,proto3,enum=convergeplane.v1.OperationStatus" json:"status,omitempty"`
@@ -195,13 +267,14 @@ type AtomicOperationResult struct {
 	// The server aggregates these across agents and operations and fills workflow-only
 	// metrics (e.g. num_failures) server-side when building the stored snapshot.
 	AgentStateUpdates map[string]*AgentInvocationMetrics `protobuf:"bytes,4,rep,name=agent_state_updates,json=agentStateUpdates,proto3" json:"agent_state_updates,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	ApprovalGate      *ApprovalGate                      `protobuf:"bytes,5,opt,name=approval_gate,json=approvalGate,proto3" json:"approval_gate,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
 
 func (x *AtomicOperationResult) Reset() {
 	*x = AtomicOperationResult{}
-	mi := &file_convergeplane_v1_operation_proto_msgTypes[1]
+	mi := &file_convergeplane_v1_operation_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -213,7 +286,7 @@ func (x *AtomicOperationResult) String() string {
 func (*AtomicOperationResult) ProtoMessage() {}
 
 func (x *AtomicOperationResult) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_operation_proto_msgTypes[1]
+	mi := &file_convergeplane_v1_operation_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -226,7 +299,7 @@ func (x *AtomicOperationResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AtomicOperationResult.ProtoReflect.Descriptor instead.
 func (*AtomicOperationResult) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_operation_proto_rawDescGZIP(), []int{1}
+	return file_convergeplane_v1_operation_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *AtomicOperationResult) GetStatus() OperationStatus {
@@ -257,6 +330,13 @@ func (x *AtomicOperationResult) GetAgentStateUpdates() map[string]*AgentInvocati
 	return nil
 }
 
+func (x *AtomicOperationResult) GetApprovalGate() *ApprovalGate {
+	if x != nil {
+		return x.ApprovalGate
+	}
+	return nil
+}
+
 // AgentInvocationMetrics holds the metrics a single agent emitted during one operation.
 // Every field is optional: a null value means the agent did not emit that metric this run
 // (distinct from emitting a zero), so windowed policy evaluation can skip non-emitting runs.
@@ -278,7 +358,7 @@ type AgentInvocationMetrics struct {
 
 func (x *AgentInvocationMetrics) Reset() {
 	*x = AgentInvocationMetrics{}
-	mi := &file_convergeplane_v1_operation_proto_msgTypes[2]
+	mi := &file_convergeplane_v1_operation_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -290,7 +370,7 @@ func (x *AgentInvocationMetrics) String() string {
 func (*AgentInvocationMetrics) ProtoMessage() {}
 
 func (x *AgentInvocationMetrics) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_operation_proto_msgTypes[2]
+	mi := &file_convergeplane_v1_operation_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -303,7 +383,7 @@ func (x *AgentInvocationMetrics) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentInvocationMetrics.ProtoReflect.Descriptor instead.
 func (*AgentInvocationMetrics) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_operation_proto_rawDescGZIP(), []int{2}
+	return file_convergeplane_v1_operation_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *AgentInvocationMetrics) GetCostUsd() float64 {
@@ -385,12 +465,20 @@ const file_convergeplane_v1_operation_proto_rawDesc = "" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12'\n" +
 	"\x0ftimeout_seconds\x18\a \x01(\x05R\x0etimeoutSeconds\x12#\n" +
 	"\rresource_type\x18\b \x01(\tR\fresourceType\x12)\n" +
-	"\x10workflow_version\x18\t \x01(\x05R\x0fworkflowVersion\"\x96\x03\n" +
+	"\x10workflow_version\x18\t \x01(\x05R\x0fworkflowVersion\"\xda\x01\n" +
+	"\fApprovalGate\x12@\n" +
+	"\n" +
+	"on_approve\x18\x01 \x01(\v2!.convergeplane.v1.AtomicOperationR\tonApprove\x12>\n" +
+	"\ton_reject\x18\x02 \x01(\v2!.convergeplane.v1.AtomicOperationR\bonReject\x12'\n" +
+	"\x0ftimeout_seconds\x18\x03 \x01(\x05R\x0etimeoutSeconds\x12\x1f\n" +
+	"\vapproval_id\x18\x04 \x01(\tR\n" +
+	"approvalId\"\xdb\x03\n" +
 	"\x15AtomicOperationResult\x129\n" +
 	"\x06status\x18\x01 \x01(\x0e2!.convergeplane.v1.OperationStatusR\x06status\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12H\n" +
 	"\x0enext_operation\x18\x03 \x01(\v2!.convergeplane.v1.AtomicOperationR\rnextOperation\x12n\n" +
-	"\x13agent_state_updates\x18\x04 \x03(\v2>.convergeplane.v1.AtomicOperationResult.AgentStateUpdatesEntryR\x11agentStateUpdates\x1an\n" +
+	"\x13agent_state_updates\x18\x04 \x03(\v2>.convergeplane.v1.AtomicOperationResult.AgentStateUpdatesEntryR\x11agentStateUpdates\x12C\n" +
+	"\rapproval_gate\x18\x05 \x01(\v2\x1e.convergeplane.v1.ApprovalGateR\fapprovalGate\x1an\n" +
 	"\x16AgentStateUpdatesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12>\n" +
 	"\x05value\x18\x02 \x01(\v2(.convergeplane.v1.AgentInvocationMetricsR\x05value:\x028\x01\"\xf5\x04\n" +
@@ -415,13 +503,14 @@ const file_convergeplane_v1_operation_proto_rawDesc = "" +
 	"\x0f_calls_per_toolB\x12\n" +
 	"\x10_latency_secondsB\v\n" +
 	"\t_failuresB\x16\n" +
-	"\x14_approval_rejections*\xb2\x01\n" +
+	"\x14_approval_rejections*\xda\x01\n" +
 	"\x0fOperationStatus\x12 \n" +
 	"\x1cOPERATION_STATUS_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cOPERATION_STATUS_IN_PROGRESS\x10\x01\x12\x1e\n" +
 	"\x1aOPERATION_STATUS_COMPLETED\x10\x02\x12\x1b\n" +
 	"\x17OPERATION_STATUS_FAILED\x10\x03\x12\x1e\n" +
-	"\x1aOPERATION_STATUS_CANCELLED\x10\x04BMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
+	"\x1aOPERATION_STATUS_CANCELLED\x10\x04\x12&\n" +
+	"\"OPERATION_STATUS_AWAITING_APPROVAL\x10\x05BMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
 
 var (
 	file_convergeplane_v1_operation_proto_rawDescOnce sync.Once
@@ -436,30 +525,34 @@ func file_convergeplane_v1_operation_proto_rawDescGZIP() []byte {
 }
 
 var file_convergeplane_v1_operation_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_convergeplane_v1_operation_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_convergeplane_v1_operation_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_convergeplane_v1_operation_proto_goTypes = []any{
 	(OperationStatus)(0),           // 0: convergeplane.v1.OperationStatus
 	(*AtomicOperation)(nil),        // 1: convergeplane.v1.AtomicOperation
-	(*AtomicOperationResult)(nil),  // 2: convergeplane.v1.AtomicOperationResult
-	(*AgentInvocationMetrics)(nil), // 3: convergeplane.v1.AgentInvocationMetrics
-	nil,                            // 4: convergeplane.v1.AtomicOperationResult.AgentStateUpdatesEntry
-	nil,                            // 5: convergeplane.v1.AgentInvocationMetrics.ToolFailureCountsEntry
-	(*structpb.Struct)(nil),        // 6: google.protobuf.Struct
-	(*timestamppb.Timestamp)(nil),  // 7: google.protobuf.Timestamp
+	(*ApprovalGate)(nil),           // 2: convergeplane.v1.ApprovalGate
+	(*AtomicOperationResult)(nil),  // 3: convergeplane.v1.AtomicOperationResult
+	(*AgentInvocationMetrics)(nil), // 4: convergeplane.v1.AgentInvocationMetrics
+	nil,                            // 5: convergeplane.v1.AtomicOperationResult.AgentStateUpdatesEntry
+	nil,                            // 6: convergeplane.v1.AgentInvocationMetrics.ToolFailureCountsEntry
+	(*structpb.Struct)(nil),        // 7: google.protobuf.Struct
+	(*timestamppb.Timestamp)(nil),  // 8: google.protobuf.Timestamp
 }
 var file_convergeplane_v1_operation_proto_depIdxs = []int32{
-	6, // 0: convergeplane.v1.AtomicOperation.context:type_name -> google.protobuf.Struct
-	7, // 1: convergeplane.v1.AtomicOperation.created_at:type_name -> google.protobuf.Timestamp
-	0, // 2: convergeplane.v1.AtomicOperationResult.status:type_name -> convergeplane.v1.OperationStatus
-	1, // 3: convergeplane.v1.AtomicOperationResult.next_operation:type_name -> convergeplane.v1.AtomicOperation
-	4, // 4: convergeplane.v1.AtomicOperationResult.agent_state_updates:type_name -> convergeplane.v1.AtomicOperationResult.AgentStateUpdatesEntry
-	5, // 5: convergeplane.v1.AgentInvocationMetrics.tool_failure_counts:type_name -> convergeplane.v1.AgentInvocationMetrics.ToolFailureCountsEntry
-	3, // 6: convergeplane.v1.AtomicOperationResult.AgentStateUpdatesEntry.value:type_name -> convergeplane.v1.AgentInvocationMetrics
-	7, // [7:7] is the sub-list for method output_type
-	7, // [7:7] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	7,  // 0: convergeplane.v1.AtomicOperation.context:type_name -> google.protobuf.Struct
+	8,  // 1: convergeplane.v1.AtomicOperation.created_at:type_name -> google.protobuf.Timestamp
+	1,  // 2: convergeplane.v1.ApprovalGate.on_approve:type_name -> convergeplane.v1.AtomicOperation
+	1,  // 3: convergeplane.v1.ApprovalGate.on_reject:type_name -> convergeplane.v1.AtomicOperation
+	0,  // 4: convergeplane.v1.AtomicOperationResult.status:type_name -> convergeplane.v1.OperationStatus
+	1,  // 5: convergeplane.v1.AtomicOperationResult.next_operation:type_name -> convergeplane.v1.AtomicOperation
+	5,  // 6: convergeplane.v1.AtomicOperationResult.agent_state_updates:type_name -> convergeplane.v1.AtomicOperationResult.AgentStateUpdatesEntry
+	2,  // 7: convergeplane.v1.AtomicOperationResult.approval_gate:type_name -> convergeplane.v1.ApprovalGate
+	6,  // 8: convergeplane.v1.AgentInvocationMetrics.tool_failure_counts:type_name -> convergeplane.v1.AgentInvocationMetrics.ToolFailureCountsEntry
+	4,  // 9: convergeplane.v1.AtomicOperationResult.AgentStateUpdatesEntry.value:type_name -> convergeplane.v1.AgentInvocationMetrics
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_convergeplane_v1_operation_proto_init() }
@@ -467,14 +560,14 @@ func file_convergeplane_v1_operation_proto_init() {
 	if File_convergeplane_v1_operation_proto != nil {
 		return
 	}
-	file_convergeplane_v1_operation_proto_msgTypes[2].OneofWrappers = []any{}
+	file_convergeplane_v1_operation_proto_msgTypes[3].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_convergeplane_v1_operation_proto_rawDesc), len(file_convergeplane_v1_operation_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   5,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -28,6 +28,7 @@ const (
 	ResourceLifecycleService_DeleteAgent_FullMethodName                = "/convergeplane.v1.ResourceLifecycleService/DeleteAgent"
 	ResourceLifecycleService_SetWorkflowLifecyclePolicy_FullMethodName = "/convergeplane.v1.ResourceLifecycleService/SetWorkflowLifecyclePolicy"
 	ResourceLifecycleService_ApproveWorkflow_FullMethodName            = "/convergeplane.v1.ResourceLifecycleService/ApproveWorkflow"
+	ResourceLifecycleService_RejectWorkflow_FullMethodName             = "/convergeplane.v1.ResourceLifecycleService/RejectWorkflow"
 	ResourceLifecycleService_ActivateWorkflow_FullMethodName           = "/convergeplane.v1.ResourceLifecycleService/ActivateWorkflow"
 )
 
@@ -44,6 +45,7 @@ type ResourceLifecycleServiceClient interface {
 	DeleteAgent(ctx context.Context, in *DeleteAgentRequest, opts ...grpc.CallOption) (*DeleteAgentResponse, error)
 	SetWorkflowLifecyclePolicy(ctx context.Context, in *SetWorkflowLifecyclePolicyRequest, opts ...grpc.CallOption) (*SetWorkflowLifecyclePolicyResponse, error)
 	ApproveWorkflow(ctx context.Context, in *ApproveWorkflowRequest, opts ...grpc.CallOption) (*ApproveWorkflowResponse, error)
+	RejectWorkflow(ctx context.Context, in *RejectWorkflowRequest, opts ...grpc.CallOption) (*RejectWorkflowResponse, error)
 	ActivateWorkflow(ctx context.Context, in *ActivateWorkflowRequest, opts ...grpc.CallOption) (*ActivateWorkflowResponse, error)
 }
 
@@ -145,6 +147,16 @@ func (c *resourceLifecycleServiceClient) ApproveWorkflow(ctx context.Context, in
 	return out, nil
 }
 
+func (c *resourceLifecycleServiceClient) RejectWorkflow(ctx context.Context, in *RejectWorkflowRequest, opts ...grpc.CallOption) (*RejectWorkflowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RejectWorkflowResponse)
+	err := c.cc.Invoke(ctx, ResourceLifecycleService_RejectWorkflow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *resourceLifecycleServiceClient) ActivateWorkflow(ctx context.Context, in *ActivateWorkflowRequest, opts ...grpc.CallOption) (*ActivateWorkflowResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ActivateWorkflowResponse)
@@ -168,6 +180,7 @@ type ResourceLifecycleServiceServer interface {
 	DeleteAgent(context.Context, *DeleteAgentRequest) (*DeleteAgentResponse, error)
 	SetWorkflowLifecyclePolicy(context.Context, *SetWorkflowLifecyclePolicyRequest) (*SetWorkflowLifecyclePolicyResponse, error)
 	ApproveWorkflow(context.Context, *ApproveWorkflowRequest) (*ApproveWorkflowResponse, error)
+	RejectWorkflow(context.Context, *RejectWorkflowRequest) (*RejectWorkflowResponse, error)
 	ActivateWorkflow(context.Context, *ActivateWorkflowRequest) (*ActivateWorkflowResponse, error)
 	mustEmbedUnimplementedResourceLifecycleServiceServer()
 }
@@ -205,6 +218,9 @@ func (UnimplementedResourceLifecycleServiceServer) SetWorkflowLifecyclePolicy(co
 }
 func (UnimplementedResourceLifecycleServiceServer) ApproveWorkflow(context.Context, *ApproveWorkflowRequest) (*ApproveWorkflowResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ApproveWorkflow not implemented")
+}
+func (UnimplementedResourceLifecycleServiceServer) RejectWorkflow(context.Context, *RejectWorkflowRequest) (*RejectWorkflowResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RejectWorkflow not implemented")
 }
 func (UnimplementedResourceLifecycleServiceServer) ActivateWorkflow(context.Context, *ActivateWorkflowRequest) (*ActivateWorkflowResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ActivateWorkflow not implemented")
@@ -393,6 +409,24 @@ func _ResourceLifecycleService_ApproveWorkflow_Handler(srv interface{}, ctx cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ResourceLifecycleService_RejectWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RejectWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ResourceLifecycleServiceServer).RejectWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ResourceLifecycleService_RejectWorkflow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ResourceLifecycleServiceServer).RejectWorkflow(ctx, req.(*RejectWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ResourceLifecycleService_ActivateWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ActivateWorkflowRequest)
 	if err := dec(in); err != nil {
@@ -453,6 +487,10 @@ var ResourceLifecycleService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ApproveWorkflow",
 			Handler:    _ResourceLifecycleService_ApproveWorkflow_Handler,
+		},
+		{
+			MethodName: "RejectWorkflow",
+			Handler:    _ResourceLifecycleService_RejectWorkflow_Handler,
 		},
 		{
 			MethodName: "ActivateWorkflow",

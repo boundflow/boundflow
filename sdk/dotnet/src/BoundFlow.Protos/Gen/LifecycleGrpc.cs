@@ -82,6 +82,10 @@ namespace Convergeplane.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Convergeplane.V1.ApproveWorkflowResponse> __Marshaller_convergeplane_v1_ApproveWorkflowResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.ApproveWorkflowResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Convergeplane.V1.RejectWorkflowRequest> __Marshaller_convergeplane_v1_RejectWorkflowRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.RejectWorkflowRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Convergeplane.V1.RejectWorkflowResponse> __Marshaller_convergeplane_v1_RejectWorkflowResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.RejectWorkflowResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Convergeplane.V1.ActivateWorkflowRequest> __Marshaller_convergeplane_v1_ActivateWorkflowRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.ActivateWorkflowRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Convergeplane.V1.ActivateWorkflowResponse> __Marshaller_convergeplane_v1_ActivateWorkflowResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.ActivateWorkflowResponse.Parser));
@@ -159,6 +163,14 @@ namespace Convergeplane.V1 {
         __Marshaller_convergeplane_v1_ApproveWorkflowResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Convergeplane.V1.RejectWorkflowRequest, global::Convergeplane.V1.RejectWorkflowResponse> __Method_RejectWorkflow = new grpc::Method<global::Convergeplane.V1.RejectWorkflowRequest, global::Convergeplane.V1.RejectWorkflowResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "RejectWorkflow",
+        __Marshaller_convergeplane_v1_RejectWorkflowRequest,
+        __Marshaller_convergeplane_v1_RejectWorkflowResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Convergeplane.V1.ActivateWorkflowRequest, global::Convergeplane.V1.ActivateWorkflowResponse> __Method_ActivateWorkflow = new grpc::Method<global::Convergeplane.V1.ActivateWorkflowRequest, global::Convergeplane.V1.ActivateWorkflowResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
@@ -226,6 +238,12 @@ namespace Convergeplane.V1 {
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Convergeplane.V1.ApproveWorkflowResponse> ApproveWorkflow(global::Convergeplane.V1.ApproveWorkflowRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Convergeplane.V1.RejectWorkflowResponse> RejectWorkflow(global::Convergeplane.V1.RejectWorkflowRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -446,6 +464,26 @@ namespace Convergeplane.V1 {
         return CallInvoker.AsyncUnaryCall(__Method_ApproveWorkflow, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Convergeplane.V1.RejectWorkflowResponse RejectWorkflow(global::Convergeplane.V1.RejectWorkflowRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return RejectWorkflow(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Convergeplane.V1.RejectWorkflowResponse RejectWorkflow(global::Convergeplane.V1.RejectWorkflowRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_RejectWorkflow, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Convergeplane.V1.RejectWorkflowResponse> RejectWorkflowAsync(global::Convergeplane.V1.RejectWorkflowRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return RejectWorkflowAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Convergeplane.V1.RejectWorkflowResponse> RejectWorkflowAsync(global::Convergeplane.V1.RejectWorkflowRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_RejectWorkflow, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::Convergeplane.V1.ActivateWorkflowResponse ActivateWorkflow(global::Convergeplane.V1.ActivateWorkflowRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ActivateWorkflow(request, new grpc::CallOptions(headers, deadline, cancellationToken));
@@ -488,6 +526,7 @@ namespace Convergeplane.V1 {
           .AddMethod(__Method_DeleteAgent, serviceImpl.DeleteAgent)
           .AddMethod(__Method_SetWorkflowLifecyclePolicy, serviceImpl.SetWorkflowLifecyclePolicy)
           .AddMethod(__Method_ApproveWorkflow, serviceImpl.ApproveWorkflow)
+          .AddMethod(__Method_RejectWorkflow, serviceImpl.RejectWorkflow)
           .AddMethod(__Method_ActivateWorkflow, serviceImpl.ActivateWorkflow).Build();
     }
 
@@ -507,6 +546,7 @@ namespace Convergeplane.V1 {
       serviceBinder.AddMethod(__Method_DeleteAgent, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Convergeplane.V1.DeleteAgentRequest, global::Convergeplane.V1.DeleteAgentResponse>(serviceImpl.DeleteAgent));
       serviceBinder.AddMethod(__Method_SetWorkflowLifecyclePolicy, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Convergeplane.V1.SetWorkflowLifecyclePolicyRequest, global::Convergeplane.V1.SetWorkflowLifecyclePolicyResponse>(serviceImpl.SetWorkflowLifecyclePolicy));
       serviceBinder.AddMethod(__Method_ApproveWorkflow, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Convergeplane.V1.ApproveWorkflowRequest, global::Convergeplane.V1.ApproveWorkflowResponse>(serviceImpl.ApproveWorkflow));
+      serviceBinder.AddMethod(__Method_RejectWorkflow, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Convergeplane.V1.RejectWorkflowRequest, global::Convergeplane.V1.RejectWorkflowResponse>(serviceImpl.RejectWorkflow));
       serviceBinder.AddMethod(__Method_ActivateWorkflow, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Convergeplane.V1.ActivateWorkflowRequest, global::Convergeplane.V1.ActivateWorkflowResponse>(serviceImpl.ActivateWorkflow));
     }
 

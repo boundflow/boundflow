@@ -34,41 +34,49 @@ namespace Convergeplane.V1 {
             "Gi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wUgljcmVhdGVkQXQSJwoPdGlt",
             "ZW91dF9zZWNvbmRzGAcgASgFUg50aW1lb3V0U2Vjb25kcxIjCg1yZXNvdXJj",
             "ZV90eXBlGAggASgJUgxyZXNvdXJjZVR5cGUSKQoQd29ya2Zsb3dfdmVyc2lv",
-            "bhgJIAEoBVIPd29ya2Zsb3dWZXJzaW9uIpYDChVBdG9taWNPcGVyYXRpb25S",
-            "ZXN1bHQSOQoGc3RhdHVzGAEgASgOMiEuY29udmVyZ2VwbGFuZS52MS5PcGVy",
-            "YXRpb25TdGF0dXNSBnN0YXR1cxIYCgdtZXNzYWdlGAIgASgJUgdtZXNzYWdl",
-            "EkgKDm5leHRfb3BlcmF0aW9uGAMgASgLMiEuY29udmVyZ2VwbGFuZS52MS5B",
-            "dG9taWNPcGVyYXRpb25SDW5leHRPcGVyYXRpb24SbgoTYWdlbnRfc3RhdGVf",
-            "dXBkYXRlcxgEIAMoCzI+LmNvbnZlcmdlcGxhbmUudjEuQXRvbWljT3BlcmF0",
-            "aW9uUmVzdWx0LkFnZW50U3RhdGVVcGRhdGVzRW50cnlSEWFnZW50U3RhdGVV",
-            "cGRhdGVzGm4KFkFnZW50U3RhdGVVcGRhdGVzRW50cnkSEAoDa2V5GAEgASgJ",
-            "UgNrZXkSPgoFdmFsdWUYAiABKAsyKC5jb252ZXJnZXBsYW5lLnYxLkFnZW50",
-            "SW52b2NhdGlvbk1ldHJpY3NSBXZhbHVlOgI4ASL1BAoWQWdlbnRJbnZvY2F0",
-            "aW9uTWV0cmljcxIeCghjb3N0X3VzZBgBIAEoAUgAUgdjb3N0VXNkiAEBEiAK",
-            "CWxsbV9jYWxscxgCIAEoBUgBUghsbG1DYWxsc4gBARIkCgt0b2tlbnNfdXNl",
-            "ZBgDIAEoBUgCUgp0b2tlbnNVc2VkiAEBEikKDmNhbGxzX3Blcl90b29sGAQg",
-            "ASgFSANSDGNhbGxzUGVyVG9vbIgBARIsCg9sYXRlbmN5X3NlY29uZHMYBSAB",
-            "KAFIBFIObGF0ZW5jeVNlY29uZHOIAQESHwoIZmFpbHVyZXMYBiABKAVIBVII",
-            "ZmFpbHVyZXOIAQESNAoTYXBwcm92YWxfcmVqZWN0aW9ucxgHIAEoBUgGUhJh",
-            "cHByb3ZhbFJlamVjdGlvbnOIAQESbwoTdG9vbF9mYWlsdXJlX2NvdW50cxgI",
-            "IAMoCzI/LmNvbnZlcmdlcGxhbmUudjEuQWdlbnRJbnZvY2F0aW9uTWV0cmlj",
-            "cy5Ub29sRmFpbHVyZUNvdW50c0VudHJ5UhF0b29sRmFpbHVyZUNvdW50cxIV",
-            "CgZyYW5fYXQYCSABKANSBXJhbkF0GkQKFlRvb2xGYWlsdXJlQ291bnRzRW50",
-            "cnkSEAoDa2V5GAEgASgJUgNrZXkSFAoFdmFsdWUYAiABKAVSBXZhbHVlOgI4",
-            "AUILCglfY29zdF91c2RCDAoKX2xsbV9jYWxsc0IOCgxfdG9rZW5zX3VzZWRC",
-            "EQoPX2NhbGxzX3Blcl90b29sQhIKEF9sYXRlbmN5X3NlY29uZHNCCwoJX2Zh",
-            "aWx1cmVzQhYKFF9hcHByb3ZhbF9yZWplY3Rpb25zKrIBCg9PcGVyYXRpb25T",
-            "dGF0dXMSIAocT1BFUkFUSU9OX1NUQVRVU19VTlNQRUNJRklFRBAAEiAKHE9Q",
-            "RVJBVElPTl9TVEFUVVNfSU5fUFJPR1JFU1MQARIeChpPUEVSQVRJT05fU1RB",
-            "VFVTX0NPTVBMRVRFRBACEhsKF09QRVJBVElPTl9TVEFUVVNfRkFJTEVEEAMS",
-            "HgoaT1BFUkFUSU9OX1NUQVRVU19DQU5DRUxMRUQQBEJNWktnaXRodWIuY29t",
-            "L2NvbnZlcmdlcGxhbmUvY29udmVyZ2VwbGFuZS9nZW4vY29udmVyZ2VwbGFu",
-            "ZS92MTtjb252ZXJnZXBsYW5ldjFiBnByb3RvMw=="));
+            "bhgJIAEoBVIPd29ya2Zsb3dWZXJzaW9uItoBCgxBcHByb3ZhbEdhdGUSQAoK",
+            "b25fYXBwcm92ZRgBIAEoCzIhLmNvbnZlcmdlcGxhbmUudjEuQXRvbWljT3Bl",
+            "cmF0aW9uUglvbkFwcHJvdmUSPgoJb25fcmVqZWN0GAIgASgLMiEuY29udmVy",
+            "Z2VwbGFuZS52MS5BdG9taWNPcGVyYXRpb25SCG9uUmVqZWN0EicKD3RpbWVv",
+            "dXRfc2Vjb25kcxgDIAEoBVIOdGltZW91dFNlY29uZHMSHwoLYXBwcm92YWxf",
+            "aWQYBCABKAlSCmFwcHJvdmFsSWQi2wMKFUF0b21pY09wZXJhdGlvblJlc3Vs",
+            "dBI5CgZzdGF0dXMYASABKA4yIS5jb252ZXJnZXBsYW5lLnYxLk9wZXJhdGlv",
+            "blN0YXR1c1IGc3RhdHVzEhgKB21lc3NhZ2UYAiABKAlSB21lc3NhZ2USSAoO",
+            "bmV4dF9vcGVyYXRpb24YAyABKAsyIS5jb252ZXJnZXBsYW5lLnYxLkF0b21p",
+            "Y09wZXJhdGlvblINbmV4dE9wZXJhdGlvbhJuChNhZ2VudF9zdGF0ZV91cGRh",
+            "dGVzGAQgAygLMj4uY29udmVyZ2VwbGFuZS52MS5BdG9taWNPcGVyYXRpb25S",
+            "ZXN1bHQuQWdlbnRTdGF0ZVVwZGF0ZXNFbnRyeVIRYWdlbnRTdGF0ZVVwZGF0",
+            "ZXMSQwoNYXBwcm92YWxfZ2F0ZRgFIAEoCzIeLmNvbnZlcmdlcGxhbmUudjEu",
+            "QXBwcm92YWxHYXRlUgxhcHByb3ZhbEdhdGUabgoWQWdlbnRTdGF0ZVVwZGF0",
+            "ZXNFbnRyeRIQCgNrZXkYASABKAlSA2tleRI+CgV2YWx1ZRgCIAEoCzIoLmNv",
+            "bnZlcmdlcGxhbmUudjEuQWdlbnRJbnZvY2F0aW9uTWV0cmljc1IFdmFsdWU6",
+            "AjgBIvUEChZBZ2VudEludm9jYXRpb25NZXRyaWNzEh4KCGNvc3RfdXNkGAEg",
+            "ASgBSABSB2Nvc3RVc2SIAQESIAoJbGxtX2NhbGxzGAIgASgFSAFSCGxsbUNh",
+            "bGxziAEBEiQKC3Rva2Vuc191c2VkGAMgASgFSAJSCnRva2Vuc1VzZWSIAQES",
+            "KQoOY2FsbHNfcGVyX3Rvb2wYBCABKAVIA1IMY2FsbHNQZXJUb29siAEBEiwK",
+            "D2xhdGVuY3lfc2Vjb25kcxgFIAEoAUgEUg5sYXRlbmN5U2Vjb25kc4gBARIf",
+            "CghmYWlsdXJlcxgGIAEoBUgFUghmYWlsdXJlc4gBARI0ChNhcHByb3ZhbF9y",
+            "ZWplY3Rpb25zGAcgASgFSAZSEmFwcHJvdmFsUmVqZWN0aW9uc4gBARJvChN0",
+            "b29sX2ZhaWx1cmVfY291bnRzGAggAygLMj8uY29udmVyZ2VwbGFuZS52MS5B",
+            "Z2VudEludm9jYXRpb25NZXRyaWNzLlRvb2xGYWlsdXJlQ291bnRzRW50cnlS",
+            "EXRvb2xGYWlsdXJlQ291bnRzEhUKBnJhbl9hdBgJIAEoA1IFcmFuQXQaRAoW",
+            "VG9vbEZhaWx1cmVDb3VudHNFbnRyeRIQCgNrZXkYASABKAlSA2tleRIUCgV2",
+            "YWx1ZRgCIAEoBVIFdmFsdWU6AjgBQgsKCV9jb3N0X3VzZEIMCgpfbGxtX2Nh",
+            "bGxzQg4KDF90b2tlbnNfdXNlZEIRCg9fY2FsbHNfcGVyX3Rvb2xCEgoQX2xh",
+            "dGVuY3lfc2Vjb25kc0ILCglfZmFpbHVyZXNCFgoUX2FwcHJvdmFsX3JlamVj",
+            "dGlvbnMq2gEKD09wZXJhdGlvblN0YXR1cxIgChxPUEVSQVRJT05fU1RBVFVT",
+            "X1VOU1BFQ0lGSUVEEAASIAocT1BFUkFUSU9OX1NUQVRVU19JTl9QUk9HUkVT",
+            "UxABEh4KGk9QRVJBVElPTl9TVEFUVVNfQ09NUExFVEVEEAISGwoXT1BFUkFU",
+            "SU9OX1NUQVRVU19GQUlMRUQQAxIeChpPUEVSQVRJT05fU1RBVFVTX0NBTkNF",
+            "TExFRBAEEiYKIk9QRVJBVElPTl9TVEFUVVNfQVdBSVRJTkdfQVBQUk9WQUwQ",
+            "BUJNWktnaXRodWIuY29tL2NvbnZlcmdlcGxhbmUvY29udmVyZ2VwbGFuZS9n",
+            "ZW4vY29udmVyZ2VwbGFuZS92MTtjb252ZXJnZXBsYW5ldjFiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.StructReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Convergeplane.V1.OperationStatus), }, null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.AtomicOperation), global::Convergeplane.V1.AtomicOperation.Parser, new[]{ "Id", "ResourceId", "OperationType", "Name", "Context", "CreatedAt", "TimeoutSeconds", "ResourceType", "WorkflowVersion" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.AtomicOperationResult), global::Convergeplane.V1.AtomicOperationResult.Parser, new[]{ "Status", "Message", "NextOperation", "AgentStateUpdates" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, }),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.ApprovalGate), global::Convergeplane.V1.ApprovalGate.Parser, new[]{ "OnApprove", "OnReject", "TimeoutSeconds", "ApprovalId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.AtomicOperationResult), global::Convergeplane.V1.AtomicOperationResult.Parser, new[]{ "Status", "Message", "NextOperation", "AgentStateUpdates", "ApprovalGate" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.AgentInvocationMetrics), global::Convergeplane.V1.AgentInvocationMetrics.Parser, new[]{ "CostUsd", "LlmCalls", "TokensUsed", "CallsPerTool", "LatencySeconds", "Failures", "ApprovalRejections", "ToolFailureCounts", "RanAt" }, new[]{ "CostUsd", "LlmCalls", "TokensUsed", "CallsPerTool", "LatencySeconds", "Failures", "ApprovalRejections" }, null, null, new pbr::GeneratedClrTypeInfo[] { null, })
           }));
     }
@@ -82,6 +90,7 @@ namespace Convergeplane.V1 {
     [pbr::OriginalName("OPERATION_STATUS_COMPLETED")] Completed = 2,
     [pbr::OriginalName("OPERATION_STATUS_FAILED")] Failed = 3,
     [pbr::OriginalName("OPERATION_STATUS_CANCELLED")] Cancelled = 4,
+    [pbr::OriginalName("OPERATION_STATUS_AWAITING_APPROVAL")] AwaitingApproval = 5,
   }
 
   #endregion
@@ -600,6 +609,336 @@ namespace Convergeplane.V1 {
   }
 
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class ApprovalGate : pb::IMessage<ApprovalGate>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<ApprovalGate> _parser = new pb::MessageParser<ApprovalGate>(() => new ApprovalGate());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<ApprovalGate> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Convergeplane.V1.OperationReflection.Descriptor.MessageTypes[1]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ApprovalGate() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ApprovalGate(ApprovalGate other) : this() {
+      onApprove_ = other.onApprove_ != null ? other.onApprove_.Clone() : null;
+      onReject_ = other.onReject_ != null ? other.onReject_.Clone() : null;
+      timeoutSeconds_ = other.timeoutSeconds_;
+      approvalId_ = other.approvalId_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ApprovalGate Clone() {
+      return new ApprovalGate(this);
+    }
+
+    /// <summary>Field number for the "on_approve" field.</summary>
+    public const int OnApproveFieldNumber = 1;
+    private global::Convergeplane.V1.AtomicOperation onApprove_;
+    /// <summary>
+    /// null means Complete (terminal) for that branch.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Convergeplane.V1.AtomicOperation OnApprove {
+      get { return onApprove_; }
+      set {
+        onApprove_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "on_reject" field.</summary>
+    public const int OnRejectFieldNumber = 2;
+    private global::Convergeplane.V1.AtomicOperation onReject_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Convergeplane.V1.AtomicOperation OnReject {
+      get { return onReject_; }
+      set {
+        onReject_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "timeout_seconds" field.</summary>
+    public const int TimeoutSecondsFieldNumber = 3;
+    private int timeoutSeconds_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int TimeoutSeconds {
+      get { return timeoutSeconds_; }
+      set {
+        timeoutSeconds_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "approval_id" field.</summary>
+    public const int ApprovalIdFieldNumber = 4;
+    private string approvalId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ApprovalId {
+      get { return approvalId_; }
+      set {
+        approvalId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as ApprovalGate);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(ApprovalGate other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (!object.Equals(OnApprove, other.OnApprove)) return false;
+      if (!object.Equals(OnReject, other.OnReject)) return false;
+      if (TimeoutSeconds != other.TimeoutSeconds) return false;
+      if (ApprovalId != other.ApprovalId) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (onApprove_ != null) hash ^= OnApprove.GetHashCode();
+      if (onReject_ != null) hash ^= OnReject.GetHashCode();
+      if (TimeoutSeconds != 0) hash ^= TimeoutSeconds.GetHashCode();
+      if (ApprovalId.Length != 0) hash ^= ApprovalId.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (onApprove_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(OnApprove);
+      }
+      if (onReject_ != null) {
+        output.WriteRawTag(18);
+        output.WriteMessage(OnReject);
+      }
+      if (TimeoutSeconds != 0) {
+        output.WriteRawTag(24);
+        output.WriteInt32(TimeoutSeconds);
+      }
+      if (ApprovalId.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(ApprovalId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (onApprove_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(OnApprove);
+      }
+      if (onReject_ != null) {
+        output.WriteRawTag(18);
+        output.WriteMessage(OnReject);
+      }
+      if (TimeoutSeconds != 0) {
+        output.WriteRawTag(24);
+        output.WriteInt32(TimeoutSeconds);
+      }
+      if (ApprovalId.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(ApprovalId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (onApprove_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(OnApprove);
+      }
+      if (onReject_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(OnReject);
+      }
+      if (TimeoutSeconds != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(TimeoutSeconds);
+      }
+      if (ApprovalId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ApprovalId);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(ApprovalGate other) {
+      if (other == null) {
+        return;
+      }
+      if (other.onApprove_ != null) {
+        if (onApprove_ == null) {
+          OnApprove = new global::Convergeplane.V1.AtomicOperation();
+        }
+        OnApprove.MergeFrom(other.OnApprove);
+      }
+      if (other.onReject_ != null) {
+        if (onReject_ == null) {
+          OnReject = new global::Convergeplane.V1.AtomicOperation();
+        }
+        OnReject.MergeFrom(other.OnReject);
+      }
+      if (other.TimeoutSeconds != 0) {
+        TimeoutSeconds = other.TimeoutSeconds;
+      }
+      if (other.ApprovalId.Length != 0) {
+        ApprovalId = other.ApprovalId;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            if (onApprove_ == null) {
+              OnApprove = new global::Convergeplane.V1.AtomicOperation();
+            }
+            input.ReadMessage(OnApprove);
+            break;
+          }
+          case 18: {
+            if (onReject_ == null) {
+              OnReject = new global::Convergeplane.V1.AtomicOperation();
+            }
+            input.ReadMessage(OnReject);
+            break;
+          }
+          case 24: {
+            TimeoutSeconds = input.ReadInt32();
+            break;
+          }
+          case 34: {
+            ApprovalId = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            if (onApprove_ == null) {
+              OnApprove = new global::Convergeplane.V1.AtomicOperation();
+            }
+            input.ReadMessage(OnApprove);
+            break;
+          }
+          case 18: {
+            if (onReject_ == null) {
+              OnReject = new global::Convergeplane.V1.AtomicOperation();
+            }
+            input.ReadMessage(OnReject);
+            break;
+          }
+          case 24: {
+            TimeoutSeconds = input.ReadInt32();
+            break;
+          }
+          case 34: {
+            ApprovalId = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
   public sealed partial class AtomicOperationResult : pb::IMessage<AtomicOperationResult>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
@@ -614,7 +953,7 @@ namespace Convergeplane.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Convergeplane.V1.OperationReflection.Descriptor.MessageTypes[1]; }
+      get { return global::Convergeplane.V1.OperationReflection.Descriptor.MessageTypes[2]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -638,6 +977,7 @@ namespace Convergeplane.V1 {
       message_ = other.message_;
       nextOperation_ = other.nextOperation_ != null ? other.nextOperation_.Clone() : null;
       agentStateUpdates_ = other.agentStateUpdates_.Clone();
+      approvalGate_ = other.approvalGate_ != null ? other.approvalGate_.Clone() : null;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -699,6 +1039,18 @@ namespace Convergeplane.V1 {
       get { return agentStateUpdates_; }
     }
 
+    /// <summary>Field number for the "approval_gate" field.</summary>
+    public const int ApprovalGateFieldNumber = 5;
+    private global::Convergeplane.V1.ApprovalGate approvalGate_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Convergeplane.V1.ApprovalGate ApprovalGate {
+      get { return approvalGate_; }
+      set {
+        approvalGate_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -718,6 +1070,7 @@ namespace Convergeplane.V1 {
       if (Message != other.Message) return false;
       if (!object.Equals(NextOperation, other.NextOperation)) return false;
       if (!AgentStateUpdates.Equals(other.AgentStateUpdates)) return false;
+      if (!object.Equals(ApprovalGate, other.ApprovalGate)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -729,6 +1082,7 @@ namespace Convergeplane.V1 {
       if (Message.Length != 0) hash ^= Message.GetHashCode();
       if (nextOperation_ != null) hash ^= NextOperation.GetHashCode();
       hash ^= AgentStateUpdates.GetHashCode();
+      if (approvalGate_ != null) hash ^= ApprovalGate.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -760,6 +1114,10 @@ namespace Convergeplane.V1 {
         output.WriteMessage(NextOperation);
       }
       agentStateUpdates_.WriteTo(output, _map_agentStateUpdates_codec);
+      if (approvalGate_ != null) {
+        output.WriteRawTag(42);
+        output.WriteMessage(ApprovalGate);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -783,6 +1141,10 @@ namespace Convergeplane.V1 {
         output.WriteMessage(NextOperation);
       }
       agentStateUpdates_.WriteTo(ref output, _map_agentStateUpdates_codec);
+      if (approvalGate_ != null) {
+        output.WriteRawTag(42);
+        output.WriteMessage(ApprovalGate);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -803,6 +1165,9 @@ namespace Convergeplane.V1 {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(NextOperation);
       }
       size += agentStateUpdates_.CalculateSize(_map_agentStateUpdates_codec);
+      if (approvalGate_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(ApprovalGate);
+      }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -828,6 +1193,12 @@ namespace Convergeplane.V1 {
         NextOperation.MergeFrom(other.NextOperation);
       }
       agentStateUpdates_.MergeFrom(other.agentStateUpdates_);
+      if (other.approvalGate_ != null) {
+        if (approvalGate_ == null) {
+          ApprovalGate = new global::Convergeplane.V1.ApprovalGate();
+        }
+        ApprovalGate.MergeFrom(other.ApprovalGate);
+      }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -864,6 +1235,13 @@ namespace Convergeplane.V1 {
           }
           case 34: {
             agentStateUpdates_.AddEntriesFrom(input, _map_agentStateUpdates_codec);
+            break;
+          }
+          case 42: {
+            if (approvalGate_ == null) {
+              ApprovalGate = new global::Convergeplane.V1.ApprovalGate();
+            }
+            input.ReadMessage(ApprovalGate);
             break;
           }
         }
@@ -904,6 +1282,13 @@ namespace Convergeplane.V1 {
             agentStateUpdates_.AddEntriesFrom(ref input, _map_agentStateUpdates_codec);
             break;
           }
+          case 42: {
+            if (approvalGate_ == null) {
+              ApprovalGate = new global::Convergeplane.V1.ApprovalGate();
+            }
+            input.ReadMessage(ApprovalGate);
+            break;
+          }
         }
       }
     }
@@ -932,7 +1317,7 @@ namespace Convergeplane.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Convergeplane.V1.OperationReflection.Descriptor.MessageTypes[2]; }
+      get { return global::Convergeplane.V1.OperationReflection.Descriptor.MessageTypes[3]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]

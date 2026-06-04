@@ -19,6 +19,14 @@ message AtomicOperation {
   int32 workflow_version = 9;
 }
 
+message ApprovalGate {
+  // null means Complete (terminal) for that branch.
+  AtomicOperation on_approve = 1;
+  AtomicOperation on_reject  = 2;
+  int32 timeout_seconds      = 3;
+  string approval_id         = 4;
+}
+
 message AtomicOperationResult {
   OperationStatus status = 1;
   string message = 2;
@@ -27,6 +35,7 @@ message AtomicOperationResult {
   // The server aggregates these across agents and operations and fills workflow-only
   // metrics (e.g. num_failures) server-side when building the stored snapshot.
   map<string, AgentInvocationMetrics> agent_state_updates = 4;
+  ApprovalGate approval_gate = 5;
 }
 
 // AgentInvocationMetrics holds the metrics a single agent emitted during one operation.
@@ -46,9 +55,10 @@ message AgentInvocationMetrics {
 }
 
 enum OperationStatus {
-  OPERATION_STATUS_UNSPECIFIED = 0;
-  OPERATION_STATUS_IN_PROGRESS = 1;
-  OPERATION_STATUS_COMPLETED = 2;
-  OPERATION_STATUS_FAILED = 3;
-  OPERATION_STATUS_CANCELLED = 4;
+  OPERATION_STATUS_UNSPECIFIED        = 0;
+  OPERATION_STATUS_IN_PROGRESS        = 1;
+  OPERATION_STATUS_COMPLETED          = 2;
+  OPERATION_STATUS_FAILED             = 3;
+  OPERATION_STATUS_CANCELLED          = 4;
+  OPERATION_STATUS_AWAITING_APPROVAL  = 5;
 }
