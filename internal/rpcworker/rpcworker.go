@@ -295,15 +295,11 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 							}
 						}(resourceInstID)
 
-						var jobContext map[string]any
-						var timeoutSeconds int32
-						var opName string
-
 						resolveBranch := func(branch *domain.ApprovalBranch, label string) bool {
 							if branch != nil {
-								jobContext = branch.Context
-								timeoutSeconds = int32(branch.TimeoutSeconds)
-								opName = branch.OperationName
+								job.Context = branch.Context
+								job.RuntimeParams.OperationTimeoutSeconds = branch.TimeoutSeconds
+								job.CurrentAtomicOperation = branch.OperationName
 								return true
 							}
 							// nil branch = Complete() — finish the job without launching an operation.
@@ -322,9 +318,6 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 							// JobStatusAwaitingApproval here means the approval timed out.
 							shouldLaunch = resolveBranch(job.JobMetadata.ApprovalGate.OnReject, "on_reject")
 						case domain.JobStatusAwaitingNext, domain.JobStatusPending:
-							jobContext = job.Context
-							timeoutSeconds = int32(job.RuntimeParams.OperationTimeoutSeconds)
-							opName = job.CurrentAtomicOperation
 							shouldLaunch = true
 						default:
 							log.Error("unexpected job status in dispatch, skipping", "request_id", job.RequestID, "status", job.Status)
@@ -341,7 +334,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 							continue
 						}
 
-						contextStruct, err := structpb.NewStruct(jobContext)
+						contextStruct, err := structpb.NewStruct(job.Context)
 						if err != nil {
 							log.Error("failed to serialize job context", "request_id", job.RequestID, "error", err)
 							cancelLeaseIfExists(cancelLease)
@@ -363,8 +356,8 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 										OperationType:   job.JobType,
 										ResourceType:    job.ResourceType,
 										Context:         contextStruct,
-										Name:            opName,
-										TimeoutSeconds:  timeoutSeconds,
+										Name:            job.CurrentAtomicOperation,
+										TimeoutSeconds:  int32(job.RuntimeParams.OperationTimeoutSeconds),
 										WorkflowVersion: int32(job.WorkflowVersion),
 									},
 								},

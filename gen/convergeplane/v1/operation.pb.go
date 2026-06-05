@@ -26,12 +26,11 @@ const (
 type OperationStatus int32
 
 const (
-	OperationStatus_OPERATION_STATUS_UNSPECIFIED       OperationStatus = 0
-	OperationStatus_OPERATION_STATUS_IN_PROGRESS       OperationStatus = 1
-	OperationStatus_OPERATION_STATUS_COMPLETED         OperationStatus = 2
-	OperationStatus_OPERATION_STATUS_FAILED            OperationStatus = 3
-	OperationStatus_OPERATION_STATUS_CANCELLED         OperationStatus = 4
-	OperationStatus_OPERATION_STATUS_AWAITING_APPROVAL OperationStatus = 5
+	OperationStatus_OPERATION_STATUS_UNSPECIFIED OperationStatus = 0
+	OperationStatus_OPERATION_STATUS_IN_PROGRESS OperationStatus = 1
+	OperationStatus_OPERATION_STATUS_COMPLETED   OperationStatus = 2
+	OperationStatus_OPERATION_STATUS_FAILED      OperationStatus = 3
+	OperationStatus_OPERATION_STATUS_CANCELLED   OperationStatus = 4
 )
 
 // Enum value maps for OperationStatus.
@@ -42,15 +41,13 @@ var (
 		2: "OPERATION_STATUS_COMPLETED",
 		3: "OPERATION_STATUS_FAILED",
 		4: "OPERATION_STATUS_CANCELLED",
-		5: "OPERATION_STATUS_AWAITING_APPROVAL",
 	}
 	OperationStatus_value = map[string]int32{
-		"OPERATION_STATUS_UNSPECIFIED":       0,
-		"OPERATION_STATUS_IN_PROGRESS":       1,
-		"OPERATION_STATUS_COMPLETED":         2,
-		"OPERATION_STATUS_FAILED":            3,
-		"OPERATION_STATUS_CANCELLED":         4,
-		"OPERATION_STATUS_AWAITING_APPROVAL": 5,
+		"OPERATION_STATUS_UNSPECIFIED": 0,
+		"OPERATION_STATUS_IN_PROGRESS": 1,
+		"OPERATION_STATUS_COMPLETED":   2,
+		"OPERATION_STATUS_FAILED":      3,
+		"OPERATION_STATUS_CANCELLED":   4,
 	}
 )
 
@@ -503,14 +500,13 @@ const file_convergeplane_v1_operation_proto_rawDesc = "" +
 	"\x0f_calls_per_toolB\x12\n" +
 	"\x10_latency_secondsB\v\n" +
 	"\t_failuresB\x16\n" +
-	"\x14_approval_rejections*\xda\x01\n" +
+	"\x14_approval_rejections*\xb2\x01\n" +
 	"\x0fOperationStatus\x12 \n" +
 	"\x1cOPERATION_STATUS_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cOPERATION_STATUS_IN_PROGRESS\x10\x01\x12\x1e\n" +
 	"\x1aOPERATION_STATUS_COMPLETED\x10\x02\x12\x1b\n" +
 	"\x17OPERATION_STATUS_FAILED\x10\x03\x12\x1e\n" +
-	"\x1aOPERATION_STATUS_CANCELLED\x10\x04\x12&\n" +
-	"\"OPERATION_STATUS_AWAITING_APPROVAL\x10\x05BMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
+	"\x1aOPERATION_STATUS_CANCELLED\x10\x04BMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3"
 
 var (
 	file_convergeplane_v1_operation_proto_rawDescOnce sync.Once

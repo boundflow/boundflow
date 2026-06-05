@@ -272,7 +272,7 @@ public sealed class BoundFlowWorker
         },
         AwaitApprovalResult approval => new AtomicOperationResult
         {
-            Status = OperationStatus.AwaitingApproval,
+            Status = OperationStatus.Completed,
             ApprovalGate = new ApprovalGate
             {
                 OnApprove      = ToApprovalBranch(approval.OnApprove),

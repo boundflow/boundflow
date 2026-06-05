@@ -64,13 +64,13 @@ namespace Convergeplane.V1 {
             "YWx1ZRgCIAEoBVIFdmFsdWU6AjgBQgsKCV9jb3N0X3VzZEIMCgpfbGxtX2Nh",
             "bGxzQg4KDF90b2tlbnNfdXNlZEIRCg9fY2FsbHNfcGVyX3Rvb2xCEgoQX2xh",
             "dGVuY3lfc2Vjb25kc0ILCglfZmFpbHVyZXNCFgoUX2FwcHJvdmFsX3JlamVj",
-            "dGlvbnMq2gEKD09wZXJhdGlvblN0YXR1cxIgChxPUEVSQVRJT05fU1RBVFVT",
+            "dGlvbnMqsgEKD09wZXJhdGlvblN0YXR1cxIgChxPUEVSQVRJT05fU1RBVFVT",
             "X1VOU1BFQ0lGSUVEEAASIAocT1BFUkFUSU9OX1NUQVRVU19JTl9QUk9HUkVT",
             "UxABEh4KGk9QRVJBVElPTl9TVEFUVVNfQ09NUExFVEVEEAISGwoXT1BFUkFU",
             "SU9OX1NUQVRVU19GQUlMRUQQAxIeChpPUEVSQVRJT05fU1RBVFVTX0NBTkNF",
-            "TExFRBAEEiYKIk9QRVJBVElPTl9TVEFUVVNfQVdBSVRJTkdfQVBQUk9WQUwQ",
-            "BUJNWktnaXRodWIuY29tL2NvbnZlcmdlcGxhbmUvY29udmVyZ2VwbGFuZS9n",
-            "ZW4vY29udmVyZ2VwbGFuZS92MTtjb252ZXJnZXBsYW5ldjFiBnByb3RvMw=="));
+            "TExFRBAEQk1aS2dpdGh1Yi5jb20vY29udmVyZ2VwbGFuZS9jb252ZXJnZXBs",
+            "YW5lL2dlbi9jb252ZXJnZXBsYW5lL3YxO2NvbnZlcmdlcGxhbmV2MWIGcHJv",
+            "dG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.StructReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Convergeplane.V1.OperationStatus), }, null, new pbr::GeneratedClrTypeInfo[] {
@@ -90,7 +90,6 @@ namespace Convergeplane.V1 {
     [pbr::OriginalName("OPERATION_STATUS_COMPLETED")] Completed = 2,
     [pbr::OriginalName("OPERATION_STATUS_FAILED")] Failed = 3,
     [pbr::OriginalName("OPERATION_STATUS_CANCELLED")] Cancelled = 4,
-    [pbr::OriginalName("OPERATION_STATUS_AWAITING_APPROVAL")] AwaitingApproval = 5,
   }
 
   #endregion
