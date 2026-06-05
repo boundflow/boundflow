@@ -65,6 +65,54 @@ public class ApprovalGateTests : IntegrationTestBase
     }
 
     /// <summary>
+    /// Verifies that an approval gate auto-rejects and runs the on_reject branch
+    /// once the approval timeout expires, without any explicit reject call.
+    /// </summary>
+    [Fact]
+    public async Task ApprovalTimeout_RunsRejectOperation()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+        var timedOutStepRan = false;
+        var approvedStepRan = false;
+
+        var worker = new BoundFlowWorker(WorkerAddress, "dummy-key-not-used", LoggerFactory)
+            .RegisterWorkflow("approval_timeout", 1, (ctx, ct) =>
+                Task.FromResult(OperationResult.AwaitApproval(
+                    onApprove:      OperationResult.Next("approved_step", ctx.Context, 30),
+                    onReject:       OperationResult.Next("timed_out_step", ctx.Context, 30),
+                    timeoutSeconds: 8)))
+            .Register("approval_timeout", "approved_step", (ctx, ct) =>
+            {
+                approvedStepRan = true;
+                return Task.FromResult(OperationResult.Complete());
+            })
+            .Register("approval_timeout", "timed_out_step", (ctx, ct) =>
+            {
+                timedOutStepRan = true;
+                return Task.FromResult(OperationResult.Complete());
+            });
+
+        var workerTask = worker.RunAsync(cts.Token);
+
+        var (_, tenant) = await CreateIsolatedTenantAsync("approval-timeout");
+        var workflow = await ControlPlane.CreateWorkflowAsync("approval_timeout", tenant.Id,
+            workflowConfig: new WorkflowConfig(Version: 1));
+
+        await ControlPlane.ActivateWorkflowAsync(workflow.Id);
+        await ControlPlane.InvokeWorkflowAsync(workflow.Id, new RuntimeOverrides(OperationTimeoutSeconds: 30));
+
+        // Wait for it to park, then let the timeout expire — don't call approve or reject.
+        await WaitForLifecycleStateAsync(workflow.Id, LifecycleState.AwaitingApproval, cts.Token);
+        await WaitForLifecycleStateAsync(workflow.Id, LifecycleState.Active, cts.Token);
+
+        Assert.True(timedOutStepRan, "timed_out_step should have run after timeout.");
+        Assert.False(approvedStepRan, "approved_step should NOT have run.");
+
+        cts.Cancel();
+        try { await workerTask; } catch { }
+    }
+
+    /// <summary>
     /// Verifies the reject path: rejecting the approval runs the on_reject branch
     /// (Complete in this case) and the on_approve operation does not run.
     /// </summary>
