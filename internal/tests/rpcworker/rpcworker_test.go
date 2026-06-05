@@ -108,6 +108,10 @@ func (m *mockScheduler) FailRequest(_ context.Context, req string) (bool, error)
 	return true, nil
 }
 
+func (m *mockScheduler) MarkAwaitingApproval(_ context.Context, _ string) error {
+	return nil
+}
+
 // ---- metrics handler mock ----
 
 type mockMetrics struct{}
@@ -142,6 +146,7 @@ func testJob() *domain.Job {
 		RequestID:              testRequestID,
 		CurrentAtomicOperation: "create",
 		JobType:                "create",
+		Status:                 domain.JobStatusPending,
 		Context:                map[string]any{},
 		RuntimeParams:          domain.WorkflowRuntimeParams{OperationTimeoutSeconds: 60},
 	}

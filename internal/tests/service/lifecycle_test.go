@@ -25,17 +25,37 @@ func (m *mockRequestScheduler) ScheduleRequest(_ context.Context, _ string) erro
 	return m.scheduleErr
 }
 
+// mockApprovalResolver is a simple test double for service.ApprovalResolver.
+type mockApprovalResolver struct {
+	approveResult bool
+	approveErr    error
+	rejectResult  bool
+	rejectErr     error
+}
+
+func (m *mockApprovalResolver) ApproveJob(_ context.Context, _ string, _ string) (bool, error) {
+	return m.approveResult, m.approveErr
+}
+
+func (m *mockApprovalResolver) RejectJob(_ context.Context, _ string, _ string) (bool, error) {
+	return m.rejectResult, m.rejectErr
+}
+
 // policy used in all tests — non-zero so resolveJobPolicy returns immediately.
 var testPolicy = domain.WorkflowRuntimeParams{OperationTimeoutSeconds: 30}
 
 func newSvc(ctrl *gomock.Controller) (*service.LifecycleService, *mocks.MockResourceInstanceRepository, *mocks.MockCustomerRequestRepository, *mocks.MockTenantRepository, *mocks.MockTenantGroupRepository, *mocks.MockAgentStateRepository) {
+	return newSvcWithApproval(ctrl, &mockApprovalResolver{approveResult: true, rejectResult: true})
+}
+
+func newSvcWithApproval(ctrl *gomock.Controller, approval service.ApprovalResolver) (*service.LifecycleService, *mocks.MockResourceInstanceRepository, *mocks.MockCustomerRequestRepository, *mocks.MockTenantRepository, *mocks.MockTenantGroupRepository, *mocks.MockAgentStateRepository) {
 	resourceInstanceRepo := mocks.NewMockResourceInstanceRepository(ctrl)
 	customerRequestRepo := mocks.NewMockCustomerRequestRepository(ctrl)
 	tenantRepo := mocks.NewMockTenantRepository(ctrl)
 	tenantGroupRepo := mocks.NewMockTenantGroupRepository(ctrl)
 	agentStateRepo := mocks.NewMockAgentStateRepository(ctrl)
 	sched := &mockRequestScheduler{}
-	svc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, sched, 10, discardLogger)
+	svc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, sched, approval, 10, discardLogger)
 	return svc, resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo
 }
 
@@ -66,11 +86,11 @@ func TestCreateResource(t *testing.T) {
 			if r.CurrentWorkflowVersion != 1 {
 				t.Errorf("expected current_workflow_version 1, got %d", r.CurrentWorkflowVersion)
 			}
-			if r.TargetVersion != 1 {
-				t.Errorf("expected target_version 1, got %d", r.TargetVersion)
+			if r.TargetVersion != 0 {
+				t.Errorf("expected target_version 0, got %d", r.TargetVersion)
 			}
-			if r.CurrentVersion != 1 {
-				t.Errorf("expected current_version 1, got %d", r.CurrentVersion)
+			if r.CurrentVersion != 0 {
+				t.Errorf("expected current_version 0, got %d", r.CurrentVersion)
 			}
 			return nil
 		})
@@ -95,6 +115,7 @@ func TestReconcileResource(t *testing.T) {
 			TenantID:               "tenant-1",
 			CurrentWorkflowVersion: 1,
 			WorkflowConfig:         domain.WorkflowConfig{InvokeTimeoutSeconds: 60, Triggerable: true},
+			WorkflowState:          domain.WorkflowStateActive,
 		}, nil)
 
 	agentStateRepo.EXPECT().
@@ -128,7 +149,7 @@ func TestDeleteResource(t *testing.T) {
 		Return(&domain.ResourceInstance{ID: "instance-1", TenantID: "tenant-1"}, nil)
 
 	resourceInstanceRepo.EXPECT().
-		UpdateLifecycleState(gomock.Any(), "instance-1", domain.LifecycleStateDeleted).
+		MarkDeleted(gomock.Any(), "instance-1").
 		Return(nil)
 
 	if err := svc.DeleteResource(context.Background(), "corr-3", "instance-1"); err != nil {
@@ -253,6 +274,64 @@ func TestDeleteAgent_RepoError(t *testing.T) {
 		Return(errors.New("db error"))
 
 	if err := svc.DeleteAgent(context.Background(), "instance-1", "my_agent"); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestApproveWorkflow_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	svc, _, _, _, _, _ := newSvcWithApproval(ctrl, &mockApprovalResolver{approveResult: true})
+
+	if err := svc.ApproveWorkflow(context.Background(), "instance-1", "approval-id-1"); err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+}
+
+func TestApproveWorkflow_IdMismatch_ReturnsInvalidWorkflowState(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	svc, _, _, _, _, _ := newSvcWithApproval(ctrl, &mockApprovalResolver{approveResult: false})
+
+	err := svc.ApproveWorkflow(context.Background(), "instance-1", "wrong-id")
+	if !errors.Is(err, service.ErrInvalidWorkflowState) {
+		t.Fatalf("expected ErrInvalidWorkflowState, got %v", err)
+	}
+}
+
+func TestApproveWorkflow_StorageError_ReturnsError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	storageErr := errors.New("db error")
+	svc, _, _, _, _, _ := newSvcWithApproval(ctrl, &mockApprovalResolver{approveErr: storageErr})
+
+	if err := svc.ApproveWorkflow(context.Background(), "instance-1", "approval-id-1"); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestRejectWorkflow_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	svc, _, _, _, _, _ := newSvcWithApproval(ctrl, &mockApprovalResolver{rejectResult: true})
+
+	if err := svc.RejectWorkflow(context.Background(), "instance-1", "approval-id-1"); err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+}
+
+func TestRejectWorkflow_IdMismatch_ReturnsInvalidWorkflowState(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	svc, _, _, _, _, _ := newSvcWithApproval(ctrl, &mockApprovalResolver{rejectResult: false})
+
+	err := svc.RejectWorkflow(context.Background(), "instance-1", "wrong-id")
+	if !errors.Is(err, service.ErrInvalidWorkflowState) {
+		t.Fatalf("expected ErrInvalidWorkflowState, got %v", err)
+	}
+}
+
+func TestRejectWorkflow_StorageError_ReturnsError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	storageErr := errors.New("db error")
+	svc, _, _, _, _, _ := newSvcWithApproval(ctrl, &mockApprovalResolver{rejectErr: storageErr})
+
+	if err := svc.RejectWorkflow(context.Background(), "instance-1", "approval-id-1"); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }
