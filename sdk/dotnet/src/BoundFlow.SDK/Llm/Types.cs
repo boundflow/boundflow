@@ -78,7 +78,6 @@ public record AllowedCallback(
     Func<JsonNode, CancellationToken, Task<JsonNode?>> Handler,
     /// <summary>Informational mode label (e.g. "read", "write"). Appended to description if set.</summary>
     string? Mode = null,
-    bool ApprovalRequired = false,
     /// <summary>JSON Schema for the tool's input. If null, the tool accepts an open-ended object.</summary>
     JsonNode? InputSchema = null
 );

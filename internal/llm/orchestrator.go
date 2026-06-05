@@ -24,8 +24,7 @@ type AllowedCallback struct {
 	// Description is shown to the LLM as the tool description.
 	Description string
 	// Mode is informational (read / write / write_draft), appended to description.
-	Mode             string
-	ApprovalRequired bool
+	Mode string
 	// InputSchema is a JSON Schema properties map describing the tool's expected input.
 	// Passed directly to the LLM as the tool's input_schema properties.
 	// If nil, the tool accepts an open-ended object.
