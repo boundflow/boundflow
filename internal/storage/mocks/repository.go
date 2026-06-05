@@ -541,6 +541,20 @@ func (mr *MockSchedulerRepositoryMockRecorder) GetTopUnscheduledRequests(ctx, pa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTopUnscheduledRequests", reflect.TypeOf((*MockSchedulerRepository)(nil).GetTopUnscheduledRequests), ctx, partitionID)
 }
 
+// MarkResourceAwaitingApproval mocks base method.
+func (m *MockSchedulerRepository) MarkResourceAwaitingApproval(ctx context.Context, resourceInstanceID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkResourceAwaitingApproval", ctx, resourceInstanceID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MarkResourceAwaitingApproval indicates an expected call of MarkResourceAwaitingApproval.
+func (mr *MockSchedulerRepositoryMockRecorder) MarkResourceAwaitingApproval(ctx, resourceInstanceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkResourceAwaitingApproval", reflect.TypeOf((*MockSchedulerRepository)(nil).MarkResourceAwaitingApproval), ctx, resourceInstanceID)
+}
+
 // SupercedeOlderRequests mocks base method.
 func (m *MockSchedulerRepository) SupercedeOlderRequests(ctx context.Context, resourceInstanceID string, version int64) error {
 	m.ctrl.T.Helper()
@@ -553,6 +567,21 @@ func (m *MockSchedulerRepository) SupercedeOlderRequests(ctx context.Context, re
 func (mr *MockSchedulerRepositoryMockRecorder) SupercedeOlderRequests(ctx, resourceInstanceID, version any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SupercedeOlderRequests", reflect.TypeOf((*MockSchedulerRepository)(nil).SupercedeOlderRequests), ctx, resourceInstanceID, version)
+}
+
+// SyncAwaitingApprovalStates mocks base method.
+func (m *MockSchedulerRepository) SyncAwaitingApprovalStates(ctx context.Context, partitionID string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SyncAwaitingApprovalStates", ctx, partitionID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SyncAwaitingApprovalStates indicates an expected call of SyncAwaitingApprovalStates.
+func (mr *MockSchedulerRepositoryMockRecorder) SyncAwaitingApprovalStates(ctx, partitionID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncAwaitingApprovalStates", reflect.TypeOf((*MockSchedulerRepository)(nil).SyncAwaitingApprovalStates), ctx, partitionID)
 }
 
 // UpsertJobAndSchedule mocks base method.
@@ -683,6 +712,21 @@ func (m *MockJobRepository) RenewJobLease(ctx context.Context, resourceInstanceI
 func (mr *MockJobRepositoryMockRecorder) RenewJobLease(ctx, resourceInstanceID, ownerID, leaseDuration any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RenewJobLease", reflect.TypeOf((*MockJobRepository)(nil).RenewJobLease), ctx, resourceInstanceID, ownerID, leaseDuration)
+}
+
+// ResolveApproval mocks base method.
+func (m *MockJobRepository) ResolveApproval(ctx context.Context, resourceInstanceID, approvalID string, status domain.JobStatus) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResolveApproval", ctx, resourceInstanceID, approvalID, status)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ResolveApproval indicates an expected call of ResolveApproval.
+func (mr *MockJobRepositoryMockRecorder) ResolveApproval(ctx, resourceInstanceID, approvalID, status any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveApproval", reflect.TypeOf((*MockJobRepository)(nil).ResolveApproval), ctx, resourceInstanceID, approvalID, status)
 }
 
 // UpdateJob mocks base method.

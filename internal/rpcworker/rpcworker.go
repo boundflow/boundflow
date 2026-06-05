@@ -16,6 +16,7 @@ import (
 type RequestScheduler interface {
 	CompleteRequest(ctx context.Context, req string) (bool, error)
 	FailRequest(ctx context.Context, req string) (bool, error)
+	MarkAwaitingApproval(ctx context.Context, resourceInstanceID string) error
 }
 
 type MetricsHandler interface {
@@ -136,25 +137,44 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 
 			return err
 		} else if result.ApprovalGate != nil {
+			log.Info("operation requires approval, parking job", "request_id", job.RequestID, "resource_id", job.ResourceInstanceID, "approval_id", result.ApprovalGate.ApprovalId)
 
-			// mark the job as awaiting approval, set timeout and set approval id
+			var onApprove *domain.ApprovalBranch
+			if result.ApprovalGate.OnApprove != nil {
+				onApprove = &domain.ApprovalBranch{
+					OperationName:  result.ApprovalGate.OnApprove.Name,
+					Context:        result.ApprovalGate.OnApprove.Context.AsMap(),
+					TimeoutSeconds: int(result.ApprovalGate.OnApprove.TimeoutSeconds),
+				}
+			}
+			var onReject *domain.ApprovalBranch
+			if result.ApprovalGate.OnReject != nil {
+				onReject = &domain.ApprovalBranch{
+					OperationName:  result.ApprovalGate.OnReject.Name,
+					Context:        result.ApprovalGate.OnReject.Context.AsMap(),
+					TimeoutSeconds: int(result.ApprovalGate.OnReject.TimeoutSeconds),
+				}
+			}
 
-			jobMetadata := domain.JobMetadata {
+			jobMetadata := domain.JobMetadata{
 				ApprovalGate: &domain.ApprovalGateMetadata{
-					OnApproval: &domain.ApprovalBranch {
-						OperationName: result.ApprovalGate.OnApprove.Name,
-						Context: result.ApprovalGate.OnApprove.Context.AsMap(),
-						TimeoutSeconds: int(result.ApprovalGate.OnApprove.TimeoutSeconds),
-					},
-					OnReject: &domain.ApprovalBranch {
-						OperationName: result.ApprovalGate.OnReject.Name,
-						Context: result.ApprovalGate.OnReject.Context.AsMap(),
-						TimeoutSeconds: int(result.ApprovalGate.OnReject.TimeoutSeconds),
-					},
+					OnApprove: onApprove,
+					OnReject:  onReject,
 				},
-			},
+			}
 
-
+			timeoutAt := time.Now().Add(time.Duration(result.ApprovalGate.TimeoutSeconds) * time.Second)
+			parked, err := s.jobs.ParkForApproval(ctx, job.ResourceInstanceID, s.id, result.ApprovalGate.ApprovalId, timeoutAt, jobMetadata)
+			if err != nil {
+				log.Error("failed to park job for approval", "request_id", job.RequestID, "resource_id", job.ResourceInstanceID, "error", err)
+				return err
+			}
+			if !parked {
+				log.Warn("lost ownership while parking job for approval", "request_id", job.RequestID, "resource_id", job.ResourceInstanceID)
+			}
+			if err := s.scheduler.MarkAwaitingApproval(ctx, job.ResourceInstanceID); err != nil {
+				log.Warn("failed to mark resource awaiting approval, scheduler will sync", "resource_id", job.ResourceInstanceID, "error", err)
+			}
 		} else {
 			updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.ResourceInstanceID, s.id, domain.JobStatusCompleted, job.AgentMetrics)
 			if err != nil {
@@ -275,7 +295,53 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 							}
 						}(resourceInstID)
 
-						contextStruct, err := structpb.NewStruct(job.Context)
+						var jobContext map[string]any
+						var timeoutSeconds int32
+						var opName string
+
+						resolveBranch := func(branch *domain.ApprovalBranch, label string) bool {
+							if branch != nil {
+								jobContext = branch.Context
+								timeoutSeconds = int32(branch.TimeoutSeconds)
+								opName = branch.OperationName
+								return true
+							}
+							// nil branch = Complete() — finish the job without launching an operation.
+							log.Info("approval branch is complete, finishing job", "request_id", job.RequestID, "branch", label)
+							completeOperation(cancelLease, job, &convergeplanev1.AtomicOperationResult{
+								Status: convergeplanev1.OperationStatus_OPERATION_STATUS_COMPLETED,
+							})
+							return false
+						}
+
+						var shouldLaunch bool
+						switch job.Status {
+						case domain.JobStatusApproved:
+							shouldLaunch = resolveBranch(job.JobMetadata.ApprovalGate.OnApprove, "on_approve")
+						case domain.JobStatusRejected, domain.JobStatusAwaitingApproval:
+							// JobStatusAwaitingApproval here means the approval timed out.
+							shouldLaunch = resolveBranch(job.JobMetadata.ApprovalGate.OnReject, "on_reject")
+						case domain.JobStatusAwaitingNext, domain.JobStatusPending:
+							jobContext = job.Context
+							timeoutSeconds = int32(job.RuntimeParams.OperationTimeoutSeconds)
+							opName = job.CurrentAtomicOperation
+							shouldLaunch = true
+						default:
+							log.Error("unexpected job status in dispatch, skipping", "request_id", job.RequestID, "status", job.Status)
+							cancelLeaseIfExists(cancelLease)
+							select {
+							case <-stream.Context().Done():
+								return nil
+							case <-time.After(jobLookupInterval):
+							}
+							continue
+						}
+
+						if !shouldLaunch {
+							continue
+						}
+
+						contextStruct, err := structpb.NewStruct(jobContext)
 						if err != nil {
 							log.Error("failed to serialize job context", "request_id", job.RequestID, "error", err)
 							cancelLeaseIfExists(cancelLease)
@@ -297,8 +363,8 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 										OperationType:   job.JobType,
 										ResourceType:    job.ResourceType,
 										Context:         contextStruct,
-										Name:            job.CurrentAtomicOperation,
-										TimeoutSeconds:  int32(job.RuntimeParams.OperationTimeoutSeconds),
+										Name:            opName,
+										TimeoutSeconds:  timeoutSeconds,
 										WorkflowVersion: int32(job.WorkflowVersion),
 									},
 								},

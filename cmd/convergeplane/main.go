@@ -83,7 +83,7 @@ func runServer(sigCh <-chan os.Signal) {
 	sched := internalscheduler.NewScheduler("server", 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, agentStateRepo, jobRepo, metricsHandler, policyResolver, logger)
 
 	regSvc := service.NewRegistrationService(tenantGroupRepo, tenantRepo)
-	lifecycleSvc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, sched, cfg.NumPartitions, logger)
+	lifecycleSvc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, sched, sched, cfg.NumPartitions, logger)
 
 	srv := server.New(cfg, regSvc, lifecycleSvc, cfg.Debug)
 
@@ -129,7 +129,7 @@ func runScheduler(sigCh <-chan os.Signal) {
 		resolver := internalscheduler.NewLifecycleResolver(30, logger, lifecycleResolverRepo, resourceInstanceRepo, versionMetricsRepo)
 		sched := internalscheduler.NewScheduler(schedulerID, 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, agentStateRepo, jobRepo, metricsHandler, resolver, logger)
 		// The periodic handler reconciles due workflows via the scheduler + lifecycle service.
-		lifecycleSvc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, sched, cfg.NumPartitions, logger)
+		lifecycleSvc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, sched, sched, cfg.NumPartitions, logger)
 		periodic := internalscheduler.NewPeriodicWorkflowHandler(30, logger, sched, lifecycleSvc, schedulerRepo, customerRequestRepo)
 		// Resolver (cooldown expiry) and periodic handler are partition-scoped: the scheduler
 		// starts them when it acquires a partition and cancels them when it loses it.

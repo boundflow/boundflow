@@ -223,6 +223,50 @@ func (r *SchedulerRepo) DeleteTerminalJob(ctx context.Context, resourceInstanceI
 	return tag.RowsAffected() == 1, nil
 }
 
+func (r *SchedulerRepo) MarkResourceAwaitingApproval(ctx context.Context, resourceInstanceID string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE resource_instances ri
+		 SET lifecycle_state = 'awaiting_approval'
+		 FROM jobs j
+		 WHERE j.resource_instance_id = ri.id
+		   AND j.status = 'awaiting_approval'
+		   AND ri.id = $1`,
+		resourceInstanceID,
+	)
+	if err != nil {
+		return fmt.Errorf("mark resource awaiting approval: %w", err)
+	}
+	return nil
+}
+
+func (r *SchedulerRepo) SyncAwaitingApprovalStates(ctx context.Context, partitionID string) ([]string, error) {
+	rows, err := r.pool.Query(ctx,
+		`UPDATE resource_instances ri
+		 SET lifecycle_state = 'awaiting_approval'
+		 FROM jobs j
+		 WHERE j.resource_instance_id = ri.id
+		   AND j.status = 'awaiting_approval'
+		   AND ri.scheduler_partition_id = $1
+		   AND ri.lifecycle_state != 'awaiting_approval'
+		 RETURNING ri.id`,
+		partitionID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("sync awaiting approval states: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan synced id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	return ids, nil
+}
+
 func (r *SchedulerRepo) SupercedeOlderRequests(ctx context.Context, resourceInstanceID string, version int64) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE customer_requests

@@ -26,7 +26,10 @@ func (r *JobRepo) GetAvailableJob(ctx context.Context) (*string, error) {
 	var resourceInstanceID string
 	err := r.pool.QueryRow(ctx,
 		`SELECT resource_instance_id FROM jobs
-		 WHERE status IN ('pending', 'awaiting_next')
+		 WHERE (
+		     status IN ('pending', 'awaiting_next', 'approved', 'rejected')
+		     OR (status = 'awaiting_approval' AND approval_timeout_at <= now())
+		 )
 		   AND (owner IS NULL OR lease_expires_at < now())
 		 LIMIT 1`,
 	).Scan(&resourceInstanceID)
@@ -41,20 +44,28 @@ func (r *JobRepo) GetAvailableJob(ctx context.Context) (*string, error) {
 
 func (r *JobRepo) AcquireJob(ctx context.Context, resourceInstanceID string, ownerID string, leaseDuration time.Duration) (*domain.Job, error) {
 	var job domain.Job
-	var contextJSON, agentMetricsJSON []byte
+	var contextJSON, agentMetricsJSON, jobMetadataJSON []byte
 
 	err := r.pool.QueryRow(ctx,
 		`UPDATE jobs
 		 SET owner = $2, lease_expires_at = now() + $3::interval
 		 WHERE resource_instance_id = $1
-		   AND status IN ('pending', 'awaiting_next')
+		   AND (
+		       status IN ('pending', 'awaiting_next', 'approved', 'rejected')
+		       OR (status = 'awaiting_approval' AND approval_timeout_at <= now())
+		   )
 		   AND (owner IS NULL OR lease_expires_at < now())
-		 RETURNING resource_instance_id, request_id, version, current_atomic_operation, context, status, job_type, resource_type, timeout_seconds, workflow_version, agent_metrics, owner, lease_expires_at, created_at`,
+		 RETURNING resource_instance_id, request_id, version, current_atomic_operation, context, status,
+		           job_type, resource_type, timeout_seconds, workflow_version, agent_metrics,
+		           job_metadata, approval_id, approval_timeout_at,
+		           owner, lease_expires_at, created_at`,
 		resourceInstanceID, ownerID, leaseDuration.String(),
 	).Scan(
 		&job.ResourceInstanceID, &job.RequestID, &job.Version,
 		&job.CurrentAtomicOperation, &contextJSON, &job.Status,
-		&job.JobType, &job.ResourceType, &job.RuntimeParams.OperationTimeoutSeconds, &job.WorkflowVersion, &agentMetricsJSON, &job.Owner, &job.LeaseExpiresAt, &job.CreatedAt,
+		&job.JobType, &job.ResourceType, &job.RuntimeParams.OperationTimeoutSeconds, &job.WorkflowVersion, &agentMetricsJSON,
+		&jobMetadataJSON, &job.ApprovalID, &job.ApprovalTimeoutAt,
+		&job.Owner, &job.LeaseExpiresAt, &job.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -68,6 +79,9 @@ func (r *JobRepo) AcquireJob(ctx context.Context, resourceInstanceID string, own
 	}
 	if err := json.Unmarshal(agentMetricsJSON, &job.AgentMetrics); err != nil {
 		return nil, fmt.Errorf("unmarshal agent metrics: %w", err)
+	}
+	if err := json.Unmarshal(jobMetadataJSON, &job.JobMetadata); err != nil {
+		return nil, fmt.Errorf("unmarshal job metadata: %w", err)
 	}
 
 	return &job, nil
@@ -134,6 +148,32 @@ func (r *JobRepo) GetAgentMetrics(ctx context.Context, resourceInstanceID string
 	return metrics, nil
 }
 
+func (r *JobRepo) ResolveApproval(ctx context.Context, resourceInstanceID string, approvalID string, status domain.JobStatus) (bool, error) {
+	var updated string
+	err := r.pool.QueryRow(ctx,
+		`WITH job_update AS (
+		     UPDATE jobs
+		     SET status = $3
+		     WHERE resource_instance_id = $1
+		       AND approval_id = $2
+		       AND status = 'awaiting_approval'
+		     RETURNING resource_instance_id
+		 )
+		 UPDATE resource_instances
+		 SET lifecycle_state = 'reconciling'
+		 WHERE id IN (SELECT resource_instance_id FROM job_update)
+		 RETURNING id`,
+		resourceInstanceID, approvalID, status,
+	).Scan(&updated)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("resolve approval: %w", err)
+	}
+	return true, nil
+}
+
 func (r *JobRepo) ParkForApproval(ctx context.Context, resourceInstanceID string, ownerID string, approvalID string, timeoutAt time.Time, metadata domain.JobMetadata) (bool, error) {
 	metadataJSON, err := json.Marshal(metadata)
 	if err != nil {
@@ -141,7 +181,8 @@ func (r *JobRepo) ParkForApproval(ctx context.Context, resourceInstanceID string
 	}
 	tag, err := r.pool.Exec(ctx,
 		`UPDATE jobs
-		 SET status = $3, approval_id = $4, approval_timeout_at = $5, job_metadata = $6
+		 SET status = $3, approval_id = $4, approval_timeout_at = $5, job_metadata = $6,
+		     context = '{}'::jsonb, timeout_seconds = 0, current_atomic_operation = ''
 		 WHERE resource_instance_id = $1 AND owner = $2`,
 		resourceInstanceID, ownerID, domain.JobStatusAwaitingApproval, approvalID, timeoutAt, metadataJSON,
 	)
@@ -172,7 +213,8 @@ func (r *JobRepo) UpdateJob(ctx context.Context, resourceInstanceID string, owne
 
 	tag, err := r.pool.Exec(ctx,
 		`UPDATE jobs
-		 SET status = $3, current_atomic_operation = $4, timeout_seconds = $5, context = $6
+		 SET status = $3, current_atomic_operation = $4, timeout_seconds = $5, context = $6,
+		     approval_id = NULL, approval_timeout_at = NULL, job_metadata = '{}'
 		 WHERE resource_instance_id = $1 AND owner = $2`,
 		resourceInstanceID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, contextJSON,
 	)
@@ -194,7 +236,8 @@ func (r *JobRepo) UpdateJobWithMetrics(ctx context.Context, resourceInstanceID s
 
 	tag, err := r.pool.Exec(ctx,
 		`UPDATE jobs
-		 SET status = $3, current_atomic_operation = $4, timeout_seconds = $5, context = $6, agent_metrics = $7
+		 SET status = $3, current_atomic_operation = $4, timeout_seconds = $5, context = $6, agent_metrics = $7,
+		     approval_id = NULL, approval_timeout_at = NULL, job_metadata = '{}'
 		 WHERE resource_instance_id = $1 AND owner = $2`,
 		resourceInstanceID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, contextJSON, agentMetricsJSON,
 	)

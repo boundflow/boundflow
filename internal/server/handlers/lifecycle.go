@@ -197,14 +197,30 @@ func (h *ResourceLifecycleHandler) ApproveWorkflow(ctx context.Context, req *con
 	if req.ResourceInstanceId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
 	}
-	if err := h.svc.ApproveWorkflow(ctx, req.ResourceInstanceId); err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Errorf(codes.NotFound, "resource instance not found")
-		}
-		if errors.Is(err, storage.ErrInvalidLifecycleState) {
+	if req.ApprovalId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "approval_id is required")
+	}
+	if err := h.svc.ApproveWorkflow(ctx, req.ResourceInstanceId, req.ApprovalId); err != nil {
+		if errors.Is(err, service.ErrInvalidWorkflowState) {
 			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
 		}
 		return nil, status.Errorf(codes.Internal, "approve workflow: %v", err)
 	}
 	return &convergeplanev1.ApproveWorkflowResponse{}, nil
+}
+
+func (h *ResourceLifecycleHandler) RejectWorkflow(ctx context.Context, req *convergeplanev1.RejectWorkflowRequest) (*convergeplanev1.RejectWorkflowResponse, error) {
+	if req.ResourceInstanceId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
+	}
+	if req.ApprovalId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "approval_id is required")
+	}
+	if err := h.svc.RejectWorkflow(ctx, req.ResourceInstanceId, req.ApprovalId); err != nil {
+		if errors.Is(err, service.ErrInvalidWorkflowState) {
+			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
+		}
+		return nil, status.Errorf(codes.Internal, "reject workflow: %v", err)
+	}
+	return &convergeplanev1.RejectWorkflowResponse{}, nil
 }

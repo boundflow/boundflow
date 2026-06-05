@@ -126,7 +126,7 @@ func (s *Scheduler) runPartition(ctx context.Context, partition *domain.Schedule
 			s.log.Debug("tick", "partition_id", partition.ID)
 
 			var wg sync.WaitGroup
-			wg.Add(2)
+			wg.Add(3)
 			go func() {
 				defer wg.Done()
 				s.failJobs(ctx, partition.ID)
@@ -134,6 +134,10 @@ func (s *Scheduler) runPartition(ctx context.Context, partition *domain.Schedule
 			go func() {
 				defer wg.Done()
 				s.completeJobs(ctx, partition.ID)
+			}()
+			go func() {
+				defer wg.Done()
+				s.syncAwaitingApprovalStates(ctx, partition.ID)
 			}()
 			wg.Wait()
 			s.scheduleJobs(ctx, partition.ID)
@@ -150,6 +154,29 @@ func (s *Scheduler) runPartition(ctx context.Context, partition *domain.Schedule
 			s.log.Debug("partition lease renewed", "partition_id", partition.ID)
 			ticker.Reset(time.Duration(s.interval) * time.Second)
 		}
+	}
+}
+
+func (s *Scheduler) ApproveJob(ctx context.Context, resourceInstanceID string, approvalID string) (bool, error) {
+	return s.jobs.ResolveApproval(ctx, resourceInstanceID, approvalID, domain.JobStatusApproved)
+}
+
+func (s *Scheduler) RejectJob(ctx context.Context, resourceInstanceID string, approvalID string) (bool, error) {
+	return s.jobs.ResolveApproval(ctx, resourceInstanceID, approvalID, domain.JobStatusRejected)
+}
+
+func (s *Scheduler) MarkAwaitingApproval(ctx context.Context, resourceInstanceID string) error {
+	return s.scheduler.MarkResourceAwaitingApproval(ctx, resourceInstanceID)
+}
+
+func (s *Scheduler) syncAwaitingApprovalStates(ctx context.Context, partitionID string) {
+	synced, err := s.scheduler.SyncAwaitingApprovalStates(ctx, partitionID)
+	if err != nil {
+		s.log.Error("failed to sync awaiting approval states", "partition_id", partitionID, "error", err)
+		return
+	}
+	if len(synced) > 0 {
+		s.log.Info("synced awaiting approval lifecycle states", "partition_id", partitionID, "count", len(synced), "resource_ids", synced)
 	}
 }
 

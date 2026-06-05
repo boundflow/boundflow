@@ -75,6 +75,13 @@ type SchedulerRepository interface {
 	// expectedCurrentVersion guards the write: it only proceeds if the resource's current_version
 	// still equals it (the run the caller validated against), else written=false.
 	UpsertJobAndSchedule(ctx context.Context, requestID string, contextJSON string, currentAtomicOperation string, timeoutSeconds int, workflowVersion int, expectedCurrentVersion int64) (resourceInstanceID string, version int64, written bool, err error)
+	// MarkResourceAwaitingApproval sets lifecycle_state = awaiting_approval for the given resource,
+	// guarded so it only fires if the job still shows awaiting_approval status at update time.
+	MarkResourceAwaitingApproval(ctx context.Context, resourceInstanceID string) error
+	// SyncAwaitingApprovalStates sets lifecycle_state = awaiting_approval for all resource instances
+	// in the partition that have a job in awaiting_approval status, guarded so it only fires if the
+	// job still shows awaiting_approval at update time. Returns the synced resource instance IDs.
+	SyncAwaitingApprovalStates(ctx context.Context, partitionID string) ([]string, error)
 	// SupercedeOlderRequests marks all unscheduled or scheduled requests for the given resource
 	// whose version is strictly less than version as superceded.
 	SupercedeOlderRequests(ctx context.Context, resourceInstanceID string, version int64) error
@@ -120,6 +127,9 @@ type JobRepository interface {
 	// timeout, and job metadata. Only succeeds if ownerID holds the job.
 	// Returns false if ownership check fails.
 	ParkForApproval(ctx context.Context, resourceInstanceID string, ownerID string, approvalID string, timeoutAt time.Time, metadata domain.JobMetadata) (bool, error)
+	// ResolveApproval transitions a job from awaiting_approval to the given status (approved/rejected),
+	// guarded by approvalID match. Returns false if the ID doesn't match or the job isn't awaiting approval.
+	ResolveApproval(ctx context.Context, resourceInstanceID string, approvalID string, status domain.JobStatus) (bool, error)
 	// ReleaseJob clears the owner and lease on a job, only if currently owned by ownerID.
 	ReleaseJob(ctx context.Context, resourceInstanceID string, ownerID string) error
 }

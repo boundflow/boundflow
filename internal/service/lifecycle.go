@@ -23,6 +23,13 @@ type RequestScheduler interface {
 	ScheduleRequest(ctx context.Context, requestID string) error
 }
 
+// ApprovalResolver handles approve/reject for jobs awaiting approval.
+// Satisfied by *scheduler.Scheduler.
+type ApprovalResolver interface {
+	ApproveJob(ctx context.Context, resourceInstanceID string, approvalID string) (bool, error)
+	RejectJob(ctx context.Context, resourceInstanceID string, approvalID string) (bool, error)
+}
+
 type LifecycleService struct {
 	resourceInstances storage.ResourceInstanceRepository
 	customerRequests  storage.CustomerRequestRepository
@@ -30,6 +37,7 @@ type LifecycleService struct {
 	tenantGroups      storage.TenantGroupRepository
 	agentStates       storage.AgentStateRepository
 	scheduler         RequestScheduler
+	approvalResolver  ApprovalResolver
 	numPartitions     int
 	log               *slog.Logger
 }
@@ -41,6 +49,7 @@ func NewLifecycleService(
 	tenantGroups storage.TenantGroupRepository,
 	agentStates storage.AgentStateRepository,
 	scheduler RequestScheduler,
+	approvalResolver ApprovalResolver,
 	numPartitions int,
 	log *slog.Logger,
 ) *LifecycleService {
@@ -51,6 +60,7 @@ func NewLifecycleService(
 		tenantGroups:      tenantGroups,
 		agentStates:       agentStates,
 		scheduler:         scheduler,
+		approvalResolver:  approvalResolver,
 		numPartitions:     numPartitions,
 		log:               log.With("component", "lifecycle_service"),
 	}
@@ -231,9 +241,28 @@ func (s *LifecycleService) ActivateWorkflow(ctx context.Context, resourceInstanc
 	return nil
 }
 
-func (s *LifecycleService) ApproveWorkflow(ctx context.Context, resourceInstanceID string) error {
-	s.log.Info("approving workflow", "resource_id", resourceInstanceID)
-	return fmt.Errorf("not implemented")
+func (s *LifecycleService) ApproveWorkflow(ctx context.Context, resourceInstanceID string, approvalID string) error {
+	s.log.Info("approving workflow", "resource_id", resourceInstanceID, "approval_id", approvalID)
+	resolved, err := s.approvalResolver.ApproveJob(ctx, resourceInstanceID, approvalID)
+	if err != nil {
+		return fmt.Errorf("approve workflow: %w", err)
+	}
+	if !resolved {
+		return fmt.Errorf("%w: approval ID did not match or workflow is not awaiting approval", ErrInvalidWorkflowState)
+	}
+	return nil
+}
+
+func (s *LifecycleService) RejectWorkflow(ctx context.Context, resourceInstanceID string, approvalID string) error {
+	s.log.Info("rejecting workflow", "resource_id", resourceInstanceID, "approval_id", approvalID)
+	resolved, err := s.approvalResolver.RejectJob(ctx, resourceInstanceID, approvalID)
+	if err != nil {
+		return fmt.Errorf("reject workflow: %w", err)
+	}
+	if !resolved {
+		return fmt.Errorf("%w: approval ID did not match or workflow is not awaiting approval", ErrInvalidWorkflowState)
+	}
+	return nil
 }
 
 func partitionForID(id string, numPartitions int) string {
