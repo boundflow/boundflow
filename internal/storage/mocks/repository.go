@@ -640,21 +640,6 @@ func (mr *MockJobRepositoryMockRecorder) AcquireJob(ctx, resourceInstanceID, own
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AcquireJob", reflect.TypeOf((*MockJobRepository)(nil).AcquireJob), ctx, resourceInstanceID, ownerID, leaseDuration)
 }
 
-// GetAgentMetrics mocks base method.
-func (m *MockJobRepository) GetAgentMetrics(ctx context.Context, resourceInstanceID, requestID string) (map[string]*convergeplanev1.AgentInvocationMetrics, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAgentMetrics", ctx, resourceInstanceID, requestID)
-	ret0, _ := ret[0].(map[string]*convergeplanev1.AgentInvocationMetrics)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetAgentMetrics indicates an expected call of GetAgentMetrics.
-func (mr *MockJobRepositoryMockRecorder) GetAgentMetrics(ctx, resourceInstanceID, requestID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAgentMetrics", reflect.TypeOf((*MockJobRepository)(nil).GetAgentMetrics), ctx, resourceInstanceID, requestID)
-}
-
 // GetAvailableJob mocks base method.
 func (m *MockJobRepository) GetAvailableJob(ctx context.Context) (*string, error) {
 	m.ctrl.T.Helper()
@@ -668,6 +653,22 @@ func (m *MockJobRepository) GetAvailableJob(ctx context.Context) (*string, error
 func (mr *MockJobRepositoryMockRecorder) GetAvailableJob(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAvailableJob", reflect.TypeOf((*MockJobRepository)(nil).GetAvailableJob), ctx)
+}
+
+// GetJobMetrics mocks base method.
+func (m *MockJobRepository) GetJobMetrics(ctx context.Context, resourceInstanceID, requestID string) (map[string]*convergeplanev1.AgentInvocationMetrics, domain.WorkflowJobMetrics, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetJobMetrics", ctx, resourceInstanceID, requestID)
+	ret0, _ := ret[0].(map[string]*convergeplanev1.AgentInvocationMetrics)
+	ret1, _ := ret[1].(domain.WorkflowJobMetrics)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetJobMetrics indicates an expected call of GetJobMetrics.
+func (mr *MockJobRepositoryMockRecorder) GetJobMetrics(ctx, resourceInstanceID, requestID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetJobMetrics", reflect.TypeOf((*MockJobRepository)(nil).GetJobMetrics), ctx, resourceInstanceID, requestID)
 }
 
 // ParkForApproval mocks base method.
@@ -760,33 +761,33 @@ func (mr *MockJobRepositoryMockRecorder) UpdateJobStatus(ctx, resourceInstanceID
 }
 
 // UpdateJobStatusWithMetrics mocks base method.
-func (m *MockJobRepository) UpdateJobStatusWithMetrics(ctx context.Context, resourceInstanceID, ownerID string, status domain.JobStatus, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics) (bool, error) {
+func (m *MockJobRepository) UpdateJobStatusWithMetrics(ctx context.Context, resourceInstanceID, ownerID string, status domain.JobStatus, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateJobStatusWithMetrics", ctx, resourceInstanceID, ownerID, status, agentMetrics)
+	ret := m.ctrl.Call(m, "UpdateJobStatusWithMetrics", ctx, resourceInstanceID, ownerID, status, agentMetrics, workflowMetrics)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UpdateJobStatusWithMetrics indicates an expected call of UpdateJobStatusWithMetrics.
-func (mr *MockJobRepositoryMockRecorder) UpdateJobStatusWithMetrics(ctx, resourceInstanceID, ownerID, status, agentMetrics any) *gomock.Call {
+func (mr *MockJobRepositoryMockRecorder) UpdateJobStatusWithMetrics(ctx, resourceInstanceID, ownerID, status, agentMetrics, workflowMetrics any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateJobStatusWithMetrics", reflect.TypeOf((*MockJobRepository)(nil).UpdateJobStatusWithMetrics), ctx, resourceInstanceID, ownerID, status, agentMetrics)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateJobStatusWithMetrics", reflect.TypeOf((*MockJobRepository)(nil).UpdateJobStatusWithMetrics), ctx, resourceInstanceID, ownerID, status, agentMetrics, workflowMetrics)
 }
 
 // UpdateJobWithMetrics mocks base method.
-func (m *MockJobRepository) UpdateJobWithMetrics(ctx context.Context, resourceInstanceID, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics) (bool, error) {
+func (m *MockJobRepository) UpdateJobWithMetrics(ctx context.Context, resourceInstanceID, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateJobWithMetrics", ctx, resourceInstanceID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, jobContext, agentMetrics)
+	ret := m.ctrl.Call(m, "UpdateJobWithMetrics", ctx, resourceInstanceID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, jobContext, agentMetrics, workflowMetrics)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UpdateJobWithMetrics indicates an expected call of UpdateJobWithMetrics.
-func (mr *MockJobRepositoryMockRecorder) UpdateJobWithMetrics(ctx, resourceInstanceID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, jobContext, agentMetrics any) *gomock.Call {
+func (mr *MockJobRepositoryMockRecorder) UpdateJobWithMetrics(ctx, resourceInstanceID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, jobContext, agentMetrics, workflowMetrics any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateJobWithMetrics", reflect.TypeOf((*MockJobRepository)(nil).UpdateJobWithMetrics), ctx, resourceInstanceID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, jobContext, agentMetrics)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateJobWithMetrics", reflect.TypeOf((*MockJobRepository)(nil).UpdateJobWithMetrics), ctx, resourceInstanceID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, jobContext, agentMetrics, workflowMetrics)
 }
 
 // MockAgentStateRepository is a mock of AgentStateRepository interface.

@@ -32,6 +32,8 @@ type Job struct {
 	WorkflowVersion        int
 	// AgentMetrics is the per-agent invocation metrics accumulated across this job's operations.
 	AgentMetrics           map[string]*convergeplanev1.AgentInvocationMetrics
+	// WorkflowMetrics is workflow-level (non-agent) metrics accumulated across this job's operations.
+	WorkflowMetrics        WorkflowJobMetrics
 	Owner                  *string
 	LeaseExpiresAt         *time.Time
 	CreatedAt              time.Time
@@ -40,6 +42,12 @@ type Job struct {
 	// Approval gate — only populated when Status == JobStatusAwaitingApproval/Approved/Rejected.
 	ApprovalID        *string
 	ApprovalTimeoutAt *time.Time
+}
+
+// WorkflowJobMetrics holds workflow-level metrics accumulated across a job's operations.
+// Serialized as JSONB in the jobs table (workflow_metrics column).
+type WorkflowJobMetrics struct {
+	Failures int `json:"failures"`
 }
 
 // OperationMetadata holds server-internal state for the current job operation.

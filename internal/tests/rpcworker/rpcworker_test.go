@@ -125,6 +125,10 @@ func (m *mockMetrics) MergeAgentMetrics(opMetrics map[string]*convergeplanev1.Ag
 	}
 }
 
+func (m *mockMetrics) MergeWorkflowMetrics(opMetrics domain.WorkflowJobMetrics, jobMetrics *domain.WorkflowJobMetrics) {
+	jobMetrics.Failures += opMetrics.Failures
+}
+
 // ---- constants and helpers ----
 
 const (
@@ -311,7 +315,7 @@ func TestWorkerSession_CompleteOperation(t *testing.T) {
 	worker, jobRepo, sched := newTestWorker(ctrl)
 	expectJobAcquired(jobRepo)
 	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testResourceID, testWorkerID, domain.JobStatusRunning).Return(true, nil)
-	jobRepo.EXPECT().UpdateJobStatusWithMetrics(gomock.Any(), testResourceID, testWorkerID, domain.JobStatusCompleted, gomock.Any()).Return(true, nil)
+	jobRepo.EXPECT().UpdateJobStatusWithMetrics(gomock.Any(), testResourceID, testWorkerID, domain.JobStatusCompleted, gomock.Any(), gomock.Any()).Return(true, nil)
 
 	stream := newMockStream(ctx)
 	errCh := runSession(worker, stream)

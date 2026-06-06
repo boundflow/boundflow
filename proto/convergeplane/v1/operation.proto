@@ -32,10 +32,18 @@ message AtomicOperationResult {
   string message = 2;
   AtomicOperation next_operation = 3;
   // Per-agent invocation metrics observed during this operation, keyed by agent name.
-  // The server aggregates these across agents and operations and fills workflow-only
-  // metrics (e.g. num_failures) server-side when building the stored snapshot.
   map<string, AgentInvocationMetrics> agent_state_updates = 4;
   ApprovalGate approval_gate = 5;
+  // Workflow-level metrics the customer emits for this operation (e.g. a failed run).
+  // Accumulated across the job's operations and folded into the rolling snapshot.
+  WorkflowInvocationMetrics workflow_metrics = 6;
+}
+
+// WorkflowInvocationMetrics holds workflow-level (non-agent) metrics the customer
+// reports for an operation. A customer failure is a completed operation from
+// BoundFlow's perspective that simply reports failures here.
+message WorkflowInvocationMetrics {
+  optional int32 failures = 1;
 }
 
 // AgentInvocationMetrics holds the metrics a single agent emitted during one operation.

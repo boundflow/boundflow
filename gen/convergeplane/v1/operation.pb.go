@@ -261,12 +261,13 @@ type AtomicOperationResult struct {
 	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	NextOperation *AtomicOperation       `protobuf:"bytes,3,opt,name=next_operation,json=nextOperation,proto3" json:"next_operation,omitempty"`
 	// Per-agent invocation metrics observed during this operation, keyed by agent name.
-	// The server aggregates these across agents and operations and fills workflow-only
-	// metrics (e.g. num_failures) server-side when building the stored snapshot.
 	AgentStateUpdates map[string]*AgentInvocationMetrics `protobuf:"bytes,4,rep,name=agent_state_updates,json=agentStateUpdates,proto3" json:"agent_state_updates,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	ApprovalGate      *ApprovalGate                      `protobuf:"bytes,5,opt,name=approval_gate,json=approvalGate,proto3" json:"approval_gate,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Workflow-level metrics the customer emits for this operation (e.g. a failed run).
+	// Accumulated across the job's operations and folded into the rolling snapshot.
+	WorkflowMetrics *WorkflowInvocationMetrics `protobuf:"bytes,6,opt,name=workflow_metrics,json=workflowMetrics,proto3" json:"workflow_metrics,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *AtomicOperationResult) Reset() {
@@ -334,6 +335,60 @@ func (x *AtomicOperationResult) GetApprovalGate() *ApprovalGate {
 	return nil
 }
 
+func (x *AtomicOperationResult) GetWorkflowMetrics() *WorkflowInvocationMetrics {
+	if x != nil {
+		return x.WorkflowMetrics
+	}
+	return nil
+}
+
+// WorkflowInvocationMetrics holds workflow-level (non-agent) metrics the customer
+// reports for an operation. A customer failure is a completed operation from
+// BoundFlow's perspective that simply reports failures here.
+type WorkflowInvocationMetrics struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Failures      *int32                 `protobuf:"varint,1,opt,name=failures,proto3,oneof" json:"failures,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WorkflowInvocationMetrics) Reset() {
+	*x = WorkflowInvocationMetrics{}
+	mi := &file_convergeplane_v1_operation_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WorkflowInvocationMetrics) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WorkflowInvocationMetrics) ProtoMessage() {}
+
+func (x *WorkflowInvocationMetrics) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_operation_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WorkflowInvocationMetrics.ProtoReflect.Descriptor instead.
+func (*WorkflowInvocationMetrics) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_operation_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *WorkflowInvocationMetrics) GetFailures() int32 {
+	if x != nil && x.Failures != nil {
+		return *x.Failures
+	}
+	return 0
+}
+
 // AgentInvocationMetrics holds the metrics a single agent emitted during one operation.
 // Every field is optional: a null value means the agent did not emit that metric this run
 // (distinct from emitting a zero), so windowed policy evaluation can skip non-emitting runs.
@@ -355,7 +410,7 @@ type AgentInvocationMetrics struct {
 
 func (x *AgentInvocationMetrics) Reset() {
 	*x = AgentInvocationMetrics{}
-	mi := &file_convergeplane_v1_operation_proto_msgTypes[3]
+	mi := &file_convergeplane_v1_operation_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -367,7 +422,7 @@ func (x *AgentInvocationMetrics) String() string {
 func (*AgentInvocationMetrics) ProtoMessage() {}
 
 func (x *AgentInvocationMetrics) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_operation_proto_msgTypes[3]
+	mi := &file_convergeplane_v1_operation_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -380,7 +435,7 @@ func (x *AgentInvocationMetrics) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentInvocationMetrics.ProtoReflect.Descriptor instead.
 func (*AgentInvocationMetrics) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_operation_proto_rawDescGZIP(), []int{3}
+	return file_convergeplane_v1_operation_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *AgentInvocationMetrics) GetCostUsd() float64 {
@@ -469,16 +524,20 @@ const file_convergeplane_v1_operation_proto_rawDesc = "" +
 	"\ton_reject\x18\x02 \x01(\v2!.convergeplane.v1.AtomicOperationR\bonReject\x12'\n" +
 	"\x0ftimeout_seconds\x18\x03 \x01(\x05R\x0etimeoutSeconds\x12\x1f\n" +
 	"\vapproval_id\x18\x04 \x01(\tR\n" +
-	"approvalId\"\xdb\x03\n" +
+	"approvalId\"\xb3\x04\n" +
 	"\x15AtomicOperationResult\x129\n" +
 	"\x06status\x18\x01 \x01(\x0e2!.convergeplane.v1.OperationStatusR\x06status\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12H\n" +
 	"\x0enext_operation\x18\x03 \x01(\v2!.convergeplane.v1.AtomicOperationR\rnextOperation\x12n\n" +
 	"\x13agent_state_updates\x18\x04 \x03(\v2>.convergeplane.v1.AtomicOperationResult.AgentStateUpdatesEntryR\x11agentStateUpdates\x12C\n" +
-	"\rapproval_gate\x18\x05 \x01(\v2\x1e.convergeplane.v1.ApprovalGateR\fapprovalGate\x1an\n" +
+	"\rapproval_gate\x18\x05 \x01(\v2\x1e.convergeplane.v1.ApprovalGateR\fapprovalGate\x12V\n" +
+	"\x10workflow_metrics\x18\x06 \x01(\v2+.convergeplane.v1.WorkflowInvocationMetricsR\x0fworkflowMetrics\x1an\n" +
 	"\x16AgentStateUpdatesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12>\n" +
-	"\x05value\x18\x02 \x01(\v2(.convergeplane.v1.AgentInvocationMetricsR\x05value:\x028\x01\"\xf5\x04\n" +
+	"\x05value\x18\x02 \x01(\v2(.convergeplane.v1.AgentInvocationMetricsR\x05value:\x028\x01\"I\n" +
+	"\x19WorkflowInvocationMetrics\x12\x1f\n" +
+	"\bfailures\x18\x01 \x01(\x05H\x00R\bfailures\x88\x01\x01B\v\n" +
+	"\t_failures\"\xf5\x04\n" +
 	"\x16AgentInvocationMetrics\x12\x1e\n" +
 	"\bcost_usd\x18\x01 \x01(\x01H\x00R\acostUsd\x88\x01\x01\x12 \n" +
 	"\tllm_calls\x18\x02 \x01(\x05H\x01R\bllmCalls\x88\x01\x01\x12$\n" +
@@ -521,34 +580,36 @@ func file_convergeplane_v1_operation_proto_rawDescGZIP() []byte {
 }
 
 var file_convergeplane_v1_operation_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_convergeplane_v1_operation_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_convergeplane_v1_operation_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_convergeplane_v1_operation_proto_goTypes = []any{
-	(OperationStatus)(0),           // 0: convergeplane.v1.OperationStatus
-	(*AtomicOperation)(nil),        // 1: convergeplane.v1.AtomicOperation
-	(*ApprovalGate)(nil),           // 2: convergeplane.v1.ApprovalGate
-	(*AtomicOperationResult)(nil),  // 3: convergeplane.v1.AtomicOperationResult
-	(*AgentInvocationMetrics)(nil), // 4: convergeplane.v1.AgentInvocationMetrics
-	nil,                            // 5: convergeplane.v1.AtomicOperationResult.AgentStateUpdatesEntry
-	nil,                            // 6: convergeplane.v1.AgentInvocationMetrics.ToolFailureCountsEntry
-	(*structpb.Struct)(nil),        // 7: google.protobuf.Struct
-	(*timestamppb.Timestamp)(nil),  // 8: google.protobuf.Timestamp
+	(OperationStatus)(0),              // 0: convergeplane.v1.OperationStatus
+	(*AtomicOperation)(nil),           // 1: convergeplane.v1.AtomicOperation
+	(*ApprovalGate)(nil),              // 2: convergeplane.v1.ApprovalGate
+	(*AtomicOperationResult)(nil),     // 3: convergeplane.v1.AtomicOperationResult
+	(*WorkflowInvocationMetrics)(nil), // 4: convergeplane.v1.WorkflowInvocationMetrics
+	(*AgentInvocationMetrics)(nil),    // 5: convergeplane.v1.AgentInvocationMetrics
+	nil,                               // 6: convergeplane.v1.AtomicOperationResult.AgentStateUpdatesEntry
+	nil,                               // 7: convergeplane.v1.AgentInvocationMetrics.ToolFailureCountsEntry
+	(*structpb.Struct)(nil),           // 8: google.protobuf.Struct
+	(*timestamppb.Timestamp)(nil),     // 9: google.protobuf.Timestamp
 }
 var file_convergeplane_v1_operation_proto_depIdxs = []int32{
-	7,  // 0: convergeplane.v1.AtomicOperation.context:type_name -> google.protobuf.Struct
-	8,  // 1: convergeplane.v1.AtomicOperation.created_at:type_name -> google.protobuf.Timestamp
+	8,  // 0: convergeplane.v1.AtomicOperation.context:type_name -> google.protobuf.Struct
+	9,  // 1: convergeplane.v1.AtomicOperation.created_at:type_name -> google.protobuf.Timestamp
 	1,  // 2: convergeplane.v1.ApprovalGate.on_approve:type_name -> convergeplane.v1.AtomicOperation
 	1,  // 3: convergeplane.v1.ApprovalGate.on_reject:type_name -> convergeplane.v1.AtomicOperation
 	0,  // 4: convergeplane.v1.AtomicOperationResult.status:type_name -> convergeplane.v1.OperationStatus
 	1,  // 5: convergeplane.v1.AtomicOperationResult.next_operation:type_name -> convergeplane.v1.AtomicOperation
-	5,  // 6: convergeplane.v1.AtomicOperationResult.agent_state_updates:type_name -> convergeplane.v1.AtomicOperationResult.AgentStateUpdatesEntry
+	6,  // 6: convergeplane.v1.AtomicOperationResult.agent_state_updates:type_name -> convergeplane.v1.AtomicOperationResult.AgentStateUpdatesEntry
 	2,  // 7: convergeplane.v1.AtomicOperationResult.approval_gate:type_name -> convergeplane.v1.ApprovalGate
-	6,  // 8: convergeplane.v1.AgentInvocationMetrics.tool_failure_counts:type_name -> convergeplane.v1.AgentInvocationMetrics.ToolFailureCountsEntry
-	4,  // 9: convergeplane.v1.AtomicOperationResult.AgentStateUpdatesEntry.value:type_name -> convergeplane.v1.AgentInvocationMetrics
-	10, // [10:10] is the sub-list for method output_type
-	10, // [10:10] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	4,  // 8: convergeplane.v1.AtomicOperationResult.workflow_metrics:type_name -> convergeplane.v1.WorkflowInvocationMetrics
+	7,  // 9: convergeplane.v1.AgentInvocationMetrics.tool_failure_counts:type_name -> convergeplane.v1.AgentInvocationMetrics.ToolFailureCountsEntry
+	5,  // 10: convergeplane.v1.AtomicOperationResult.AgentStateUpdatesEntry.value:type_name -> convergeplane.v1.AgentInvocationMetrics
+	11, // [11:11] is the sub-list for method output_type
+	11, // [11:11] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_convergeplane_v1_operation_proto_init() }
@@ -557,13 +618,14 @@ func file_convergeplane_v1_operation_proto_init() {
 		return
 	}
 	file_convergeplane_v1_operation_proto_msgTypes[3].OneofWrappers = []any{}
+	file_convergeplane_v1_operation_proto_msgTypes[4].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_convergeplane_v1_operation_proto_rawDesc), len(file_convergeplane_v1_operation_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

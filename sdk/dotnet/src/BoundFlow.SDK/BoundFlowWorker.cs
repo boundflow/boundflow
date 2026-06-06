@@ -47,6 +47,9 @@ public sealed class OperationContext
     private readonly List<(string Key, LlmContextEntry Entry)> _llmContext = [];
     // Per-agent metrics from this operation, sent back to the server via AtomicOperationResult.
     internal readonly Dictionary<string, AgentInvocationMetrics> AgentStateUpdates = [];
+    // Workflow-level failure signal for this operation. A failed run is still a completed
+    // operation from BoundFlow's perspective; it just increments the num_failures metric.
+    internal bool Failed { get; private set; }
 
     internal OperationContext(AtomicOperation operation, Orchestrator orchestrator)
     {
@@ -81,6 +84,13 @@ public sealed class OperationContext
         _llmContext.RemoveAll(e => e.Key == key);
         return this;
     }
+
+    /// <summary>
+    /// Marks this run as a customer-side failure. The operation still completes normally
+    /// from BoundFlow's perspective; this only increments the workflow's num_failures metric,
+    /// which workflow lifecycle policies can act on.
+    /// </summary>
+    public void MarkFailed() => Failed = true;
 
     /// <summary>
     /// Runs an agent step inline. Policies are loaded from the server-stored agent_state
@@ -251,6 +261,8 @@ public sealed class BoundFlowWorker
             var proto = MapToProto(result);
             foreach (var (name, metrics) in customerContext.AgentStateUpdates)
                 proto.AgentStateUpdates.Add(name, metrics);
+            if (customerContext.Failed)
+                proto.WorkflowMetrics = new WorkflowInvocationMetrics { Failures = 1 };
             return proto;
         };
 

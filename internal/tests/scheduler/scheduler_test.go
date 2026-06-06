@@ -22,7 +22,7 @@ func i32(v int32) *int32 { return &v }
 // no-op doubles for the post-completion metric + policy steps in CompleteRequest.
 type noopMetricsHandler struct{}
 
-func (noopMetricsHandler) HandleAgentMetrics(_ context.Context, _ map[string]*convergeplanev1.AgentInvocationMetrics, _ *domain.ResourceInstance) (error, *domain.WorkflowVersionMetrics) {
+func (noopMetricsHandler) HandleAgentMetrics(_ context.Context, _ map[string]*convergeplanev1.AgentInvocationMetrics, _ domain.WorkflowJobMetrics, _ *domain.ResourceInstance) (error, *domain.WorkflowVersionMetrics) {
 	return nil, nil
 }
 
@@ -49,7 +49,7 @@ func newTestScheduler(ctrl *gomock.Controller) (
 	// CompleteRequest pulls agent metrics off the job; default to none so tests that don't
 	// care about metrics don't need to set it up. The no-op metrics/resolver doubles below
 	// keep the post-completion metric+policy steps inert.
-	jobs.EXPECT().GetAgentMetrics(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+	jobs.EXPECT().GetJobMetrics(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, domain.WorkflowJobMetrics{}, nil).AnyTimes()
 	// Default workflow passes validateWorkflowState (active + metrics resolved up to current run).
 	resource.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.ResourceInstance{
 		ID:                     "resource-1",

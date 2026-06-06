@@ -15,7 +15,7 @@ import (
 )
 
 type MetricsHandler interface {
-	HandleAgentMetrics(ctx context.Context, invocationMetrics map[string]*convergeplanev1.AgentInvocationMetrics, workflow *domain.ResourceInstance) (error, *domain.WorkflowVersionMetrics)
+	HandleAgentMetrics(ctx context.Context, invocationMetrics map[string]*convergeplanev1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics, workflow *domain.ResourceInstance) (error, *domain.WorkflowVersionMetrics)
 }
 
 type PolicyResolver interface {
@@ -289,10 +289,10 @@ func (s *Scheduler) CompleteRequest(ctx context.Context, req string) (bool, erro
 		s.log.Warn("request completed but resource version check skipped update (newer version already applied)", "request_id", req, "resource_id", request.ResourceInstanceID, "version", request.Version)
 	}
 
-	// get the agentMetrics
-	metrics, err := s.jobs.GetAgentMetrics(ctx, request.ResourceInstanceID, request.ID)
+	// get the accumulated metrics for this job
+	metrics, workflowMetrics, err := s.jobs.GetJobMetrics(ctx, request.ResourceInstanceID, request.ID)
 	if err != nil {
-		s.log.Error("failed to get agent metrics from job", "request_id", req, "resource_id", request.ResourceInstanceID, "error", err)
+		s.log.Error("failed to get job metrics", "request_id", req, "resource_id", request.ResourceInstanceID, "error", err)
 		return false, err
 	}
 
@@ -304,7 +304,7 @@ func (s *Scheduler) CompleteRequest(ctx context.Context, req string) (bool, erro
 
 	// update metrics in storage
 	var versionMetrics *domain.WorkflowVersionMetrics
-	err, versionMetrics = s.metricsHandler.HandleAgentMetrics(ctx, metrics, workflow)
+	err, versionMetrics = s.metricsHandler.HandleAgentMetrics(ctx, metrics, workflowMetrics, workflow)
 	if err != nil {
 		s.log.Error("failed to handle agent metrics", "request_id", req, "resource_id", request.ResourceInstanceID, "error", err)
 		return false, err

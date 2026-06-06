@@ -29,7 +29,7 @@ func NewMetricsHandler(workflow storage.ResourceInstanceRepository, agentState s
 	}
 }
 
-func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, invocationMetrics map[string]*convergeplanev1.AgentInvocationMetrics, workflow *domain.ResourceInstance) (error, *domain.WorkflowVersionMetrics) {
+func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, invocationMetrics map[string]*convergeplanev1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics, workflow *domain.ResourceInstance) (error, *domain.WorkflowVersionMetrics) {
 
 	workFlowId := workflow.ID
 
@@ -90,10 +90,6 @@ func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, invocationMetri
 			versionMetrics.TotalLatencySeconds += *metrics.LatencySeconds
 			m.accF64(&snapshot.LatencySeconds, *metrics.LatencySeconds)
 		}
-		if metrics.Failures != nil {
-			versionMetrics.TotalFailures += int(*metrics.Failures)
-			m.accInt(&snapshot.Failures, int(*metrics.Failures))
-		}
 		if metrics.ApprovalRejections != nil {
 			versionMetrics.TotalApprovalRejections += int(*metrics.ApprovalRejections)
 			m.accInt(&snapshot.ApprovalRejections, int(*metrics.ApprovalRejections))
@@ -105,6 +101,12 @@ func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, invocationMetri
 			}
 			snapshot.ToolFailureCounts[tool] += int(failCount)
 		}
+	}
+
+	// Fold workflow-level metrics (customer-reported failures) into the run snapshot + version totals.
+	if workflowMetrics.Failures > 0 {
+		versionMetrics.TotalFailures += workflowMetrics.Failures
+		m.accInt(&snapshot.Failures, workflowMetrics.Failures)
 	}
 
 	// Collect the updated histories for only the agents touched this run.
@@ -178,6 +180,11 @@ func (m *MetricsHandler) MergeAgentMetrics(opMetrics map[string]*convergeplanev1
 			}
 		}
 	}
+}
+
+// MergeWorkflowMetrics sums the operation's workflow-level metrics into the job accumulator.
+func (m *MetricsHandler) MergeWorkflowMetrics(opMetrics domain.WorkflowJobMetrics, jobMetrics *domain.WorkflowJobMetrics) {
+	jobMetrics.Failures += opMetrics.Failures
 }
 
 // addF64 sums src into *dst. If src is nil it's a no-op; if *dst is nil the value is carried over fresh.

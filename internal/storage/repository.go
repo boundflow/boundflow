@@ -112,17 +112,17 @@ type JobRepository interface {
 	// Returns false if the ownership check failed (job taken by another worker or released).
 	UpdateJobStatus(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus) (bool, error)
 	// UpdateJobStatusWithMetrics is UpdateJobStatus plus an atomic write of the accumulated
-	// per-agent metrics into agent_metrics. Used when finalizing a job.
-	UpdateJobStatusWithMetrics(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics) (bool, error)
+	// per-agent and workflow-level metrics. Used when finalizing a job.
+	UpdateJobStatusWithMetrics(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error)
 	// UpdateJob updates status, current_atomic_operation, timeout_seconds, and context only if ownerID is the current owner.
 	// Returns false if the ownership check failed (job taken by another worker or released).
 	UpdateJob(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any) (bool, error)
 	// UpdateJobWithMetrics is UpdateJob plus an atomic write of the accumulated per-agent
-	// metrics into agent_metrics. Used when advancing to the next operation.
-	UpdateJobWithMetrics(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics) (bool, error)
-	// GetAgentMetrics returns the accumulated per-agent metrics stored on the job
-	// for the given resource and request. Returns nil if no such job exists.
-	GetAgentMetrics(ctx context.Context, resourceInstanceID string, requestID string) (map[string]*convergeplanev1.AgentInvocationMetrics, error)
+	// and workflow-level metrics. Used when advancing to the next operation.
+	UpdateJobWithMetrics(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error)
+	// GetJobMetrics returns the accumulated per-agent and workflow-level metrics stored on the
+	// job for the given resource and request. Returns zero values if no such job exists.
+	GetJobMetrics(ctx context.Context, resourceInstanceID string, requestID string) (map[string]*convergeplanev1.AgentInvocationMetrics, domain.WorkflowJobMetrics, error)
 	// ParkForApproval transitions a job to awaiting_approval, storing the approval ID,
 	// timeout, and job metadata. Only succeeds if ownerID holds the job.
 	// Returns false if ownership check fails.

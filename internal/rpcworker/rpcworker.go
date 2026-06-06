@@ -21,6 +21,7 @@ type RequestScheduler interface {
 
 type MetricsHandler interface {
 	MergeAgentMetrics(opMetrics map[string]*convergeplanev1.AgentInvocationMetrics, jobMetrics *map[string]*convergeplanev1.AgentInvocationMetrics)
+	MergeWorkflowMetrics(opMetrics domain.WorkflowJobMetrics, jobMetrics *domain.WorkflowJobMetrics)
 }
 
 type RpcWorker struct {
@@ -129,11 +130,17 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 		defer cancelLeaseIfExists(cancelLease)
 
 		s.metrics.MergeAgentMetrics(result.AgentStateUpdates, &job.AgentMetrics)
+		if result.WorkflowMetrics != nil {
+			s.metrics.MergeWorkflowMetrics(
+				domain.WorkflowJobMetrics{Failures: int(result.WorkflowMetrics.GetFailures())},
+				&job.WorkflowMetrics,
+			)
+		}
 
 		if result.NextOperation != nil {
 			log.Info("operation completed with next operation, advancing job", "request_id", job.RequestID, "next_operation", result.NextOperation.Name)
 			_, err := s.jobs.UpdateJobWithMetrics(ctx, job.ResourceInstanceID, s.id, domain.JobStatusAwaitingNext,
-				result.NextOperation.Name, int(result.NextOperation.TimeoutSeconds), result.NextOperation.Context.AsMap(), job.AgentMetrics)
+				result.NextOperation.Name, int(result.NextOperation.TimeoutSeconds), result.NextOperation.Context.AsMap(), job.AgentMetrics, job.WorkflowMetrics)
 
 			return err
 		} else if result.ApprovalGate != nil {
@@ -176,7 +183,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 				log.Warn("failed to mark resource awaiting approval, scheduler will sync", "resource_id", job.ResourceInstanceID, "error", err)
 			}
 		} else {
-			updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.ResourceInstanceID, s.id, domain.JobStatusCompleted, job.AgentMetrics)
+			updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.ResourceInstanceID, s.id, domain.JobStatusCompleted, job.AgentMetrics, job.WorkflowMetrics)
 			if err != nil {
 				log.Error("failed to mark job completed", "request_id", job.RequestID, "resource_id", job.ResourceInstanceID, "error", err)
 				return err
