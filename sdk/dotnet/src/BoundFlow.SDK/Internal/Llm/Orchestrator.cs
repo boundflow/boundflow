@@ -18,10 +18,10 @@ internal sealed class Orchestrator
     private const decimal InputCostPer1M = 3.0m;
     private const decimal OutputCostPer1M = 15.0m;
 
-    private readonly AnthropicClient _client;
+    private readonly ILlmClient _client;
     private readonly ILogger<Orchestrator> _logger;
 
-    public Orchestrator(AnthropicClient client, ILogger<Orchestrator> logger)
+    public Orchestrator(ILlmClient client, ILogger<Orchestrator> logger)
     {
         _client = client;
         _logger = logger;
@@ -70,7 +70,7 @@ internal sealed class Orchestrator
                     : new ToolChoice { Type = ToolChoiceType.Auto },
             };
 
-            var resp = await _client.Messages.GetClaudeMessageAsync(request, ct);
+            var resp = await _client.GetClaudeMessageAsync(request, ct);
 
             llmCallsUsed++;
             costUsd += EstimateCost(resp.Usage);

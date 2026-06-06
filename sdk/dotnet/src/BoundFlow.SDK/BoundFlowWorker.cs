@@ -169,7 +169,7 @@ public sealed class OperationContext
 public sealed class BoundFlowWorker
 {
     private readonly string _serverAddress;
-    private readonly AnthropicClient _anthropicClient;
+    private readonly ILlmClient _llmClient;
     private readonly ILoggerFactory _loggerFactory;
     private readonly Dictionary<(string ResourceType, string OperationName), Func<OperationContext, CancellationToken, Task<OperationResult>>> _handlers = new();
     private readonly Dictionary<(string ResourceType, int Version), Func<OperationContext, CancellationToken, Task<OperationResult>>> _workflowHandlers = new();
@@ -180,9 +180,21 @@ public sealed class BoundFlowWorker
         string serverAddress,
         string llmApiKey,
         ILoggerFactory loggerFactory)
+        : this(serverAddress, new AnthropicLlmClient(new AnthropicClient(new APIAuthentication(llmApiKey))), loggerFactory)
+    {
+    }
+
+    /// <summary>
+    /// Constructs a worker with a custom LLM client. Use this to inject a scripted mock
+    /// for deterministic demos and tests instead of calling the real Anthropic API.
+    /// </summary>
+    public BoundFlowWorker(
+        string serverAddress,
+        ILlmClient llmClient,
+        ILoggerFactory loggerFactory)
     {
         _serverAddress = serverAddress;
-        _anthropicClient = new AnthropicClient(new APIAuthentication(llmApiKey));
+        _llmClient = llmClient;
         _loggerFactory = loggerFactory;
     }
 
@@ -244,7 +256,7 @@ public sealed class BoundFlowWorker
 
             // New Orchestrator per call — stateless, cheap to create.
             var orchestrator = new Orchestrator(
-                _anthropicClient,
+                _llmClient,
                 _loggerFactory.CreateLogger<Orchestrator>());
 
             var customerContext = new OperationContext(op, orchestrator);
