@@ -153,6 +153,8 @@ public sealed class OperationContext
         };
         foreach (var (tool, count) in result.CallsPerTool)
             agentMetrics.CallsPerTool[tool] = count;
+        foreach (var (tool, count) in result.ToolFailureCounts)
+            agentMetrics.ToolFailureCounts[tool] = count;
         AgentStateUpdates[agent.Name] = agentMetrics;
 
         return result;

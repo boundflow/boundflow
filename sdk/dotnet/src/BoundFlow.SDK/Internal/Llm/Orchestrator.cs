@@ -46,6 +46,7 @@ internal sealed class Orchestrator
         var tokensUsed = 0;
         var maxLlmCalls = cfg.Policy.MaxLlmCalls;
         var toolCallCounts = new Dictionary<string, int>();
+        var toolFailureCounts = new Dictionary<string, int>();
         var toolCallLimits = (cfg.Policy.ToolCallLimits ?? []).ToDictionary(l => l.ToolName, l => l.MaxCalls);
 
         while (true)
@@ -104,7 +105,7 @@ internal sealed class Orchestrator
                 if (toolUse.Name == SubmitResultTool)
                 {
                     _logger.LogInformation("Agent step complete via submit_result. LlmCalls={Calls} CostUsd={Cost} Model={Model}", llmCallsUsed, costUsd, cfg.Model);
-                    return new StepResult(input, llmCallsUsed, costUsd, tokensUsed, toolCallCounts, cfg.Model);
+                    return new StepResult(input, llmCallsUsed, costUsd, tokensUsed, toolCallCounts, toolFailureCounts, cfg.Model);
                 }
 
                 if (!callbackMap.TryGetValue(toolUse.Name, out var cb))
@@ -138,6 +139,7 @@ internal sealed class Orchestrator
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Callback returned error, reporting to LLM. Callback={Name}", toolUse.Name);
+                    toolFailureCounts[toolUse.Name] = toolFailureCounts.GetValueOrDefault(toolUse.Name) + 1;
                     toolResults.Add(new ToolResultContent { ToolUseId = toolUse.Id, Content = ex.Message, IsError = true });
                     continue;
                 }

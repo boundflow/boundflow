@@ -97,6 +97,8 @@ public record StepResult(
     int TokensUsed,
     /// <summary>Per-tool call counts for this step, keyed by tool name.</summary>
     IReadOnlyDictionary<string, int> CallsPerTool,
+    /// <summary>Per-tool failure counts (handler exceptions) for this step, keyed by tool name.</summary>
+    IReadOnlyDictionary<string, int> ToolFailureCounts,
     /// <summary>The model that was actually used for this step.</summary>
     string ModelUsed
 );

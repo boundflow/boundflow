@@ -294,4 +294,62 @@ public class WorkflowLifecyclePolicyTests : IntegrationTestBase
         cts.Cancel();
         try { await workerTask; } catch { }
     }
+
+    /// <summary>
+    /// Verifies that tool handler exceptions are recorded as tool failures and that a
+    /// workflow lifecycle rule on tool_failure_rate (per tool) cools the workflow down.
+    /// </summary>
+    [Fact]
+    public async Task WorkflowEntersCooldownAfterToolFailures()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+
+        AgentDefinition Agent() => new(
+            Name:         "flaky_agent",
+            SystemPrompt: "You are a test agent. You MUST call the `flaky` tool exactly once, " +
+                          "then call submit_result regardless of the result.",
+            Model:        HaikuModel,
+            AllowedCallbacks: [
+                new AllowedCallback(
+                    Name:        "flaky",
+                    Description: "A tool that always fails. Call it once.",
+                    Handler:     (input, ct) => throw new InvalidOperationException("flaky tool failed"))
+            ],
+            OutputSchema: JsonNode.Parse("{\"done\":{\"type\":\"boolean\"}}")
+        );
+
+        var worker = new BoundFlowWorker(WorkerAddress, LlmApiKey, LoggerFactory)
+            .RegisterWorkflow("tool_failure_cooldown", 1, async (ctx, ct) =>
+            {
+                await ctx.RunAgentAsync(Agent(), ct);
+                return OperationResult.Complete();
+            });
+
+        var workerTask = worker.RunAsync(cts.Token);
+
+        var (_, tenant) = await CreateIsolatedTenantAsync("tool-failure");
+        var workflow = await ControlPlane.CreateWorkflowAsync("tool_failure_cooldown", tenant.Id,
+            workflowConfig: new WorkflowConfig(Version: 1));
+
+        await ControlPlane.SetWorkflowLifecyclePolicyAsync(
+            workflow.Id,
+            new WorkflowLifecyclePolicy([
+                new WorkflowLifecyclePolicyRule(
+                    Metric:    WorkflowMetric.ToolFailureRate,
+                    Threshold: 1,
+                    Action:    new CooldownAction(Window: 1, CooldownSeconds: 10),
+                    ToolName:  "flaky"
+                )
+            ]));
+
+        await ControlPlane.ActivateWorkflowAsync(workflow.Id);
+        await ControlPlane.InvokeWorkflowAsync(workflow.Id, new RuntimeOverrides(OperationTimeoutSeconds: 60));
+        await WaitForCompletionAsync(workflow.Id, cts.Token);
+
+        var state = await WaitForWorkflowStateAsync(workflow.Id, WorkflowState.Cooldown, cts.Token);
+        Assert.Equal(WorkflowState.Cooldown, state);
+
+        cts.Cancel();
+        try { await workerTask; } catch { }
+    }
 }
