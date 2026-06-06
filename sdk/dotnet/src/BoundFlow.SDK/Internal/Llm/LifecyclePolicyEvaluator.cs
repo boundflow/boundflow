@@ -17,11 +17,22 @@ internal static class LifecyclePolicyEvaluator
     internal static AgentRuntimePolicy LoadRuntimePolicy(JsonNode? policyNode)
     {
         if (policyNode is not JsonObject rp) return new AgentRuntimePolicy();
+        List<ToolCallLimit>? toolCallLimits = null;
+        if (rp["tool_call_limits"] is JsonArray limits)
+        {
+            toolCallLimits = limits
+                .OfType<JsonObject>()
+                .Select(l => new ToolCallLimit(
+                    l["tool_name"]?.GetValue<string>() ?? "",
+                    l["max_calls"]?.GetValue<int>()    ?? 0))
+                .Where(l => l.ToolName.Length > 0)
+                .ToList();
+        }
         return new AgentRuntimePolicy(
             MaxLlmCalls:      rp["max_llm_calls"]?.GetValue<int>()             ?? 0,
             MaxCostUsd:       (decimal)(rp["max_cost_usd"]?.GetValue<double>() ?? 0),
             MaxTokensPerCall: rp["max_tokens_per_call"]?.GetValue<int>()       ?? 0,
-            MaxCallsPerTool:  rp["max_calls_per_tool"]?.GetValue<int>()        ?? 0,
+            ToolCallLimits:   toolCallLimits,
             Model:            rp["model"]?.GetValue<string>()
         );
     }
@@ -39,7 +50,8 @@ internal static class LifecyclePolicyEvaluator
                 Action:    new PolicyMutation(
                     System.Enum.Parse<PolicyField>(r["action"]?["field"]?.GetValue<string>()   ?? "Model", ignoreCase: true),
                     r["action"]?["value"]?.ToString() ?? ""
-                )
+                ),
+                ToolName:  r["tool_name"]?.GetValue<string>()
             ))
             .ToList();
         return new AgentLifecyclePolicy(rules);
@@ -64,7 +76,7 @@ internal static class LifecyclePolicyEvaluator
         foreach (var rule in policy.Rules)
         {
             var window = rule.Window > 0 ? history.TakeLast(rule.Window).ToList() : history;
-            var sum = window.Sum(e => GetMetricValue(e, rule.Metric));
+            var sum = window.Sum(e => GetMetricValue(e, rule.Metric, rule.ToolName));
             if (!Evaluate(sum, rule.Operator, rule.Threshold)) continue;
 
             current = ApplyMutation(current, rule.Action);
@@ -72,12 +84,14 @@ internal static class LifecyclePolicyEvaluator
         return current;
     }
 
-    internal static decimal GetMetricValue(InvocationSnapshot entry, AgentMetric metric) => metric switch
+    internal static decimal GetMetricValue(InvocationSnapshot entry, AgentMetric metric, string? toolName = null) => metric switch
     {
         AgentMetric.TokensUsed   => entry.TokensUsed,
         AgentMetric.CostUsd      => (decimal)entry.CostUsd,
         AgentMetric.LlmCalls     => entry.LlmCalls,
-        AgentMetric.CallsPerTool => entry.CallsPerTool,
+        AgentMetric.CallsPerTool => toolName is not null
+            ? entry.CallsPerTool?.GetValueOrDefault(toolName) ?? 0
+            : entry.CallsPerTool?.Values.DefaultIfEmpty(0).Max() ?? 0,
         _                        => 0,
     };
 
@@ -100,7 +114,6 @@ internal static class LifecyclePolicyEvaluator
             PolicyField.MaxLlmCalls      => policy with { MaxLlmCalls      = int.TryParse(val, out var i)     ? i : policy.MaxLlmCalls },
             PolicyField.MaxCostUsd       => policy with { MaxCostUsd       = decimal.TryParse(val, out var d) ? d : policy.MaxCostUsd },
             PolicyField.MaxTokensPerCall => policy with { MaxTokensPerCall = int.TryParse(val, out var t)     ? t : policy.MaxTokensPerCall },
-            PolicyField.MaxCallsPerTool  => policy with { MaxCallsPerTool  = int.TryParse(val, out var c)     ? c : policy.MaxCallsPerTool },
             _                            => policy,
         };
     }

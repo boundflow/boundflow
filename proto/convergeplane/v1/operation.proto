@@ -53,11 +53,12 @@ message AgentInvocationMetrics {
   optional double cost_usd            = 1;
   optional int32  llm_calls           = 2;
   optional int32  tokens_used         = 3;
-  optional int32  calls_per_tool      = 4;
   optional double latency_seconds     = 5;
   optional int32  failures            = 6;
   optional int32  approval_rejections = 7;
   map<string, int32> tool_failure_counts = 8;
+  // Per-tool call counts for this run, keyed by tool name. Empty = no tools called.
+  map<string, int32> calls_per_tool = 10;
   // Unix milliseconds when this agent run occurred. Always set (used to order history).
   int64 ran_at = 9;
 }

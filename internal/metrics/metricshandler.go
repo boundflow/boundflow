@@ -173,7 +173,6 @@ func (m *MetricsHandler) MergeAgentMetrics(opMetrics map[string]*convergeplanev1
 		m.addF64(&jobMetric.CostUsd, opMetric.CostUsd)
 		m.addI32(&jobMetric.LlmCalls, opMetric.LlmCalls)
 		m.addI32(&jobMetric.TokensUsed, opMetric.TokensUsed)
-		m.addI32(&jobMetric.CallsPerTool, opMetric.CallsPerTool)
 		m.addF64(&jobMetric.LatencySeconds, opMetric.LatencySeconds)
 		m.addI32(&jobMetric.Failures, opMetric.Failures)
 		m.addI32(&jobMetric.ApprovalRejections, opMetric.ApprovalRejections)
@@ -183,6 +182,14 @@ func (m *MetricsHandler) MergeAgentMetrics(opMetrics map[string]*convergeplanev1
 			}
 			for tool, count := range opMetric.ToolFailureCounts {
 				jobMetric.ToolFailureCounts[tool] += count
+			}
+		}
+		if len(opMetric.CallsPerTool) > 0 {
+			if jobMetric.CallsPerTool == nil {
+				jobMetric.CallsPerTool = make(map[string]int32, len(opMetric.CallsPerTool))
+			}
+			for tool, count := range opMetric.CallsPerTool {
+				jobMetric.CallsPerTool[tool] += count
 			}
 		}
 	}

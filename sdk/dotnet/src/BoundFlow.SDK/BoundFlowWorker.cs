@@ -132,7 +132,7 @@ public sealed class OperationContext
             TokensUsed:   result.TokensUsed,
             CostUsd:      (double)result.CostUsd,
             LlmCalls:     result.LlmCallsUsed,
-            CallsPerTool: 0,
+            CallsPerTool: new Dictionary<string, int>(result.CallsPerTool),
             RanAt:        DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         );
 
@@ -144,13 +144,16 @@ public sealed class OperationContext
         while (updatedHistory.Count > Math.Max(maxWindow, 1))
             updatedHistory.RemoveAt(0);
 
-        AgentStateUpdates[agent.Name] = new AgentInvocationMetrics
+        var agentMetrics = new AgentInvocationMetrics
         {
             CostUsd    = (double)result.CostUsd,
             LlmCalls   = result.LlmCallsUsed,
             TokensUsed = result.TokensUsed,
             RanAt      = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         };
+        foreach (var (tool, count) in result.CallsPerTool)
+            agentMetrics.CallsPerTool[tool] = count;
+        AgentStateUpdates[agent.Name] = agentMetrics;
 
         return result;
     }

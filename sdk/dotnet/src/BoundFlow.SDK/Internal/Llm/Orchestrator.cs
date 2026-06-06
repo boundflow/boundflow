@@ -45,6 +45,8 @@ internal sealed class Orchestrator
         var costUsd = 0m;
         var tokensUsed = 0;
         var maxLlmCalls = cfg.Policy.MaxLlmCalls;
+        var toolCallCounts = new Dictionary<string, int>();
+        var toolCallLimits = (cfg.Policy.ToolCallLimits ?? []).ToDictionary(l => l.ToolName, l => l.MaxCalls);
 
         while (true)
         {
@@ -102,7 +104,7 @@ internal sealed class Orchestrator
                 if (toolUse.Name == SubmitResultTool)
                 {
                     _logger.LogInformation("Agent step complete via submit_result. LlmCalls={Calls} CostUsd={Cost} Model={Model}", llmCallsUsed, costUsd, cfg.Model);
-                    return new StepResult(input, llmCallsUsed, costUsd, tokensUsed, cfg.Model);
+                    return new StepResult(input, llmCallsUsed, costUsd, tokensUsed, toolCallCounts, cfg.Model);
                 }
 
                 if (!callbackMap.TryGetValue(toolUse.Name, out var cb))
@@ -111,6 +113,22 @@ internal sealed class Orchestrator
                     toolResults.Add(new ToolResultContent { ToolUseId = toolUse.Id, Content = $"Unknown callback: {toolUse.Name}", IsError = true });
                     continue;
                 }
+
+                // Enforce the per-tool call cap: block further calls to a tool once its limit is hit.
+                if (toolCallLimits.TryGetValue(toolUse.Name, out var toolCap)
+                    && toolCap > 0
+                    && toolCallCounts.GetValueOrDefault(toolUse.Name) >= toolCap)
+                {
+                    _logger.LogWarning("Per-tool call limit reached, blocking. Tool={Name} Limit={Limit}", toolUse.Name, toolCap);
+                    toolResults.Add(new ToolResultContent
+                    {
+                        ToolUseId = toolUse.Id,
+                        Content = $"Call limit reached for tool '{toolUse.Name}' (max {toolCap}). Do not call it again.",
+                        IsError = true
+                    });
+                    continue;
+                }
+                toolCallCounts[toolUse.Name] = toolCallCounts.GetValueOrDefault(toolUse.Name) + 1;
 
                 JsonNode? cbOutput;
                 try

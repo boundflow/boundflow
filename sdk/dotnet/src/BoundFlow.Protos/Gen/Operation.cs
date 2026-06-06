@@ -53,27 +53,29 @@ namespace Convergeplane.V1 {
             "RW50cnkSEAoDa2V5GAEgASgJUgNrZXkSPgoFdmFsdWUYAiABKAsyKC5jb252",
             "ZXJnZXBsYW5lLnYxLkFnZW50SW52b2NhdGlvbk1ldHJpY3NSBXZhbHVlOgI4",
             "ASJJChlXb3JrZmxvd0ludm9jYXRpb25NZXRyaWNzEh8KCGZhaWx1cmVzGAEg",
-            "ASgFSABSCGZhaWx1cmVziAEBQgsKCV9mYWlsdXJlcyL1BAoWQWdlbnRJbnZv",
+            "ASgFSABSCGZhaWx1cmVziAEBQgsKCV9mYWlsdXJlcyLaBQoWQWdlbnRJbnZv",
             "Y2F0aW9uTWV0cmljcxIeCghjb3N0X3VzZBgBIAEoAUgAUgdjb3N0VXNkiAEB",
             "EiAKCWxsbV9jYWxscxgCIAEoBUgBUghsbG1DYWxsc4gBARIkCgt0b2tlbnNf",
-            "dXNlZBgDIAEoBUgCUgp0b2tlbnNVc2VkiAEBEikKDmNhbGxzX3Blcl90b29s",
-            "GAQgASgFSANSDGNhbGxzUGVyVG9vbIgBARIsCg9sYXRlbmN5X3NlY29uZHMY",
-            "BSABKAFIBFIObGF0ZW5jeVNlY29uZHOIAQESHwoIZmFpbHVyZXMYBiABKAVI",
-            "BVIIZmFpbHVyZXOIAQESNAoTYXBwcm92YWxfcmVqZWN0aW9ucxgHIAEoBUgG",
-            "UhJhcHByb3ZhbFJlamVjdGlvbnOIAQESbwoTdG9vbF9mYWlsdXJlX2NvdW50",
-            "cxgIIAMoCzI/LmNvbnZlcmdlcGxhbmUudjEuQWdlbnRJbnZvY2F0aW9uTWV0",
-            "cmljcy5Ub29sRmFpbHVyZUNvdW50c0VudHJ5UhF0b29sRmFpbHVyZUNvdW50",
-            "cxIVCgZyYW5fYXQYCSABKANSBXJhbkF0GkQKFlRvb2xGYWlsdXJlQ291bnRz",
-            "RW50cnkSEAoDa2V5GAEgASgJUgNrZXkSFAoFdmFsdWUYAiABKAVSBXZhbHVl",
-            "OgI4AUILCglfY29zdF91c2RCDAoKX2xsbV9jYWxsc0IOCgxfdG9rZW5zX3Vz",
-            "ZWRCEQoPX2NhbGxzX3Blcl90b29sQhIKEF9sYXRlbmN5X3NlY29uZHNCCwoJ",
-            "X2ZhaWx1cmVzQhYKFF9hcHByb3ZhbF9yZWplY3Rpb25zKrIBCg9PcGVyYXRp",
-            "b25TdGF0dXMSIAocT1BFUkFUSU9OX1NUQVRVU19VTlNQRUNJRklFRBAAEiAK",
-            "HE9QRVJBVElPTl9TVEFUVVNfSU5fUFJPR1JFU1MQARIeChpPUEVSQVRJT05f",
-            "U1RBVFVTX0NPTVBMRVRFRBACEhsKF09QRVJBVElPTl9TVEFUVVNfRkFJTEVE",
-            "EAMSHgoaT1BFUkFUSU9OX1NUQVRVU19DQU5DRUxMRUQQBEJNWktnaXRodWIu",
-            "Y29tL2NvbnZlcmdlcGxhbmUvY29udmVyZ2VwbGFuZS9nZW4vY29udmVyZ2Vw",
-            "bGFuZS92MTtjb252ZXJnZXBsYW5ldjFiBnByb3RvMw=="));
+            "dXNlZBgDIAEoBUgCUgp0b2tlbnNVc2VkiAEBEiwKD2xhdGVuY3lfc2Vjb25k",
+            "cxgFIAEoAUgDUg5sYXRlbmN5U2Vjb25kc4gBARIfCghmYWlsdXJlcxgGIAEo",
+            "BUgEUghmYWlsdXJlc4gBARI0ChNhcHByb3ZhbF9yZWplY3Rpb25zGAcgASgF",
+            "SAVSEmFwcHJvdmFsUmVqZWN0aW9uc4gBARJvChN0b29sX2ZhaWx1cmVfY291",
+            "bnRzGAggAygLMj8uY29udmVyZ2VwbGFuZS52MS5BZ2VudEludm9jYXRpb25N",
+            "ZXRyaWNzLlRvb2xGYWlsdXJlQ291bnRzRW50cnlSEXRvb2xGYWlsdXJlQ291",
+            "bnRzEmAKDmNhbGxzX3Blcl90b29sGAogAygLMjouY29udmVyZ2VwbGFuZS52",
+            "MS5BZ2VudEludm9jYXRpb25NZXRyaWNzLkNhbGxzUGVyVG9vbEVudHJ5Ugxj",
+            "YWxsc1BlclRvb2wSFQoGcmFuX2F0GAkgASgDUgVyYW5BdBpEChZUb29sRmFp",
+            "bHVyZUNvdW50c0VudHJ5EhAKA2tleRgBIAEoCVIDa2V5EhQKBXZhbHVlGAIg",
+            "ASgFUgV2YWx1ZToCOAEaPwoRQ2FsbHNQZXJUb29sRW50cnkSEAoDa2V5GAEg",
+            "ASgJUgNrZXkSFAoFdmFsdWUYAiABKAVSBXZhbHVlOgI4AUILCglfY29zdF91",
+            "c2RCDAoKX2xsbV9jYWxsc0IOCgxfdG9rZW5zX3VzZWRCEgoQX2xhdGVuY3lf",
+            "c2Vjb25kc0ILCglfZmFpbHVyZXNCFgoUX2FwcHJvdmFsX3JlamVjdGlvbnMq",
+            "sgEKD09wZXJhdGlvblN0YXR1cxIgChxPUEVSQVRJT05fU1RBVFVTX1VOU1BF",
+            "Q0lGSUVEEAASIAocT1BFUkFUSU9OX1NUQVRVU19JTl9QUk9HUkVTUxABEh4K",
+            "Gk9QRVJBVElPTl9TVEFUVVNfQ09NUExFVEVEEAISGwoXT1BFUkFUSU9OX1NU",
+            "QVRVU19GQUlMRUQQAxIeChpPUEVSQVRJT05fU1RBVFVTX0NBTkNFTExFRBAE",
+            "Qk1aS2dpdGh1Yi5jb20vY29udmVyZ2VwbGFuZS9jb252ZXJnZXBsYW5lL2dl",
+            "bi9jb252ZXJnZXBsYW5lL3YxO2NvbnZlcmdlcGxhbmV2MWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.StructReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Convergeplane.V1.OperationStatus), }, null, new pbr::GeneratedClrTypeInfo[] {
@@ -81,7 +83,7 @@ namespace Convergeplane.V1 {
             new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.ApprovalGate), global::Convergeplane.V1.ApprovalGate.Parser, new[]{ "OnApprove", "OnReject", "TimeoutSeconds", "ApprovalId" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.AtomicOperationResult), global::Convergeplane.V1.AtomicOperationResult.Parser, new[]{ "Status", "Message", "NextOperation", "AgentStateUpdates", "ApprovalGate", "WorkflowMetrics" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.WorkflowInvocationMetrics), global::Convergeplane.V1.WorkflowInvocationMetrics.Parser, new[]{ "Failures" }, new[]{ "Failures" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.AgentInvocationMetrics), global::Convergeplane.V1.AgentInvocationMetrics.Parser, new[]{ "CostUsd", "LlmCalls", "TokensUsed", "CallsPerTool", "LatencySeconds", "Failures", "ApprovalRejections", "ToolFailureCounts", "RanAt" }, new[]{ "CostUsd", "LlmCalls", "TokensUsed", "CallsPerTool", "LatencySeconds", "Failures", "ApprovalRejections" }, null, null, new pbr::GeneratedClrTypeInfo[] { null, })
+            new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.AgentInvocationMetrics), global::Convergeplane.V1.AgentInvocationMetrics.Parser, new[]{ "CostUsd", "LlmCalls", "TokensUsed", "LatencySeconds", "Failures", "ApprovalRejections", "ToolFailureCounts", "CallsPerTool", "RanAt" }, new[]{ "CostUsd", "LlmCalls", "TokensUsed", "LatencySeconds", "Failures", "ApprovalRejections" }, null, null, new pbr::GeneratedClrTypeInfo[] { null, null, })
           }));
     }
     #endregion
@@ -1612,11 +1614,11 @@ namespace Convergeplane.V1 {
       costUsd_ = other.costUsd_;
       llmCalls_ = other.llmCalls_;
       tokensUsed_ = other.tokensUsed_;
-      callsPerTool_ = other.callsPerTool_;
       latencySeconds_ = other.latencySeconds_;
       failures_ = other.failures_;
       approvalRejections_ = other.approvalRejections_;
       toolFailureCounts_ = other.toolFailureCounts_.Clone();
+      callsPerTool_ = other.callsPerTool_.Clone();
       ranAt_ = other.ranAt_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
@@ -1708,33 +1710,6 @@ namespace Convergeplane.V1 {
       _hasBits0 &= ~4;
     }
 
-    /// <summary>Field number for the "calls_per_tool" field.</summary>
-    public const int CallsPerToolFieldNumber = 4;
-    private readonly static int CallsPerToolDefaultValue = 0;
-
-    private int callsPerTool_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public int CallsPerTool {
-      get { if ((_hasBits0 & 8) != 0) { return callsPerTool_; } else { return CallsPerToolDefaultValue; } }
-      set {
-        _hasBits0 |= 8;
-        callsPerTool_ = value;
-      }
-    }
-    /// <summary>Gets whether the "calls_per_tool" field is set</summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool HasCallsPerTool {
-      get { return (_hasBits0 & 8) != 0; }
-    }
-    /// <summary>Clears the value of the "calls_per_tool" field</summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void ClearCallsPerTool() {
-      _hasBits0 &= ~8;
-    }
-
     /// <summary>Field number for the "latency_seconds" field.</summary>
     public const int LatencySecondsFieldNumber = 5;
     private readonly static double LatencySecondsDefaultValue = 0D;
@@ -1743,9 +1718,9 @@ namespace Convergeplane.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public double LatencySeconds {
-      get { if ((_hasBits0 & 16) != 0) { return latencySeconds_; } else { return LatencySecondsDefaultValue; } }
+      get { if ((_hasBits0 & 8) != 0) { return latencySeconds_; } else { return LatencySecondsDefaultValue; } }
       set {
-        _hasBits0 |= 16;
+        _hasBits0 |= 8;
         latencySeconds_ = value;
       }
     }
@@ -1753,13 +1728,13 @@ namespace Convergeplane.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public bool HasLatencySeconds {
-      get { return (_hasBits0 & 16) != 0; }
+      get { return (_hasBits0 & 8) != 0; }
     }
     /// <summary>Clears the value of the "latency_seconds" field</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public void ClearLatencySeconds() {
-      _hasBits0 &= ~16;
+      _hasBits0 &= ~8;
     }
 
     /// <summary>Field number for the "failures" field.</summary>
@@ -1770,9 +1745,9 @@ namespace Convergeplane.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int Failures {
-      get { if ((_hasBits0 & 32) != 0) { return failures_; } else { return FailuresDefaultValue; } }
+      get { if ((_hasBits0 & 16) != 0) { return failures_; } else { return FailuresDefaultValue; } }
       set {
-        _hasBits0 |= 32;
+        _hasBits0 |= 16;
         failures_ = value;
       }
     }
@@ -1780,13 +1755,13 @@ namespace Convergeplane.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public bool HasFailures {
-      get { return (_hasBits0 & 32) != 0; }
+      get { return (_hasBits0 & 16) != 0; }
     }
     /// <summary>Clears the value of the "failures" field</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public void ClearFailures() {
-      _hasBits0 &= ~32;
+      _hasBits0 &= ~16;
     }
 
     /// <summary>Field number for the "approval_rejections" field.</summary>
@@ -1797,9 +1772,9 @@ namespace Convergeplane.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int ApprovalRejections {
-      get { if ((_hasBits0 & 64) != 0) { return approvalRejections_; } else { return ApprovalRejectionsDefaultValue; } }
+      get { if ((_hasBits0 & 32) != 0) { return approvalRejections_; } else { return ApprovalRejectionsDefaultValue; } }
       set {
-        _hasBits0 |= 64;
+        _hasBits0 |= 32;
         approvalRejections_ = value;
       }
     }
@@ -1807,13 +1782,13 @@ namespace Convergeplane.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public bool HasApprovalRejections {
-      get { return (_hasBits0 & 64) != 0; }
+      get { return (_hasBits0 & 32) != 0; }
     }
     /// <summary>Clears the value of the "approval_rejections" field</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public void ClearApprovalRejections() {
-      _hasBits0 &= ~64;
+      _hasBits0 &= ~32;
     }
 
     /// <summary>Field number for the "tool_failure_counts" field.</summary>
@@ -1825,6 +1800,20 @@ namespace Convergeplane.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public pbc::MapField<string, int> ToolFailureCounts {
       get { return toolFailureCounts_; }
+    }
+
+    /// <summary>Field number for the "calls_per_tool" field.</summary>
+    public const int CallsPerToolFieldNumber = 10;
+    private static readonly pbc::MapField<string, int>.Codec _map_callsPerTool_codec
+        = new pbc::MapField<string, int>.Codec(pb::FieldCodec.ForString(10, ""), pb::FieldCodec.ForInt32(16, 0), 82);
+    private readonly pbc::MapField<string, int> callsPerTool_ = new pbc::MapField<string, int>();
+    /// <summary>
+    /// Per-tool call counts for this run, keyed by tool name. Empty = no tools called.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::MapField<string, int> CallsPerTool {
+      get { return callsPerTool_; }
     }
 
     /// <summary>Field number for the "ran_at" field.</summary>
@@ -1860,11 +1849,11 @@ namespace Convergeplane.V1 {
       if (!pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.Equals(CostUsd, other.CostUsd)) return false;
       if (LlmCalls != other.LlmCalls) return false;
       if (TokensUsed != other.TokensUsed) return false;
-      if (CallsPerTool != other.CallsPerTool) return false;
       if (!pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.Equals(LatencySeconds, other.LatencySeconds)) return false;
       if (Failures != other.Failures) return false;
       if (ApprovalRejections != other.ApprovalRejections) return false;
       if (!ToolFailureCounts.Equals(other.ToolFailureCounts)) return false;
+      if (!CallsPerTool.Equals(other.CallsPerTool)) return false;
       if (RanAt != other.RanAt) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
@@ -1876,11 +1865,11 @@ namespace Convergeplane.V1 {
       if (HasCostUsd) hash ^= pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.GetHashCode(CostUsd);
       if (HasLlmCalls) hash ^= LlmCalls.GetHashCode();
       if (HasTokensUsed) hash ^= TokensUsed.GetHashCode();
-      if (HasCallsPerTool) hash ^= CallsPerTool.GetHashCode();
       if (HasLatencySeconds) hash ^= pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.GetHashCode(LatencySeconds);
       if (HasFailures) hash ^= Failures.GetHashCode();
       if (HasApprovalRejections) hash ^= ApprovalRejections.GetHashCode();
       hash ^= ToolFailureCounts.GetHashCode();
+      hash ^= CallsPerTool.GetHashCode();
       if (RanAt != 0L) hash ^= RanAt.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
@@ -1912,10 +1901,6 @@ namespace Convergeplane.V1 {
         output.WriteRawTag(24);
         output.WriteInt32(TokensUsed);
       }
-      if (HasCallsPerTool) {
-        output.WriteRawTag(32);
-        output.WriteInt32(CallsPerTool);
-      }
       if (HasLatencySeconds) {
         output.WriteRawTag(41);
         output.WriteDouble(LatencySeconds);
@@ -1933,6 +1918,7 @@ namespace Convergeplane.V1 {
         output.WriteRawTag(72);
         output.WriteInt64(RanAt);
       }
+      callsPerTool_.WriteTo(output, _map_callsPerTool_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -1955,10 +1941,6 @@ namespace Convergeplane.V1 {
         output.WriteRawTag(24);
         output.WriteInt32(TokensUsed);
       }
-      if (HasCallsPerTool) {
-        output.WriteRawTag(32);
-        output.WriteInt32(CallsPerTool);
-      }
       if (HasLatencySeconds) {
         output.WriteRawTag(41);
         output.WriteDouble(LatencySeconds);
@@ -1976,6 +1958,7 @@ namespace Convergeplane.V1 {
         output.WriteRawTag(72);
         output.WriteInt64(RanAt);
       }
+      callsPerTool_.WriteTo(ref output, _map_callsPerTool_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -1995,9 +1978,6 @@ namespace Convergeplane.V1 {
       if (HasTokensUsed) {
         size += 1 + pb::CodedOutputStream.ComputeInt32Size(TokensUsed);
       }
-      if (HasCallsPerTool) {
-        size += 1 + pb::CodedOutputStream.ComputeInt32Size(CallsPerTool);
-      }
       if (HasLatencySeconds) {
         size += 1 + 8;
       }
@@ -2008,6 +1988,7 @@ namespace Convergeplane.V1 {
         size += 1 + pb::CodedOutputStream.ComputeInt32Size(ApprovalRejections);
       }
       size += toolFailureCounts_.CalculateSize(_map_toolFailureCounts_codec);
+      size += callsPerTool_.CalculateSize(_map_callsPerTool_codec);
       if (RanAt != 0L) {
         size += 1 + pb::CodedOutputStream.ComputeInt64Size(RanAt);
       }
@@ -2032,9 +2013,6 @@ namespace Convergeplane.V1 {
       if (other.HasTokensUsed) {
         TokensUsed = other.TokensUsed;
       }
-      if (other.HasCallsPerTool) {
-        CallsPerTool = other.CallsPerTool;
-      }
       if (other.HasLatencySeconds) {
         LatencySeconds = other.LatencySeconds;
       }
@@ -2045,6 +2023,7 @@ namespace Convergeplane.V1 {
         ApprovalRejections = other.ApprovalRejections;
       }
       toolFailureCounts_.MergeFrom(other.toolFailureCounts_);
+      callsPerTool_.MergeFrom(other.callsPerTool_);
       if (other.RanAt != 0L) {
         RanAt = other.RanAt;
       }
@@ -2079,10 +2058,6 @@ namespace Convergeplane.V1 {
             TokensUsed = input.ReadInt32();
             break;
           }
-          case 32: {
-            CallsPerTool = input.ReadInt32();
-            break;
-          }
           case 41: {
             LatencySeconds = input.ReadDouble();
             break;
@@ -2101,6 +2076,10 @@ namespace Convergeplane.V1 {
           }
           case 72: {
             RanAt = input.ReadInt64();
+            break;
+          }
+          case 82: {
+            callsPerTool_.AddEntriesFrom(input, _map_callsPerTool_codec);
             break;
           }
         }
@@ -2134,10 +2113,6 @@ namespace Convergeplane.V1 {
             TokensUsed = input.ReadInt32();
             break;
           }
-          case 32: {
-            CallsPerTool = input.ReadInt32();
-            break;
-          }
           case 41: {
             LatencySeconds = input.ReadDouble();
             break;
@@ -2156,6 +2131,10 @@ namespace Convergeplane.V1 {
           }
           case 72: {
             RanAt = input.ReadInt64();
+            break;
+          }
+          case 82: {
+            callsPerTool_.AddEntriesFrom(ref input, _map_callsPerTool_codec);
             break;
           }
         }

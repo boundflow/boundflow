@@ -10,15 +10,17 @@ internal record InvocationSnapshot(
     int TokensUsed,
     double CostUsd,
     int LlmCalls,
-    int CallsPerTool,
+    Dictionary<string, int>? CallsPerTool,
     long RanAt
 );
+
+internal record ToolCallLimit(string ToolName, int MaxCalls);
 
 internal record AgentRuntimePolicy(
     int MaxLlmCalls = 0,
     decimal MaxCostUsd = 0,
     int MaxTokensPerCall = 0,
-    int MaxCallsPerTool = 0,
+    IReadOnlyList<ToolCallLimit>? ToolCallLimits = null,
     IReadOnlyList<string>? AllowedModels = null,
     // Written by lifecycle rules only. Null = use AgentDefinition.Model.
     string? Model = null
@@ -29,7 +31,9 @@ internal record AgentLifecycleRule(
     PolicyOperator Operator,
     decimal Threshold,
     int Window,
-    PolicyMutation Action
+    PolicyMutation Action,
+    // Only used when Metric == CallsPerTool: which tool's count to evaluate.
+    string? ToolName = null
 );
 
 internal record WorkflowConfig(
@@ -42,7 +46,7 @@ internal record WorkflowConfig(
 internal enum AgentMetric     { TokensUsed, CostUsd, LlmCalls, CallsPerTool }
 internal enum PolicyOperator  { LessThan, LessThanOrEqual, GreaterThan, GreaterThanOrEqual, Equal }
 internal record PolicyMutation(PolicyField Field, object Value);
-internal enum PolicyField     { Model, MaxLlmCalls, MaxCostUsd, MaxTokensPerCall, MaxCallsPerTool }
+internal enum PolicyField     { Model, MaxLlmCalls, MaxCostUsd, MaxTokensPerCall }
 internal record AgentLifecyclePolicy(IReadOnlyList<AgentLifecycleRule> Rules);
 
 /// <summary>
@@ -91,6 +95,8 @@ public record StepResult(
     int LlmCallsUsed,
     decimal CostUsd,
     int TokensUsed,
+    /// <summary>Per-tool call counts for this step, keyed by tool name.</summary>
+    IReadOnlyDictionary<string, int> CallsPerTool,
     /// <summary>The model that was actually used for this step.</summary>
     string ModelUsed
 );

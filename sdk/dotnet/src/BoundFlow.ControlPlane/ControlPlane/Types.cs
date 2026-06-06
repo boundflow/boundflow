@@ -42,11 +42,13 @@ public record RuntimeOverrides(
     int OperationTimeoutSeconds = 0
 );
 
+public record ToolCallLimit(string ToolName, int MaxCalls);
+
 public record AgentRuntimePolicy(
     int MaxLlmCalls = 0,
     decimal MaxCostUsd = 0,
     int MaxTokensPerCall = 0,
-    int MaxCallsPerTool = 0,
+    IReadOnlyList<ToolCallLimit>? ToolCallLimits = null,
     string? Model = null
 );
 
@@ -78,7 +80,7 @@ public record WorkflowLifecyclePolicy(IReadOnlyList<WorkflowLifecyclePolicyRule>
 
 public enum AgentMetric     { TokensUsed, CostUsd, LlmCalls, CallsPerTool }
 public enum PolicyOperator  { LessThan, LessThanOrEqual, GreaterThan, GreaterThanOrEqual, Equal }
-public enum PolicyField     { Model, MaxLlmCalls, MaxCostUsd, MaxTokensPerCall, MaxCallsPerTool }
+public enum PolicyField     { Model, MaxLlmCalls, MaxCostUsd, MaxTokensPerCall }
 
 public record PolicyMutation(PolicyField Field, string Value);
 
@@ -87,7 +89,9 @@ public record AgentLifecycleRule(
     PolicyOperator Operator,
     decimal Threshold,
     int Window,
-    PolicyMutation Action
+    PolicyMutation Action,
+    // Only used when Metric == CallsPerTool: which tool's count to evaluate.
+    string? ToolName = null
 );
 
 public record AgentLifecyclePolicy(IReadOnlyList<AgentLifecycleRule> Rules);

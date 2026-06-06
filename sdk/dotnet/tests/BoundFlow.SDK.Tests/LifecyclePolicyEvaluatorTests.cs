@@ -8,7 +8,7 @@ public class LifecyclePolicyEvaluatorTests
 {
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private static InvocationSnapshot Snapshot(int tokens = 0, double cost = 0, int llmCalls = 0, int callsPerTool = 0) =>
+    private static InvocationSnapshot Snapshot(int tokens = 0, double cost = 0, int llmCalls = 0, Dictionary<string, int>? callsPerTool = null) =>
         new(tokens, cost, llmCalls, callsPerTool, RanAt: 0);
 
     private static AgentLifecycleRule Rule(
@@ -44,10 +44,12 @@ public class LifecyclePolicyEvaluatorTests
     }
 
     [Fact]
-    public void GetMetricValue_CallsPerTool_ReturnsCorrectValue()
+    public void GetMetricValue_CallsPerTool_ReturnsToolSpecificValue()
     {
-        var snap = Snapshot(callsPerTool: 7);
-        Assert.Equal(7m, LifecyclePolicyEvaluator.GetMetricValue(snap, AgentMetric.CallsPerTool));
+        var snap = Snapshot(callsPerTool: new() { ["rollback"] = 7, ["retry"] = 2 });
+        Assert.Equal(7m, LifecyclePolicyEvaluator.GetMetricValue(snap, AgentMetric.CallsPerTool, "rollback"));
+        Assert.Equal(2m, LifecyclePolicyEvaluator.GetMetricValue(snap, AgentMetric.CallsPerTool, "retry"));
+        Assert.Equal(0m, LifecyclePolicyEvaluator.GetMetricValue(snap, AgentMetric.CallsPerTool, "unknown"));
     }
 
     [Fact]
@@ -57,7 +59,7 @@ public class LifecyclePolicyEvaluatorTests
         Assert.Equal(0m, LifecyclePolicyEvaluator.GetMetricValue(snap, AgentMetric.TokensUsed));
         Assert.Equal(0m, LifecyclePolicyEvaluator.GetMetricValue(snap, AgentMetric.CostUsd));
         Assert.Equal(0m, LifecyclePolicyEvaluator.GetMetricValue(snap, AgentMetric.LlmCalls));
-        Assert.Equal(0m, LifecyclePolicyEvaluator.GetMetricValue(snap, AgentMetric.CallsPerTool));
+        Assert.Equal(0m, LifecyclePolicyEvaluator.GetMetricValue(snap, AgentMetric.CallsPerTool, "rollback"));
     }
 
     // ── Evaluate ─────────────────────────────────────────────────────────────
@@ -116,14 +118,6 @@ public class LifecyclePolicyEvaluatorTests
         var policy = new AgentRuntimePolicy();
         var result = LifecyclePolicyEvaluator.ApplyMutation(policy, new PolicyMutation(PolicyField.MaxTokensPerCall, "2048"));
         Assert.Equal(2048, result.MaxTokensPerCall);
-    }
-
-    [Fact]
-    public void ApplyMutation_MaxCallsPerTool_UpdatesField()
-    {
-        var policy = new AgentRuntimePolicy();
-        var result = LifecyclePolicyEvaluator.ApplyMutation(policy, new PolicyMutation(PolicyField.MaxCallsPerTool, "3"));
-        Assert.Equal(3, result.MaxCallsPerTool);
     }
 
     [Fact]
@@ -299,14 +293,20 @@ public class LifecyclePolicyEvaluatorTests
               "max_llm_calls": 5,
               "max_cost_usd": 0.25,
               "max_tokens_per_call": 2048,
-              "max_calls_per_tool": 3
+              "tool_call_limits": [
+                { "tool_name": "rollback", "max_calls": 1 },
+                { "tool_name": "retry", "max_calls": 5 }
+              ]
             }
             """);
         var policy = LifecyclePolicyEvaluator.LoadRuntimePolicy(stateNode);
         Assert.Equal(5,      policy.MaxLlmCalls);
         Assert.Equal(0.25m,  policy.MaxCostUsd);
         Assert.Equal(2048,   policy.MaxTokensPerCall);
-        Assert.Equal(3,      policy.MaxCallsPerTool);
+        Assert.NotNull(policy.ToolCallLimits);
+        Assert.Equal(2, policy.ToolCallLimits.Count);
+        Assert.Equal(1, policy.ToolCallLimits.Single(l => l.ToolName == "rollback").MaxCalls);
+        Assert.Equal(5, policy.ToolCallLimits.Single(l => l.ToolName == "retry").MaxCalls);
     }
 
     // ── LoadLifecyclePolicy ──────────────────────────────────────────────────

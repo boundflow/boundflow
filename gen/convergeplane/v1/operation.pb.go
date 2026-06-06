@@ -397,11 +397,12 @@ type AgentInvocationMetrics struct {
 	CostUsd            *float64               `protobuf:"fixed64,1,opt,name=cost_usd,json=costUsd,proto3,oneof" json:"cost_usd,omitempty"`
 	LlmCalls           *int32                 `protobuf:"varint,2,opt,name=llm_calls,json=llmCalls,proto3,oneof" json:"llm_calls,omitempty"`
 	TokensUsed         *int32                 `protobuf:"varint,3,opt,name=tokens_used,json=tokensUsed,proto3,oneof" json:"tokens_used,omitempty"`
-	CallsPerTool       *int32                 `protobuf:"varint,4,opt,name=calls_per_tool,json=callsPerTool,proto3,oneof" json:"calls_per_tool,omitempty"`
 	LatencySeconds     *float64               `protobuf:"fixed64,5,opt,name=latency_seconds,json=latencySeconds,proto3,oneof" json:"latency_seconds,omitempty"`
 	Failures           *int32                 `protobuf:"varint,6,opt,name=failures,proto3,oneof" json:"failures,omitempty"`
 	ApprovalRejections *int32                 `protobuf:"varint,7,opt,name=approval_rejections,json=approvalRejections,proto3,oneof" json:"approval_rejections,omitempty"`
 	ToolFailureCounts  map[string]int32       `protobuf:"bytes,8,rep,name=tool_failure_counts,json=toolFailureCounts,proto3" json:"tool_failure_counts,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	// Per-tool call counts for this run, keyed by tool name. Empty = no tools called.
+	CallsPerTool map[string]int32 `protobuf:"bytes,10,rep,name=calls_per_tool,json=callsPerTool,proto3" json:"calls_per_tool,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
 	// Unix milliseconds when this agent run occurred. Always set (used to order history).
 	RanAt         int64 `protobuf:"varint,9,opt,name=ran_at,json=ranAt,proto3" json:"ran_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -459,13 +460,6 @@ func (x *AgentInvocationMetrics) GetTokensUsed() int32 {
 	return 0
 }
 
-func (x *AgentInvocationMetrics) GetCallsPerTool() int32 {
-	if x != nil && x.CallsPerTool != nil {
-		return *x.CallsPerTool
-	}
-	return 0
-}
-
 func (x *AgentInvocationMetrics) GetLatencySeconds() float64 {
 	if x != nil && x.LatencySeconds != nil {
 		return *x.LatencySeconds
@@ -490,6 +484,13 @@ func (x *AgentInvocationMetrics) GetApprovalRejections() int32 {
 func (x *AgentInvocationMetrics) GetToolFailureCounts() map[string]int32 {
 	if x != nil {
 		return x.ToolFailureCounts
+	}
+	return nil
+}
+
+func (x *AgentInvocationMetrics) GetCallsPerTool() map[string]int32 {
+	if x != nil {
+		return x.CallsPerTool
 	}
 	return nil
 }
@@ -537,26 +538,29 @@ const file_convergeplane_v1_operation_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\v2(.convergeplane.v1.AgentInvocationMetricsR\x05value:\x028\x01\"I\n" +
 	"\x19WorkflowInvocationMetrics\x12\x1f\n" +
 	"\bfailures\x18\x01 \x01(\x05H\x00R\bfailures\x88\x01\x01B\v\n" +
-	"\t_failures\"\xf5\x04\n" +
+	"\t_failures\"\xda\x05\n" +
 	"\x16AgentInvocationMetrics\x12\x1e\n" +
 	"\bcost_usd\x18\x01 \x01(\x01H\x00R\acostUsd\x88\x01\x01\x12 \n" +
 	"\tllm_calls\x18\x02 \x01(\x05H\x01R\bllmCalls\x88\x01\x01\x12$\n" +
 	"\vtokens_used\x18\x03 \x01(\x05H\x02R\n" +
-	"tokensUsed\x88\x01\x01\x12)\n" +
-	"\x0ecalls_per_tool\x18\x04 \x01(\x05H\x03R\fcallsPerTool\x88\x01\x01\x12,\n" +
-	"\x0flatency_seconds\x18\x05 \x01(\x01H\x04R\x0elatencySeconds\x88\x01\x01\x12\x1f\n" +
-	"\bfailures\x18\x06 \x01(\x05H\x05R\bfailures\x88\x01\x01\x124\n" +
-	"\x13approval_rejections\x18\a \x01(\x05H\x06R\x12approvalRejections\x88\x01\x01\x12o\n" +
-	"\x13tool_failure_counts\x18\b \x03(\v2?.convergeplane.v1.AgentInvocationMetrics.ToolFailureCountsEntryR\x11toolFailureCounts\x12\x15\n" +
+	"tokensUsed\x88\x01\x01\x12,\n" +
+	"\x0flatency_seconds\x18\x05 \x01(\x01H\x03R\x0elatencySeconds\x88\x01\x01\x12\x1f\n" +
+	"\bfailures\x18\x06 \x01(\x05H\x04R\bfailures\x88\x01\x01\x124\n" +
+	"\x13approval_rejections\x18\a \x01(\x05H\x05R\x12approvalRejections\x88\x01\x01\x12o\n" +
+	"\x13tool_failure_counts\x18\b \x03(\v2?.convergeplane.v1.AgentInvocationMetrics.ToolFailureCountsEntryR\x11toolFailureCounts\x12`\n" +
+	"\x0ecalls_per_tool\x18\n" +
+	" \x03(\v2:.convergeplane.v1.AgentInvocationMetrics.CallsPerToolEntryR\fcallsPerTool\x12\x15\n" +
 	"\x06ran_at\x18\t \x01(\x03R\x05ranAt\x1aD\n" +
 	"\x16ToolFailureCountsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\x1a?\n" +
+	"\x11CallsPerToolEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01B\v\n" +
 	"\t_cost_usdB\f\n" +
 	"\n" +
 	"_llm_callsB\x0e\n" +
-	"\f_tokens_usedB\x11\n" +
-	"\x0f_calls_per_toolB\x12\n" +
+	"\f_tokens_usedB\x12\n" +
 	"\x10_latency_secondsB\v\n" +
 	"\t_failuresB\x16\n" +
 	"\x14_approval_rejections*\xb2\x01\n" +
@@ -580,7 +584,7 @@ func file_convergeplane_v1_operation_proto_rawDescGZIP() []byte {
 }
 
 var file_convergeplane_v1_operation_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_convergeplane_v1_operation_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_convergeplane_v1_operation_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_convergeplane_v1_operation_proto_goTypes = []any{
 	(OperationStatus)(0),              // 0: convergeplane.v1.OperationStatus
 	(*AtomicOperation)(nil),           // 1: convergeplane.v1.AtomicOperation
@@ -590,12 +594,13 @@ var file_convergeplane_v1_operation_proto_goTypes = []any{
 	(*AgentInvocationMetrics)(nil),    // 5: convergeplane.v1.AgentInvocationMetrics
 	nil,                               // 6: convergeplane.v1.AtomicOperationResult.AgentStateUpdatesEntry
 	nil,                               // 7: convergeplane.v1.AgentInvocationMetrics.ToolFailureCountsEntry
-	(*structpb.Struct)(nil),           // 8: google.protobuf.Struct
-	(*timestamppb.Timestamp)(nil),     // 9: google.protobuf.Timestamp
+	nil,                               // 8: convergeplane.v1.AgentInvocationMetrics.CallsPerToolEntry
+	(*structpb.Struct)(nil),           // 9: google.protobuf.Struct
+	(*timestamppb.Timestamp)(nil),     // 10: google.protobuf.Timestamp
 }
 var file_convergeplane_v1_operation_proto_depIdxs = []int32{
-	8,  // 0: convergeplane.v1.AtomicOperation.context:type_name -> google.protobuf.Struct
-	9,  // 1: convergeplane.v1.AtomicOperation.created_at:type_name -> google.protobuf.Timestamp
+	9,  // 0: convergeplane.v1.AtomicOperation.context:type_name -> google.protobuf.Struct
+	10, // 1: convergeplane.v1.AtomicOperation.created_at:type_name -> google.protobuf.Timestamp
 	1,  // 2: convergeplane.v1.ApprovalGate.on_approve:type_name -> convergeplane.v1.AtomicOperation
 	1,  // 3: convergeplane.v1.ApprovalGate.on_reject:type_name -> convergeplane.v1.AtomicOperation
 	0,  // 4: convergeplane.v1.AtomicOperationResult.status:type_name -> convergeplane.v1.OperationStatus
@@ -604,12 +609,13 @@ var file_convergeplane_v1_operation_proto_depIdxs = []int32{
 	2,  // 7: convergeplane.v1.AtomicOperationResult.approval_gate:type_name -> convergeplane.v1.ApprovalGate
 	4,  // 8: convergeplane.v1.AtomicOperationResult.workflow_metrics:type_name -> convergeplane.v1.WorkflowInvocationMetrics
 	7,  // 9: convergeplane.v1.AgentInvocationMetrics.tool_failure_counts:type_name -> convergeplane.v1.AgentInvocationMetrics.ToolFailureCountsEntry
-	5,  // 10: convergeplane.v1.AtomicOperationResult.AgentStateUpdatesEntry.value:type_name -> convergeplane.v1.AgentInvocationMetrics
-	11, // [11:11] is the sub-list for method output_type
-	11, // [11:11] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	8,  // 10: convergeplane.v1.AgentInvocationMetrics.calls_per_tool:type_name -> convergeplane.v1.AgentInvocationMetrics.CallsPerToolEntry
+	5,  // 11: convergeplane.v1.AtomicOperationResult.AgentStateUpdatesEntry.value:type_name -> convergeplane.v1.AgentInvocationMetrics
+	12, // [12:12] is the sub-list for method output_type
+	12, // [12:12] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_convergeplane_v1_operation_proto_init() }
@@ -625,7 +631,7 @@ func file_convergeplane_v1_operation_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_convergeplane_v1_operation_proto_rawDesc), len(file_convergeplane_v1_operation_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   7,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
