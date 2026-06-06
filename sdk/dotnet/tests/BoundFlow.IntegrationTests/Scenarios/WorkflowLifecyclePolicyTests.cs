@@ -195,4 +195,103 @@ public class WorkflowLifecyclePolicyTests : IntegrationTestBase
 
         Assert.True(completions.Any(n => n == 2), "Invoke 2 should have completed after activation.");
     }
+
+    /// <summary>
+    /// Verifies that a customer-reported failure (ctx.MarkFailed) increments num_failures
+    /// and that a workflow lifecycle rule on num_failures cools the workflow down.
+    /// </summary>
+    [Fact]
+    public async Task WorkflowEntersCooldownAfterCustomerFailure()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+
+        var worker = new BoundFlowWorker(WorkerAddress, "dummy-key-not-used", LoggerFactory)
+            .RegisterWorkflow("failure_cooldown", 1, (ctx, ct) =>
+            {
+                // Customer logic decided this run failed — still a completed op to BoundFlow.
+                ctx.MarkFailed();
+                return Task.FromResult(OperationResult.Complete());
+            });
+
+        var workerTask = worker.RunAsync(cts.Token);
+
+        var (_, tenant) = await CreateIsolatedTenantAsync("failure-cooldown");
+        var workflow = await ControlPlane.CreateWorkflowAsync("failure_cooldown", tenant.Id,
+            workflowConfig: new WorkflowConfig(Version: 1));
+
+        await ControlPlane.SetWorkflowLifecyclePolicyAsync(
+            workflow.Id,
+            new WorkflowLifecyclePolicy([
+                new WorkflowLifecyclePolicyRule(
+                    Metric:    WorkflowMetric.NumFailures,
+                    Threshold: 1,
+                    Action:    new CooldownAction(Window: 1, CooldownSeconds: 10)
+                )
+            ]));
+
+        await ControlPlane.ActivateWorkflowAsync(workflow.Id);
+
+        await ControlPlane.InvokeWorkflowAsync(workflow.Id, new RuntimeOverrides(OperationTimeoutSeconds: 30));
+        await WaitForCompletionAsync(workflow.Id, cts.Token);
+
+        var state = await WaitForWorkflowStateAsync(workflow.Id, WorkflowState.Cooldown, cts.Token);
+        Assert.Equal(WorkflowState.Cooldown, state);
+
+        cts.Cancel();
+        try { await workerTask; } catch { }
+    }
+
+    /// <summary>
+    /// Verifies that an approval rejection increments approval_rejections and that a
+    /// workflow lifecycle rule on approval_rejections pauses the workflow.
+    /// </summary>
+    [Fact]
+    public async Task WorkflowPausesAfterApprovalRejection()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+        ApprovalRequest? capturedRequest = null;
+
+        var worker = new BoundFlowWorker(WorkerAddress, "dummy-key-not-used", LoggerFactory)
+            .RegisterWorkflow("rejection_pause", 1, (ctx, ct) =>
+                Task.FromResult(OperationResult.AwaitApproval(
+                    onApprove:      OperationResult.Complete(),
+                    onReject:       OperationResult.Complete(),
+                    timeoutSeconds: 60)))
+            .OnApprovalRequested((request, ct) =>
+            {
+                capturedRequest = request;
+                return Task.CompletedTask;
+            });
+
+        var workerTask = worker.RunAsync(cts.Token);
+
+        var (_, tenant) = await CreateIsolatedTenantAsync("rejection-pause");
+        var workflow = await ControlPlane.CreateWorkflowAsync("rejection_pause", tenant.Id,
+            workflowConfig: new WorkflowConfig(Version: 1));
+
+        await ControlPlane.SetWorkflowLifecyclePolicyAsync(
+            workflow.Id,
+            new WorkflowLifecyclePolicy([
+                new WorkflowLifecyclePolicyRule(
+                    Metric:    WorkflowMetric.ApprovalRejections,
+                    Threshold: 1,
+                    Action:    new PauseAction(Window: 1)
+                )
+            ]));
+
+        await ControlPlane.ActivateWorkflowAsync(workflow.Id);
+        await ControlPlane.InvokeWorkflowAsync(workflow.Id, new RuntimeOverrides(OperationTimeoutSeconds: 30));
+
+        await WaitForLifecycleStateAsync(workflow.Id, LifecycleState.AwaitingApproval, cts.Token);
+        Assert.NotNull(capturedRequest);
+
+        // Reject — runs the on_reject branch (Complete) and records an approval rejection.
+        await ControlPlane.RejectWorkflowAsync(workflow.Id, capturedRequest.ApprovalId, cts.Token);
+
+        var state = await WaitForWorkflowStateAsync(workflow.Id, WorkflowState.Paused, cts.Token);
+        Assert.Equal(WorkflowState.Paused, state);
+
+        cts.Cancel();
+        try { await workerTask; } catch { }
+    }
 }

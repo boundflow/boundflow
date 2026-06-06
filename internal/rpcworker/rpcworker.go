@@ -323,6 +323,9 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 							shouldLaunch = resolveBranch(job.JobMetadata.ApprovalGate.OnApprove, "on_approve")
 						case domain.JobStatusRejected, domain.JobStatusAwaitingApproval:
 							// JobStatusAwaitingApproval here means the approval timed out.
+							// Both explicit rejection and timeout converge here — record the
+							// approval rejection so workflow lifecycle policies can act on it.
+							job.WorkflowMetrics.ApprovalRejections++
 							shouldLaunch = resolveBranch(job.JobMetadata.ApprovalGate.OnReject, "on_reject")
 						case domain.JobStatusAwaitingNext, domain.JobStatusPending:
 							shouldLaunch = true
