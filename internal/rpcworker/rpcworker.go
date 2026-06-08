@@ -171,7 +171,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 			}
 
 			timeoutAt := time.Now().Add(time.Duration(result.ApprovalGate.TimeoutSeconds) * time.Second)
-			parked, err := s.jobs.ParkForApproval(ctx, job.ResourceInstanceID, s.id, result.ApprovalGate.ApprovalId, timeoutAt, jobMetadata)
+			parked, err := s.jobs.ParkForApproval(ctx, job.ResourceInstanceID, s.id, result.ApprovalGate.ApprovalId, timeoutAt, jobMetadata, job.AgentMetrics, job.WorkflowMetrics)
 			if err != nil {
 				log.Error("failed to park job for approval", "request_id", job.RequestID, "resource_id", job.ResourceInstanceID, "error", err)
 				return err

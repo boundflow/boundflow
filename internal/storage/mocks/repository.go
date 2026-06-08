@@ -672,18 +672,18 @@ func (mr *MockJobRepositoryMockRecorder) GetJobMetrics(ctx, resourceInstanceID, 
 }
 
 // ParkForApproval mocks base method.
-func (m *MockJobRepository) ParkForApproval(ctx context.Context, resourceInstanceID, ownerID, approvalID string, timeoutAt time.Time, metadata domain.JobMetadata) (bool, error) {
+func (m *MockJobRepository) ParkForApproval(ctx context.Context, resourceInstanceID, ownerID, approvalID string, timeoutAt time.Time, metadata domain.JobMetadata, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ParkForApproval", ctx, resourceInstanceID, ownerID, approvalID, timeoutAt, metadata)
+	ret := m.ctrl.Call(m, "ParkForApproval", ctx, resourceInstanceID, ownerID, approvalID, timeoutAt, metadata, agentMetrics, workflowMetrics)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ParkForApproval indicates an expected call of ParkForApproval.
-func (mr *MockJobRepositoryMockRecorder) ParkForApproval(ctx, resourceInstanceID, ownerID, approvalID, timeoutAt, metadata any) *gomock.Call {
+func (mr *MockJobRepositoryMockRecorder) ParkForApproval(ctx, resourceInstanceID, ownerID, approvalID, timeoutAt, metadata, agentMetrics, workflowMetrics any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParkForApproval", reflect.TypeOf((*MockJobRepository)(nil).ParkForApproval), ctx, resourceInstanceID, ownerID, approvalID, timeoutAt, metadata)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParkForApproval", reflect.TypeOf((*MockJobRepository)(nil).ParkForApproval), ctx, resourceInstanceID, ownerID, approvalID, timeoutAt, metadata, agentMetrics, workflowMetrics)
 }
 
 // ReleaseJob mocks base method.

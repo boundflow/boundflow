@@ -126,7 +126,7 @@ type JobRepository interface {
 	// ParkForApproval transitions a job to awaiting_approval, storing the approval ID,
 	// timeout, and job metadata. Only succeeds if ownerID holds the job.
 	// Returns false if ownership check fails.
-	ParkForApproval(ctx context.Context, resourceInstanceID string, ownerID string, approvalID string, timeoutAt time.Time, metadata domain.JobMetadata) (bool, error)
+	ParkForApproval(ctx context.Context, resourceInstanceID string, ownerID string, approvalID string, timeoutAt time.Time, metadata domain.JobMetadata, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error)
 	// ResolveApproval transitions a job from awaiting_approval to the given status (approved/rejected),
 	// guarded by approvalID match. Returns false if the ID doesn't match or the job isn't awaiting approval.
 	ResolveApproval(ctx context.Context, resourceInstanceID string, approvalID string, status domain.JobStatus) (bool, error)

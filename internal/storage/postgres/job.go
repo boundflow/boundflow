@@ -185,17 +185,26 @@ func (r *JobRepo) ResolveApproval(ctx context.Context, resourceInstanceID string
 	return true, nil
 }
 
-func (r *JobRepo) ParkForApproval(ctx context.Context, resourceInstanceID string, ownerID string, approvalID string, timeoutAt time.Time, metadata domain.JobMetadata) (bool, error) {
+func (r *JobRepo) ParkForApproval(ctx context.Context, resourceInstanceID string, ownerID string, approvalID string, timeoutAt time.Time, metadata domain.JobMetadata, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
 	metadataJSON, err := json.Marshal(metadata)
 	if err != nil {
 		return false, fmt.Errorf("marshal job metadata: %w", err)
 	}
+	agentMetricsJSON, err := json.Marshal(agentMetrics)
+	if err != nil {
+		return false, fmt.Errorf("marshal agent metrics: %w", err)
+	}
+	workflowMetricsJSON, err := json.Marshal(workflowMetrics)
+	if err != nil {
+		return false, fmt.Errorf("marshal workflow metrics: %w", err)
+	}
 	tag, err := r.pool.Exec(ctx,
 		`UPDATE jobs
 		 SET status = $3, approval_id = $4, approval_timeout_at = $5, job_metadata = $6,
+		     agent_metrics = $7, workflow_metrics = $8,
 		     context = '{}'::jsonb, timeout_seconds = 0, current_atomic_operation = ''
 		 WHERE resource_instance_id = $1 AND owner = $2`,
-		resourceInstanceID, ownerID, domain.JobStatusAwaitingApproval, approvalID, timeoutAt, metadataJSON,
+		resourceInstanceID, ownerID, domain.JobStatusAwaitingApproval, approvalID, timeoutAt, metadataJSON, agentMetricsJSON, workflowMetricsJSON,
 	)
 	if err != nil {
 		return false, fmt.Errorf("park job for approval: %w", err)

@@ -35,12 +35,22 @@ public sealed class MockLlmClient : ILlmClient
 
     public Task<MessageResponse> GetClaudeMessageAsync(MessageParameters request, CancellationToken ct = default)
     {
+        // Honor a forced tool choice: when a policy limit is hit the orchestrator forces
+        // submit_result via ToolChoice. A real model obeys, so the mock must too — otherwise
+        // MaxLlmCalls wouldn't actually cap the loop.
+        if (request.ToolChoice?.Type == ToolChoiceType.Tool && !string.IsNullOrEmpty(request.ToolChoice.Name))
+            return Task.FromResult(Build([new MockToolCall(request.ToolChoice.Name)], 0, 0));
+
         // Turn index = how many assistant turns already happened this step (history grows
         // by one assistant message per prior model call).
         var turnIndex = request.Messages?.Count(m => m.Role == RoleType.Assistant) ?? 0;
         var turn = _next(new MockContext(turnIndex, request.SystemMessage ?? ""));
+        return Task.FromResult(Build(turn.ToolCalls, turn.InputTokens, turn.OutputTokens));
+    }
 
-        var blocks = turn.ToolCalls
+    private static MessageResponse Build(IReadOnlyList<MockToolCall> toolCalls, int inputTokens, int outputTokens)
+    {
+        var blocks = toolCalls
             .Select(tc => (ContentBase)new ToolUseContent
             {
                 Id    = Guid.NewGuid().ToString(),
@@ -50,12 +60,11 @@ public sealed class MockLlmClient : ILlmClient
             .ToList();
 
         // MessageResponse.Message is read-only — it's derived from Content, which we set below.
-        var response = new MessageResponse
+        return new MessageResponse
         {
             Content    = blocks,
             StopReason = "tool_use",
-            Usage      = new Usage { InputTokens = turn.InputTokens, OutputTokens = turn.OutputTokens },
+            Usage      = new Usage { InputTokens = inputTokens, OutputTokens = outputTokens },
         };
-        return Task.FromResult(response);
     }
 }
