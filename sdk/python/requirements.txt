@@ -1,0 +1,7 @@
+grpcio
+grpcio-tools
+pydantic
+eval_type_backport
+anthropic
+pytest
+pytest-asyncio
