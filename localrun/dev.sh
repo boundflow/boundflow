@@ -89,7 +89,7 @@ done
 
 for i in $(seq 1 $NUM_WORKERS); do
   start_proc "worker-$i" "worker" "$LOG_DIR/worker-${i}.log" \
-    CONVERGEPLANE_GRPC_PORT=$WORKER_PORT
+    CONVERGEPLANE_WORKER_GRPC_PORT=$WORKER_PORT
 done
 
 sleep 1
