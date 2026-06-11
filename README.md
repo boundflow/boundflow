@@ -94,12 +94,18 @@ docker compose up --build
 
 This starts five services in the correct order: Postgres → migrations → server (`:50051`) + scheduler + worker (`:50052`). The image is built automatically from the repo.
 
-Verify the server is up:
+#### Provision an API key
+
+All gRPC calls require an API key. After the stack is up, run the provisioning script once to create a tenant group and print a raw API key:
 
 ```bash
-grpcurl -plaintext \
-  -d '{"tenant_group":{"name":"test"}}' \
-  localhost:50051 convergeplane.v1.RegistrationService/CreateTenantGroup
+go run ./scripts/provision_customer -name "my-org" -db "postgres://convergeplane:convergeplane@localhost:5432/convergeplane?sslmode=disable"
+```
+
+The script prints the API key once — save it. Set it in your environment for the SDK and demos:
+
+```bash
+export BOUNDFLOW_API_KEY=<key printed above>
 ```
 
 To wipe all state and start fresh:
@@ -165,6 +171,18 @@ Open three terminals (or run them as background processes):
 ```
 
 All three connect to PostgreSQL using `CONVERGEPLANE_DATABASE_URL` (defaults to `postgres://localhost:5432/convergeplane?sslmode=disable`).
+
+#### 4. Provision an API key
+
+```bash
+go run ./scripts/provision_customer -name "my-org"
+```
+
+The script prints a raw API key once — save it and export it before running the SDK or demos:
+
+```bash
+export BOUNDFLOW_API_KEY=<key printed above>
+```
 
 ---
 
