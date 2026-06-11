@@ -11,9 +11,13 @@ the pause step).
 import asyncio
 import os
 import sys
-import termios
-import tty
 from dataclasses import dataclass
+
+if sys.platform == "win32":
+    import msvcrt
+else:
+    import termios
+    import tty
 
 import boundflow as bf
 from boundflow import (
@@ -433,6 +437,8 @@ async def pause(hint: str = "") -> None:
 def _read_key_sync() -> str:
     if not sys.stdin.isatty():
         return sys.stdin.read(1) or " "
+    if sys.platform == "win32":
+        return msvcrt.getwch()
     fd = sys.stdin.fileno()
     old = termios.tcgetattr(fd)
     try:
