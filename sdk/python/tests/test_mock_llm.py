@@ -55,7 +55,7 @@ async def test_mock_llm_drives_tool_calls_and_per_tool_limit_holds(cp):
         return Complete()
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "mock-tool-limit")
+        tenant = await create_isolated_tenant(cp, "mock-tool-limit")
         workflow = await cp.create_workflow("mock_tool_limit", tenant.id,
                                             config=WorkflowConfig(version=1))
 

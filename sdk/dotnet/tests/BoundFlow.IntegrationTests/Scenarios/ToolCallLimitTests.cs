@@ -50,7 +50,7 @@ public class ToolCallLimitTests : IntegrationTestBase
 
         var workerTask = worker.RunAsync(cts.Token);
 
-        var (_, tenant) = await CreateIsolatedTenantAsync("tool-limit");
+        var tenant = await CreateIsolatedTenantAsync("tool-limit");
         var workflow = await ControlPlane.CreateWorkflowAsync("tool_limit_test", tenant.Id,
             workflowConfig: new WorkflowConfig(Version: 1));
 

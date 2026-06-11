@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
+	"github.com/convergeplane/convergeplane/internal/auth"
 	"github.com/convergeplane/convergeplane/internal/convert"
 	"github.com/convergeplane/convergeplane/internal/service"
 	"github.com/convergeplane/convergeplane/internal/storage"
@@ -22,28 +23,26 @@ func NewRegistrationHandler(svc *service.RegistrationService) *RegistrationHandl
 	return &RegistrationHandler{svc: svc}
 }
 
-func (h *RegistrationHandler) CreateTenantGroup(ctx context.Context, req *convergeplanev1.CreateTenantGroupRequest) (*convergeplanev1.CreateTenantGroupResponse, error) {
-	group, err := convert.TenantGroupFromProto(req.GetTenantGroup())
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "%v", err)
+// callerTenantGroup extracts the tenant group ID injected by the auth interceptor.
+func callerTenantGroup(ctx context.Context) (string, error) {
+	id, ok := auth.TenantGroupFromContext(ctx)
+	if !ok {
+		return "", status.Error(codes.Unauthenticated, "missing auth")
 	}
-
-	result, err := h.svc.CreateTenantGroup(ctx, group)
-	if err != nil {
-		if errors.Is(err, storage.ErrAlreadyExists) {
-			return nil, status.Errorf(codes.AlreadyExists, "tenant group already exists")
-		}
-		return nil, status.Errorf(codes.Internal, "create tenant group: %v", err)
-	}
-
-	return &convergeplanev1.CreateTenantGroupResponse{
-		TenantGroup: convert.TenantGroupToProto(result),
-	}, nil
+	return id, nil
 }
 
 func (h *RegistrationHandler) GetTenantGroup(ctx context.Context, req *convergeplanev1.GetTenantGroupRequest) (*convergeplanev1.GetTenantGroupResponse, error) {
 	if req.Id == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "id is required")
+	}
+
+	callerGroup, err := callerTenantGroup(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if req.Id != callerGroup {
+		return nil, status.Error(codes.NotFound, "tenant group not found")
 	}
 
 	group, err := h.svc.GetTenantGroup(ctx, req.Id)
@@ -64,6 +63,14 @@ func (h *RegistrationHandler) DeleteTenantGroup(ctx context.Context, req *conver
 		return nil, status.Errorf(codes.InvalidArgument, "id is required")
 	}
 
+	callerGroup, err := callerTenantGroup(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if req.Id != callerGroup {
+		return nil, status.Error(codes.NotFound, "tenant group not found")
+	}
+
 	if err := h.svc.DeleteTenantGroup(ctx, req.Id); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Errorf(codes.NotFound, "tenant group not found")
@@ -78,6 +85,10 @@ func (h *RegistrationHandler) CreateTenant(ctx context.Context, req *convergepla
 	tenant, err := convert.TenantFromProto(req.GetTenant())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	if groupID, ok := auth.TenantGroupFromContext(ctx); ok {
+		tenant.TenantGroupID = groupID
 	}
 
 	result, err := h.svc.CreateTenant(ctx, tenant)
@@ -106,6 +117,14 @@ func (h *RegistrationHandler) GetTenant(ctx context.Context, req *convergeplanev
 		return nil, status.Errorf(codes.Internal, "get tenant: %v", err)
 	}
 
+	callerGroup, err := callerTenantGroup(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if tenant.TenantGroupID != callerGroup {
+		return nil, status.Error(codes.NotFound, "tenant not found")
+	}
+
 	return &convergeplanev1.GetTenantResponse{
 		Tenant: convert.TenantToProto(tenant),
 	}, nil
@@ -114,6 +133,22 @@ func (h *RegistrationHandler) GetTenant(ctx context.Context, req *convergeplanev
 func (h *RegistrationHandler) DeleteTenant(ctx context.Context, req *convergeplanev1.DeleteTenantRequest) (*convergeplanev1.DeleteTenantResponse, error) {
 	if req.Id == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "id is required")
+	}
+
+	tenant, err := h.svc.GetTenant(ctx, req.Id)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Errorf(codes.NotFound, "tenant not found")
+		}
+		return nil, status.Errorf(codes.Internal, "get tenant: %v", err)
+	}
+
+	callerGroup, err := callerTenantGroup(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if tenant.TenantGroupID != callerGroup {
+		return nil, status.Error(codes.NotFound, "tenant not found")
 	}
 
 	if err := h.svc.DeleteTenant(ctx, req.Id); err != nil {

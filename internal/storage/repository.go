@@ -43,6 +43,9 @@ type ResourceInstanceRepository interface {
 	ApplyCompletedJob(ctx context.Context, id string, lifecycleState domain.LifecycleState, version int64) (bool, error)
 	UpdateSchedulerPartition(ctx context.Context, id string, partitionID string) error
 	UpdateLastCompletedRequestAt(ctx context.Context, id string, t time.Time) error
+	// TenantGroupIDForResource returns the tenant_group_id for a resource via a single JOIN.
+	// Used for ownership checks. Returns ErrNotFound if the resource does not exist.
+	TenantGroupIDForResource(ctx context.Context, resourceInstanceID string) (string, error)
 }
 
 type SchedulerPartitionRepository interface {
@@ -172,6 +175,16 @@ type VersionMetricsRepository interface {
 	// GetCurrentVersionMetrics returns the metrics row with the highest epoch for the
 	// given resource instance and version. Returns nil if no row exists yet.
 	GetCurrentVersionMetrics(ctx context.Context, resourceInstanceID string, version int) (*domain.WorkflowVersionMetrics, error)
+}
+
+type ApiKeyRepository interface {
+	// Create inserts a new API key. The caller is responsible for hashing the raw key before calling.
+	Create(ctx context.Context, key *domain.ApiKey) error
+	// GetByKeyHash looks up an active (non-revoked) API key by its hash.
+	// Returns ErrNotFound if no active key matches.
+	GetByKeyHash(ctx context.Context, keyHash string) (*domain.ApiKey, error)
+	// Revoke sets revoked_at on the key with the given ID.
+	Revoke(ctx context.Context, id string) error
 }
 
 type CustomerRequestRepository interface {

@@ -265,6 +265,22 @@ func (s *LifecycleService) RejectWorkflow(ctx context.Context, resourceInstanceI
 	return nil
 }
 
+// TenantGroupIDForResource returns the tenant_group_id that owns a resource (single JOIN).
+// Returns storage.ErrNotFound if the resource does not exist.
+func (s *LifecycleService) TenantGroupIDForResource(ctx context.Context, resourceInstanceID string) (string, error) {
+	return s.resourceInstances.TenantGroupIDForResource(ctx, resourceInstanceID)
+}
+
+// TenantGroupIDForTenant returns the tenant_group_id for a tenant.
+// Returns storage.ErrNotFound if the tenant does not exist.
+func (s *LifecycleService) TenantGroupIDForTenant(ctx context.Context, tenantID string) (string, error) {
+	tenant, err := s.tenants.Get(ctx, tenantID)
+	if err != nil {
+		return "", err
+	}
+	return tenant.TenantGroupID, nil
+}
+
 func partitionForID(id string, numPartitions int) string {
 	h := fnv.New32a()
 	h.Write([]byte(id))

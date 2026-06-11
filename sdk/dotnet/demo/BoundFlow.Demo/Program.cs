@@ -148,14 +148,12 @@ worker.OnApprovalRequested((req, ct) =>
 var workerTask = worker.RunAsync(cts.Token);
 
 var cp = new ControlPlaneClient(ServerAddress);
-var tenantGroup = await cp.CreateTenantGroupAsync("acme");
-
 // ─────────────────────────────────────────────────────────────────────────────
 Section("STEP 1 — Register workflows");
 
-var support  = (await cp.CreateTenantAsync("support", tenantGroup.Id)).Id;
-var ops      = (await cp.CreateTenantAsync("operations", tenantGroup.Id)).Id;
-var platform = (await cp.CreateTenantAsync("platform", tenantGroup.Id)).Id;
+var support  = (await cp.CreateTenantAsync("support")).Id;
+var ops      = (await cp.CreateTenantAsync("operations")).Id;
+var platform = (await cp.CreateTenantAsync("platform")).Id;
 
 var triage   = await Register("ticket-triage", support, 1);
 var order    = await Register("order-remediation", ops, 1);

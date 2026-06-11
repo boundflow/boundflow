@@ -52,7 +52,7 @@ async def test_model_switches_to_haiku_after_first_invocation(cp, api_key):
         return Complete()
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "agent-policy")
+        tenant = await create_isolated_tenant(cp, "agent-policy")
         workflow = await cp.create_workflow("database_agent", tenant.id,
                                             config=WorkflowConfig(version=1))
 

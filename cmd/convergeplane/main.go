@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/convergeplane/convergeplane/internal/auth"
 	"github.com/convergeplane/convergeplane/internal/config"
 	"github.com/convergeplane/convergeplane/internal/metrics"
 	"github.com/convergeplane/convergeplane/internal/rpcworker"
@@ -85,7 +86,8 @@ func runServer(sigCh <-chan os.Signal) {
 	regSvc := service.NewRegistrationService(tenantGroupRepo, tenantRepo)
 	lifecycleSvc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, sched, sched, cfg.NumPartitions, logger)
 
-	srv := server.New(cfg, regSvc, lifecycleSvc, cfg.Debug)
+	authn := auth.NewAuthenticator(postgres.NewApiKeyRepo(pool))
+	srv := server.New(cfg, regSvc, lifecycleSvc, authn, cfg.Debug)
 
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.Start() }()
@@ -176,7 +178,8 @@ func runWorker(sigCh <-chan os.Signal) {
 	sched := internalscheduler.NewScheduler(workerID, 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, agentStateRepo, jobRepo, metricsHandler, policyResolver, logger)
 
 	worker := rpcworker.NewRpcWorker(jobRepo, workerID, cfg.JobTimeoutSecs, sched, metricsHandler, logger)
-	srv := server.NewWorkerServer(cfg, worker)
+	authn := auth.NewAuthenticator(postgres.NewApiKeyRepo(pool))
+	srv := server.NewWorkerServer(cfg, worker, authn)
 
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.Start() }()

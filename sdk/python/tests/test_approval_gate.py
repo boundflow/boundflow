@@ -49,7 +49,7 @@ async def test_approve_gate_runs_approve_operation(cp):
         captured.append(request)
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "approval-approve")
+        tenant = await create_isolated_tenant(cp, "approval-approve")
         workflow = await cp.create_workflow("approval_approve", tenant.id,
                                             config=WorkflowConfig(version=1))
 
@@ -96,7 +96,7 @@ async def test_approval_timeout_runs_reject_operation(cp):
         return Complete()
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "approval-timeout")
+        tenant = await create_isolated_tenant(cp, "approval-timeout")
         workflow = await cp.create_workflow("approval_timeout", tenant.id,
                                             config=WorkflowConfig(version=1))
 
@@ -136,7 +136,7 @@ async def test_reject_gate_skips_approve_operation(cp):
         captured.append(request)
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "approval-reject")
+        tenant = await create_isolated_tenant(cp, "approval-reject")
         workflow = await cp.create_workflow("approval_reject", tenant.id,
                                             config=WorkflowConfig(version=1))
 

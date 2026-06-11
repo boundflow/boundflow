@@ -48,7 +48,7 @@ async def test_per_tool_limit_caps_handler_invocations(cp, api_key):
         return Complete()
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "tool-limit")
+        tenant = await create_isolated_tenant(cp, "tool-limit")
         workflow = await cp.create_workflow("tool_limit_test", tenant.id,
                                             config=WorkflowConfig(version=1))
 

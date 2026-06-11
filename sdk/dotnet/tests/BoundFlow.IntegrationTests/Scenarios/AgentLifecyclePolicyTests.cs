@@ -46,7 +46,7 @@ public class AgentLifecyclePolicyTests : IntegrationTestBase
 
         var workerTask = worker.RunAsync(cts.Token);
 
-        var (_, tenant) = await CreateIsolatedTenantAsync("agent-policy");
+        var tenant = await CreateIsolatedTenantAsync("agent-policy");
         var workflow = await ControlPlane.CreateWorkflowAsync("database_agent", tenant.Id,
             workflowConfig: new WorkflowConfig(Version: 1));
 

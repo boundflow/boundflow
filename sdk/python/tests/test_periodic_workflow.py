@@ -52,7 +52,7 @@ async def test_periodic_workflow_fires_automatically(cp, api_key):
         return Complete()
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "periodic-auto")
+        tenant = await create_isolated_tenant(cp, "periodic-auto")
         workflow = await cp.create_workflow(
             "periodic_auto", tenant.id,
             config=WorkflowConfig(version=1, invoke_timeout_seconds=30,
@@ -90,7 +90,7 @@ async def test_periodic_workflow_does_not_fire_during_cooldown(cp, api_key):
         return Complete()
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "periodic-cooldown")
+        tenant = await create_isolated_tenant(cp, "periodic-cooldown")
         workflow = await cp.create_workflow(
             "periodic_cooldown", tenant.id,
             config=WorkflowConfig(version=1, invoke_timeout_seconds=30,

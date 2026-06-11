@@ -39,7 +39,7 @@ public class ApprovalGateTests : IntegrationTestBase
 
         var workerTask = worker.RunAsync(cts.Token);
 
-        var (_, tenant) = await CreateIsolatedTenantAsync("approval-approve");
+        var tenant = await CreateIsolatedTenantAsync("approval-approve");
         var workflow = await ControlPlane.CreateWorkflowAsync("approval_approve", tenant.Id,
             workflowConfig: new WorkflowConfig(Version: 1));
 
@@ -94,7 +94,7 @@ public class ApprovalGateTests : IntegrationTestBase
 
         var workerTask = worker.RunAsync(cts.Token);
 
-        var (_, tenant) = await CreateIsolatedTenantAsync("approval-timeout");
+        var tenant = await CreateIsolatedTenantAsync("approval-timeout");
         var workflow = await ControlPlane.CreateWorkflowAsync("approval_timeout", tenant.Id,
             workflowConfig: new WorkflowConfig(Version: 1));
 
@@ -142,7 +142,7 @@ public class ApprovalGateTests : IntegrationTestBase
 
         var workerTask = worker.RunAsync(cts.Token);
 
-        var (_, tenant) = await CreateIsolatedTenantAsync("approval-reject");
+        var tenant = await CreateIsolatedTenantAsync("approval-reject");
         var workflow = await ControlPlane.CreateWorkflowAsync("approval_reject", tenant.Id,
             workflowConfig: new WorkflowConfig(Version: 1));
 

@@ -55,7 +55,7 @@ async def test_workflow_enters_cooldown_after_llm_call_threshold_exceeded(cp, ap
         return Complete()
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "workflow-policy")
+        tenant = await create_isolated_tenant(cp, "workflow-policy")
         workflow = await cp.create_workflow("cooldown_test", tenant.id,
                                             config=WorkflowConfig(version=1))
 
@@ -97,7 +97,7 @@ async def test_workflow_switches_to_new_version_after_llm_call_threshold_exceede
         return Complete()
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "version-rollback")
+        tenant = await create_isolated_tenant(cp, "version-rollback")
         workflow = await cp.create_workflow("version_test", tenant.id,
                                             config=WorkflowConfig(version=1))
 
@@ -141,7 +141,7 @@ async def test_workflow_pauses_and_does_not_schedule_until_activated(cp, api_key
         return Complete()
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "workflow-pause")
+        tenant = await create_isolated_tenant(cp, "workflow-pause")
         workflow = await cp.create_workflow("pause_test", tenant.id,
                                             config=WorkflowConfig(version=1))
 
@@ -182,7 +182,7 @@ async def test_workflow_enters_cooldown_after_customer_failure(cp):
         return Complete()
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "failure-cooldown")
+        tenant = await create_isolated_tenant(cp, "failure-cooldown")
         workflow = await cp.create_workflow("failure_cooldown", tenant.id,
                                             config=WorkflowConfig(version=1))
 
@@ -221,7 +221,7 @@ async def test_workflow_pauses_after_approval_rejection(cp):
         captured.append(request)
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "rejection-pause")
+        tenant = await create_isolated_tenant(cp, "rejection-pause")
         workflow = await cp.create_workflow("rejection_pause", tenant.id,
                                             config=WorkflowConfig(version=1))
 
@@ -272,7 +272,7 @@ async def test_workflow_enters_cooldown_after_tool_failures(cp, api_key):
         return Complete()
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "tool-failure")
+        tenant = await create_isolated_tenant(cp, "tool-failure")
         workflow = await cp.create_workflow("tool_failure_cooldown", tenant.id,
                                             config=WorkflowConfig(version=1))
 

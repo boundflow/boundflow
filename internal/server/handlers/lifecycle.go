@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
+	"github.com/convergeplane/convergeplane/internal/auth"
 	"github.com/convergeplane/convergeplane/internal/convert"
 	"github.com/convergeplane/convergeplane/internal/domain"
 	"github.com/convergeplane/convergeplane/internal/service"
@@ -23,12 +24,55 @@ func NewResourceLifecycleHandler(svc *service.LifecycleService) *ResourceLifecyc
 	return &ResourceLifecycleHandler{svc: svc}
 }
 
+// checkResourceOwner verifies the caller owns the given resource instance.
+// Returns NotFound (not PermissionDenied) on failure to avoid leaking existence.
+func (h *ResourceLifecycleHandler) checkResourceOwner(ctx context.Context, resourceInstanceID string) error {
+	callerGroup, ok := auth.TenantGroupFromContext(ctx)
+	if !ok {
+		return status.Error(codes.Unauthenticated, "missing auth")
+	}
+	ownerGroup, err := h.svc.TenantGroupIDForResource(ctx, resourceInstanceID)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return status.Error(codes.NotFound, "resource instance not found")
+		}
+		return status.Errorf(codes.Internal, "check resource owner: %v", err)
+	}
+	if ownerGroup != callerGroup {
+		return status.Error(codes.NotFound, "resource instance not found")
+	}
+	return nil
+}
+
+// checkTenantOwner verifies the caller owns the given tenant.
+func (h *ResourceLifecycleHandler) checkTenantOwner(ctx context.Context, tenantID string) error {
+	callerGroup, ok := auth.TenantGroupFromContext(ctx)
+	if !ok {
+		return status.Error(codes.Unauthenticated, "missing auth")
+	}
+	ownerGroup, err := h.svc.TenantGroupIDForTenant(ctx, tenantID)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return status.Error(codes.NotFound, "tenant not found")
+		}
+		return status.Errorf(codes.Internal, "check tenant owner: %v", err)
+	}
+	if ownerGroup != callerGroup {
+		return status.Error(codes.NotFound, "tenant not found")
+	}
+	return nil
+}
+
 func (h *ResourceLifecycleHandler) CreateResource(ctx context.Context, req *convergeplanev1.CreateResourceRequest) (*convergeplanev1.CreateResourceResponse, error) {
 	if req.ResourceType == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "resource_type is required")
 	}
 	if req.TenantId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "tenant_id is required")
+	}
+
+	if err := h.checkTenantOwner(ctx, req.TenantId); err != nil {
+		return nil, err
 	}
 
 	cfg := convert.WorkflowConfigFromProto(req.WorkflowConfig)
@@ -53,6 +97,10 @@ func (h *ResourceLifecycleHandler) CreateResource(ctx context.Context, req *conv
 func (h *ResourceLifecycleHandler) ReconcileResource(ctx context.Context, req *convergeplanev1.ReconcileResourceRequest) (*convergeplanev1.ReconcileResourceResponse, error) {
 	if req.ResourceInstanceId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
+	}
+
+	if err := h.checkResourceOwner(ctx, req.ResourceInstanceId); err != nil {
+		return nil, err
 	}
 
 	var params domain.WorkflowRuntimeParams
@@ -84,6 +132,10 @@ func (h *ResourceLifecycleHandler) DeleteResource(ctx context.Context, req *conv
 		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
 	}
 
+	if err := h.checkResourceOwner(ctx, req.ResourceInstanceId); err != nil {
+		return nil, err
+	}
+
 	if err := h.svc.DeleteResource(ctx, req.CorrelationId, req.ResourceInstanceId); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Errorf(codes.NotFound, "resource instance not found")
@@ -97,6 +149,10 @@ func (h *ResourceLifecycleHandler) DeleteResource(ctx context.Context, req *conv
 func (h *ResourceLifecycleHandler) GetResourceState(ctx context.Context, req *convergeplanev1.GetResourceStateRequest) (*convergeplanev1.GetResourceStateResponse, error) {
 	if req.ResourceInstanceId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
+	}
+
+	if err := h.checkResourceOwner(ctx, req.ResourceInstanceId); err != nil {
+		return nil, err
 	}
 
 	instance, err := h.svc.GetResourceState(ctx, req.ResourceInstanceId)
@@ -118,6 +174,11 @@ func (h *ResourceLifecycleHandler) SetAgentRuntimePolicy(ctx context.Context, re
 	if req.AgentName == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "agent_name is required")
 	}
+
+	if err := h.checkResourceOwner(ctx, req.ResourceInstanceId); err != nil {
+		return nil, err
+	}
+
 	policy := map[string]any{}
 	if req.RuntimePolicy != nil {
 		policy = req.RuntimePolicy.AsMap()
@@ -135,6 +196,11 @@ func (h *ResourceLifecycleHandler) SetAgentLifecyclePolicy(ctx context.Context, 
 	if req.AgentName == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "agent_name is required")
 	}
+
+	if err := h.checkResourceOwner(ctx, req.ResourceInstanceId); err != nil {
+		return nil, err
+	}
+
 	policy := map[string]any{}
 	if req.LifecyclePolicy != nil {
 		policy = req.LifecyclePolicy.AsMap()
@@ -152,6 +218,11 @@ func (h *ResourceLifecycleHandler) DeleteAgent(ctx context.Context, req *converg
 	if req.AgentName == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "agent_name is required")
 	}
+
+	if err := h.checkResourceOwner(ctx, req.ResourceInstanceId); err != nil {
+		return nil, err
+	}
+
 	if err := h.svc.DeleteAgent(ctx, req.ResourceInstanceId, req.AgentName); err != nil {
 		return nil, status.Errorf(codes.Internal, "delete agent: %v", err)
 	}
@@ -170,6 +241,11 @@ func (h *ResourceLifecycleHandler) SetWorkflowLifecyclePolicy(ctx context.Contex
 			return nil, status.Errorf(codes.InvalidArgument, "rule %d: window must be > 0 for %s actions", i, rule.Action.Type)
 		}
 	}
+
+	if err := h.checkResourceOwner(ctx, req.ResourceInstanceId); err != nil {
+		return nil, err
+	}
+
 	policy := convert.WorkflowLifecyclePolicyFromProto(req.LifecyclePolicy)
 	if err := h.svc.SetWorkflowLifecyclePolicy(ctx, req.ResourceInstanceId, policy); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
@@ -184,6 +260,11 @@ func (h *ResourceLifecycleHandler) ActivateWorkflow(ctx context.Context, req *co
 	if req.ResourceInstanceId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
 	}
+
+	if err := h.checkResourceOwner(ctx, req.ResourceInstanceId); err != nil {
+		return nil, err
+	}
+
 	if err := h.svc.ActivateWorkflow(ctx, req.ResourceInstanceId); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Errorf(codes.NotFound, "resource instance not found")
@@ -200,6 +281,11 @@ func (h *ResourceLifecycleHandler) ApproveWorkflow(ctx context.Context, req *con
 	if req.ApprovalId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "approval_id is required")
 	}
+
+	if err := h.checkResourceOwner(ctx, req.ResourceInstanceId); err != nil {
+		return nil, err
+	}
+
 	if err := h.svc.ApproveWorkflow(ctx, req.ResourceInstanceId, req.ApprovalId); err != nil {
 		if errors.Is(err, service.ErrInvalidWorkflowState) {
 			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
@@ -216,6 +302,11 @@ func (h *ResourceLifecycleHandler) RejectWorkflow(ctx context.Context, req *conv
 	if req.ApprovalId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "approval_id is required")
 	}
+
+	if err := h.checkResourceOwner(ctx, req.ResourceInstanceId); err != nil {
+		return nil, err
+	}
+
 	if err := h.svc.RejectWorkflow(ctx, req.ResourceInstanceId, req.ApprovalId); err != nil {
 		if errors.Is(err, service.ErrInvalidWorkflowState) {
 			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)

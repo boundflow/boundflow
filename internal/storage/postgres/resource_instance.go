@@ -260,3 +260,21 @@ func (r *ResourceInstanceRepo) UpdateLastCompletedRequestAt(ctx context.Context,
 	}
 	return nil
 }
+
+func (r *ResourceInstanceRepo) TenantGroupIDForResource(ctx context.Context, resourceInstanceID string) (string, error) {
+	var groupID string
+	err := r.pool.QueryRow(ctx,
+		`SELECT t.tenant_group_id
+		 FROM resource_instances ri
+		 JOIN tenants t ON t.id = ri.tenant_id
+		 WHERE ri.id = $1 AND ri.deleted_at IS NULL`,
+		resourceInstanceID,
+	).Scan(&groupID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", storage.ErrNotFound
+		}
+		return "", fmt.Errorf("tenant group for resource: %w", err)
+	}
+	return groupID, nil
+}

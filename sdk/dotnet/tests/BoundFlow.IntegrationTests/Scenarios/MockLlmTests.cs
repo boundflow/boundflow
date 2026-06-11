@@ -54,7 +54,7 @@ public class MockLlmTests : IntegrationTestBase
 
         var workerTask = worker.RunAsync(cts.Token);
 
-        var (_, tenant) = await CreateIsolatedTenantAsync("mock-tool-limit");
+        var tenant = await CreateIsolatedTenantAsync("mock-tool-limit");
         var workflow = await ControlPlane.CreateWorkflowAsync("mock_tool_limit", tenant.Id,
             workflowConfig: new WorkflowConfig(Version: 1));
 

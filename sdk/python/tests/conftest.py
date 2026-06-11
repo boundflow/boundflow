@@ -43,9 +43,8 @@ def dummy_mock():
 
 async def create_isolated_tenant(cp: ControlPlaneClient, prefix: str = "test"):
     uid = uuid.uuid4().hex[:8]
-    group = await cp.create_tenant_group(f"{prefix}-group-{uid}")
-    tenant = await cp.create_tenant(f"{prefix}-tenant-{uid}", group.id)
-    return group, tenant
+    tenant = await cp.create_tenant(f"{prefix}-tenant-{uid}")
+    return tenant
 
 
 async def wait_for_completion(cp: ControlPlaneClient, workflow_id: str, timeout: int = 120) -> LifecycleState:

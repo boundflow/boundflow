@@ -7,6 +7,7 @@ import (
 
 	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
 	config "github.com/convergeplane/convergeplane/internal/config"
+	"github.com/convergeplane/convergeplane/internal/auth"
 	"github.com/convergeplane/convergeplane/internal/server/handlers"
 	"github.com/convergeplane/convergeplane/internal/service"
 	"google.golang.org/grpc"
@@ -18,8 +19,11 @@ type WorkerServer struct {
 	cfg        *config.WorkerConfig
 }
 
-func NewWorkerServer(cfg *config.WorkerConfig, workerSvc convergeplanev1.WorkerServiceServer) *WorkerServer {
-	grpcServer := grpc.NewServer()
+func NewWorkerServer(cfg *config.WorkerConfig, workerSvc convergeplanev1.WorkerServiceServer, authn *auth.Authenticator) *WorkerServer {
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(authn.UnaryInterceptor()),
+		grpc.StreamInterceptor(authn.StreamInterceptor()),
+	)
 	convergeplanev1.RegisterWorkerServiceServer(grpcServer, workerSvc)
 	return &WorkerServer{grpcServer: grpcServer, cfg: cfg}
 }
@@ -44,8 +48,11 @@ type Server struct {
 	cfg        *config.ServerConfig
 }
 
-func New(cfg *config.ServerConfig, regSvc *service.RegistrationService, lifecycleSvc *service.LifecycleService, debug bool) *Server {
-	grpcServer := grpc.NewServer()
+func New(cfg *config.ServerConfig, regSvc *service.RegistrationService, lifecycleSvc *service.LifecycleService, authn *auth.Authenticator, debug bool) *Server {
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(authn.UnaryInterceptor()),
+		grpc.StreamInterceptor(authn.StreamInterceptor()),
+	)
 
 	convergeplanev1.RegisterRegistrationServiceServer(grpcServer, handlers.NewRegistrationHandler(regSvc))
 	convergeplanev1.RegisterResourceLifecycleServiceServer(grpcServer, handlers.NewResourceLifecycleHandler(lifecycleSvc))

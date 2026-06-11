@@ -59,7 +59,7 @@ async def test_workflow_resumes_after_cooldown_expires(cp, api_key):
         return Complete()
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "cooldown-resume")
+        tenant = await create_isolated_tenant(cp, "cooldown-resume")
         workflow = await cp.create_workflow("cooldown_resume", tenant.id,
                                             config=WorkflowConfig(version=1))
 
@@ -97,7 +97,7 @@ async def test_invoke_while_in_cooldown_is_rejected_then_succeeds_after_resume(c
         return Complete()
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "cooldown-invoke")
+        tenant = await create_isolated_tenant(cp, "cooldown-invoke")
         workflow = await cp.create_workflow("cooldown_invoke", tenant.id,
                                             config=WorkflowConfig(version=1))
 

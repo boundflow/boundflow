@@ -131,9 +131,9 @@ class ControlPlaneClient:
             reg.CreateTenantGroupRequest(tenant_group=tg_pb.TenantGroup(name=name)))
         return TenantGroup(resp.tenant_group.id, resp.tenant_group.name)
 
-    async def create_tenant(self, name: str, tenant_group_id: str) -> Tenant:
+    async def create_tenant(self, name: str) -> Tenant:
         resp = await self._reg.CreateTenant(
-            reg.CreateTenantRequest(tenant=tn_pb.Tenant(name=name, tenant_group_id=tenant_group_id)))
+            reg.CreateTenantRequest(tenant=tn_pb.Tenant(name=name)))
         return Tenant(resp.tenant.id, resp.tenant.name, resp.tenant.tenant_group_id)
 
     # ── Workflows ────────────────────────────────────────────────────────────

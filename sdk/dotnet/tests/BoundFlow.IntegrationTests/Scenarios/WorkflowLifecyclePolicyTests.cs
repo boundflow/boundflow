@@ -37,7 +37,7 @@ public class WorkflowLifecyclePolicyTests : IntegrationTestBase
 
         var workerTask = worker.RunAsync(cts.Token);
 
-        var (_, tenant) = await CreateIsolatedTenantAsync("workflow-policy");
+        var tenant = await CreateIsolatedTenantAsync("workflow-policy");
         var workflow = await ControlPlane.CreateWorkflowAsync("cooldown_test", tenant.Id,
             workflowConfig: new WorkflowConfig(Version: 1));
 
@@ -98,7 +98,7 @@ public class WorkflowLifecyclePolicyTests : IntegrationTestBase
 
         var workerTask = worker.RunAsync(cts.Token);
 
-        var (_, tenant) = await CreateIsolatedTenantAsync("version-rollback");
+        var tenant = await CreateIsolatedTenantAsync("version-rollback");
         var workflow = await ControlPlane.CreateWorkflowAsync("version_test", tenant.Id,
             workflowConfig: new WorkflowConfig(Version: 1));
 
@@ -162,7 +162,7 @@ public class WorkflowLifecyclePolicyTests : IntegrationTestBase
 
         var workerTask = worker.RunAsync(cts.Token);
 
-        var (_, tenant) = await CreateIsolatedTenantAsync("workflow-pause");
+        var tenant = await CreateIsolatedTenantAsync("workflow-pause");
         var workflow = await ControlPlane.CreateWorkflowAsync("pause_test", tenant.Id,
             workflowConfig: new WorkflowConfig(Version: 1));
 
@@ -215,7 +215,7 @@ public class WorkflowLifecyclePolicyTests : IntegrationTestBase
 
         var workerTask = worker.RunAsync(cts.Token);
 
-        var (_, tenant) = await CreateIsolatedTenantAsync("failure-cooldown");
+        var tenant = await CreateIsolatedTenantAsync("failure-cooldown");
         var workflow = await ControlPlane.CreateWorkflowAsync("failure_cooldown", tenant.Id,
             workflowConfig: new WorkflowConfig(Version: 1));
 
@@ -265,7 +265,7 @@ public class WorkflowLifecyclePolicyTests : IntegrationTestBase
 
         var workerTask = worker.RunAsync(cts.Token);
 
-        var (_, tenant) = await CreateIsolatedTenantAsync("rejection-pause");
+        var tenant = await CreateIsolatedTenantAsync("rejection-pause");
         var workflow = await ControlPlane.CreateWorkflowAsync("rejection_pause", tenant.Id,
             workflowConfig: new WorkflowConfig(Version: 1));
 
@@ -327,7 +327,7 @@ public class WorkflowLifecyclePolicyTests : IntegrationTestBase
 
         var workerTask = worker.RunAsync(cts.Token);
 
-        var (_, tenant) = await CreateIsolatedTenantAsync("tool-failure");
+        var tenant = await CreateIsolatedTenantAsync("tool-failure");
         var workflow = await ControlPlane.CreateWorkflowAsync("tool_failure_cooldown", tenant.Id,
             workflowConfig: new WorkflowConfig(Version: 1));
 
