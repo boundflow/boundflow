@@ -284,6 +284,21 @@ func (mr *MockResourceInstanceRepositoryMockRecorder) UpdateCurrentVersion(ctx, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCurrentVersion", reflect.TypeOf((*MockResourceInstanceRepository)(nil).UpdateCurrentVersion), ctx, id, version)
 }
 
+// TenantGroupIDForResource mocks base method.
+func (m *MockResourceInstanceRepository) TenantGroupIDForResource(ctx context.Context, resourceInstanceID string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TenantGroupIDForResource", ctx, resourceInstanceID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TenantGroupIDForResource indicates an expected call of TenantGroupIDForResource.
+func (mr *MockResourceInstanceRepositoryMockRecorder) TenantGroupIDForResource(ctx, resourceInstanceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TenantGroupIDForResource", reflect.TypeOf((*MockResourceInstanceRepository)(nil).TenantGroupIDForResource), ctx, resourceInstanceID)
+}
+
 // UpdateLastCompletedRequestAt mocks base method.
 func (m *MockResourceInstanceRepository) UpdateLastCompletedRequestAt(ctx context.Context, id string, t time.Time) error {
 	m.ctrl.T.Helper()
