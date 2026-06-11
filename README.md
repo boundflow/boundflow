@@ -16,28 +16,32 @@ The Boundflow control plane runs as three independent process modes:
 │  (SDK /            │                    │  :50051              │
 │   gRPC direct)     │                    │  RegistrationService │
 │                    │                    │  LifecycleService    │
-└────────────────────┘                    └──────────┬───────────┘
-                                                     │ PostgreSQL
+└────────────────────┘                    └──────────────────────┘
+                                                     │
+                                               PostgreSQL (shared)
+                                                     │
                                           ┌──────────▼───────────┐
                                           │      Scheduler        │
                                           │  (N partition workers)│
-                                          │  Picks up due jobs,   │
-                                          │  dispatches to workers│
-                                          └──────────┬───────────┘
-                                                     │ bidirectional stream
+                                          │  Polls due requests,  │
+                                          │  writes jobs to DB    │
+                                          └──────────────────────┘
+                                                     │
+                                               PostgreSQL (shared)
+                                                     │
 ┌────────────────────┐                    ┌──────────▼───────────┐
 │   Python Worker    │◀───────────────────│       Worker         │
 │  (BoundFlowWorker) │    gRPC stream     │  :50052              │
-│  Runs LLM agents   │                    │  Accepts connections  │
-│  & tool callbacks  │                    │  from SDK workers    │
+│  Runs LLM agents   │                    │  Polls DB for jobs,  │
+│  & tool callbacks  │                    │  streams ops to SDK  │
 └────────────────────┘                    └──────────────────────┘
 ```
 
 | Mode | Responsibility |
 |------|----------------|
 | `server` | Accepts gRPC calls from clients. Manages resource/workflow lifecycle, approval flow, and policy configuration. |
-| `scheduler` | Partition-based distributed scheduler. Polls due customer requests, creates jobs, dispatches operations to workers. Runs lifecycle policy evaluation (cooldown, version rollback). |
-| `worker` | Accepts bidirectional gRPC streams from Boundflow SDK workers. Forwards `LaunchOperation` commands and relays results back to the scheduler. |
+| `scheduler` | Partition-based distributed scheduler. Polls due customer requests and writes jobs to the database. Runs lifecycle policy evaluation (cooldown, version rollback). |
+| `worker` | Polls the database for pending jobs and dispatches them to SDK workers over a bidirectional gRPC stream. |
 
 All three modes share a single PostgreSQL database.
 
