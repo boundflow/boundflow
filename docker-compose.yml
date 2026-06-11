@@ -1,0 +1,74 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: convergeplane
+      POSTGRES_USER: convergeplane
+      POSTGRES_PASSWORD: convergeplane
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U convergeplane"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    image: migrate/migrate
+    volumes:
+      - ./migrations:/migrations:ro
+    command:
+      - "-path=/migrations"
+      - "-database=postgres://convergeplane:convergeplane@postgres:5432/convergeplane?sslmode=disable"
+      - "up"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  server:
+    build: .
+    command: ["-mode=server"]
+    environment:
+      CONVERGEPLANE_DATABASE_URL: postgres://convergeplane:convergeplane@postgres:5432/convergeplane?sslmode=disable
+      CONVERGEPLANE_GRPC_PORT: "50051"
+      CONVERGEPLANE_NUM_PARTITIONS: "1"
+      CONVERGEPLANE_DEBUG: "true"
+      CONVERGEPLANE_LOG_LEVEL: info
+    ports:
+      - "50051:50051"
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  scheduler:
+    build: .
+    command: ["-mode=scheduler"]
+    environment:
+      CONVERGEPLANE_DATABASE_URL: postgres://convergeplane:convergeplane@postgres:5432/convergeplane?sslmode=disable
+      CONVERGEPLANE_NUM_PARTITIONS: "1"
+      CONVERGEPLANE_LOG_LEVEL: info
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    build: .
+    command: ["-mode=worker"]
+    environment:
+      CONVERGEPLANE_DATABASE_URL: postgres://convergeplane:convergeplane@postgres:5432/convergeplane?sslmode=disable
+      CONVERGEPLANE_WORKER_GRPC_PORT: "50052"
+      CONVERGEPLANE_NUM_WORKERS: "1"
+      CONVERGEPLANE_LOG_LEVEL: info
+    ports:
+      - "50052:50052"
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_data:
