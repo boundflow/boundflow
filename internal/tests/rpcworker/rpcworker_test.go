@@ -8,6 +8,7 @@ import (
 	"time"
 
 	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
+	"github.com/convergeplane/convergeplane/internal/auth"
 	"github.com/convergeplane/convergeplane/internal/domain"
 	"github.com/convergeplane/convergeplane/internal/rpcworker"
 	"github.com/convergeplane/convergeplane/internal/storage/mocks"
@@ -30,7 +31,7 @@ type mockStream struct {
 
 func newMockStream(ctx context.Context) *mockStream {
 	return &mockStream{
-		ctx:    ctx,
+		ctx:    auth.WithTenantGroup(ctx, testTenantGroupID),
 		recvCh: make(chan recvResult, 10),
 		sendCh: make(chan *convergeplanev1.ServerCommand, 10),
 	}
@@ -132,9 +133,10 @@ func (m *mockMetrics) MergeWorkflowMetrics(opMetrics domain.WorkflowJobMetrics, 
 // ---- constants and helpers ----
 
 const (
-	testWorkerID   = "test-worker"
-	testResourceID = "resource-1"
-	testRequestID  = "req-1"
+	testWorkerID      = "test-worker"
+	testResourceID    = "resource-1"
+	testRequestID     = "req-1"
+	testTenantGroupID = "test-group"
 )
 
 func newTestWorker(ctrl *gomock.Controller) (*rpcworker.RpcWorker, *mocks.MockJobRepository, *mockScheduler) {
@@ -167,8 +169,8 @@ func runSession(worker *rpcworker.RpcWorker, stream *mockStream) chan error {
 // goroutine and are hard to time deterministically relative to the test.
 func expectJobAcquired(jobRepo *mocks.MockJobRepository) {
 	resID := testResourceID
-	jobRepo.EXPECT().GetAvailableJob(gomock.Any()).Return(&resID, nil)
-	jobRepo.EXPECT().AcquireJob(gomock.Any(), testResourceID, testWorkerID, gomock.Any()).Return(testJob(), nil)
+	jobRepo.EXPECT().GetAvailableJob(gomock.Any(), testTenantGroupID).Return(&resID, nil)
+	jobRepo.EXPECT().AcquireJob(gomock.Any(), testResourceID, testWorkerID, gomock.Any(), testTenantGroupID).Return(testJob(), nil)
 	jobRepo.EXPECT().RenewJobLease(gomock.Any(), testResourceID, testWorkerID, gomock.Any()).Return(true, nil).AnyTimes()
 	jobRepo.EXPECT().ReleaseJob(gomock.Any(), testResourceID, testWorkerID).Return(nil).AnyTimes()
 }
@@ -259,8 +261,8 @@ func TestWorkerSession_NoJob_StreamDisconnects(t *testing.T) {
 	worker, jobRepo, _ := newTestWorker(ctrl)
 
 	called := make(chan struct{})
-	jobRepo.EXPECT().GetAvailableJob(gomock.Any()).
-		DoAndReturn(func(context.Context) (*string, error) {
+	jobRepo.EXPECT().GetAvailableJob(gomock.Any(), testTenantGroupID).
+		DoAndReturn(func(context.Context, string) (*string, error) {
 			close(called)
 			return nil, nil
 		})
@@ -285,11 +287,11 @@ func TestWorkerSession_AcquireJob_Fails_StreamDisconnects(t *testing.T) {
 	worker, jobRepo, _ := newTestWorker(ctrl)
 
 	resID := testResourceID
-	jobRepo.EXPECT().GetAvailableJob(gomock.Any()).Return(&resID, nil)
+	jobRepo.EXPECT().GetAvailableJob(gomock.Any(), testTenantGroupID).Return(&resID, nil)
 
 	acquired := make(chan struct{})
-	jobRepo.EXPECT().AcquireJob(gomock.Any(), testResourceID, testWorkerID, gomock.Any()).
-		DoAndReturn(func(_ context.Context, _, _ string, _ time.Duration) (*domain.Job, error) {
+	jobRepo.EXPECT().AcquireJob(gomock.Any(), testResourceID, testWorkerID, gomock.Any(), testTenantGroupID).
+		DoAndReturn(func(_ context.Context, _, _ string, _ time.Duration, _ string) (*domain.Job, error) {
 			close(acquired)
 			return nil, nil // failed to acquire
 		})

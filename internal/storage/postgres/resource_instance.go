@@ -267,7 +267,7 @@ func (r *ResourceInstanceRepo) TenantGroupIDForResource(ctx context.Context, res
 		`SELECT t.tenant_group_id
 		 FROM resource_instances ri
 		 JOIN tenants t ON t.id = ri.tenant_id
-		 WHERE ri.id = $1 AND ri.deleted_at IS NULL`,
+		 WHERE ri.id = $1 AND ri.lifecycle_state != 'deleted'`,
 		resourceInstanceID,
 	).Scan(&groupID)
 	if err != nil {

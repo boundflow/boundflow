@@ -31,9 +31,17 @@ def api_key():
     return key
 
 
+@pytest.fixture
+def boundflow_api_key():
+    key = os.environ.get("BOUNDFLOW_API_KEY")
+    if not key:
+        pytest.skip("BOUNDFLOW_API_KEY not set")
+    return key
+
+
 @pytest_asyncio.fixture
-async def cp():
-    async with ControlPlaneClient(SERVER_ADDRESS) as client:
+async def cp(boundflow_api_key):
+    async with ControlPlaneClient(SERVER_ADDRESS, api_key=boundflow_api_key) as client:
         yield client
 
 

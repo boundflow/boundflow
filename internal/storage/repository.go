@@ -102,12 +102,14 @@ type SchedulerRepository interface {
 
 type JobRepository interface {
 	// GetAvailableJob returns the resource instance ID of one job with status
-	// pending or awaiting_next that has no owner or an expired lease.
+	// pending or awaiting_next that has no owner or an expired lease,
+	// scoped to the given tenant group.
 	// Returns nil (no error) if none are available.
-	GetAvailableJob(ctx context.Context) (resourceInstanceID *string, err error)
+	GetAvailableJob(ctx context.Context, tenantGroupID string) (resourceInstanceID *string, err error)
 	// AcquireJob attempts to claim the job for ownerID, returning the full Job
 	// if successful. Returns nil if the job no longer qualifies (taken by another worker).
-	AcquireJob(ctx context.Context, resourceInstanceID string, ownerID string, leaseDuration time.Duration) (*domain.Job, error)
+	// tenantGroupID is an additional guard to prevent cross-tenant acquisition.
+	AcquireJob(ctx context.Context, resourceInstanceID string, ownerID string, leaseDuration time.Duration, tenantGroupID string) (*domain.Job, error)
 	// RenewJobLease extends the lease on a job owned by ownerID.
 	// Returns false if the lease could not be renewed.
 	RenewJobLease(ctx context.Context, resourceInstanceID string, ownerID string, leaseDuration time.Duration) (bool, error)

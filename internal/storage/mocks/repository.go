@@ -641,33 +641,33 @@ func (m *MockJobRepository) EXPECT() *MockJobRepositoryMockRecorder {
 }
 
 // AcquireJob mocks base method.
-func (m *MockJobRepository) AcquireJob(ctx context.Context, resourceInstanceID, ownerID string, leaseDuration time.Duration) (*domain.Job, error) {
+func (m *MockJobRepository) AcquireJob(ctx context.Context, resourceInstanceID, ownerID string, leaseDuration time.Duration, tenantGroupID string) (*domain.Job, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AcquireJob", ctx, resourceInstanceID, ownerID, leaseDuration)
+	ret := m.ctrl.Call(m, "AcquireJob", ctx, resourceInstanceID, ownerID, leaseDuration, tenantGroupID)
 	ret0, _ := ret[0].(*domain.Job)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AcquireJob indicates an expected call of AcquireJob.
-func (mr *MockJobRepositoryMockRecorder) AcquireJob(ctx, resourceInstanceID, ownerID, leaseDuration any) *gomock.Call {
+func (mr *MockJobRepositoryMockRecorder) AcquireJob(ctx, resourceInstanceID, ownerID, leaseDuration, tenantGroupID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AcquireJob", reflect.TypeOf((*MockJobRepository)(nil).AcquireJob), ctx, resourceInstanceID, ownerID, leaseDuration)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AcquireJob", reflect.TypeOf((*MockJobRepository)(nil).AcquireJob), ctx, resourceInstanceID, ownerID, leaseDuration, tenantGroupID)
 }
 
 // GetAvailableJob mocks base method.
-func (m *MockJobRepository) GetAvailableJob(ctx context.Context) (*string, error) {
+func (m *MockJobRepository) GetAvailableJob(ctx context.Context, tenantGroupID string) (*string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAvailableJob", ctx)
+	ret := m.ctrl.Call(m, "GetAvailableJob", ctx, tenantGroupID)
 	ret0, _ := ret[0].(*string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetAvailableJob indicates an expected call of GetAvailableJob.
-func (mr *MockJobRepositoryMockRecorder) GetAvailableJob(ctx any) *gomock.Call {
+func (mr *MockJobRepositoryMockRecorder) GetAvailableJob(ctx, tenantGroupID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAvailableJob", reflect.TypeOf((*MockJobRepository)(nil).GetAvailableJob), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAvailableJob", reflect.TypeOf((*MockJobRepository)(nil).GetAvailableJob), ctx, tenantGroupID)
 }
 
 // GetJobMetrics mocks base method.

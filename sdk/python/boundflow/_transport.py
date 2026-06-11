@@ -63,15 +63,16 @@ def metrics_to_proto(snapshot: dict) -> op_pb.AgentInvocationMetrics:
 class WorkerSession:
     """Owns the bidi stream and dispatch loop. One operation in flight at a time."""
 
-    def __init__(self, address: str) -> None:
+    def __init__(self, address: str, api_key: str) -> None:
         self._target = _strip_scheme(address)
         self._session_id = str(uuid.uuid4())
         self._write_lock = asyncio.Lock()
+        self._metadata = (("x-api-key", api_key),)
 
     async def run(self, dispatch: Dispatch) -> None:
         async with grpc.aio.insecure_channel(self._target) as channel:
             stub = wk_grpc.WorkerServiceStub(channel)
-            call = stub.WorkerSession()
+            call = stub.WorkerSession(metadata=self._metadata)
             await self._write(call, self._ready())
 
             op_task: asyncio.Task | None = None

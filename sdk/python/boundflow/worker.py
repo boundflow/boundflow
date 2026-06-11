@@ -188,8 +188,13 @@ class ApprovalRequest:
 
 
 class BoundFlowWorker:
-    def __init__(self, address: str, llm: LlmClient) -> None:
+    def __init__(self, address: str, llm: LlmClient, api_key: str | None = None) -> None:
+        import os
+        key = api_key or os.environ.get("BOUNDFLOW_API_KEY") or ""
+        if not key:
+            raise ValueError("api_key must be provided or BOUNDFLOW_API_KEY must be set")
         self._address = address
+        self._api_key = key
         self._orchestrator = Orchestrator(llm)
         self._workflows: dict[tuple[str, int], HandlerFn] = {}
         self._operations: dict[tuple[str, str], HandlerFn] = {}
@@ -244,7 +249,7 @@ class BoundFlowWorker:
                 proto.workflow_metrics.CopyFrom(op_pb.WorkflowInvocationMetrics(failures=1))
             return proto
 
-        await t.WorkerSession(self._address).run(dispatch)
+        await t.WorkerSession(self._address, self._api_key).run(dispatch)
 
     async def _to_proto(self, result: OperationResult, op):
         """Map an OperationResult to an AtomicOperationResult proto."""
