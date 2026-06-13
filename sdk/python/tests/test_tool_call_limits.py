@@ -51,16 +51,18 @@ async def test_per_tool_limit_caps_handler_invocations(cp, api_key):
         tenant = await create_isolated_tenant(cp, "tool-limit")
         workflow = await cp.create_workflow("tool_limit_test", tenant.id,
                                             config=WorkflowConfig(version=1))
+        try:
+            await cp.set_agent_runtime_policy(
+                workflow.id,
+                AGENT_NAME,
+                RuntimePolicy(max_llm_calls=8, tool_call_limits=[ToolCallLimit(tool="ping", max_calls=1)]),
+            )
 
-        await cp.set_agent_runtime_policy(
-            workflow.id,
-            AGENT_NAME,
-            RuntimePolicy(max_llm_calls=8, tool_call_limits=[ToolCallLimit(tool="ping", max_calls=1)]),
-        )
+            await cp.activate_workflow(workflow.id)
+            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=60)
+            await wait_for_completion(cp, workflow.id)
 
-        await cp.activate_workflow(workflow.id)
-        await cp.invoke_workflow(workflow.id, operation_timeout_seconds=60)
-        await wait_for_completion(cp, workflow.id)
-
-        assert ping_calls[0] >= 1, "ping handler should have run at least once"
-        assert ping_calls[0] <= 1, f"ping handler should have been capped at 1, but ran {ping_calls[0]} times"
+            assert ping_calls[0] >= 1, "ping handler should have run at least once"
+            assert ping_calls[0] <= 1, f"ping handler should have been capped at 1, but ran {ping_calls[0]} times"
+        finally:
+            await cp.delete_workflow(workflow.id)
