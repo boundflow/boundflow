@@ -110,13 +110,20 @@ def _strip(addr: str) -> str:
     return addr.split("://", 1)[1] if "://" in addr else addr
 
 
+def _make_channel(addr: str):
+    target = _strip(addr)
+    if addr.startswith("https://"):
+        return grpc.aio.secure_channel(target, grpc.ssl_channel_credentials())
+    return grpc.aio.insecure_channel(target)
+
+
 class ControlPlaneClient:
     def __init__(self, server_address: str, api_key: str | None = None) -> None:
         key = api_key or os.environ.get("BOUNDFLOW_API_KEY") or ""
         if not key:
             raise ValueError("api_key must be provided or BOUNDFLOW_API_KEY must be set")
         self._metadata = (("x-api-key", key),)
-        self._channel = grpc.aio.insecure_channel(_strip(server_address))
+        self._channel = _make_channel(server_address)
         self._reg = reg_grpc.RegistrationServiceStub(self._channel)
         self._lc = lc_grpc.ResourceLifecycleServiceStub(self._channel)
 

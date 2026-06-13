@@ -9,10 +9,13 @@ receive loop, then reports the result and re-arms with ReadyForWork.
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
 from typing import Awaitable, Callable
 
 import grpc
+
+log = logging.getLogger("boundflow.worker")
 from google.protobuf import json_format
 from google.protobuf.struct_pb2 import Struct
 
@@ -65,12 +68,17 @@ class WorkerSession:
 
     def __init__(self, address: str, api_key: str) -> None:
         self._target = _strip_scheme(address)
+        self._secure = address.startswith("https://")
         self._session_id = str(uuid.uuid4())
         self._write_lock = asyncio.Lock()
         self._metadata = (("x-api-key", api_key),)
 
     async def run(self, dispatch: Dispatch) -> None:
-        async with grpc.aio.insecure_channel(self._target) as channel:
+        if self._secure:
+            channel_ctx = grpc.aio.secure_channel(self._target, grpc.ssl_channel_credentials())
+        else:
+            channel_ctx = grpc.aio.insecure_channel(self._target)
+        async with channel_ctx as channel:
             stub = wk_grpc.WorkerServiceStub(channel)
             call = stub.WorkerSession(metadata=self._metadata)
             await self._write(call, self._ready())
@@ -83,6 +91,8 @@ class WorkerSession:
                 if which == "launch":
                     op = command.launch.operation
                     op_id = op.id
+                    log.debug("launch: op_id=%s resource_type=%s name=%s version=%d",
+                              op.id, op.resource_type, op.name, op.workflow_version)
                     # Ack IN_PROGRESS before starting; keep the receive loop free.
                     await self._write(call, self._update(op.id, op_pb.OPERATION_STATUS_IN_PROGRESS))
                     op_task = asyncio.create_task(self._run_operation(call, op, dispatch))
@@ -102,9 +112,7 @@ class WorkerSession:
         except asyncio.CancelledError:
             raise  # surfaced to the main loop, which sends CANCELLED
         except Exception as ex:  # noqa: BLE001 — report a handler failure
-            import traceback
-            print(f"\n[BoundFlow worker] operation FAILED: {ex}", flush=True)
-            traceback.print_exc()
+            log.error("operation FAILED: op_id=%s error=%s", op.id, ex, exc_info=True)
             await self._write(call, self._update(op.id, op_pb.OPERATION_STATUS_FAILED, str(ex)))
             await self._write(call, self._ready())
             return

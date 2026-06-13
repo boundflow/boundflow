@@ -7,10 +7,13 @@ port of BoundFlow.SDK Orchestrator.RunAsync.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Any, Callable, Protocol
 
 from .policies import RuntimePolicy
+
+log = logging.getLogger("boundflow.orchestrator")
 
 INPUT_COST_PER_1M = 3.0
 OUTPUT_COST_PER_1M = 15.0
@@ -196,6 +199,9 @@ class Orchestrator:
         failure_counts: dict[str, int] = {}
         tool_limits = {l.tool: l.max_calls for l in cfg.policy.tool_call_limits}
 
+        log.debug("run_step start: objective=%s model=%s max_llm_calls=%s tool_limits=%s",
+                  cfg.objective, cfg.model, max_llm_calls, tool_limits)
+
         while True:
             limit_reached = max_llm_calls > 0 and llm_calls >= max_llm_calls
             req = LlmRequest(
@@ -206,6 +212,7 @@ class Orchestrator:
                 tools=tools,
                 forced_tool=SUBMIT_RESULT if limit_reached else None,
             )
+            log.debug("llm_call #%d forced_tool=%s", llm_calls + 1, req.forced_tool)
             resp = await self._client.complete(req)
 
             llm_calls += 1
@@ -226,6 +233,7 @@ class Orchestrator:
                     continue
 
                 if block.name == SUBMIT_RESULT:
+                    log.debug("submit_result: llm_calls=%d call_counts=%s", llm_calls, call_counts)
                     return StepResult(block.input, llm_calls, cost, tokens,
                                       call_counts, failure_counts, cfg.model)
 
@@ -234,12 +242,15 @@ class Orchestrator:
                     continue
 
                 cap = tool_limits.get(block.name, 0)
-                if cap > 0 and call_counts.get(block.name, 0) >= cap:
+                current_count = call_counts.get(block.name, 0)
+                if cap > 0 and current_count >= cap:
+                    log.debug("tool_limit hit: tool=%s count=%d cap=%d", block.name, current_count, cap)
                     tool_results.append(ToolResultBlock(
                         block.id, f"Call limit reached for '{block.name}' (max {cap}). Do not call it again.",
                         is_error=True))
                     continue
-                call_counts[block.name] = call_counts.get(block.name, 0) + 1
+                call_counts[block.name] = current_count + 1
+                log.debug("tool_call: tool=%s count_after=%d cap=%s", block.name, current_count + 1, cap or "unlimited")
 
                 try:
                     out = await callbacks[block.name].handler(block.input)

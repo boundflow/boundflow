@@ -58,15 +58,17 @@ async def test_mock_llm_drives_tool_calls_and_per_tool_limit_holds(cp):
         tenant = await create_isolated_tenant(cp, "mock-tool-limit")
         workflow = await cp.create_workflow("mock_tool_limit", tenant.id,
                                             config=WorkflowConfig(version=1))
+        try:
+            await cp.set_agent_runtime_policy(
+                workflow.id,
+                AGENT_NAME,
+                RuntimePolicy(max_llm_calls=8, tool_call_limits=[ToolCallLimit(tool="ping", max_calls=1)]),
+            )
 
-        await cp.set_agent_runtime_policy(
-            workflow.id,
-            AGENT_NAME,
-            RuntimePolicy(max_llm_calls=8, tool_call_limits=[ToolCallLimit(tool="ping", max_calls=1)]),
-        )
+            await cp.activate_workflow(workflow.id)
+            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, workflow.id)
 
-        await cp.activate_workflow(workflow.id)
-        await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
-        await wait_for_completion(cp, workflow.id)
-
-        assert ping_calls[0] == 1, f"ping handler should have been called exactly once, got {ping_calls[0]}"
+            assert ping_calls[0] == 1, f"ping handler should have been called exactly once, got {ping_calls[0]}"
+        finally:
+            await cp.delete_workflow(workflow.id)
