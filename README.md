@@ -248,12 +248,19 @@ make mocks
 
 ### Python integration tests
 
-Requires the full stack running (server + scheduler + worker) and `ANTHROPIC_API_KEY` for real-LLM scenarios. Mock-LLM tests run without a key.
+Tests run against a Boundflow backend — either a local stack or a remote one (e.g. Azure Container Apps). The target addresses are set in `sdk/python/tests/conftest.py`.
+
+`BOUNDFLOW_API_KEY` is required for all tests. `ANTHROPIC_API_KEY` is additionally required for real-LLM scenarios; mock-LLM tests run without it.
 
 ```bash
 cd sdk/python
 pip install -r requirements.txt
+
+export BOUNDFLOW_API_KEY=<your key>
 pytest
+
+# with debug logging from the SDK:
+pytest -s --log-cli-level=DEBUG --log-cli-format="%(name)s %(message)s"
 
 # real-LLM tests only:
 ANTHROPIC_API_KEY=sk-ant-... pytest
