@@ -245,14 +245,21 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 					return nil
 				case msg := <-recvStream:
 
-					if _, ok := msg.Payload.(*convergeplanev1.WorkerMessage_Ready); !ok {
+					ready, ok := msg.Payload.(*convergeplanev1.WorkerMessage_Ready)
+					if !ok {
 						log.Warn("unexpected message in idle state, expected ReadyForWork")
 						return errors.New("protocol error") // protocol error
 					}
 
-					log.Debug("client ready, polling for available job")
+					var resourceTypes []string
+					var workflowVersions []int32
+					for _, cap := range ready.Ready.GetCapabilities() {
+						resourceTypes = append(resourceTypes, cap.GetResourceType())
+						workflowVersions = append(workflowVersions, cap.GetWorkflowVersion())
+					}
+					log.Debug("client ready, polling for available job", "capabilities", len(resourceTypes))
 					for {
-						resourceInstID, err := s.jobs.GetAvailableJob(stream.Context(), tenantGroupID)
+						resourceInstID, err := s.jobs.GetAvailableJob(stream.Context(), tenantGroupID, resourceTypes, workflowVersions)
 						if resourceInstID == nil || err != nil {
 							if err != nil {
 								log.Error("error polling for available job", "error", err)

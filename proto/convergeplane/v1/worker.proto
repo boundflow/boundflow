@@ -27,9 +27,18 @@ message WorkerMessage {
   }
 }
 
+// WorkerCapability declares a (resource_type, workflow_version) pair
+// that the worker has a registered handler for.
+message WorkerCapability {
+  string resource_type    = 1;
+  int32  workflow_version = 2;
+}
+
 // ReadyForWork signals that the worker has connected and is available
 // to accept a new operation.
-message ReadyForWork {}
+message ReadyForWork {
+  repeated WorkerCapability capabilities = 1;
+}
 
 // OperationUpdate carries the current status of an in-progress operation.
 message OperationUpdate {

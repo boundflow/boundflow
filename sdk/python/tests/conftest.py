@@ -17,8 +17,8 @@ from boundflow import (
     submit,
 )
 
-WORKER_ADDRESS = "https://boundflow-worker-test.ambitioushill-b4517714.canadacentral.azurecontainerapps.io"
-SERVER_ADDRESS = "https://boundflow-server-test.ambitioushill-b4517714.canadacentral.azurecontainerapps.io"
+WORKER_ADDRESS = "http://localhost:50052"
+SERVER_ADDRESS = "http://localhost:50051"
 SONNET = "claude-sonnet-4-6"
 HAIKU = "claude-haiku-4-5-20251001"
 

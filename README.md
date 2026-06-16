@@ -174,8 +174,10 @@ All three connect to PostgreSQL using `CONVERGEPLANE_DATABASE_URL` (defaults to 
 
 #### 4. Provision an API key
 
+The provisioning script requires a direct Postgres connection. `dev.sh` prompts for a DB user and defaults to `$USER`, so pass whichever user you specified when running the script:
+
 ```bash
-go run ./scripts/provision_customer -name "my-org"
+go run ./scripts/provision_customer -name "my-org" -db "postgres://$USER@localhost:5432/convergeplane?sslmode=disable"
 ```
 
 The script prints a raw API key once — save it and export it before running the SDK or demos:

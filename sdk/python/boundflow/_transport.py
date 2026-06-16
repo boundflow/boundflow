@@ -66,12 +66,16 @@ def metrics_to_proto(snapshot: dict) -> op_pb.AgentInvocationMetrics:
 class WorkerSession:
     """Owns the bidi stream and dispatch loop. One operation in flight at a time."""
 
-    def __init__(self, address: str, api_key: str) -> None:
+    def __init__(self, address: str, api_key: str, capabilities: list[tuple[str, int]] | None = None) -> None:
         self._target = _strip_scheme(address)
         self._secure = address.startswith("https://")
         self._session_id = str(uuid.uuid4())
         self._write_lock = asyncio.Lock()
         self._metadata = (("x-api-key", api_key),)
+        self._capabilities = [
+            wk_pb.WorkerCapability(resource_type=rt, workflow_version=v)
+            for rt, v in (capabilities or [])
+        ]
 
     async def run(self, dispatch: Dispatch) -> None:
         if self._secure:
@@ -127,7 +131,10 @@ class WorkerSession:
             await call.write(msg)
 
     def _ready(self) -> wk_pb.WorkerMessage:
-        return wk_pb.WorkerMessage(session_id=self._session_id, ready=wk_pb.ReadyForWork())
+        return wk_pb.WorkerMessage(
+            session_id=self._session_id,
+            ready=wk_pb.ReadyForWork(capabilities=self._capabilities),
+        )
 
     def _update(self, operation_id: str, status, message: str = "") -> wk_pb.WorkerMessage:
         return wk_pb.WorkerMessage(

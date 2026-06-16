@@ -115,17 +115,72 @@ func (*WorkerMessage_Ready) isWorkerMessage_Payload() {}
 
 func (*WorkerMessage_Update) isWorkerMessage_Payload() {}
 
+// WorkerCapability declares a (resource_type, workflow_version) pair
+// that the worker has a registered handler for.
+type WorkerCapability struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	ResourceType    string                 `protobuf:"bytes,1,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
+	WorkflowVersion int32                  `protobuf:"varint,2,opt,name=workflow_version,json=workflowVersion,proto3" json:"workflow_version,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *WorkerCapability) Reset() {
+	*x = WorkerCapability{}
+	mi := &file_convergeplane_v1_worker_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WorkerCapability) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WorkerCapability) ProtoMessage() {}
+
+func (x *WorkerCapability) ProtoReflect() protoreflect.Message {
+	mi := &file_convergeplane_v1_worker_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WorkerCapability.ProtoReflect.Descriptor instead.
+func (*WorkerCapability) Descriptor() ([]byte, []int) {
+	return file_convergeplane_v1_worker_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *WorkerCapability) GetResourceType() string {
+	if x != nil {
+		return x.ResourceType
+	}
+	return ""
+}
+
+func (x *WorkerCapability) GetWorkflowVersion() int32 {
+	if x != nil {
+		return x.WorkflowVersion
+	}
+	return 0
+}
+
 // ReadyForWork signals that the worker has connected and is available
 // to accept a new operation.
 type ReadyForWork struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	Capabilities  []*WorkerCapability    `protobuf:"bytes,1,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ReadyForWork) Reset() {
 	*x = ReadyForWork{}
-	mi := &file_convergeplane_v1_worker_proto_msgTypes[1]
+	mi := &file_convergeplane_v1_worker_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -137,7 +192,7 @@ func (x *ReadyForWork) String() string {
 func (*ReadyForWork) ProtoMessage() {}
 
 func (x *ReadyForWork) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_worker_proto_msgTypes[1]
+	mi := &file_convergeplane_v1_worker_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -150,7 +205,14 @@ func (x *ReadyForWork) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReadyForWork.ProtoReflect.Descriptor instead.
 func (*ReadyForWork) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_worker_proto_rawDescGZIP(), []int{1}
+	return file_convergeplane_v1_worker_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ReadyForWork) GetCapabilities() []*WorkerCapability {
+	if x != nil {
+		return x.Capabilities
+	}
+	return nil
 }
 
 // OperationUpdate carries the current status of an in-progress operation.
@@ -164,7 +226,7 @@ type OperationUpdate struct {
 
 func (x *OperationUpdate) Reset() {
 	*x = OperationUpdate{}
-	mi := &file_convergeplane_v1_worker_proto_msgTypes[2]
+	mi := &file_convergeplane_v1_worker_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -176,7 +238,7 @@ func (x *OperationUpdate) String() string {
 func (*OperationUpdate) ProtoMessage() {}
 
 func (x *OperationUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_worker_proto_msgTypes[2]
+	mi := &file_convergeplane_v1_worker_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -189,7 +251,7 @@ func (x *OperationUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OperationUpdate.ProtoReflect.Descriptor instead.
 func (*OperationUpdate) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_worker_proto_rawDescGZIP(), []int{2}
+	return file_convergeplane_v1_worker_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *OperationUpdate) GetOperationId() string {
@@ -220,7 +282,7 @@ type ServerCommand struct {
 
 func (x *ServerCommand) Reset() {
 	*x = ServerCommand{}
-	mi := &file_convergeplane_v1_worker_proto_msgTypes[3]
+	mi := &file_convergeplane_v1_worker_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -232,7 +294,7 @@ func (x *ServerCommand) String() string {
 func (*ServerCommand) ProtoMessage() {}
 
 func (x *ServerCommand) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_worker_proto_msgTypes[3]
+	mi := &file_convergeplane_v1_worker_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -245,7 +307,7 @@ func (x *ServerCommand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServerCommand.ProtoReflect.Descriptor instead.
 func (*ServerCommand) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_worker_proto_rawDescGZIP(), []int{3}
+	return file_convergeplane_v1_worker_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ServerCommand) GetPayload() isServerCommand_Payload {
@@ -299,7 +361,7 @@ type LaunchOperation struct {
 
 func (x *LaunchOperation) Reset() {
 	*x = LaunchOperation{}
-	mi := &file_convergeplane_v1_worker_proto_msgTypes[4]
+	mi := &file_convergeplane_v1_worker_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -311,7 +373,7 @@ func (x *LaunchOperation) String() string {
 func (*LaunchOperation) ProtoMessage() {}
 
 func (x *LaunchOperation) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_worker_proto_msgTypes[4]
+	mi := &file_convergeplane_v1_worker_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -324,7 +386,7 @@ func (x *LaunchOperation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LaunchOperation.ProtoReflect.Descriptor instead.
 func (*LaunchOperation) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_worker_proto_rawDescGZIP(), []int{4}
+	return file_convergeplane_v1_worker_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *LaunchOperation) GetOperation() *AtomicOperation {
@@ -345,7 +407,7 @@ type CancelOperation struct {
 
 func (x *CancelOperation) Reset() {
 	*x = CancelOperation{}
-	mi := &file_convergeplane_v1_worker_proto_msgTypes[5]
+	mi := &file_convergeplane_v1_worker_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -357,7 +419,7 @@ func (x *CancelOperation) String() string {
 func (*CancelOperation) ProtoMessage() {}
 
 func (x *CancelOperation) ProtoReflect() protoreflect.Message {
-	mi := &file_convergeplane_v1_worker_proto_msgTypes[5]
+	mi := &file_convergeplane_v1_worker_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -370,7 +432,7 @@ func (x *CancelOperation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelOperation.ProtoReflect.Descriptor instead.
 func (*CancelOperation) Descriptor() ([]byte, []int) {
-	return file_convergeplane_v1_worker_proto_rawDescGZIP(), []int{5}
+	return file_convergeplane_v1_worker_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CancelOperation) GetOperationId() string {
@@ -390,8 +452,12 @@ const file_convergeplane_v1_worker_proto_rawDesc = "" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x126\n" +
 	"\x05ready\x18\x02 \x01(\v2\x1e.convergeplane.v1.ReadyForWorkH\x00R\x05ready\x12;\n" +
 	"\x06update\x18\x03 \x01(\v2!.convergeplane.v1.OperationUpdateH\x00R\x06updateB\t\n" +
-	"\apayload\"\x0e\n" +
-	"\fReadyForWork\"u\n" +
+	"\apayload\"b\n" +
+	"\x10WorkerCapability\x12#\n" +
+	"\rresource_type\x18\x01 \x01(\tR\fresourceType\x12)\n" +
+	"\x10workflow_version\x18\x02 \x01(\x05R\x0fworkflowVersion\"V\n" +
+	"\fReadyForWork\x12F\n" +
+	"\fcapabilities\x18\x01 \x03(\v2\".convergeplane.v1.WorkerCapabilityR\fcapabilities\"u\n" +
 	"\x0fOperationUpdate\x12!\n" +
 	"\foperation_id\x18\x01 \x01(\tR\voperationId\x12?\n" +
 	"\x06result\x18\x02 \x01(\v2'.convergeplane.v1.AtomicOperationResultR\x06result\"\x94\x01\n" +
@@ -418,31 +484,33 @@ func file_convergeplane_v1_worker_proto_rawDescGZIP() []byte {
 	return file_convergeplane_v1_worker_proto_rawDescData
 }
 
-var file_convergeplane_v1_worker_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_convergeplane_v1_worker_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_convergeplane_v1_worker_proto_goTypes = []any{
 	(*WorkerMessage)(nil),         // 0: convergeplane.v1.WorkerMessage
-	(*ReadyForWork)(nil),          // 1: convergeplane.v1.ReadyForWork
-	(*OperationUpdate)(nil),       // 2: convergeplane.v1.OperationUpdate
-	(*ServerCommand)(nil),         // 3: convergeplane.v1.ServerCommand
-	(*LaunchOperation)(nil),       // 4: convergeplane.v1.LaunchOperation
-	(*CancelOperation)(nil),       // 5: convergeplane.v1.CancelOperation
-	(*AtomicOperationResult)(nil), // 6: convergeplane.v1.AtomicOperationResult
-	(*AtomicOperation)(nil),       // 7: convergeplane.v1.AtomicOperation
+	(*WorkerCapability)(nil),      // 1: convergeplane.v1.WorkerCapability
+	(*ReadyForWork)(nil),          // 2: convergeplane.v1.ReadyForWork
+	(*OperationUpdate)(nil),       // 3: convergeplane.v1.OperationUpdate
+	(*ServerCommand)(nil),         // 4: convergeplane.v1.ServerCommand
+	(*LaunchOperation)(nil),       // 5: convergeplane.v1.LaunchOperation
+	(*CancelOperation)(nil),       // 6: convergeplane.v1.CancelOperation
+	(*AtomicOperationResult)(nil), // 7: convergeplane.v1.AtomicOperationResult
+	(*AtomicOperation)(nil),       // 8: convergeplane.v1.AtomicOperation
 }
 var file_convergeplane_v1_worker_proto_depIdxs = []int32{
-	1, // 0: convergeplane.v1.WorkerMessage.ready:type_name -> convergeplane.v1.ReadyForWork
-	2, // 1: convergeplane.v1.WorkerMessage.update:type_name -> convergeplane.v1.OperationUpdate
-	6, // 2: convergeplane.v1.OperationUpdate.result:type_name -> convergeplane.v1.AtomicOperationResult
-	4, // 3: convergeplane.v1.ServerCommand.launch:type_name -> convergeplane.v1.LaunchOperation
-	5, // 4: convergeplane.v1.ServerCommand.cancel:type_name -> convergeplane.v1.CancelOperation
-	7, // 5: convergeplane.v1.LaunchOperation.operation:type_name -> convergeplane.v1.AtomicOperation
-	0, // 6: convergeplane.v1.WorkerService.WorkerSession:input_type -> convergeplane.v1.WorkerMessage
-	3, // 7: convergeplane.v1.WorkerService.WorkerSession:output_type -> convergeplane.v1.ServerCommand
-	7, // [7:8] is the sub-list for method output_type
-	6, // [6:7] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	2, // 0: convergeplane.v1.WorkerMessage.ready:type_name -> convergeplane.v1.ReadyForWork
+	3, // 1: convergeplane.v1.WorkerMessage.update:type_name -> convergeplane.v1.OperationUpdate
+	1, // 2: convergeplane.v1.ReadyForWork.capabilities:type_name -> convergeplane.v1.WorkerCapability
+	7, // 3: convergeplane.v1.OperationUpdate.result:type_name -> convergeplane.v1.AtomicOperationResult
+	5, // 4: convergeplane.v1.ServerCommand.launch:type_name -> convergeplane.v1.LaunchOperation
+	6, // 5: convergeplane.v1.ServerCommand.cancel:type_name -> convergeplane.v1.CancelOperation
+	8, // 6: convergeplane.v1.LaunchOperation.operation:type_name -> convergeplane.v1.AtomicOperation
+	0, // 7: convergeplane.v1.WorkerService.WorkerSession:input_type -> convergeplane.v1.WorkerMessage
+	4, // 8: convergeplane.v1.WorkerService.WorkerSession:output_type -> convergeplane.v1.ServerCommand
+	8, // [8:9] is the sub-list for method output_type
+	7, // [7:8] is the sub-list for method input_type
+	7, // [7:7] is the sub-list for extension type_name
+	7, // [7:7] is the sub-list for extension extendee
+	0, // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_convergeplane_v1_worker_proto_init() }
@@ -455,7 +523,7 @@ func file_convergeplane_v1_worker_proto_init() {
 		(*WorkerMessage_Ready)(nil),
 		(*WorkerMessage_Update)(nil),
 	}
-	file_convergeplane_v1_worker_proto_msgTypes[3].OneofWrappers = []any{
+	file_convergeplane_v1_worker_proto_msgTypes[4].OneofWrappers = []any{
 		(*ServerCommand_Launch)(nil),
 		(*ServerCommand_Cancel)(nil),
 	}
@@ -465,7 +533,7 @@ func file_convergeplane_v1_worker_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_convergeplane_v1_worker_proto_rawDesc), len(file_convergeplane_v1_worker_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

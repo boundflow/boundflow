@@ -270,20 +270,6 @@ func (mr *MockResourceInstanceRepositoryMockRecorder) StartInvocationAndIncremen
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartInvocationAndIncrementVersion", reflect.TypeOf((*MockResourceInstanceRepository)(nil).StartInvocationAndIncrementVersion), varargs...)
 }
 
-// UpdateCurrentVersion mocks base method.
-func (m *MockResourceInstanceRepository) UpdateCurrentVersion(ctx context.Context, id string, version int64) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateCurrentVersion", ctx, id, version)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// UpdateCurrentVersion indicates an expected call of UpdateCurrentVersion.
-func (mr *MockResourceInstanceRepositoryMockRecorder) UpdateCurrentVersion(ctx, id, version any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCurrentVersion", reflect.TypeOf((*MockResourceInstanceRepository)(nil).UpdateCurrentVersion), ctx, id, version)
-}
-
 // TenantGroupIDForResource mocks base method.
 func (m *MockResourceInstanceRepository) TenantGroupIDForResource(ctx context.Context, resourceInstanceID string) (string, error) {
 	m.ctrl.T.Helper()
@@ -297,6 +283,20 @@ func (m *MockResourceInstanceRepository) TenantGroupIDForResource(ctx context.Co
 func (mr *MockResourceInstanceRepositoryMockRecorder) TenantGroupIDForResource(ctx, resourceInstanceID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TenantGroupIDForResource", reflect.TypeOf((*MockResourceInstanceRepository)(nil).TenantGroupIDForResource), ctx, resourceInstanceID)
+}
+
+// UpdateCurrentVersion mocks base method.
+func (m *MockResourceInstanceRepository) UpdateCurrentVersion(ctx context.Context, id string, version int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateCurrentVersion", ctx, id, version)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateCurrentVersion indicates an expected call of UpdateCurrentVersion.
+func (mr *MockResourceInstanceRepositoryMockRecorder) UpdateCurrentVersion(ctx, id, version any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCurrentVersion", reflect.TypeOf((*MockResourceInstanceRepository)(nil).UpdateCurrentVersion), ctx, id, version)
 }
 
 // UpdateLastCompletedRequestAt mocks base method.
@@ -656,18 +656,18 @@ func (mr *MockJobRepositoryMockRecorder) AcquireJob(ctx, resourceInstanceID, own
 }
 
 // GetAvailableJob mocks base method.
-func (m *MockJobRepository) GetAvailableJob(ctx context.Context, tenantGroupID string) (*string, error) {
+func (m *MockJobRepository) GetAvailableJob(ctx context.Context, tenantGroupID string, resourceTypes []string, workflowVersions []int32) (*string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAvailableJob", ctx, tenantGroupID)
+	ret := m.ctrl.Call(m, "GetAvailableJob", ctx, tenantGroupID, resourceTypes, workflowVersions)
 	ret0, _ := ret[0].(*string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetAvailableJob indicates an expected call of GetAvailableJob.
-func (mr *MockJobRepositoryMockRecorder) GetAvailableJob(ctx, tenantGroupID any) *gomock.Call {
+func (mr *MockJobRepositoryMockRecorder) GetAvailableJob(ctx, tenantGroupID, resourceTypes, workflowVersions any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAvailableJob", reflect.TypeOf((*MockJobRepository)(nil).GetAvailableJob), ctx, tenantGroupID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAvailableJob", reflect.TypeOf((*MockJobRepository)(nil).GetAvailableJob), ctx, tenantGroupID, resourceTypes, workflowVersions)
 }
 
 // GetJobMetrics mocks base method.
@@ -1045,6 +1045,73 @@ func (m *MockVersionMetricsRepository) GetCurrentVersionMetrics(ctx context.Cont
 func (mr *MockVersionMetricsRepositoryMockRecorder) GetCurrentVersionMetrics(ctx, resourceInstanceID, version any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCurrentVersionMetrics", reflect.TypeOf((*MockVersionMetricsRepository)(nil).GetCurrentVersionMetrics), ctx, resourceInstanceID, version)
+}
+
+// MockApiKeyRepository is a mock of ApiKeyRepository interface.
+type MockApiKeyRepository struct {
+	ctrl     *gomock.Controller
+	recorder *MockApiKeyRepositoryMockRecorder
+	isgomock struct{}
+}
+
+// MockApiKeyRepositoryMockRecorder is the mock recorder for MockApiKeyRepository.
+type MockApiKeyRepositoryMockRecorder struct {
+	mock *MockApiKeyRepository
+}
+
+// NewMockApiKeyRepository creates a new mock instance.
+func NewMockApiKeyRepository(ctrl *gomock.Controller) *MockApiKeyRepository {
+	mock := &MockApiKeyRepository{ctrl: ctrl}
+	mock.recorder = &MockApiKeyRepositoryMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockApiKeyRepository) EXPECT() *MockApiKeyRepositoryMockRecorder {
+	return m.recorder
+}
+
+// Create mocks base method.
+func (m *MockApiKeyRepository) Create(ctx context.Context, key *domain.ApiKey) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, key)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockApiKeyRepositoryMockRecorder) Create(ctx, key any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockApiKeyRepository)(nil).Create), ctx, key)
+}
+
+// GetByKeyHash mocks base method.
+func (m *MockApiKeyRepository) GetByKeyHash(ctx context.Context, keyHash string) (*domain.ApiKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByKeyHash", ctx, keyHash)
+	ret0, _ := ret[0].(*domain.ApiKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetByKeyHash indicates an expected call of GetByKeyHash.
+func (mr *MockApiKeyRepositoryMockRecorder) GetByKeyHash(ctx, keyHash any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByKeyHash", reflect.TypeOf((*MockApiKeyRepository)(nil).GetByKeyHash), ctx, keyHash)
+}
+
+// Revoke mocks base method.
+func (m *MockApiKeyRepository) Revoke(ctx context.Context, id string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Revoke", ctx, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Revoke indicates an expected call of Revoke.
+func (mr *MockApiKeyRepositoryMockRecorder) Revoke(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Revoke", reflect.TypeOf((*MockApiKeyRepository)(nil).Revoke), ctx, id)
 }
 
 // MockCustomerRequestRepository is a mock of CustomerRequestRepository interface.

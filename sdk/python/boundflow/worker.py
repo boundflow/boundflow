@@ -249,7 +249,8 @@ class BoundFlowWorker:
                 proto.workflow_metrics.CopyFrom(op_pb.WorkflowInvocationMetrics(failures=1))
             return proto
 
-        await t.WorkerSession(self._address, self._api_key).run(dispatch)
+        capabilities = list(self._workflows.keys())
+        await t.WorkerSession(self._address, self._api_key, capabilities).run(dispatch)
 
     async def _to_proto(self, result: OperationResult, op):
         """Map an OperationResult to an AtomicOperationResult proto."""

@@ -22,7 +22,7 @@ func NewJobRepo(pool *pgxpool.Pool) *JobRepo {
 	return &JobRepo{pool: pool}
 }
 
-func (r *JobRepo) GetAvailableJob(ctx context.Context, tenantGroupID string) (*string, error) {
+func (r *JobRepo) GetAvailableJob(ctx context.Context, tenantGroupID string, resourceTypes []string, workflowVersions []int32) (*string, error) {
 	var resourceInstanceID string
 	err := r.pool.QueryRow(ctx,
 		`SELECT resource_instance_id FROM jobs
@@ -32,8 +32,11 @@ func (r *JobRepo) GetAvailableJob(ctx context.Context, tenantGroupID string) (*s
 		 )
 		   AND (owner IS NULL OR lease_expires_at < now())
 		   AND tenant_group_id = $1
+		   AND (resource_type, workflow_version) IN (
+		       SELECT rt, wv FROM unnest($2::text[], $3::int[]) AS cap(rt, wv)
+		   )
 		 LIMIT 1`,
-		tenantGroupID,
+		tenantGroupID, resourceTypes, workflowVersions,
 	).Scan(&resourceInstanceID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

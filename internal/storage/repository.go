@@ -103,9 +103,9 @@ type SchedulerRepository interface {
 type JobRepository interface {
 	// GetAvailableJob returns the resource instance ID of one job with status
 	// pending or awaiting_next that has no owner or an expired lease,
-	// scoped to the given tenant group.
+	// scoped to the given tenant group and worker capabilities.
 	// Returns nil (no error) if none are available.
-	GetAvailableJob(ctx context.Context, tenantGroupID string) (resourceInstanceID *string, err error)
+	GetAvailableJob(ctx context.Context, tenantGroupID string, resourceTypes []string, workflowVersions []int32) (resourceInstanceID *string, err error)
 	// AcquireJob attempts to claim the job for ownerID, returning the full Job
 	// if successful. Returns nil if the job no longer qualifies (taken by another worker).
 	// tenantGroupID is an additional guard to prevent cross-tenant acquisition.

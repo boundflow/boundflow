@@ -29,26 +29,31 @@ namespace Convergeplane.V1 {
             "cmtlck1lc3NhZ2USHQoKc2Vzc2lvbl9pZBgBIAEoCVIJc2Vzc2lvbklkEjYK",
             "BXJlYWR5GAIgASgLMh4uY29udmVyZ2VwbGFuZS52MS5SZWFkeUZvcldvcmtI",
             "AFIFcmVhZHkSOwoGdXBkYXRlGAMgASgLMiEuY29udmVyZ2VwbGFuZS52MS5P",
-            "cGVyYXRpb25VcGRhdGVIAFIGdXBkYXRlQgkKB3BheWxvYWQiDgoMUmVhZHlG",
-            "b3JXb3JrInUKD09wZXJhdGlvblVwZGF0ZRIhCgxvcGVyYXRpb25faWQYASAB",
-            "KAlSC29wZXJhdGlvbklkEj8KBnJlc3VsdBgCIAEoCzInLmNvbnZlcmdlcGxh",
-            "bmUudjEuQXRvbWljT3BlcmF0aW9uUmVzdWx0UgZyZXN1bHQilAEKDVNlcnZl",
-            "ckNvbW1hbmQSOwoGbGF1bmNoGAEgASgLMiEuY29udmVyZ2VwbGFuZS52MS5M",
-            "YXVuY2hPcGVyYXRpb25IAFIGbGF1bmNoEjsKBmNhbmNlbBgCIAEoCzIhLmNv",
-            "bnZlcmdlcGxhbmUudjEuQ2FuY2VsT3BlcmF0aW9uSABSBmNhbmNlbEIJCgdw",
-            "YXlsb2FkIlIKD0xhdW5jaE9wZXJhdGlvbhI/CglvcGVyYXRpb24YASABKAsy",
-            "IS5jb252ZXJnZXBsYW5lLnYxLkF0b21pY09wZXJhdGlvblIJb3BlcmF0aW9u",
-            "IjQKD0NhbmNlbE9wZXJhdGlvbhIhCgxvcGVyYXRpb25faWQYASABKAlSC29w",
-            "ZXJhdGlvbklkMmYKDVdvcmtlclNlcnZpY2USVQoNV29ya2VyU2Vzc2lvbhIf",
-            "LmNvbnZlcmdlcGxhbmUudjEuV29ya2VyTWVzc2FnZRofLmNvbnZlcmdlcGxh",
-            "bmUudjEuU2VydmVyQ29tbWFuZCgBMAFCTVpLZ2l0aHViLmNvbS9jb252ZXJn",
-            "ZXBsYW5lL2NvbnZlcmdlcGxhbmUvZ2VuL2NvbnZlcmdlcGxhbmUvdjE7Y29u",
-            "dmVyZ2VwbGFuZXYxYgZwcm90bzM="));
+            "cGVyYXRpb25VcGRhdGVIAFIGdXBkYXRlQgkKB3BheWxvYWQiYgoQV29ya2Vy",
+            "Q2FwYWJpbGl0eRIjCg1yZXNvdXJjZV90eXBlGAEgASgJUgxyZXNvdXJjZVR5",
+            "cGUSKQoQd29ya2Zsb3dfdmVyc2lvbhgCIAEoBVIPd29ya2Zsb3dWZXJzaW9u",
+            "IlYKDFJlYWR5Rm9yV29yaxJGCgxjYXBhYmlsaXRpZXMYASADKAsyIi5jb252",
+            "ZXJnZXBsYW5lLnYxLldvcmtlckNhcGFiaWxpdHlSDGNhcGFiaWxpdGllcyJ1",
+            "Cg9PcGVyYXRpb25VcGRhdGUSIQoMb3BlcmF0aW9uX2lkGAEgASgJUgtvcGVy",
+            "YXRpb25JZBI/CgZyZXN1bHQYAiABKAsyJy5jb252ZXJnZXBsYW5lLnYxLkF0",
+            "b21pY09wZXJhdGlvblJlc3VsdFIGcmVzdWx0IpQBCg1TZXJ2ZXJDb21tYW5k",
+            "EjsKBmxhdW5jaBgBIAEoCzIhLmNvbnZlcmdlcGxhbmUudjEuTGF1bmNoT3Bl",
+            "cmF0aW9uSABSBmxhdW5jaBI7CgZjYW5jZWwYAiABKAsyIS5jb252ZXJnZXBs",
+            "YW5lLnYxLkNhbmNlbE9wZXJhdGlvbkgAUgZjYW5jZWxCCQoHcGF5bG9hZCJS",
+            "Cg9MYXVuY2hPcGVyYXRpb24SPwoJb3BlcmF0aW9uGAEgASgLMiEuY29udmVy",
+            "Z2VwbGFuZS52MS5BdG9taWNPcGVyYXRpb25SCW9wZXJhdGlvbiI0Cg9DYW5j",
+            "ZWxPcGVyYXRpb24SIQoMb3BlcmF0aW9uX2lkGAEgASgJUgtvcGVyYXRpb25J",
+            "ZDJmCg1Xb3JrZXJTZXJ2aWNlElUKDVdvcmtlclNlc3Npb24SHy5jb252ZXJn",
+            "ZXBsYW5lLnYxLldvcmtlck1lc3NhZ2UaHy5jb252ZXJnZXBsYW5lLnYxLlNl",
+            "cnZlckNvbW1hbmQoATABQk1aS2dpdGh1Yi5jb20vY29udmVyZ2VwbGFuZS9j",
+            "b252ZXJnZXBsYW5lL2dlbi9jb252ZXJnZXBsYW5lL3YxO2NvbnZlcmdlcGxh",
+            "bmV2MWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Convergeplane.V1.OperationReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.WorkerMessage), global::Convergeplane.V1.WorkerMessage.Parser, new[]{ "SessionId", "Ready", "Update" }, new[]{ "Payload" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.ReadyForWork), global::Convergeplane.V1.ReadyForWork.Parser, null, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.WorkerCapability), global::Convergeplane.V1.WorkerCapability.Parser, new[]{ "ResourceType", "WorkflowVersion" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.ReadyForWork), global::Convergeplane.V1.ReadyForWork.Parser, new[]{ "Capabilities" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.OperationUpdate), global::Convergeplane.V1.OperationUpdate.Parser, new[]{ "OperationId", "Result" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.ServerCommand), global::Convergeplane.V1.ServerCommand.Parser, new[]{ "Launch", "Cancel" }, new[]{ "Payload" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Convergeplane.V1.LaunchOperation), global::Convergeplane.V1.LaunchOperation.Parser, new[]{ "Operation" }, null, null, null, null),
@@ -397,20 +402,20 @@ namespace Convergeplane.V1 {
   }
 
   /// <summary>
-  /// ReadyForWork signals that the worker has connected and is available
-  /// to accept a new operation.
+  /// WorkerCapability declares a (resource_type, workflow_version) pair
+  /// that the worker has a registered handler for.
   /// </summary>
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-  public sealed partial class ReadyForWork : pb::IMessage<ReadyForWork>
+  public sealed partial class WorkerCapability : pb::IMessage<WorkerCapability>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
   {
-    private static readonly pb::MessageParser<ReadyForWork> _parser = new pb::MessageParser<ReadyForWork>(() => new ReadyForWork());
+    private static readonly pb::MessageParser<WorkerCapability> _parser = new pb::MessageParser<WorkerCapability>(() => new WorkerCapability());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<ReadyForWork> Parser { get { return _parser; } }
+    public static pb::MessageParser<WorkerCapability> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -426,7 +431,7 @@ namespace Convergeplane.V1 {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public ReadyForWork() {
+    public WorkerCapability() {
       OnConstruction();
     }
 
@@ -434,31 +439,59 @@ namespace Convergeplane.V1 {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public ReadyForWork(ReadyForWork other) : this() {
+    public WorkerCapability(WorkerCapability other) : this() {
+      resourceType_ = other.resourceType_;
+      workflowVersion_ = other.workflowVersion_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public ReadyForWork Clone() {
-      return new ReadyForWork(this);
+    public WorkerCapability Clone() {
+      return new WorkerCapability(this);
+    }
+
+    /// <summary>Field number for the "resource_type" field.</summary>
+    public const int ResourceTypeFieldNumber = 1;
+    private string resourceType_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ResourceType {
+      get { return resourceType_; }
+      set {
+        resourceType_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "workflow_version" field.</summary>
+    public const int WorkflowVersionFieldNumber = 2;
+    private int workflowVersion_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int WorkflowVersion {
+      get { return workflowVersion_; }
+      set {
+        workflowVersion_ = value;
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
-      return Equals(other as ReadyForWork);
+      return Equals(other as WorkerCapability);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(ReadyForWork other) {
+    public bool Equals(WorkerCapability other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
       if (ReferenceEquals(other, this)) {
         return true;
       }
+      if (ResourceType != other.ResourceType) return false;
+      if (WorkflowVersion != other.WorkflowVersion) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -466,6 +499,8 @@ namespace Convergeplane.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override int GetHashCode() {
       int hash = 1;
+      if (ResourceType.Length != 0) hash ^= ResourceType.GetHashCode();
+      if (WorkflowVersion != 0) hash ^= WorkflowVersion.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -484,6 +519,14 @@ namespace Convergeplane.V1 {
     #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       output.WriteRawMessage(this);
     #else
+      if (ResourceType.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ResourceType);
+      }
+      if (WorkflowVersion != 0) {
+        output.WriteRawTag(16);
+        output.WriteInt32(WorkflowVersion);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -494,6 +537,14 @@ namespace Convergeplane.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (ResourceType.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ResourceType);
+      }
+      if (WorkflowVersion != 0) {
+        output.WriteRawTag(16);
+        output.WriteInt32(WorkflowVersion);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -504,6 +555,12 @@ namespace Convergeplane.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int CalculateSize() {
       int size = 0;
+      if (ResourceType.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ResourceType);
+      }
+      if (WorkflowVersion != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(WorkflowVersion);
+      }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -512,9 +569,15 @@ namespace Convergeplane.V1 {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(ReadyForWork other) {
+    public void MergeFrom(WorkerCapability other) {
       if (other == null) {
         return;
+      }
+      if (other.ResourceType.Length != 0) {
+        ResourceType = other.ResourceType;
+      }
+      if (other.WorkflowVersion != 0) {
+        WorkflowVersion = other.WorkflowVersion;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -535,6 +598,14 @@ namespace Convergeplane.V1 {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
+          case 10: {
+            ResourceType = input.ReadString();
+            break;
+          }
+          case 16: {
+            WorkflowVersion = input.ReadInt32();
+            break;
+          }
         }
       }
     #endif
@@ -554,6 +625,205 @@ namespace Convergeplane.V1 {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
+          case 10: {
+            ResourceType = input.ReadString();
+            break;
+          }
+          case 16: {
+            WorkflowVersion = input.ReadInt32();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// ReadyForWork signals that the worker has connected and is available
+  /// to accept a new operation.
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class ReadyForWork : pb::IMessage<ReadyForWork>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<ReadyForWork> _parser = new pb::MessageParser<ReadyForWork>(() => new ReadyForWork());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<ReadyForWork> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Convergeplane.V1.WorkerReflection.Descriptor.MessageTypes[2]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ReadyForWork() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ReadyForWork(ReadyForWork other) : this() {
+      capabilities_ = other.capabilities_.Clone();
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ReadyForWork Clone() {
+      return new ReadyForWork(this);
+    }
+
+    /// <summary>Field number for the "capabilities" field.</summary>
+    public const int CapabilitiesFieldNumber = 1;
+    private static readonly pb::FieldCodec<global::Convergeplane.V1.WorkerCapability> _repeated_capabilities_codec
+        = pb::FieldCodec.ForMessage(10, global::Convergeplane.V1.WorkerCapability.Parser);
+    private readonly pbc::RepeatedField<global::Convergeplane.V1.WorkerCapability> capabilities_ = new pbc::RepeatedField<global::Convergeplane.V1.WorkerCapability>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<global::Convergeplane.V1.WorkerCapability> Capabilities {
+      get { return capabilities_; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as ReadyForWork);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(ReadyForWork other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if(!capabilities_.Equals(other.capabilities_)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      hash ^= capabilities_.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      capabilities_.WriteTo(output, _repeated_capabilities_codec);
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      capabilities_.WriteTo(ref output, _repeated_capabilities_codec);
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      size += capabilities_.CalculateSize(_repeated_capabilities_codec);
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(ReadyForWork other) {
+      if (other == null) {
+        return;
+      }
+      capabilities_.Add(other.capabilities_);
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            capabilities_.AddEntriesFrom(input, _repeated_capabilities_codec);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            capabilities_.AddEntriesFrom(ref input, _repeated_capabilities_codec);
+            break;
+          }
         }
       }
     }
@@ -579,7 +849,7 @@ namespace Convergeplane.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Convergeplane.V1.WorkerReflection.Descriptor.MessageTypes[2]; }
+      get { return global::Convergeplane.V1.WorkerReflection.Descriptor.MessageTypes[3]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -826,7 +1096,7 @@ namespace Convergeplane.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Convergeplane.V1.WorkerReflection.Descriptor.MessageTypes[3]; }
+      get { return global::Convergeplane.V1.WorkerReflection.Descriptor.MessageTypes[4]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1123,7 +1393,7 @@ namespace Convergeplane.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Convergeplane.V1.WorkerReflection.Descriptor.MessageTypes[4]; }
+      get { return global::Convergeplane.V1.WorkerReflection.Descriptor.MessageTypes[5]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1334,7 +1604,7 @@ namespace Convergeplane.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Convergeplane.V1.WorkerReflection.Descriptor.MessageTypes[5]; }
+      get { return global::Convergeplane.V1.WorkerReflection.Descriptor.MessageTypes[6]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
