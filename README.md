@@ -94,12 +94,18 @@ docker compose up --build
 
 This starts five services in the correct order: Postgres → migrations → server (`:50051`) + scheduler + worker (`:50052`). The image is built automatically from the repo.
 
-Verify the server is up:
+#### Provision an API key
+
+All gRPC calls require an API key. After the stack is up, run the provisioning script once to create a tenant group and print a raw API key:
 
 ```bash
-grpcurl -plaintext \
-  -d '{"tenant_group":{"name":"test"}}' \
-  localhost:50051 convergeplane.v1.RegistrationService/CreateTenantGroup
+go run ./scripts/provision_customer -name "my-org" -db "postgres://convergeplane:convergeplane@localhost:5432/convergeplane?sslmode=disable"
+```
+
+The script prints the API key once — save it. Set it in your environment for the SDK and demos:
+
+```bash
+export BOUNDFLOW_API_KEY=<key printed above>
 ```
 
 To wipe all state and start fresh:
@@ -166,6 +172,18 @@ Open three terminals (or run them as background processes):
 
 All three connect to PostgreSQL using `CONVERGEPLANE_DATABASE_URL` (defaults to `postgres://localhost:5432/convergeplane?sslmode=disable`).
 
+#### 4. Provision an API key
+
+```bash
+go run ./scripts/provision_customer -name "my-org"
+```
+
+The script prints a raw API key once — save it and export it before running the SDK or demos:
+
+```bash
+export BOUNDFLOW_API_KEY=<key printed above>
+```
+
 ---
 
 ## Configuration
@@ -230,12 +248,19 @@ make mocks
 
 ### Python integration tests
 
-Requires the full stack running (server + scheduler + worker) and `ANTHROPIC_API_KEY` for real-LLM scenarios. Mock-LLM tests run without a key.
+Tests run against a Boundflow backend — either a local stack or a remote one (e.g. Azure Container Apps). The target addresses are set in `sdk/python/tests/conftest.py`.
+
+`BOUNDFLOW_API_KEY` is required for all tests. `ANTHROPIC_API_KEY` is additionally required for real-LLM scenarios; mock-LLM tests run without it.
 
 ```bash
 cd sdk/python
 pip install -r requirements.txt
+
+export BOUNDFLOW_API_KEY=<your key>
 pytest
+
+# with debug logging from the SDK:
+pytest -s --log-cli-level=DEBUG --log-cli-format="%(name)s %(message)s"
 
 # real-LLM tests only:
 ANTHROPIC_API_KEY=sk-ant-... pytest

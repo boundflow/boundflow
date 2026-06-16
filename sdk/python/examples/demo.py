@@ -204,8 +204,6 @@ async def main() -> None:
     worker_task = asyncio.create_task(worker.run())
 
     async with ControlPlaneClient(SERVER_ADDR) as cp:
-        group = await cp.create_tenant_group("acme")
-
         async def register(type_: str, tenant: str, version: int):
             wf = await cp.create_workflow(type_, tenant, WorkflowConfig(version=version))
             await cp.activate_workflow(wf.id)
@@ -213,9 +211,9 @@ async def main() -> None:
 
         # ── STEP 1 — Register workflows ──────────────────────────────────────
         await section("STEP 1 — Register workflows")
-        support = (await cp.create_tenant("support", group.id)).id
-        ops = (await cp.create_tenant("operations", group.id)).id
-        platform = (await cp.create_tenant("platform", group.id)).id
+        support = (await cp.create_tenant("support")).id
+        ops = (await cp.create_tenant("operations")).id
+        platform = (await cp.create_tenant("platform")).id
 
         triage = await register("ticket-triage", support, 1)
         order = await register("order-remediation", ops, 1)

@@ -17,8 +17,8 @@ from boundflow import (
     submit,
 )
 
-WORKER_ADDRESS = "http://localhost:50052"
-SERVER_ADDRESS = "http://localhost:50051"
+WORKER_ADDRESS = "https://boundflow-worker-test.ambitioushill-b4517714.canadacentral.azurecontainerapps.io"
+SERVER_ADDRESS = "https://boundflow-server-test.ambitioushill-b4517714.canadacentral.azurecontainerapps.io"
 SONNET = "claude-sonnet-4-6"
 HAIKU = "claude-haiku-4-5-20251001"
 
@@ -31,9 +31,17 @@ def api_key():
     return key
 
 
+@pytest.fixture
+def boundflow_api_key():
+    key = os.environ.get("BOUNDFLOW_API_KEY")
+    if not key:
+        pytest.skip("BOUNDFLOW_API_KEY not set")
+    return key
+
+
 @pytest_asyncio.fixture
-async def cp():
-    async with ControlPlaneClient(SERVER_ADDRESS) as client:
+async def cp(boundflow_api_key):
+    async with ControlPlaneClient(SERVER_ADDRESS, api_key=boundflow_api_key) as client:
         yield client
 
 
@@ -43,9 +51,8 @@ def dummy_mock():
 
 async def create_isolated_tenant(cp: ControlPlaneClient, prefix: str = "test"):
     uid = uuid.uuid4().hex[:8]
-    group = await cp.create_tenant_group(f"{prefix}-group-{uid}")
-    tenant = await cp.create_tenant(f"{prefix}-tenant-{uid}", group.id)
-    return group, tenant
+    tenant = await cp.create_tenant(f"{prefix}-tenant-{uid}")
+    return tenant
 
 
 async def wait_for_completion(cp: ControlPlaneClient, workflow_id: str, timeout: int = 120) -> LifecycleState:

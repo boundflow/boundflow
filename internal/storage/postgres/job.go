@@ -22,7 +22,7 @@ func NewJobRepo(pool *pgxpool.Pool) *JobRepo {
 	return &JobRepo{pool: pool}
 }
 
-func (r *JobRepo) GetAvailableJob(ctx context.Context) (*string, error) {
+func (r *JobRepo) GetAvailableJob(ctx context.Context, tenantGroupID string) (*string, error) {
 	var resourceInstanceID string
 	err := r.pool.QueryRow(ctx,
 		`SELECT resource_instance_id FROM jobs
@@ -31,7 +31,9 @@ func (r *JobRepo) GetAvailableJob(ctx context.Context) (*string, error) {
 		     OR (status = 'awaiting_approval' AND approval_timeout_at <= now())
 		 )
 		   AND (owner IS NULL OR lease_expires_at < now())
+		   AND tenant_group_id = $1
 		 LIMIT 1`,
+		tenantGroupID,
 	).Scan(&resourceInstanceID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -42,7 +44,7 @@ func (r *JobRepo) GetAvailableJob(ctx context.Context) (*string, error) {
 	return &resourceInstanceID, nil
 }
 
-func (r *JobRepo) AcquireJob(ctx context.Context, resourceInstanceID string, ownerID string, leaseDuration time.Duration) (*domain.Job, error) {
+func (r *JobRepo) AcquireJob(ctx context.Context, resourceInstanceID string, ownerID string, leaseDuration time.Duration, tenantGroupID string) (*domain.Job, error) {
 	var job domain.Job
 	var contextJSON, agentMetricsJSON, jobMetadataJSON, workflowMetricsJSON []byte
 
@@ -55,11 +57,12 @@ func (r *JobRepo) AcquireJob(ctx context.Context, resourceInstanceID string, own
 		       OR (status = 'awaiting_approval' AND approval_timeout_at <= now())
 		   )
 		   AND (owner IS NULL OR lease_expires_at < now())
+		   AND tenant_group_id = $4
 		 RETURNING resource_instance_id, request_id, version, current_atomic_operation, context, status,
 		           job_type, resource_type, timeout_seconds, workflow_version, agent_metrics, workflow_metrics,
 		           job_metadata, approval_id, approval_timeout_at,
 		           owner, lease_expires_at, created_at`,
-		resourceInstanceID, ownerID, leaseDuration.String(),
+		resourceInstanceID, ownerID, leaseDuration.String(), tenantGroupID,
 	).Scan(
 		&job.ResourceInstanceID, &job.RequestID, &job.Version,
 		&job.CurrentAtomicOperation, &contextJSON, &job.Status,

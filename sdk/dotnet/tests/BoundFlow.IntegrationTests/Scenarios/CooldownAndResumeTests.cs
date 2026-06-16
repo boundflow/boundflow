@@ -46,7 +46,7 @@ public class CooldownAndResumeTests : IntegrationTestBase
 
         var workerTask = worker.RunAsync(cts.Token);
 
-        var (_, tenant) = await CreateIsolatedTenantAsync("cooldown-resume");
+        var tenant = await CreateIsolatedTenantAsync("cooldown-resume");
         var workflow = await ControlPlane.CreateWorkflowAsync("cooldown_resume", tenant.Id,
             workflowConfig: new WorkflowConfig(Version: 1));
 
@@ -92,7 +92,7 @@ public class CooldownAndResumeTests : IntegrationTestBase
 
         var workerTask = worker.RunAsync(cts.Token);
 
-        var (_, tenant) = await CreateIsolatedTenantAsync("cooldown-invoke");
+        var tenant = await CreateIsolatedTenantAsync("cooldown-invoke");
         var workflow = await ControlPlane.CreateWorkflowAsync("cooldown_invoke", tenant.Id,
             workflowConfig: new WorkflowConfig(Version: 1));
 

@@ -23,12 +23,10 @@ public abstract class IntegrationTestBase : IAsyncLifetime
         ControlPlane = new ControlPlaneClient(ServerAddress);
     }
 
-    protected async Task<(TenantGroup Group, Tenant Tenant)> CreateIsolatedTenantAsync(string prefix = "test")
+    protected async Task<Tenant> CreateIsolatedTenantAsync(string prefix = "test")
     {
         var id = Guid.NewGuid().ToString("N")[..8];
-        var group = await ControlPlane.CreateTenantGroupAsync($"{prefix}-group-{id}");
-        var tenant = await ControlPlane.CreateTenantAsync($"{prefix}-tenant-{id}", group.Id);
-        return (group, tenant);
+        return await ControlPlane.CreateTenantAsync($"{prefix}-tenant-{id}");
     }
 
     protected async Task<LifecycleState> WaitForCompletionAsync(string workflowId, CancellationToken ct = default)

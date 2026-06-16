@@ -49,25 +49,27 @@ async def test_approve_gate_runs_approve_operation(cp):
         captured.append(request)
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "approval-approve")
+        tenant = await create_isolated_tenant(cp, "approval-approve")
         workflow = await cp.create_workflow("approval_approve", tenant.id,
                                             config=WorkflowConfig(version=1))
+        try:
+            await cp.activate_workflow(workflow.id)
+            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
 
-        await cp.activate_workflow(workflow.id)
-        await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_lifecycle_state(cp, workflow.id, LifecycleState.AWAITING_APPROVAL)
 
-        await wait_for_lifecycle_state(cp, workflow.id, LifecycleState.AWAITING_APPROVAL)
+            assert len(captured) == 1
+            req = captured[0]
+            assert req.workflow_id == workflow.id
+            assert req.justification == "needs human sign-off"
+            assert req.approval_id
 
-        assert len(captured) == 1
-        req = captured[0]
-        assert req.workflow_id == workflow.id
-        assert req.justification == "needs human sign-off"
-        assert req.approval_id
+            await cp.approve_workflow(workflow.id, req.approval_id)
+            await wait_for_completion(cp, workflow.id)
 
-        await cp.approve_workflow(workflow.id, req.approval_id)
-        await wait_for_completion(cp, workflow.id)
-
-        assert approved_step_ran[0], "approved_step should have run after approval"
+            assert approved_step_ran[0], "approved_step should have run after approval"
+        finally:
+            await cp.delete_workflow(workflow.id)
 
 
 async def test_approval_timeout_runs_reject_operation(cp):
@@ -96,19 +98,21 @@ async def test_approval_timeout_runs_reject_operation(cp):
         return Complete()
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "approval-timeout")
+        tenant = await create_isolated_tenant(cp, "approval-timeout")
         workflow = await cp.create_workflow("approval_timeout", tenant.id,
                                             config=WorkflowConfig(version=1))
+        try:
+            await cp.activate_workflow(workflow.id)
+            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
 
-        await cp.activate_workflow(workflow.id)
-        await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            # Wait for it to park, then let the timeout expire (don't approve or reject).
+            await wait_for_lifecycle_state(cp, workflow.id, LifecycleState.AWAITING_APPROVAL)
+            await wait_for_lifecycle_state(cp, workflow.id, LifecycleState.ACTIVE, timeout=30)
 
-        # Wait for it to park, then let the timeout expire (don't approve or reject).
-        await wait_for_lifecycle_state(cp, workflow.id, LifecycleState.AWAITING_APPROVAL)
-        await wait_for_lifecycle_state(cp, workflow.id, LifecycleState.ACTIVE, timeout=30)
-
-        assert timed_out_ran[0], "timed_out_step should have run after timeout"
-        assert not approved_ran[0], "approved_step should NOT have run"
+            assert timed_out_ran[0], "timed_out_step should have run after timeout"
+            assert not approved_ran[0], "approved_step should NOT have run"
+        finally:
+            await cp.delete_workflow(workflow.id)
 
 
 async def test_reject_gate_skips_approve_operation(cp):
@@ -136,17 +140,19 @@ async def test_reject_gate_skips_approve_operation(cp):
         captured.append(request)
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "approval-reject")
+        tenant = await create_isolated_tenant(cp, "approval-reject")
         workflow = await cp.create_workflow("approval_reject", tenant.id,
                                             config=WorkflowConfig(version=1))
+        try:
+            await cp.activate_workflow(workflow.id)
+            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
 
-        await cp.activate_workflow(workflow.id)
-        await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_lifecycle_state(cp, workflow.id, LifecycleState.AWAITING_APPROVAL)
+            assert len(captured) == 1
 
-        await wait_for_lifecycle_state(cp, workflow.id, LifecycleState.AWAITING_APPROVAL)
-        assert len(captured) == 1
+            await cp.reject_workflow(workflow.id, captured[0].approval_id)
+            await wait_for_completion(cp, workflow.id)
 
-        await cp.reject_workflow(workflow.id, captured[0].approval_id)
-        await wait_for_completion(cp, workflow.id)
-
-        assert not approved_ran[0], "approved_step should NOT have run after rejection"
+            assert not approved_ran[0], "approved_step should NOT have run after rejection"
+        finally:
+            await cp.delete_workflow(workflow.id)

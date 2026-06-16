@@ -7,9 +7,12 @@ import (
 	"time"
 
 	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
+	"github.com/convergeplane/convergeplane/internal/auth"
 	"github.com/convergeplane/convergeplane/internal/domain"
 	"github.com/convergeplane/convergeplane/internal/storage"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -88,6 +91,11 @@ func NewRpcWorker(jobs storage.JobRepository, id string, jobTimeout int, schedul
 
 // TOOD: Make lease expiry reset the state to ConnectedIdle instead of closing the stream
 func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev1.WorkerMessage, convergeplanev1.ServerCommand]) error {
+	tenantGroupID, ok := auth.TenantGroupFromContext(stream.Context())
+	if !ok {
+		return status.Error(codes.Unauthenticated, "missing auth")
+	}
+
 	log := s.log
 
 	leaseExpired := make(chan bool)
@@ -244,7 +252,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 
 					log.Debug("client ready, polling for available job")
 					for {
-						resourceInstID, err := s.jobs.GetAvailableJob(stream.Context())
+						resourceInstID, err := s.jobs.GetAvailableJob(stream.Context(), tenantGroupID)
 						if resourceInstID == nil || err != nil {
 							if err != nil {
 								log.Error("error polling for available job", "error", err)
@@ -259,7 +267,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 							}
 						}
 
-						job, err := s.jobs.AcquireJob(stream.Context(), *resourceInstID, s.id, leaseTime)
+						job, err := s.jobs.AcquireJob(stream.Context(), *resourceInstID, s.id, leaseTime, tenantGroupID)
 						if job == nil || err != nil {
 							if err != nil {
 								log.Error("error acquiring job", "resource_id", *resourceInstID, "error", err)

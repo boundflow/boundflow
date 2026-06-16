@@ -43,6 +43,9 @@ type ResourceInstanceRepository interface {
 	ApplyCompletedJob(ctx context.Context, id string, lifecycleState domain.LifecycleState, version int64) (bool, error)
 	UpdateSchedulerPartition(ctx context.Context, id string, partitionID string) error
 	UpdateLastCompletedRequestAt(ctx context.Context, id string, t time.Time) error
+	// TenantGroupIDForResource returns the tenant_group_id for a resource via a single JOIN.
+	// Used for ownership checks. Returns ErrNotFound if the resource does not exist.
+	TenantGroupIDForResource(ctx context.Context, resourceInstanceID string) (string, error)
 }
 
 type SchedulerPartitionRepository interface {
@@ -99,12 +102,14 @@ type SchedulerRepository interface {
 
 type JobRepository interface {
 	// GetAvailableJob returns the resource instance ID of one job with status
-	// pending or awaiting_next that has no owner or an expired lease.
+	// pending or awaiting_next that has no owner or an expired lease,
+	// scoped to the given tenant group.
 	// Returns nil (no error) if none are available.
-	GetAvailableJob(ctx context.Context) (resourceInstanceID *string, err error)
+	GetAvailableJob(ctx context.Context, tenantGroupID string) (resourceInstanceID *string, err error)
 	// AcquireJob attempts to claim the job for ownerID, returning the full Job
 	// if successful. Returns nil if the job no longer qualifies (taken by another worker).
-	AcquireJob(ctx context.Context, resourceInstanceID string, ownerID string, leaseDuration time.Duration) (*domain.Job, error)
+	// tenantGroupID is an additional guard to prevent cross-tenant acquisition.
+	AcquireJob(ctx context.Context, resourceInstanceID string, ownerID string, leaseDuration time.Duration, tenantGroupID string) (*domain.Job, error)
 	// RenewJobLease extends the lease on a job owned by ownerID.
 	// Returns false if the lease could not be renewed.
 	RenewJobLease(ctx context.Context, resourceInstanceID string, ownerID string, leaseDuration time.Duration) (bool, error)
@@ -172,6 +177,16 @@ type VersionMetricsRepository interface {
 	// GetCurrentVersionMetrics returns the metrics row with the highest epoch for the
 	// given resource instance and version. Returns nil if no row exists yet.
 	GetCurrentVersionMetrics(ctx context.Context, resourceInstanceID string, version int) (*domain.WorkflowVersionMetrics, error)
+}
+
+type ApiKeyRepository interface {
+	// Create inserts a new API key. The caller is responsible for hashing the raw key before calling.
+	Create(ctx context.Context, key *domain.ApiKey) error
+	// GetByKeyHash looks up an active (non-revoked) API key by its hash.
+	// Returns ErrNotFound if no active key matches.
+	GetByKeyHash(ctx context.Context, keyHash string) (*domain.ApiKey, error)
+	// Revoke sets revoked_at on the key with the given ID.
+	Revoke(ctx context.Context, id string) error
 }
 
 type CustomerRequestRepository interface {

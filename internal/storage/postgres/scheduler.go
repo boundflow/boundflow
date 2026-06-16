@@ -114,17 +114,18 @@ func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID stri
 	err = r.pool.QueryRow(ctx,
 		`WITH candidate AS (
 		     SELECT cr.id, cr.resource_instance_id, cr.version, cr.request_type,
-		            ri.resource_type
+		            ri.resource_type, t.tenant_group_id
 		     FROM customer_requests cr
 		     JOIN resource_instances ri ON ri.id = cr.resource_instance_id
+		     JOIN tenants t ON t.id = ri.tenant_id
 		     WHERE cr.id = $1
 		       AND ri.current_version = $6
 		 ),
 		 upserted AS (
-		     INSERT INTO jobs (resource_instance_id, request_id, version, current_atomic_operation, context, status, job_type, resource_type, timeout_seconds, workflow_version)
+		     INSERT INTO jobs (resource_instance_id, request_id, version, current_atomic_operation, context, status, job_type, resource_type, timeout_seconds, workflow_version, tenant_group_id)
 		     SELECT c.resource_instance_id, c.id, c.version, $2,
 		            $3::jsonb,
-		            'pending', c.request_type, c.resource_type, $4, $5
+		            'pending', c.request_type, c.resource_type, $4, $5, c.tenant_group_id
 		     FROM candidate c
 		     ON CONFLICT (resource_instance_id) DO UPDATE
 		         SET request_id               = EXCLUDED.request_id,
@@ -137,7 +138,8 @@ func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID stri
 		             workflow_version         = EXCLUDED.workflow_version,
 		             status                   = 'pending',
 		             owner                    = NULL,
-		             lease_expires_at         = NULL
+		             lease_expires_at         = NULL,
+		             tenant_group_id          = EXCLUDED.tenant_group_id
 
 		         WHERE jobs.version < EXCLUDED.version
 		           AND jobs.status = 'pending'

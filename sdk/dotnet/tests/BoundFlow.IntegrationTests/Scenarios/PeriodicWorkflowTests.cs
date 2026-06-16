@@ -41,7 +41,7 @@ public class PeriodicWorkflowTests : IntegrationTestBase
 
         var workerTask = worker.RunAsync(cts.Token);
 
-        var (_, tenant) = await CreateIsolatedTenantAsync("periodic-auto");
+        var tenant = await CreateIsolatedTenantAsync("periodic-auto");
         var workflow = await ControlPlane.CreateWorkflowAsync("periodic_auto", tenant.Id,
             workflowConfig: new WorkflowConfig(
                 Version:             1,
@@ -86,7 +86,7 @@ public class PeriodicWorkflowTests : IntegrationTestBase
 
         var workerTask = worker.RunAsync(cts.Token);
 
-        var (_, tenant) = await CreateIsolatedTenantAsync("periodic-cooldown");
+        var tenant = await CreateIsolatedTenantAsync("periodic-cooldown");
         var workflow = await ControlPlane.CreateWorkflowAsync("periodic_cooldown", tenant.Id,
             workflowConfig: new WorkflowConfig(
                 Version:             1,

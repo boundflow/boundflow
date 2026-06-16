@@ -52,32 +52,34 @@ async def test_model_switches_to_haiku_after_first_invocation(cp, api_key):
         return Complete()
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "agent-policy")
+        tenant = await create_isolated_tenant(cp, "agent-policy")
         workflow = await cp.create_workflow("database_agent", tenant.id,
                                             config=WorkflowConfig(version=1))
+        try:
+            await cp.set_agent_lifecycle_policy(
+                workflow.id,
+                AGENT_NAME,
+                [AgentRule(
+                    metric=AgentMetric.LLM_CALLS,
+                    op=Op.GTE,
+                    threshold=1,
+                    window=1,
+                    action=SetModel(value=HAIKU),
+                )],
+            )
 
-        await cp.set_agent_lifecycle_policy(
-            workflow.id,
-            AGENT_NAME,
-            [AgentRule(
-                metric=AgentMetric.LLM_CALLS,
-                op=Op.GTE,
-                threshold=1,
-                window=1,
-                action=SetModel(value=HAIKU),
-            )],
-        )
+            await cp.activate_workflow(workflow.id)
 
-        await cp.activate_workflow(workflow.id)
+            # Invoke 1 — no prior metrics, rule does not fire → Sonnet
+            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, workflow.id)
+            assert len(model_results) == 1, "Invoke 1 did not produce a result"
+            assert model_results[0] == SONNET
 
-        # Invoke 1 — no prior metrics, rule does not fire → Sonnet
-        await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
-        await wait_for_completion(cp, workflow.id)
-        assert len(model_results) == 1, "Invoke 1 did not produce a result"
-        assert model_results[0] == SONNET
-
-        # Invoke 2 — invoke-1 metrics trigger the rule → Haiku
-        await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
-        await wait_for_completion(cp, workflow.id)
-        assert len(model_results) == 2, "Invoke 2 did not produce a result"
-        assert model_results[1] == HAIKU
+            # Invoke 2 — invoke-1 metrics trigger the rule → Haiku
+            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, workflow.id)
+            assert len(model_results) == 2, "Invoke 2 did not produce a result"
+            assert model_results[1] == HAIKU
+        finally:
+            await cp.delete_workflow(workflow.id)

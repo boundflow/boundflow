@@ -55,24 +55,26 @@ async def test_workflow_enters_cooldown_after_llm_call_threshold_exceeded(cp, ap
         return Complete()
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "workflow-policy")
+        tenant = await create_isolated_tenant(cp, "workflow-policy")
         workflow = await cp.create_workflow("cooldown_test", tenant.id,
                                             config=WorkflowConfig(version=1))
+        try:
+            await cp.set_workflow_lifecycle_policy(workflow.id, [
+                WorkflowRule(
+                    metric=WorkflowMetric.NUM_LLM_CALLS,
+                    threshold=1,
+                    action=Cooldown(window=1, seconds=10),
+                )
+            ])
+            await cp.activate_workflow(workflow.id)
 
-        await cp.set_workflow_lifecycle_policy(workflow.id, [
-            WorkflowRule(
-                metric=WorkflowMetric.NUM_LLM_CALLS,
-                threshold=1,
-                action=Cooldown(window=1, seconds=10),
-            )
-        ])
-        await cp.activate_workflow(workflow.id)
+            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, workflow.id)
 
-        await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
-        await wait_for_completion(cp, workflow.id)
-
-        state = await wait_for_workflow_state(cp, workflow.id, WorkflowState.COOLDOWN)
-        assert state == WorkflowState.COOLDOWN
+            state = await wait_for_workflow_state(cp, workflow.id, WorkflowState.COOLDOWN)
+            assert state == WorkflowState.COOLDOWN
+        finally:
+            await cp.delete_workflow(workflow.id)
 
 
 async def test_workflow_switches_to_new_version_after_llm_call_threshold_exceeded(cp, api_key):
@@ -97,29 +99,31 @@ async def test_workflow_switches_to_new_version_after_llm_call_threshold_exceede
         return Complete()
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "version-rollback")
+        tenant = await create_isolated_tenant(cp, "version-rollback")
         workflow = await cp.create_workflow("version_test", tenant.id,
                                             config=WorkflowConfig(version=1))
+        try:
+            # Switch to version 2 once total LLM calls across all runs reaches 1.
+            await cp.set_workflow_lifecycle_policy(workflow.id, [
+                WorkflowRule(
+                    metric=WorkflowMetric.NUM_LLM_CALLS,
+                    threshold=1,
+                    action=SetVersion(target=2),
+                )
+            ])
+            await cp.activate_workflow(workflow.id)
 
-        # Switch to version 2 once total LLM calls across all runs reaches 1.
-        await cp.set_workflow_lifecycle_policy(workflow.id, [
-            WorkflowRule(
-                metric=WorkflowMetric.NUM_LLM_CALLS,
-                threshold=1,
-                action=SetVersion(target=2),
-            )
-        ])
-        await cp.activate_workflow(workflow.id)
+            # Invoke 1 — runs version 1, makes an LLM call, rule fires → current_workflow_version=2.
+            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, workflow.id)
+            assert len(versions_run) >= 1 and versions_run[0] == 1, "Invoke 1 should have run version 1"
 
-        # Invoke 1 — runs version 1, makes an LLM call, rule fires → current_workflow_version=2.
-        await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
-        await wait_for_completion(cp, workflow.id)
-        assert len(versions_run) >= 1 and versions_run[0] == 1, "Invoke 1 should have run version 1"
-
-        # Invoke 2 — scheduler reads current_workflow_version=2.
-        await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
-        await wait_for_completion(cp, workflow.id)
-        assert len(versions_run) >= 2 and versions_run[1] == 2, "Invoke 2 should have run version 2"
+            # Invoke 2 — scheduler reads current_workflow_version=2.
+            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, workflow.id)
+            assert len(versions_run) >= 2 and versions_run[1] == 2, "Invoke 2 should have run version 2"
+        finally:
+            await cp.delete_workflow(workflow.id)
 
 
 async def test_workflow_pauses_and_does_not_schedule_until_activated(cp, api_key):
@@ -141,35 +145,37 @@ async def test_workflow_pauses_and_does_not_schedule_until_activated(cp, api_key
         return Complete()
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "workflow-pause")
+        tenant = await create_isolated_tenant(cp, "workflow-pause")
         workflow = await cp.create_workflow("pause_test", tenant.id,
                                             config=WorkflowConfig(version=1))
+        try:
+            await cp.set_workflow_lifecycle_policy(workflow.id, [
+                WorkflowRule(
+                    metric=WorkflowMetric.NUM_LLM_CALLS,
+                    threshold=1,
+                    action=Pause(window=1),
+                )
+            ])
+            await cp.activate_workflow(workflow.id)
 
-        await cp.set_workflow_lifecycle_policy(workflow.id, [
-            WorkflowRule(
-                metric=WorkflowMetric.NUM_LLM_CALLS,
-                threshold=1,
-                action=Pause(window=1),
-            )
-        ])
-        await cp.activate_workflow(workflow.id)
-
-        # Invoke 1 — pause rule fires on completion.
-        await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
-        await wait_for_completion(cp, workflow.id)
-        await wait_for_workflow_state(cp, workflow.id, WorkflowState.PAUSED)
-
-        # Invoke 2 — should be rejected immediately with FailedPrecondition.
-        with pytest.raises(grpc.aio.AioRpcError) as exc_info:
+            # Invoke 1 — pause rule fires on completion.
             await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
-        assert exc_info.value.code() == grpc.StatusCode.FAILED_PRECONDITION
+            await wait_for_completion(cp, workflow.id)
+            await wait_for_workflow_state(cp, workflow.id, WorkflowState.PAUSED)
 
-        # Activate — invoke should now succeed and complete.
-        await cp.activate_workflow(workflow.id)
-        await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
-        await wait_for_completion(cp, workflow.id)
+            # Invoke 2 — should be rejected immediately with FailedPrecondition.
+            with pytest.raises(grpc.aio.AioRpcError) as exc_info:
+                await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            assert exc_info.value.code() == grpc.StatusCode.FAILED_PRECONDITION
 
-        assert 2 in completions, "Invoke 2 should have completed after activation"
+            # Activate — invoke should now succeed and complete.
+            await cp.activate_workflow(workflow.id)
+            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, workflow.id)
+
+            assert 2 in completions, "Invoke 2 should have completed after activation"
+        finally:
+            await cp.delete_workflow(workflow.id)
 
 
 async def test_workflow_enters_cooldown_after_customer_failure(cp):
@@ -182,24 +188,26 @@ async def test_workflow_enters_cooldown_after_customer_failure(cp):
         return Complete()
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "failure-cooldown")
+        tenant = await create_isolated_tenant(cp, "failure-cooldown")
         workflow = await cp.create_workflow("failure_cooldown", tenant.id,
                                             config=WorkflowConfig(version=1))
+        try:
+            await cp.set_workflow_lifecycle_policy(workflow.id, [
+                WorkflowRule(
+                    metric=WorkflowMetric.NUM_FAILURES,
+                    threshold=1,
+                    action=Cooldown(window=1, seconds=10),
+                )
+            ])
+            await cp.activate_workflow(workflow.id)
 
-        await cp.set_workflow_lifecycle_policy(workflow.id, [
-            WorkflowRule(
-                metric=WorkflowMetric.NUM_FAILURES,
-                threshold=1,
-                action=Cooldown(window=1, seconds=10),
-            )
-        ])
-        await cp.activate_workflow(workflow.id)
+            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, workflow.id)
 
-        await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
-        await wait_for_completion(cp, workflow.id)
-
-        state = await wait_for_workflow_state(cp, workflow.id, WorkflowState.COOLDOWN)
-        assert state == WorkflowState.COOLDOWN
+            state = await wait_for_workflow_state(cp, workflow.id, WorkflowState.COOLDOWN)
+            assert state == WorkflowState.COOLDOWN
+        finally:
+            await cp.delete_workflow(workflow.id)
 
 
 async def test_workflow_pauses_after_approval_rejection(cp):
@@ -221,28 +229,30 @@ async def test_workflow_pauses_after_approval_rejection(cp):
         captured.append(request)
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "rejection-pause")
+        tenant = await create_isolated_tenant(cp, "rejection-pause")
         workflow = await cp.create_workflow("rejection_pause", tenant.id,
                                             config=WorkflowConfig(version=1))
+        try:
+            await cp.set_workflow_lifecycle_policy(workflow.id, [
+                WorkflowRule(
+                    metric=WorkflowMetric.APPROVAL_REJECTIONS,
+                    threshold=1,
+                    action=Pause(window=1),
+                )
+            ])
 
-        await cp.set_workflow_lifecycle_policy(workflow.id, [
-            WorkflowRule(
-                metric=WorkflowMetric.APPROVAL_REJECTIONS,
-                threshold=1,
-                action=Pause(window=1),
-            )
-        ])
+            await cp.activate_workflow(workflow.id)
+            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
 
-        await cp.activate_workflow(workflow.id)
-        await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_lifecycle_state(cp, workflow.id, LifecycleState.AWAITING_APPROVAL)
+            assert len(captured) == 1
 
-        await wait_for_lifecycle_state(cp, workflow.id, LifecycleState.AWAITING_APPROVAL)
-        assert len(captured) == 1
+            await cp.reject_workflow(workflow.id, captured[0].approval_id)
 
-        await cp.reject_workflow(workflow.id, captured[0].approval_id)
-
-        state = await wait_for_workflow_state(cp, workflow.id, WorkflowState.PAUSED)
-        assert state == WorkflowState.PAUSED
+            state = await wait_for_workflow_state(cp, workflow.id, WorkflowState.PAUSED)
+            assert state == WorkflowState.PAUSED
+        finally:
+            await cp.delete_workflow(workflow.id)
 
 
 async def test_workflow_enters_cooldown_after_tool_failures(cp, api_key):
@@ -272,22 +282,24 @@ async def test_workflow_enters_cooldown_after_tool_failures(cp, api_key):
         return Complete()
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "tool-failure")
+        tenant = await create_isolated_tenant(cp, "tool-failure")
         workflow = await cp.create_workflow("tool_failure_cooldown", tenant.id,
                                             config=WorkflowConfig(version=1))
+        try:
+            await cp.set_workflow_lifecycle_policy(workflow.id, [
+                WorkflowRule(
+                    metric=WorkflowMetric.TOOL_FAILURE_RATE,
+                    threshold=1,
+                    action=Cooldown(window=1, seconds=10),
+                    tool="flaky",
+                )
+            ])
 
-        await cp.set_workflow_lifecycle_policy(workflow.id, [
-            WorkflowRule(
-                metric=WorkflowMetric.TOOL_FAILURE_RATE,
-                threshold=1,
-                action=Cooldown(window=1, seconds=10),
-                tool="flaky",
-            )
-        ])
+            await cp.activate_workflow(workflow.id)
+            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=60)
+            await wait_for_completion(cp, workflow.id)
 
-        await cp.activate_workflow(workflow.id)
-        await cp.invoke_workflow(workflow.id, operation_timeout_seconds=60)
-        await wait_for_completion(cp, workflow.id)
-
-        state = await wait_for_workflow_state(cp, workflow.id, WorkflowState.COOLDOWN)
-        assert state == WorkflowState.COOLDOWN
+            state = await wait_for_workflow_state(cp, workflow.id, WorkflowState.COOLDOWN)
+            assert state == WorkflowState.COOLDOWN
+        finally:
+            await cp.delete_workflow(workflow.id)

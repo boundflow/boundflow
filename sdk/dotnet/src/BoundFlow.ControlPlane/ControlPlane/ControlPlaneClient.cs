@@ -49,10 +49,10 @@ public sealed class ControlPlaneClient : IDisposable
 
     // ── Tenants ───────────────────────────────────────────────────────────────
 
-    public async Task<Tenant> CreateTenantAsync(string name, string tenantGroupId, CancellationToken ct = default)
+    public async Task<Tenant> CreateTenantAsync(string name, CancellationToken ct = default)
     {
         var resp = await _registration.CreateTenantAsync(
-            new CreateTenantRequest { Tenant = new Convergeplane.V1.Tenant { Name = name, TenantGroupId = tenantGroupId } },
+            new CreateTenantRequest { Tenant = new Convergeplane.V1.Tenant { Name = name } },
             cancellationToken: ct);
         return new Tenant(resp.Tenant.Id, resp.Tenant.Name, resp.Tenant.TenantGroupId);
     }

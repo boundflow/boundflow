@@ -6,6 +6,7 @@ context-manager; policy methods take a list of rules directly (no wrapper).
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from enum import Enum
 
@@ -109,9 +110,20 @@ def _strip(addr: str) -> str:
     return addr.split("://", 1)[1] if "://" in addr else addr
 
 
+def _make_channel(addr: str):
+    target = _strip(addr)
+    if addr.startswith("https://"):
+        return grpc.aio.secure_channel(target, grpc.ssl_channel_credentials())
+    return grpc.aio.insecure_channel(target)
+
+
 class ControlPlaneClient:
-    def __init__(self, server_address: str) -> None:
-        self._channel = grpc.aio.insecure_channel(_strip(server_address))
+    def __init__(self, server_address: str, api_key: str | None = None) -> None:
+        key = api_key or os.environ.get("BOUNDFLOW_API_KEY") or ""
+        if not key:
+            raise ValueError("api_key must be provided or BOUNDFLOW_API_KEY must be set")
+        self._metadata = (("x-api-key", key),)
+        self._channel = _make_channel(server_address)
         self._reg = reg_grpc.RegistrationServiceStub(self._channel)
         self._lc = lc_grpc.ResourceLifecycleServiceStub(self._channel)
 
@@ -128,12 +140,14 @@ class ControlPlaneClient:
 
     async def create_tenant_group(self, name: str) -> TenantGroup:
         resp = await self._reg.CreateTenantGroup(
-            reg.CreateTenantGroupRequest(tenant_group=tg_pb.TenantGroup(name=name)))
+            reg.CreateTenantGroupRequest(tenant_group=tg_pb.TenantGroup(name=name)),
+            metadata=self._metadata)
         return TenantGroup(resp.tenant_group.id, resp.tenant_group.name)
 
-    async def create_tenant(self, name: str, tenant_group_id: str) -> Tenant:
+    async def create_tenant(self, name: str) -> Tenant:
         resp = await self._reg.CreateTenant(
-            reg.CreateTenantRequest(tenant=tn_pb.Tenant(name=name, tenant_group_id=tenant_group_id)))
+            reg.CreateTenantRequest(tenant=tn_pb.Tenant(name=name)),
+            metadata=self._metadata)
         return Tenant(resp.tenant.id, resp.tenant.name, resp.tenant.tenant_group_id)
 
     # ── Workflows ────────────────────────────────────────────────────────────
@@ -151,24 +165,27 @@ class ControlPlaneClient:
                 repeat_every_seconds=cfg.repeat_every_seconds,
                 triggerable=cfg.triggerable,
             ),
-        ))
+        ), metadata=self._metadata)
         inst = resp.resource_instance
         wc = inst.workflow_config
         return Workflow(inst.id, inst.tenant_id, WorkflowConfig(
             wc.version, wc.invoke_timeout_seconds, wc.repeat_every_seconds, wc.triggerable))
 
     async def activate_workflow(self, workflow_id: str) -> None:
-        await self._lc.ActivateWorkflow(lc.ActivateWorkflowRequest(resource_instance_id=workflow_id))
+        await self._lc.ActivateWorkflow(
+            lc.ActivateWorkflowRequest(resource_instance_id=workflow_id),
+            metadata=self._metadata)
 
     async def invoke_workflow(self, workflow_id: str, *, operation_timeout_seconds: int = 0) -> None:
         await self._lc.ReconcileResource(lc.ReconcileResourceRequest(
             resource_instance_id=workflow_id,
             runtime_overrides=lc.RuntimeOverrides(operation_timeout_seconds=operation_timeout_seconds),
-        ))
+        ), metadata=self._metadata)
 
     async def get_workflow_state(self, workflow_id: str) -> WorkflowState | None:
         resp = await self._lc.GetResourceState(
-            lc.GetResourceStateRequest(resource_instance_id=workflow_id))
+            lc.GetResourceStateRequest(resource_instance_id=workflow_id),
+            metadata=self._metadata)
         inst = resp.resource_instance
         if inst.lifecycle_state == "deleted":
             return None
@@ -176,19 +193,24 @@ class ControlPlaneClient:
 
     async def get_workflow_lifecycle_state(self, workflow_id: str) -> LifecycleState:
         resp = await self._lc.GetResourceState(
-            lc.GetResourceStateRequest(resource_instance_id=workflow_id))
+            lc.GetResourceStateRequest(resource_instance_id=workflow_id),
+            metadata=self._metadata)
         return _LIFECYCLE.get(resp.resource_instance.lifecycle_state, LifecycleState.UNKNOWN)
 
     async def approve_workflow(self, workflow_id: str, approval_id: str) -> None:
         await self._lc.ApproveWorkflow(
-            lc.ApproveWorkflowRequest(resource_instance_id=workflow_id, approval_id=approval_id))
+            lc.ApproveWorkflowRequest(resource_instance_id=workflow_id, approval_id=approval_id),
+            metadata=self._metadata)
 
     async def reject_workflow(self, workflow_id: str, approval_id: str) -> None:
         await self._lc.RejectWorkflow(
-            lc.RejectWorkflowRequest(resource_instance_id=workflow_id, approval_id=approval_id))
+            lc.RejectWorkflowRequest(resource_instance_id=workflow_id, approval_id=approval_id),
+            metadata=self._metadata)
 
     async def delete_workflow(self, workflow_id: str) -> None:
-        await self._lc.DeleteResource(lc.DeleteResourceRequest(resource_instance_id=workflow_id))
+        await self._lc.DeleteResource(
+            lc.DeleteResourceRequest(resource_instance_id=workflow_id),
+            metadata=self._metadata)
 
     # ── Policies ─────────────────────────────────────────────────────────────
 
@@ -199,7 +221,7 @@ class ControlPlaneClient:
             resource_instance_id=workflow_id,
             agent_name=agent_name,
             runtime_policy=_struct(policy.model_dump(mode="json", exclude_none=True)),
-        ))
+        ), metadata=self._metadata)
 
     async def set_agent_lifecycle_policy(
         self, workflow_id: str, agent_name: str, rules: list[AgentRule]
@@ -209,7 +231,7 @@ class ControlPlaneClient:
             resource_instance_id=workflow_id,
             agent_name=agent_name,
             lifecycle_policy=_struct(payload),
-        ))
+        ), metadata=self._metadata)
 
     async def set_workflow_lifecycle_policy(
         self, workflow_id: str, rules: list[WorkflowRule]
@@ -218,7 +240,7 @@ class ControlPlaneClient:
             resource_instance_id=workflow_id,
             lifecycle_policy=lc.WorkflowLifecyclePolicy(
                 rules=[_workflow_rule_proto(r) for r in rules]),
-        ))
+        ), metadata=self._metadata)
 
 
 def _workflow_rule_proto(rule: WorkflowRule) -> lc.WorkflowLifecyclePolicyRule:

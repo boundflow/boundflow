@@ -52,25 +52,26 @@ async def test_periodic_workflow_fires_automatically(cp, api_key):
         return Complete()
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "periodic-auto")
+        tenant = await create_isolated_tenant(cp, "periodic-auto")
         workflow = await cp.create_workflow(
             "periodic_auto", tenant.id,
             config=WorkflowConfig(version=1, invoke_timeout_seconds=30,
                                   repeat_every_seconds=REPEAT_EVERY),
         )
-        await cp.activate_workflow(workflow.id)
+        try:
+            await cp.activate_workflow(workflow.id)
 
-        # Wait for at least 2 automatic firings — no explicit invoke.
-        deadline = asyncio.get_event_loop().time() + 240
-        while len(firings) < 2:
-            assert asyncio.get_event_loop().time() < deadline, "Timed out waiting for 2 periodic firings"
-            await asyncio.sleep(0.5)
+            # Wait for at least 2 automatic firings — no explicit invoke.
+            deadline = asyncio.get_event_loop().time() + 240
+            while len(firings) < 2:
+                assert asyncio.get_event_loop().time() < deadline, "Timed out waiting for 2 periodic firings"
+                await asyncio.sleep(0.5)
 
-        gap = firings[1] - firings[0]
-        assert gap >= REPEAT_EVERY, \
-            f"Expected gap of at least {REPEAT_EVERY}s between firings, got {gap:.1f}s"
-
-        await cp.delete_workflow(workflow.id)
+            gap = firings[1] - firings[0]
+            assert gap >= REPEAT_EVERY, \
+                f"Expected gap of at least {REPEAT_EVERY}s between firings, got {gap:.1f}s"
+        finally:
+            await cp.delete_workflow(workflow.id)
 
 
 async def test_periodic_workflow_does_not_fire_during_cooldown(cp, api_key):
@@ -90,41 +91,41 @@ async def test_periodic_workflow_does_not_fire_during_cooldown(cp, api_key):
         return Complete()
 
     async with run_worker(worker):
-        _, tenant = await create_isolated_tenant(cp, "periodic-cooldown")
+        tenant = await create_isolated_tenant(cp, "periodic-cooldown")
         workflow = await cp.create_workflow(
             "periodic_cooldown", tenant.id,
             config=WorkflowConfig(version=1, invoke_timeout_seconds=30,
                                   repeat_every_seconds=REPEAT_EVERY),
         )
+        try:
+            await cp.set_workflow_lifecycle_policy(workflow.id, [
+                WorkflowRule(
+                    metric=WorkflowMetric.NUM_LLM_CALLS,
+                    threshold=1,
+                    action=Cooldown(window=1, seconds=COOLDOWN_SECONDS),
+                )
+            ])
+            await cp.activate_workflow(workflow.id)
 
-        await cp.set_workflow_lifecycle_policy(workflow.id, [
-            WorkflowRule(
-                metric=WorkflowMetric.NUM_LLM_CALLS,
-                threshold=1,
-                action=Cooldown(window=1, seconds=COOLDOWN_SECONDS),
-            )
-        ])
-        await cp.activate_workflow(workflow.id)
+            # Wait for first auto-firing and the resulting cooldown state.
+            deadline = asyncio.get_event_loop().time() + 120
+            while len(firings) < 1:
+                assert asyncio.get_event_loop().time() < deadline, "Timed out waiting for first firing"
+                await asyncio.sleep(0.5)
+            await wait_for_completion(cp, workflow.id)
+            await wait_for_workflow_state(cp, workflow.id, WorkflowState.COOLDOWN)
+            cooldown_entered_at = time.monotonic()
 
-        # Wait for first auto-firing and the resulting cooldown state.
-        deadline = asyncio.get_event_loop().time() + 120
-        while len(firings) < 1:
-            assert asyncio.get_event_loop().time() < deadline, "Timed out waiting for first firing"
-            await asyncio.sleep(0.5)
-        await wait_for_completion(cp, workflow.id)
-        await wait_for_workflow_state(cp, workflow.id, WorkflowState.COOLDOWN)
-        cooldown_entered_at = time.monotonic()
+            # Wait for cooldown to expire, then the second auto-firing.
+            await wait_for_workflow_state(cp, workflow.id, WorkflowState.ACTIVE, timeout=60)
+            deadline2 = asyncio.get_event_loop().time() + 120
+            while len(firings) < 2:
+                assert asyncio.get_event_loop().time() < deadline2, "Timed out waiting for second firing"
+                await asyncio.sleep(0.5)
 
-        # Wait for cooldown to expire, then the second auto-firing.
-        await wait_for_workflow_state(cp, workflow.id, WorkflowState.ACTIVE, timeout=60)
-        deadline2 = asyncio.get_event_loop().time() + 120
-        while len(firings) < 2:
-            assert asyncio.get_event_loop().time() < deadline2, "Timed out waiting for second firing"
-            await asyncio.sleep(0.5)
-
-        cooldown_duration = firings[1] - cooldown_entered_at
-        assert cooldown_duration >= COOLDOWN_SECONDS, \
-            f"Expected second firing at least {COOLDOWN_SECONDS}s after cooldown start, " \
-            f"got {cooldown_duration:.1f}s"
-
-        await cp.delete_workflow(workflow.id)
+            cooldown_duration = firings[1] - cooldown_entered_at
+            assert cooldown_duration >= COOLDOWN_SECONDS, \
+                f"Expected second firing at least {COOLDOWN_SECONDS}s after cooldown start, " \
+                f"got {cooldown_duration:.1f}s"
+        finally:
+            await cp.delete_workflow(workflow.id)
