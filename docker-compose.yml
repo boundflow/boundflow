@@ -5,8 +5,9 @@ services:
       POSTGRES_DB: convergeplane
       POSTGRES_USER: convergeplane
       POSTGRES_PASSWORD: convergeplane
-    ports:
-      - "5432:5432"
+    # Not published to the host: only the in-network services need it, and not
+    # publishing avoids clashing with a Postgres the user already runs on 5432.
+    # Inspect on demand with: docker compose exec postgres psql -U convergeplane
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -16,13 +17,10 @@ services:
       retries: 10
 
   migrate:
-    image: migrate/migrate
-    volumes:
-      - ./migrations:/migrations:ro
-    command:
-      - "-path=/migrations"
-      - "-database=postgres://convergeplane:convergeplane@postgres:5432/convergeplane?sslmode=disable"
-      - "up"
+    build: .
+    command: ["-mode=migrate"]
+    environment:
+      CONVERGEPLANE_DATABASE_URL: postgres://convergeplane:convergeplane@postgres:5432/convergeplane?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy

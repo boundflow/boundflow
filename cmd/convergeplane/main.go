@@ -2,32 +2,42 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"flag"
+	"fmt"
 	"log"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/convergeplane/convergeplane/internal/auth"
 	"github.com/convergeplane/convergeplane/internal/config"
+	"github.com/convergeplane/convergeplane/internal/domain"
 	"github.com/convergeplane/convergeplane/internal/metrics"
 	"github.com/convergeplane/convergeplane/internal/rpcworker"
 	internalscheduler "github.com/convergeplane/convergeplane/internal/scheduler"
 	"github.com/convergeplane/convergeplane/internal/server"
 	"github.com/convergeplane/convergeplane/internal/service"
 	"github.com/convergeplane/convergeplane/internal/storage/postgres"
+	"github.com/convergeplane/convergeplane/migrations"
 )
 
 func main() {
-	mode := flag.String("mode", "", "run mode: server | scheduler | worker")
+	mode := flag.String("mode", "", "run mode: server | scheduler | worker | provision")
+	name := flag.String("name", "", "provision mode: customer / tenant group name")
 	flag.Parse()
 
 	if *mode == "" {
-		log.Fatal("usage: convergeplane -mode=<server|scheduler|worker>")
+		log.Fatal("usage: convergeplane -mode=<server|scheduler|worker|provision>")
 	}
 
 	sigCh := make(chan os.Signal, 1)
@@ -40,8 +50,12 @@ func main() {
 		runScheduler(sigCh)
 	case "worker":
 		runWorker(sigCh)
+	case "provision":
+		runProvision(*name)
+	case "migrate":
+		runMigrate()
 	default:
-		log.Fatalf("unknown mode %q: must be server, scheduler, or worker", *mode)
+		log.Fatalf("unknown mode %q: must be server, scheduler, worker, provision, or migrate", *mode)
 	}
 }
 
@@ -192,6 +206,89 @@ func runWorker(sigCh <-chan os.Signal) {
 		logger.Info("received signal, shutting down", "signal", sig)
 		srv.Stop()
 	}
+}
+
+// runProvision creates a tenant group and API key for a new customer, then prints
+// the raw key. The key is hashed before storage and cannot be recovered afterwards.
+// Self-hosters run this once against the running stack:
+//   docker compose run --rm server -mode=provision -name=me
+func runProvision(name string) {
+	if name == "" {
+		log.Fatal("usage: convergeplane -mode=provision -name=<customer-name>")
+	}
+
+	cfg := config.LoadScheduler()
+	logger := newLogger(cfg.LogLevel)
+
+	pool := mustConnectDB(cfg.DatabaseURL, logger)
+	defer pool.Close()
+
+	ctx := context.Background()
+
+	group := &domain.TenantGroup{
+		ID:        uuid.New().String(),
+		Name:      name,
+		CreatedAt: time.Now(),
+	}
+	if err := postgres.NewTenantGroupRepo(pool).Create(ctx, group); err != nil {
+		log.Fatalf("create tenant group: %v", err)
+	}
+
+	// Cryptographically random key (~40 URL-safe chars); only its hash is stored.
+	raw, err := generateKey()
+	if err != nil {
+		log.Fatalf("generate api key: %v", err)
+	}
+
+	apiKey := &domain.ApiKey{
+		ID:            uuid.New().String(),
+		KeyHash:       auth.HashKey(raw),
+		TenantGroupID: group.ID,
+		CreatedAt:     time.Now(),
+	}
+	if err := postgres.NewApiKeyRepo(pool).Create(ctx, apiKey); err != nil {
+		log.Fatalf("create api key: %v", err)
+	}
+
+	fmt.Printf("tenant_group_id  : %s\n", group.ID)
+	fmt.Printf("tenant_group_name: %s\n", group.Name)
+	fmt.Printf("api_key_id       : %s\n", apiKey.ID)
+	fmt.Printf("api_key          : %s\n", raw)
+	fmt.Println()
+	fmt.Println("Set this as BOUNDFLOW_API_KEY for the SDK. It is not stored and cannot be recovered.")
+}
+
+// runMigrate applies all pending database migrations. The SQL files are embedded
+// in the binary (see the migrations package), so the distributed image carries
+// its own schema and needs no migrations directory mounted alongside it.
+func runMigrate() {
+	cfg := config.LoadScheduler()
+	logger := newLogger(cfg.LogLevel)
+	logger.Info("running migrations")
+
+	src, err := iofs.New(migrations.FS, ".")
+	if err != nil {
+		log.Fatalf("load embedded migrations: %v", err)
+	}
+
+	m, err := migrate.NewWithSourceInstance("iofs", src, cfg.DatabaseURL)
+	if err != nil {
+		log.Fatalf("init migrate: %v", err)
+	}
+	defer m.Close()
+
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		log.Fatalf("apply migrations: %v", err)
+	}
+	logger.Info("migrations applied")
+}
+
+func generateKey() (string, error) {
+	b := make([]byte, 30)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
 }
 
 func mustConnectDB(url string, logger *slog.Logger) *pgxpool.Pool {
