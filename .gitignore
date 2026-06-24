@@ -2,3 +2,8 @@ bin/
 .DS_Store
 __pycache__/
 *.pyc
+
+# Python build artifacts (sdk/python)
+dist/
+build/
+*.egg-info/

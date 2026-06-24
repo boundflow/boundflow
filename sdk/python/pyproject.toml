@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "boundflow"
+version = "0.1.0"
+description = "BoundFlow Python SDK — build governed fleets of agents against a self-hostable control plane."
+requires-python = ">=3.10"
+# TODO: choose the public SDK license (the pip package is public even though the
+# backend stays closed) and set e.g. license = "MIT" or "Apache-2.0".
+keywords = ["agents", "llm", "orchestration", "control-plane", "governance"]
+
+# grpcio>=1.81.0 is a hard floor: the generated worker/operation stubs are
+# stamped at 1.81.0 and refuse to import under older grpcio. <3.10 can't get
+# 1.81, hence requires-python>=3.10.
+dependencies = [
+    "grpcio>=1.81.0",
+    "protobuf>=6.30,<7",
+    "pydantic>=2.0",
+    "anthropic>=0.40",
+]
+
+[project.optional-dependencies]
+# Tooling for regenerating the gRPC stubs and running the integration tests.
+dev = [
+    "grpcio-tools>=1.81.0",
+    "pytest",
+    "pytest-asyncio",
+]
+
+[tool.setuptools.packages.find]
+# Ship the SDK and the generated gRPC stubs; keep tests/examples out of the wheel.
+include = ["boundflow*", "convergeplane*"]
+exclude = ["tests*", "examples*"]
