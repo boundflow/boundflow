@@ -1,0 +1,81 @@
+# Distribution compose — runs the BoundFlow backend from the published image,
+# no source checkout or Go toolchain required.
+#
+#   docker compose -f docker-compose.dist.yml up -d
+#   docker compose -f docker-compose.dist.yml run --rm server -mode=provision -name=me
+#
+# Pin a specific version by setting BOUNDFLOW_IMAGE, e.g.:
+#   BOUNDFLOW_IMAGE=ghcr.io/boundflow/boundflow:v0.1.0 docker compose -f docker-compose.dist.yml up -d
+#
+# The backend is provided under BACKEND-LICENSE.txt (evaluation use only).
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: convergeplane
+      POSTGRES_USER: convergeplane
+      POSTGRES_PASSWORD: convergeplane
+    # Not published to the host; inspect with:
+    #   docker compose -f docker-compose.dist.yml exec postgres psql -U convergeplane
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U convergeplane"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    image: ${BOUNDFLOW_IMAGE:-ghcr.io/boundflow/boundflow:latest}
+    command: ["-mode=migrate"]
+    environment:
+      CONVERGEPLANE_DATABASE_URL: postgres://convergeplane:convergeplane@postgres:5432/convergeplane?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  server:
+    image: ${BOUNDFLOW_IMAGE:-ghcr.io/boundflow/boundflow:latest}
+    command: ["-mode=server"]
+    environment:
+      CONVERGEPLANE_DATABASE_URL: postgres://convergeplane:convergeplane@postgres:5432/convergeplane?sslmode=disable
+      CONVERGEPLANE_GRPC_PORT: "50051"
+      CONVERGEPLANE_NUM_PARTITIONS: "1"
+      CONVERGEPLANE_DEBUG: "true"
+      CONVERGEPLANE_LOG_LEVEL: info
+    ports:
+      - "50051:50051"
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  scheduler:
+    image: ${BOUNDFLOW_IMAGE:-ghcr.io/boundflow/boundflow:latest}
+    command: ["-mode=scheduler"]
+    environment:
+      CONVERGEPLANE_DATABASE_URL: postgres://convergeplane:convergeplane@postgres:5432/convergeplane?sslmode=disable
+      CONVERGEPLANE_NUM_PARTITIONS: "1"
+      CONVERGEPLANE_LOG_LEVEL: info
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    image: ${BOUNDFLOW_IMAGE:-ghcr.io/boundflow/boundflow:latest}
+    command: ["-mode=worker"]
+    environment:
+      CONVERGEPLANE_DATABASE_URL: postgres://convergeplane:convergeplane@postgres:5432/convergeplane?sslmode=disable
+      CONVERGEPLANE_WORKER_GRPC_PORT: "50052"
+      CONVERGEPLANE_NUM_WORKERS: "1"
+      CONVERGEPLANE_LOG_LEVEL: info
+    ports:
+      - "50052:50052"
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_data:

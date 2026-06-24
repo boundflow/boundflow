@@ -10,4 +10,6 @@ RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /convergeplane ./cmd/convergeplan
 FROM alpine:3.21
 RUN apk --no-cache add ca-certificates
 COPY --from=builder /convergeplane /convergeplane
+# The backend ships under the evaluation license; carry it in the image.
+COPY BACKEND-LICENSE.txt /BACKEND-LICENSE.txt
 ENTRYPOINT ["/convergeplane"]
