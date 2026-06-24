@@ -1,5 +1,5 @@
 BoundFlow Backend — Evaluation License
-Copyright (c) 2026 arjunvlama. All rights reserved.
+Copyright (c) 2026 Arjun Lama. All rights reserved.
 
 This license governs use of the BoundFlow backend software when distributed in
 binary or container-image form (the "Software"). The Software is proprietary and
