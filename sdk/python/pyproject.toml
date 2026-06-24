@@ -7,8 +7,10 @@ name = "boundflow"
 version = "0.1.0"
 description = "BoundFlow Python SDK — build governed fleets of agents against a self-hostable control plane."
 requires-python = ">=3.10"
-# TODO: choose the public SDK license (the pip package is public even though the
-# backend stays closed) and set e.g. license = "MIT" or "Apache-2.0".
+# The SDK ships as public source on PyPI under MIT. The backend (shipped as a
+# closed binary/image) is licensed separately and is not covered by this.
+license = "MIT"
+license-files = ["LICENSE"]
 keywords = ["agents", "llm", "orchestration", "control-plane", "governance"]
 
 # grpcio>=1.81.0 is a hard floor: the generated worker/operation stubs are
