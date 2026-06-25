@@ -3,12 +3,15 @@
 PROTO_DIR := proto
 GEN_DIR := gen
 
+# Regenerate stubs for all languages. buf covers Go and C#; Python uses
+# grpcio-tools because buf's remote python plugin targets a newer protobuf
+# runtime (7.x gencode) than the SDK's grpcio/protobuf 6.x stack.
 proto:
 	buf generate
+	$(MAKE) proto-python
 
-# Python SDK stubs are not covered by buf.gen.yaml (Go/C# only). Regenerate them
-# with grpcio-tools (pip install grpcio-tools, or the sdk dev extra). Always use a
-# single grpcio-tools version so the generated stubs' version stamps stay aligned.
+# Python-only regeneration. Use a single grpcio-tools version (the sdk dev extra
+# pins grpcio-tools>=1.81.0) so the generated stubs' version stamps stay aligned.
 proto-python:
 	python -m grpc_tools.protoc -I proto --python_out=sdk/python --grpc_python_out=sdk/python proto/convergeplane/v1/*.proto
 
