@@ -1,10 +1,16 @@
-.PHONY: proto build run test clean lint mocks db-start db-stop db-create db-migrate db-reset
+.PHONY: proto proto-python build run test clean lint mocks db-start db-stop db-create db-migrate db-reset
 
 PROTO_DIR := proto
 GEN_DIR := gen
 
 proto:
 	buf generate
+
+# Python SDK stubs are not covered by buf.gen.yaml (Go/C# only). Regenerate them
+# with grpcio-tools (pip install grpcio-tools, or the sdk dev extra). Always use a
+# single grpcio-tools version so the generated stubs' version stamps stay aligned.
+proto-python:
+	python -m grpc_tools.protoc -I proto --python_out=sdk/python --grpc_python_out=sdk/python proto/convergeplane/v1/*.proto
 
 build:
 	go build -o bin/convergeplane ./cmd/convergeplane

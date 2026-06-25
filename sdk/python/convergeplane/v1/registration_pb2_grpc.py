@@ -5,7 +5,7 @@ import warnings
 
 from convergeplane.v1 import registration_pb2 as convergeplane_dot_v1_dot_registration__pb2
 
-GRPC_GENERATED_VERSION = '1.80.0'
+GRPC_GENERATED_VERSION = '1.81.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -25,7 +25,7 @@ if _version_not_supported:
     )
 
 
-class RegistrationServiceStub(object):
+class RegistrationServiceStub:
     """RegistrationService handles setup and configuration of tenant groups,
     tenants, and policies.
     """
@@ -68,7 +68,7 @@ class RegistrationServiceStub(object):
                 _registered_method=True)
 
 
-class RegistrationServiceServicer(object):
+class RegistrationServiceServicer:
     """RegistrationService handles setup and configuration of tenant groups,
     tenants, and policies.
     """
@@ -150,7 +150,7 @@ def add_RegistrationServiceServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class RegistrationService(object):
+class RegistrationService:
     """RegistrationService handles setup and configuration of tenant groups,
     tenants, and policies.
     """
