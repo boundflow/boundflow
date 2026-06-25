@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/convergeplane/convergeplane/internal/domain"
+	"github.com/convergeplane/convergeplane/internal/pricing"
 	"github.com/convergeplane/convergeplane/internal/storage"
 )
 
@@ -16,16 +17,46 @@ const DefaultTenantGroupID = "default"
 type RegistrationService struct {
 	tenantGroups storage.TenantGroupRepository
 	tenants      storage.TenantRepository
+	modelPricing storage.ModelPricingRepository
 }
 
 func NewRegistrationService(
 	tenantGroups storage.TenantGroupRepository,
 	tenants storage.TenantRepository,
+	modelPricing storage.ModelPricingRepository,
 ) *RegistrationService {
 	return &RegistrationService{
 		tenantGroups: tenantGroups,
 		tenants:      tenants,
+		modelPricing: modelPricing,
 	}
+}
+
+// SetModelPricing overrides a model's rate for the tenant group.
+func (s *RegistrationService) SetModelPricing(ctx context.Context, tenantGroupID string, p domain.ModelPricing) error {
+	if err := s.modelPricing.Upsert(ctx, tenantGroupID, p); err != nil {
+		return fmt.Errorf("set model pricing: %w", err)
+	}
+	return nil
+}
+
+// ListEffectivePricing returns the tenant group's effective rates — the built-in
+// defaults merged with its overrides.
+func (s *RegistrationService) ListEffectivePricing(ctx context.Context, tenantGroupID string) ([]domain.ModelPricing, error) {
+	defaults, err := s.modelPricing.ListDefaults(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list default pricing: %w", err)
+	}
+	overrides, err := s.modelPricing.ListForTenantGroup(ctx, tenantGroupID)
+	if err != nil {
+		return nil, fmt.Errorf("list model pricing: %w", err)
+	}
+	effective := pricing.Effective(defaults, overrides)
+	out := make([]domain.ModelPricing, 0, len(effective))
+	for _, p := range effective {
+		out = append(out, p)
+	}
+	return out, nil
 }
 
 func (s *RegistrationService) CreateTenantGroup(ctx context.Context, group *domain.TenantGroup) (*domain.TenantGroup, error) {

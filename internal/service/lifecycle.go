@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/convergeplane/convergeplane/internal/domain"
+	"github.com/convergeplane/convergeplane/internal/pricing"
 	"github.com/convergeplane/convergeplane/internal/storage"
 )
 
@@ -36,6 +37,7 @@ type LifecycleService struct {
 	tenants           storage.TenantRepository
 	tenantGroups      storage.TenantGroupRepository
 	agentStates       storage.AgentStateRepository
+	modelPricing      storage.ModelPricingRepository
 	scheduler         RequestScheduler
 	approvalResolver  ApprovalResolver
 	numPartitions     int
@@ -48,6 +50,7 @@ func NewLifecycleService(
 	tenants storage.TenantRepository,
 	tenantGroups storage.TenantGroupRepository,
 	agentStates storage.AgentStateRepository,
+	modelPricing storage.ModelPricingRepository,
 	scheduler RequestScheduler,
 	approvalResolver ApprovalResolver,
 	numPartitions int,
@@ -59,11 +62,37 @@ func NewLifecycleService(
 		tenants:           tenants,
 		tenantGroups:      tenantGroups,
 		agentStates:       agentStates,
+		modelPricing:      modelPricing,
 		scheduler:         scheduler,
 		approvalResolver:  approvalResolver,
 		numPartitions:     numPartitions,
 		log:               log.With("component", "lifecycle_service"),
 	}
+}
+
+// ResolveModelPricing snapshots the tenant group's effective per-model rates
+// (built-in defaults merged with overrides) into the request context, so the
+// worker can price token usage without a hardcoded table.
+func (s *LifecycleService) ResolveModelPricing(ctx context.Context, resourceInstanceID string, requestInfo map[string]any) error {
+	groupID, err := s.resourceInstances.TenantGroupIDForResource(ctx, resourceInstanceID)
+	if err != nil {
+		return fmt.Errorf("resolve tenant group for pricing: %w", err)
+	}
+	defaults, err := s.modelPricing.ListDefaults(ctx)
+	if err != nil {
+		return fmt.Errorf("list default pricing: %w", err)
+	}
+	overrides, err := s.modelPricing.ListForTenantGroup(ctx, groupID)
+	if err != nil {
+		return fmt.Errorf("list model pricing: %w", err)
+	}
+	effective := pricing.Effective(defaults, overrides)
+	m := make(map[string]any, len(effective))
+	for id, p := range effective {
+		m[id] = map[string]any{"input_per_1m": p.InputPer1M, "output_per_1m": p.OutputPer1M}
+	}
+	requestInfo["modelPricing"] = m
+	return nil
 }
 
 func (s *LifecycleService) ResolveRuntimeParams(params domain.WorkflowRuntimeParams, instance *domain.ResourceInstance, userTriggered bool, requestInfo map[string]any) error {
@@ -150,6 +179,9 @@ func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID,
 		return err
 	}
 	if err := s.ResolveAgentRuntimeParams(ctx, resourceInstanceID, requestInfo); err != nil {
+		return err
+	}
+	if err := s.ResolveModelPricing(ctx, resourceInstanceID, requestInfo); err != nil {
 		return err
 	}
 

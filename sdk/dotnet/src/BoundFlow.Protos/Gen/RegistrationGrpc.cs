@@ -73,6 +73,14 @@ namespace Convergeplane.V1 {
     static readonly grpc::Marshaller<global::Convergeplane.V1.DeleteTenantRequest> __Marshaller_convergeplane_v1_DeleteTenantRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.DeleteTenantRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Convergeplane.V1.DeleteTenantResponse> __Marshaller_convergeplane_v1_DeleteTenantResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.DeleteTenantResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Convergeplane.V1.SetModelPricingRequest> __Marshaller_convergeplane_v1_SetModelPricingRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.SetModelPricingRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Convergeplane.V1.SetModelPricingResponse> __Marshaller_convergeplane_v1_SetModelPricingResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.SetModelPricingResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Convergeplane.V1.ListModelPricingRequest> __Marshaller_convergeplane_v1_ListModelPricingRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.ListModelPricingRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Convergeplane.V1.ListModelPricingResponse> __Marshaller_convergeplane_v1_ListModelPricingResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Convergeplane.V1.ListModelPricingResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Convergeplane.V1.CreateTenantGroupRequest, global::Convergeplane.V1.CreateTenantGroupResponse> __Method_CreateTenantGroup = new grpc::Method<global::Convergeplane.V1.CreateTenantGroupRequest, global::Convergeplane.V1.CreateTenantGroupResponse>(
@@ -122,6 +130,22 @@ namespace Convergeplane.V1 {
         __Marshaller_convergeplane_v1_DeleteTenantRequest,
         __Marshaller_convergeplane_v1_DeleteTenantResponse);
 
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Convergeplane.V1.SetModelPricingRequest, global::Convergeplane.V1.SetModelPricingResponse> __Method_SetModelPricing = new grpc::Method<global::Convergeplane.V1.SetModelPricingRequest, global::Convergeplane.V1.SetModelPricingResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "SetModelPricing",
+        __Marshaller_convergeplane_v1_SetModelPricingRequest,
+        __Marshaller_convergeplane_v1_SetModelPricingResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Convergeplane.V1.ListModelPricingRequest, global::Convergeplane.V1.ListModelPricingResponse> __Method_ListModelPricing = new grpc::Method<global::Convergeplane.V1.ListModelPricingRequest, global::Convergeplane.V1.ListModelPricingResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ListModelPricing",
+        __Marshaller_convergeplane_v1_ListModelPricingRequest,
+        __Marshaller_convergeplane_v1_ListModelPricingResponse);
+
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
@@ -164,6 +188,26 @@ namespace Convergeplane.V1 {
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Convergeplane.V1.DeleteTenantResponse> DeleteTenant(global::Convergeplane.V1.DeleteTenantRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Pricing is scoped to the caller's tenant group (resolved from the API key).
+      /// SetModelPricing overrides a model's rate; ListModelPricing returns the
+      /// effective rates (built-in defaults merged with the caller's overrides).
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Convergeplane.V1.SetModelPricingResponse> SetModelPricing(global::Convergeplane.V1.SetModelPricingRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Convergeplane.V1.ListModelPricingResponse> ListModelPricing(global::Convergeplane.V1.ListModelPricingRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -317,6 +361,82 @@ namespace Convergeplane.V1 {
       {
         return CallInvoker.AsyncUnaryCall(__Method_DeleteTenant, null, options, request);
       }
+      /// <summary>
+      /// Pricing is scoped to the caller's tenant group (resolved from the API key).
+      /// SetModelPricing overrides a model's rate; ListModelPricing returns the
+      /// effective rates (built-in defaults merged with the caller's overrides).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Convergeplane.V1.SetModelPricingResponse SetModelPricing(global::Convergeplane.V1.SetModelPricingRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return SetModelPricing(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Pricing is scoped to the caller's tenant group (resolved from the API key).
+      /// SetModelPricing overrides a model's rate; ListModelPricing returns the
+      /// effective rates (built-in defaults merged with the caller's overrides).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Convergeplane.V1.SetModelPricingResponse SetModelPricing(global::Convergeplane.V1.SetModelPricingRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_SetModelPricing, null, options, request);
+      }
+      /// <summary>
+      /// Pricing is scoped to the caller's tenant group (resolved from the API key).
+      /// SetModelPricing overrides a model's rate; ListModelPricing returns the
+      /// effective rates (built-in defaults merged with the caller's overrides).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Convergeplane.V1.SetModelPricingResponse> SetModelPricingAsync(global::Convergeplane.V1.SetModelPricingRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return SetModelPricingAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Pricing is scoped to the caller's tenant group (resolved from the API key).
+      /// SetModelPricing overrides a model's rate; ListModelPricing returns the
+      /// effective rates (built-in defaults merged with the caller's overrides).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Convergeplane.V1.SetModelPricingResponse> SetModelPricingAsync(global::Convergeplane.V1.SetModelPricingRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_SetModelPricing, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Convergeplane.V1.ListModelPricingResponse ListModelPricing(global::Convergeplane.V1.ListModelPricingRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ListModelPricing(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Convergeplane.V1.ListModelPricingResponse ListModelPricing(global::Convergeplane.V1.ListModelPricingRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ListModelPricing, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Convergeplane.V1.ListModelPricingResponse> ListModelPricingAsync(global::Convergeplane.V1.ListModelPricingRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ListModelPricingAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Convergeplane.V1.ListModelPricingResponse> ListModelPricingAsync(global::Convergeplane.V1.ListModelPricingRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ListModelPricing, null, options, request);
+      }
       /// <summary>Creates a new instance of client from given <c>ClientBaseConfiguration</c>.</summary>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       protected override RegistrationServiceClient NewInstance(ClientBaseConfiguration configuration)
@@ -336,7 +456,9 @@ namespace Convergeplane.V1 {
           .AddMethod(__Method_DeleteTenantGroup, serviceImpl.DeleteTenantGroup)
           .AddMethod(__Method_CreateTenant, serviceImpl.CreateTenant)
           .AddMethod(__Method_GetTenant, serviceImpl.GetTenant)
-          .AddMethod(__Method_DeleteTenant, serviceImpl.DeleteTenant).Build();
+          .AddMethod(__Method_DeleteTenant, serviceImpl.DeleteTenant)
+          .AddMethod(__Method_SetModelPricing, serviceImpl.SetModelPricing)
+          .AddMethod(__Method_ListModelPricing, serviceImpl.ListModelPricing).Build();
     }
 
     /// <summary>Register service method with a service binder with or without implementation. Useful when customizing the service binding logic.
@@ -352,6 +474,8 @@ namespace Convergeplane.V1 {
       serviceBinder.AddMethod(__Method_CreateTenant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Convergeplane.V1.CreateTenantRequest, global::Convergeplane.V1.CreateTenantResponse>(serviceImpl.CreateTenant));
       serviceBinder.AddMethod(__Method_GetTenant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Convergeplane.V1.GetTenantRequest, global::Convergeplane.V1.GetTenantResponse>(serviceImpl.GetTenant));
       serviceBinder.AddMethod(__Method_DeleteTenant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Convergeplane.V1.DeleteTenantRequest, global::Convergeplane.V1.DeleteTenantResponse>(serviceImpl.DeleteTenant));
+      serviceBinder.AddMethod(__Method_SetModelPricing, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Convergeplane.V1.SetModelPricingRequest, global::Convergeplane.V1.SetModelPricingResponse>(serviceImpl.SetModelPricing));
+      serviceBinder.AddMethod(__Method_ListModelPricing, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Convergeplane.V1.ListModelPricingRequest, global::Convergeplane.V1.ListModelPricingResponse>(serviceImpl.ListModelPricing));
     }
 
   }

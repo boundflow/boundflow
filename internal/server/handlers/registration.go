@@ -32,6 +32,44 @@ func callerTenantGroup(ctx context.Context) (string, error) {
 	return id, nil
 }
 
+func (h *RegistrationHandler) SetModelPricing(ctx context.Context, req *convergeplanev1.SetModelPricingRequest) (*convergeplanev1.SetModelPricingResponse, error) {
+	p, err := convert.ModelPricingFromProto(req.GetPricing())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	group, err := callerTenantGroup(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := h.svc.SetModelPricing(ctx, group, p); err != nil {
+		return nil, status.Errorf(codes.Internal, "set model pricing: %v", err)
+	}
+
+	return &convergeplanev1.SetModelPricingResponse{
+		Pricing: convert.ModelPricingToProto(p),
+	}, nil
+}
+
+func (h *RegistrationHandler) ListModelPricing(ctx context.Context, req *convergeplanev1.ListModelPricingRequest) (*convergeplanev1.ListModelPricingResponse, error) {
+	group, err := callerTenantGroup(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	pricing, err := h.svc.ListEffectivePricing(ctx, group)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "list model pricing: %v", err)
+	}
+
+	out := make([]*convergeplanev1.ModelPricing, 0, len(pricing))
+	for _, p := range pricing {
+		out = append(out, convert.ModelPricingToProto(p))
+	}
+	return &convergeplanev1.ListModelPricingResponse{Pricing: out}, nil
+}
+
 func (h *RegistrationHandler) GetTenantGroup(ctx context.Context, req *convergeplanev1.GetTenantGroupRequest) (*convergeplanev1.GetTenantGroupResponse, error) {
 	if req.Id == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "id is required")

@@ -189,6 +189,15 @@ type ApiKeyRepository interface {
 	Revoke(ctx context.Context, id string) error
 }
 
+type ModelPricingRepository interface {
+	// ListDefaults returns the operator-managed global default rates.
+	ListDefaults(ctx context.Context) ([]domain.ModelPricing, error)
+	// Upsert sets a tenant group's per-1M-token rate override for a model.
+	Upsert(ctx context.Context, tenantGroupID string, p domain.ModelPricing) error
+	// ListForTenantGroup returns a tenant group's pricing overrides (not merged with defaults).
+	ListForTenantGroup(ctx context.Context, tenantGroupID string) ([]domain.ModelPricing, error)
+}
+
 type CustomerRequestRepository interface {
 	Create(ctx context.Context, req *domain.CustomerRequest) error
 	// CreateInvocationRequest atomically bumps the resource's target_version, flips lifecycle_state

@@ -97,8 +97,9 @@ func runServer(sigCh <-chan os.Signal) {
 	policyResolver := internalscheduler.NewLifecycleResolver(30, logger, lifecycleResolverRepo, resourceInstanceRepo, versionMetricsRepo)
 	sched := internalscheduler.NewScheduler("server", 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, agentStateRepo, jobRepo, metricsHandler, policyResolver, logger)
 
-	regSvc := service.NewRegistrationService(tenantGroupRepo, tenantRepo)
-	lifecycleSvc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, sched, sched, cfg.NumPartitions, logger)
+	modelPricingRepo := postgres.NewModelPricingRepo(pool)
+	regSvc := service.NewRegistrationService(tenantGroupRepo, tenantRepo, modelPricingRepo)
+	lifecycleSvc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, sched, sched, cfg.NumPartitions, logger)
 
 	authn := auth.NewAuthenticator(postgres.NewApiKeyRepo(pool))
 	srv := server.New(cfg, regSvc, lifecycleSvc, authn, cfg.Debug)
@@ -135,6 +136,7 @@ func runScheduler(sigCh <-chan os.Signal) {
 	lifecycleResolverRepo := postgres.NewLifecycleResolverRepo(pool)
 	tenantRepo := postgres.NewTenantRepo(pool)
 	tenantGroupRepo := postgres.NewTenantGroupRepo(pool)
+	modelPricingRepo := postgres.NewModelPricingRepo(pool)
 	metricsHandler := metrics.NewMetricsHandler(resourceInstanceRepo, agentStateRepo, versionMetricsRepo, metricsRepo, logger)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -145,7 +147,7 @@ func runScheduler(sigCh <-chan os.Signal) {
 		resolver := internalscheduler.NewLifecycleResolver(30, logger, lifecycleResolverRepo, resourceInstanceRepo, versionMetricsRepo)
 		sched := internalscheduler.NewScheduler(schedulerID, 30, partitionRepo, schedulerRepo, customerRequestRepo, resourceInstanceRepo, agentStateRepo, jobRepo, metricsHandler, resolver, logger)
 		// The periodic handler reconciles due workflows via the scheduler + lifecycle service.
-		lifecycleSvc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, sched, sched, cfg.NumPartitions, logger)
+		lifecycleSvc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, sched, sched, cfg.NumPartitions, logger)
 		periodic := internalscheduler.NewPeriodicWorkflowHandler(30, logger, sched, lifecycleSvc, schedulerRepo, customerRequestRepo)
 		// Resolver (cooldown expiry) and periodic handler are partition-scoped: the scheduler
 		// starts them when it acquires a partition and cancels them when it loses it.
