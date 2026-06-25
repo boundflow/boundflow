@@ -13,14 +13,14 @@ from enum import Enum
 import grpc
 from google.protobuf.struct_pb2 import Struct
 
-from convergeplane.v1 import lifecycle_pb2 as lc
-from convergeplane.v1 import lifecycle_pb2_grpc as lc_grpc
-from convergeplane.v1 import pricing_pb2 as pricing_pb
-from convergeplane.v1 import registration_pb2 as reg
-from convergeplane.v1 import registration_pb2_grpc as reg_grpc
-from convergeplane.v1 import resource_instance_pb2 as ri
-from convergeplane.v1 import tenant_group_pb2 as tg_pb
-from convergeplane.v1 import tenant_pb2 as tn_pb
+from boundflow.v1 import lifecycle_pb2 as lc
+from boundflow.v1 import lifecycle_pb2_grpc as lc_grpc
+from boundflow.v1 import pricing_pb2 as pricing_pb
+from boundflow.v1 import registration_pb2 as reg
+from boundflow.v1 import registration_pb2_grpc as reg_grpc
+from boundflow.v1 import resource_instance_pb2 as ri
+from boundflow.v1 import tenant_group_pb2 as tg_pb
+from boundflow.v1 import tenant_pb2 as tn_pb
 
 from .policies import (
     AgentRule, Cooldown, Pause, RuntimePolicy, SetVersion, WorkflowMetric, WorkflowRule,

@@ -7,9 +7,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/convergeplane/convergeplane/internal/domain"
-	"github.com/convergeplane/convergeplane/internal/pricing"
-	"github.com/convergeplane/convergeplane/internal/storage"
+	"github.com/boundflow/boundflow/internal/domain"
+	"github.com/boundflow/boundflow/internal/pricing"
+	"github.com/boundflow/boundflow/internal/storage"
 )
 
 const DefaultTenantGroupID = "default"

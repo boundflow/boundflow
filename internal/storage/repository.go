@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
-	"github.com/convergeplane/convergeplane/internal/domain"
+	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
+	"github.com/boundflow/boundflow/internal/domain"
 )
 
 type TenantGroupRepository interface {
@@ -118,20 +118,20 @@ type JobRepository interface {
 	UpdateJobStatus(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus) (bool, error)
 	// UpdateJobStatusWithMetrics is UpdateJobStatus plus an atomic write of the accumulated
 	// per-agent and workflow-level metrics. Used when finalizing a job.
-	UpdateJobStatusWithMetrics(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error)
+	UpdateJobStatusWithMetrics(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error)
 	// UpdateJob updates status, current_atomic_operation, timeout_seconds, and context only if ownerID is the current owner.
 	// Returns false if the ownership check failed (job taken by another worker or released).
 	UpdateJob(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any) (bool, error)
 	// UpdateJobWithMetrics is UpdateJob plus an atomic write of the accumulated per-agent
 	// and workflow-level metrics. Used when advancing to the next operation.
-	UpdateJobWithMetrics(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error)
+	UpdateJobWithMetrics(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error)
 	// GetJobMetrics returns the accumulated per-agent and workflow-level metrics stored on the
 	// job for the given resource and request. Returns zero values if no such job exists.
-	GetJobMetrics(ctx context.Context, resourceInstanceID string, requestID string) (map[string]*convergeplanev1.AgentInvocationMetrics, domain.WorkflowJobMetrics, error)
+	GetJobMetrics(ctx context.Context, resourceInstanceID string, requestID string) (map[string]*boundflowv1.AgentInvocationMetrics, domain.WorkflowJobMetrics, error)
 	// ParkForApproval transitions a job to awaiting_approval, storing the approval ID,
 	// timeout, and job metadata. Only succeeds if ownerID holds the job.
 	// Returns false if ownership check fails.
-	ParkForApproval(ctx context.Context, resourceInstanceID string, ownerID string, approvalID string, timeoutAt time.Time, metadata domain.JobMetadata, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error)
+	ParkForApproval(ctx context.Context, resourceInstanceID string, ownerID string, approvalID string, timeoutAt time.Time, metadata domain.JobMetadata, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error)
 	// ResolveApproval transitions a job from awaiting_approval to the given status (approved/rejected),
 	// guarded by approvalID match. Returns false if the ID doesn't match or the job isn't awaiting approval.
 	ResolveApproval(ctx context.Context, resourceInstanceID string, approvalID string, status domain.JobStatus) (bool, error)
@@ -145,7 +145,7 @@ type AgentStateRepository interface {
 	// UpsertLifecyclePolicy sets the lifecycle policy for an agent, creating the row if needed.
 	UpsertLifecyclePolicy(ctx context.Context, resourceInstanceID, agentName string, policy map[string]any) error
 	// UpdateMetrics persists updated invocation metrics for an agent.
-	UpdateMetrics(ctx context.Context, resourceInstanceID, agentName string, metrics []*convergeplanev1.AgentInvocationMetrics) error
+	UpdateMetrics(ctx context.Context, resourceInstanceID, agentName string, metrics []*boundflowv1.AgentInvocationMetrics) error
 	// GetAllForResource returns all agent states for a resource instance, keyed by agent name.
 	GetAllForResource(ctx context.Context, resourceInstanceID string) (map[string]*domain.AgentState, error)
 	// Delete removes the agent state row entirely.
@@ -170,7 +170,7 @@ type MetricsRepository interface {
 	// EmitMetrics atomically appends the rolling snapshot, upserts version-metric totals,
 	// and upserts each agent's metrics history — only if metrics_emitted_at < emittedVersion.
 	// Returns false if the gate fails (metrics already emitted for this run).
-	EmitMetrics(ctx context.Context, resourceInstanceID string, emittedVersion int64, rollingMetrics []domain.WorkflowInvocationSnapshot, versionMetrics *domain.WorkflowVersionMetrics, agentMetrics map[string][]*convergeplanev1.AgentInvocationMetrics) (bool, error)
+	EmitMetrics(ctx context.Context, resourceInstanceID string, emittedVersion int64, rollingMetrics []domain.WorkflowInvocationSnapshot, versionMetrics *domain.WorkflowVersionMetrics, agentMetrics map[string][]*boundflowv1.AgentInvocationMetrics) (bool, error)
 }
 
 type VersionMetricsRepository interface {

@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "dgSpecHash": "1RJPvixWXQk=",
+  "success": true,
+  "projectFilePath": "/Users/arjunlama/src/convergeplane/sdk/dotnet/src/BoundFlow.SDK/BoundFlow.SDK.csproj",
+  "expectedPackageFiles": [
+    "/Users/arjunlama/.nuget/packages/anthropic.sdk/4.0.0/anthropic.sdk.4.0.0.nupkg.sha512",
+    "/Users/arjunlama/.nuget/packages/google.protobuf/3.29.3/google.protobuf.3.29.3.nupkg.sha512",
+    "/Users/arjunlama/.nuget/packages/grpc.core.api/2.67.0/grpc.core.api.2.67.0.nupkg.sha512",
+    "/Users/arjunlama/.nuget/packages/grpc.net.client/2.67.0/grpc.net.client.2.67.0.nupkg.sha512",
+    "/Users/arjunlama/.nuget/packages/grpc.net.common/2.67.0/grpc.net.common.2.67.0.nupkg.sha512",
+    "/Users/arjunlama/.nuget/packages/microsoft.extensions.logging.abstractions/6.0.0/microsoft.extensions.logging.abstractions.6.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}

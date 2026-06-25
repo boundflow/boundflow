@@ -3,11 +3,11 @@ package convert
 import (
 	"fmt"
 
-	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
-	"github.com/convergeplane/convergeplane/internal/domain"
+	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
+	"github.com/boundflow/boundflow/internal/domain"
 )
 
-func ModelPricingFromProto(pb *convergeplanev1.ModelPricing) (domain.ModelPricing, error) {
+func ModelPricingFromProto(pb *boundflowv1.ModelPricing) (domain.ModelPricing, error) {
 	if pb == nil {
 		return domain.ModelPricing{}, fmt.Errorf("pricing is required")
 	}
@@ -24,8 +24,8 @@ func ModelPricingFromProto(pb *convergeplanev1.ModelPricing) (domain.ModelPricin
 	}, nil
 }
 
-func ModelPricingToProto(p domain.ModelPricing) *convergeplanev1.ModelPricing {
-	return &convergeplanev1.ModelPricing{
+func ModelPricingToProto(p domain.ModelPricing) *boundflowv1.ModelPricing {
+	return &boundflowv1.ModelPricing{
 		ModelId:      p.ModelID,
 		InputPer_1M:  p.InputPer1M,
 		OutputPer_1M: p.OutputPer1M,

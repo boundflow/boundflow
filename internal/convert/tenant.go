@@ -5,11 +5,11 @@ import (
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
-	"github.com/convergeplane/convergeplane/internal/domain"
+	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
+	"github.com/boundflow/boundflow/internal/domain"
 )
 
-func TenantFromProto(pb *convergeplanev1.Tenant) (*domain.Tenant, error) {
+func TenantFromProto(pb *boundflowv1.Tenant) (*domain.Tenant, error) {
 	if pb == nil {
 		return nil, fmt.Errorf("tenant is required")
 	}
@@ -33,8 +33,8 @@ func TenantFromProto(pb *convergeplanev1.Tenant) (*domain.Tenant, error) {
 	return t, nil
 }
 
-func TenantToProto(t *domain.Tenant) *convergeplanev1.Tenant {
-	pb := &convergeplanev1.Tenant{
+func TenantToProto(t *domain.Tenant) *boundflowv1.Tenant {
+	pb := &boundflowv1.Tenant{
 		Id:        t.ID,
 		Name:      t.Name,
 		CreatedAt: timestamppb.New(t.CreatedAt),

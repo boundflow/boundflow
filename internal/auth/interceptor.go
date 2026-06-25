@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	"github.com/convergeplane/convergeplane/internal/storage"
+	"github.com/boundflow/boundflow/internal/storage"
 )
 
 const apiKeyHeader = "x-api-key"

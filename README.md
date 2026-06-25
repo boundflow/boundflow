@@ -99,7 +99,7 @@ This starts five services in the correct order: Postgres → migrations → serv
 All gRPC calls require an API key. After the stack is up, run the provisioning script once to create a tenant group and print a raw API key:
 
 ```bash
-go run ./scripts/provision_customer -name "my-org" -db "postgres://convergeplane:convergeplane@localhost:5432/convergeplane?sslmode=disable"
+go run ./scripts/provision_customer -name "my-org" -db "postgres://boundflow:boundflow@localhost:5432/boundflow?sslmode=disable"
 ```
 
 The script prints the API key once — save it. Set it in your environment for the SDK and demos:
@@ -133,10 +133,10 @@ BOUNDFLOW_DEMO_AUTO=1 python examples/demo.py
 #### 1. Clone and build
 
 ```bash
-git clone https://github.com/convergeplane/convergeplane.git
-cd convergeplane
+git clone https://github.com/boundflow/boundflow.git
+cd boundflow
 make build
-# binary: bin/convergeplane
+# binary: bin/boundflow
 ```
 
 #### 2. Set up the database
@@ -152,7 +152,7 @@ make db-migrate
 To use a non-default database URL:
 
 ```bash
-DB_URL=postgres://user:pass@host:5432/convergeplane?sslmode=disable make db-migrate
+DB_URL=postgres://user:pass@host:5432/boundflow?sslmode=disable make db-migrate
 ```
 
 #### 3. Start the three components
@@ -161,23 +161,23 @@ Open three terminals (or run them as background processes):
 
 ```bash
 # Terminal 1 — server (gRPC API on :50051)
-./bin/convergeplane -mode=server
+./bin/boundflow -mode=server
 
 # Terminal 2 — scheduler
-./bin/convergeplane -mode=scheduler
+./bin/boundflow -mode=scheduler
 
 # Terminal 3 — worker (receives operations on :50052)
-./bin/convergeplane -mode=worker
+./bin/boundflow -mode=worker
 ```
 
-All three connect to PostgreSQL using `CONVERGEPLANE_DATABASE_URL` (defaults to `postgres://localhost:5432/convergeplane?sslmode=disable`).
+All three connect to PostgreSQL using `BOUNDFLOW_DATABASE_URL` (defaults to `postgres://localhost:5432/boundflow?sslmode=disable`).
 
 #### 4. Provision an API key
 
 The provisioning script requires a direct Postgres connection. `dev.sh` prompts for a DB user and defaults to `$USER`, so pass whichever user you specified when running the script:
 
 ```bash
-go run ./scripts/provision_customer -name "my-org" -db "postgres://$USER@localhost:5432/convergeplane?sslmode=disable"
+go run ./scripts/provision_customer -name "my-org" -db "postgres://$USER@localhost:5432/boundflow?sslmode=disable"
 ```
 
 The script prints a raw API key once — save it and export it before running the SDK or demos:
@@ -194,14 +194,14 @@ All configuration is via environment variables. Every variable is optional and f
 
 | Variable | Default | Modes | Description |
 |----------|---------|-------|-------------|
-| `CONVERGEPLANE_DATABASE_URL` | `postgres://localhost:5432/convergeplane?sslmode=disable` | all | PostgreSQL connection string |
-| `CONVERGEPLANE_LOG_LEVEL` | `info` | all | Log level: `debug`, `info`, `warn`, `error` |
-| `CONVERGEPLANE_DEBUG` | `false` | all | Enable gRPC reflection on the server |
-| `CONVERGEPLANE_NUM_PARTITIONS` | — | server, scheduler | Number of scheduler partitions for horizontal scaling |
-| `CONVERGEPLANE_GRPC_PORT` | `50051` | server | gRPC listen port for the server |
-| `CONVERGEPLANE_WORKER_GRPC_PORT` | `50052` | worker | gRPC listen port for the worker |
-| `CONVERGEPLANE_NUM_WORKERS` | `1` | worker | Number of concurrent worker goroutines |
-| `CONVERGEPLANE_JOB_TIMEOUT_SECS` | `300` | worker | Per-job execution timeout in seconds |
+| `BOUNDFLOW_DATABASE_URL` | `postgres://localhost:5432/boundflow?sslmode=disable` | all | PostgreSQL connection string |
+| `BOUNDFLOW_LOG_LEVEL` | `info` | all | Log level: `debug`, `info`, `warn`, `error` |
+| `BOUNDFLOW_DEBUG` | `false` | all | Enable gRPC reflection on the server |
+| `BOUNDFLOW_NUM_PARTITIONS` | — | server, scheduler | Number of scheduler partitions for horizontal scaling |
+| `BOUNDFLOW_GRPC_PORT` | `50051` | server | gRPC listen port for the server |
+| `BOUNDFLOW_WORKER_GRPC_PORT` | `50052` | worker | gRPC listen port for the worker |
+| `BOUNDFLOW_NUM_WORKERS` | `1` | worker | Number of concurrent worker goroutines |
+| `BOUNDFLOW_JOB_TIMEOUT_SECS` | `300` | worker | Per-job execution timeout in seconds |
 
 ---
 
@@ -290,7 +290,7 @@ After editing `.proto` files under `proto/`:
 
 ```bash
 make proto
-# Generates Go code into gen/ and Python stubs into sdk/python/convergeplane/v1/
+# Generates Go code into gen/ and Python stubs into sdk/python/boundflow/v1/
 ```
 
 Requires [Buf CLI](https://buf.build/docs/installation).
@@ -334,8 +334,8 @@ Seven tables underpin the system:
 
 ```
 boundflow/
-├── cmd/convergeplane/main.go       # Entry point — -mode flag selects server/scheduler/worker
-├── proto/convergeplane/v1/         # Protocol buffer definitions
+├── cmd/boundflow/main.go       # Entry point — -mode flag selects server/scheduler/worker
+├── proto/boundflow/v1/         # Protocol buffer definitions
 ├── gen/                            # Generated protobuf code (Go)
 ├── internal/
 │   ├── config/                     # Environment variable config loading
@@ -351,7 +351,7 @@ boundflow/
 ├── migrations/                     # SQL migration files
 ├── sdk/python/
 │   ├── boundflow/                  # Boundflow Python SDK (BoundFlowWorker, ControlPlaneClient, policies, …)
-│   ├── convergeplane/v1/           # Generated protobuf stubs for Python
+│   ├── boundflow/v1/           # Generated protobuf stubs for Python
 │   ├── examples/demo.py            # End-to-end demo application
 │   ├── tests/                      # Integration tests
 │   ├── requirements.txt            # pip install path

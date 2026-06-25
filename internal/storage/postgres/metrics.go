@@ -9,8 +9,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
-	"github.com/convergeplane/convergeplane/internal/domain"
+	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
+	"github.com/boundflow/boundflow/internal/domain"
 )
 
 type MetricsRepo struct {
@@ -33,7 +33,7 @@ func (r *MetricsRepo) EmitMetrics(
 	emittedVersion int64,
 	rollingMetrics []domain.WorkflowInvocationSnapshot,
 	versionMetrics *domain.WorkflowVersionMetrics,
-	agentMetrics map[string][]*convergeplanev1.AgentInvocationMetrics,
+	agentMetrics map[string][]*boundflowv1.AgentInvocationMetrics,
 ) (bool, error) {
 	rollingJSON, err := json.Marshal(rollingMetrics)
 	if err != nil {

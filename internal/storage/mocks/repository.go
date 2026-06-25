@@ -14,8 +14,8 @@ import (
 	reflect "reflect"
 	time "time"
 
-	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
-	domain "github.com/convergeplane/convergeplane/internal/domain"
+	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
+	domain "github.com/boundflow/boundflow/internal/domain"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -671,10 +671,10 @@ func (mr *MockJobRepositoryMockRecorder) GetAvailableJob(ctx, tenantGroupID, res
 }
 
 // GetJobMetrics mocks base method.
-func (m *MockJobRepository) GetJobMetrics(ctx context.Context, resourceInstanceID, requestID string) (map[string]*convergeplanev1.AgentInvocationMetrics, domain.WorkflowJobMetrics, error) {
+func (m *MockJobRepository) GetJobMetrics(ctx context.Context, resourceInstanceID, requestID string) (map[string]*boundflowv1.AgentInvocationMetrics, domain.WorkflowJobMetrics, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetJobMetrics", ctx, resourceInstanceID, requestID)
-	ret0, _ := ret[0].(map[string]*convergeplanev1.AgentInvocationMetrics)
+	ret0, _ := ret[0].(map[string]*boundflowv1.AgentInvocationMetrics)
 	ret1, _ := ret[1].(domain.WorkflowJobMetrics)
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2
@@ -687,7 +687,7 @@ func (mr *MockJobRepositoryMockRecorder) GetJobMetrics(ctx, resourceInstanceID, 
 }
 
 // ParkForApproval mocks base method.
-func (m *MockJobRepository) ParkForApproval(ctx context.Context, resourceInstanceID, ownerID, approvalID string, timeoutAt time.Time, metadata domain.JobMetadata, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
+func (m *MockJobRepository) ParkForApproval(ctx context.Context, resourceInstanceID, ownerID, approvalID string, timeoutAt time.Time, metadata domain.JobMetadata, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ParkForApproval", ctx, resourceInstanceID, ownerID, approvalID, timeoutAt, metadata, agentMetrics, workflowMetrics)
 	ret0, _ := ret[0].(bool)
@@ -776,7 +776,7 @@ func (mr *MockJobRepositoryMockRecorder) UpdateJobStatus(ctx, resourceInstanceID
 }
 
 // UpdateJobStatusWithMetrics mocks base method.
-func (m *MockJobRepository) UpdateJobStatusWithMetrics(ctx context.Context, resourceInstanceID, ownerID string, status domain.JobStatus, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
+func (m *MockJobRepository) UpdateJobStatusWithMetrics(ctx context.Context, resourceInstanceID, ownerID string, status domain.JobStatus, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateJobStatusWithMetrics", ctx, resourceInstanceID, ownerID, status, agentMetrics, workflowMetrics)
 	ret0, _ := ret[0].(bool)
@@ -791,7 +791,7 @@ func (mr *MockJobRepositoryMockRecorder) UpdateJobStatusWithMetrics(ctx, resourc
 }
 
 // UpdateJobWithMetrics mocks base method.
-func (m *MockJobRepository) UpdateJobWithMetrics(ctx context.Context, resourceInstanceID, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
+func (m *MockJobRepository) UpdateJobWithMetrics(ctx context.Context, resourceInstanceID, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateJobWithMetrics", ctx, resourceInstanceID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, jobContext, agentMetrics, workflowMetrics)
 	ret0, _ := ret[0].(bool)
@@ -859,7 +859,7 @@ func (mr *MockAgentStateRepositoryMockRecorder) GetAllForResource(ctx, resourceI
 }
 
 // UpdateMetrics mocks base method.
-func (m *MockAgentStateRepository) UpdateMetrics(ctx context.Context, resourceInstanceID, agentName string, metrics []*convergeplanev1.AgentInvocationMetrics) error {
+func (m *MockAgentStateRepository) UpdateMetrics(ctx context.Context, resourceInstanceID, agentName string, metrics []*boundflowv1.AgentInvocationMetrics) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateMetrics", ctx, resourceInstanceID, agentName, metrics)
 	ret0, _ := ret[0].(error)
@@ -994,7 +994,7 @@ func (m *MockMetricsRepository) EXPECT() *MockMetricsRepositoryMockRecorder {
 }
 
 // EmitMetrics mocks base method.
-func (m *MockMetricsRepository) EmitMetrics(ctx context.Context, resourceInstanceID string, emittedVersion int64, rollingMetrics []domain.WorkflowInvocationSnapshot, versionMetrics *domain.WorkflowVersionMetrics, agentMetrics map[string][]*convergeplanev1.AgentInvocationMetrics) (bool, error) {
+func (m *MockMetricsRepository) EmitMetrics(ctx context.Context, resourceInstanceID string, emittedVersion int64, rollingMetrics []domain.WorkflowInvocationSnapshot, versionMetrics *domain.WorkflowVersionMetrics, agentMetrics map[string][]*boundflowv1.AgentInvocationMetrics) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EmitMetrics", ctx, resourceInstanceID, emittedVersion, rollingMetrics, versionMetrics, agentMetrics)
 	ret0, _ := ret[0].(bool)

@@ -237,7 +237,7 @@ class BoundFlowWorker:
     async def run(self) -> None:
         """Open the worker stream and dispatch jobs until cancelled."""
         from . import _transport as t
-        from convergeplane.v1 import operation_pb2 as op_pb
+        from boundflow.v1 import operation_pb2 as op_pb
 
         ENTRY = "reconcile_entry"
 
@@ -267,7 +267,7 @@ class BoundFlowWorker:
     async def _to_proto(self, result: OperationResult, op):
         """Map an OperationResult to an AtomicOperationResult proto."""
         from . import _transport as t
-        from convergeplane.v1 import operation_pb2 as op_pb
+        from boundflow.v1 import operation_pb2 as op_pb
 
         completed = op_pb.OPERATION_STATUS_COMPLETED
 

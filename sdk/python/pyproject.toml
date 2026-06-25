@@ -33,5 +33,5 @@ dev = [
 
 [tool.setuptools.packages.find]
 # Ship the SDK and the generated gRPC stubs; keep tests/examples out of the wheel.
-include = ["boundflow*", "convergeplane*"]
+include = ["boundflow*"]
 exclude = ["tests*", "examples*"]

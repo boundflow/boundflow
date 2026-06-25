@@ -9,10 +9,10 @@ import (
 
 	"go.uber.org/mock/gomock"
 
-	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
-	"github.com/convergeplane/convergeplane/internal/domain"
-	"github.com/convergeplane/convergeplane/internal/scheduler"
-	"github.com/convergeplane/convergeplane/internal/storage/mocks"
+	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
+	"github.com/boundflow/boundflow/internal/domain"
+	"github.com/boundflow/boundflow/internal/scheduler"
+	"github.com/boundflow/boundflow/internal/storage/mocks"
 )
 
 var discardLogger = slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -22,7 +22,7 @@ func i32(v int32) *int32 { return &v }
 // no-op doubles for the post-completion metric + policy steps in CompleteRequest.
 type noopMetricsHandler struct{}
 
-func (noopMetricsHandler) HandleAgentMetrics(_ context.Context, _ map[string]*convergeplanev1.AgentInvocationMetrics, _ domain.WorkflowJobMetrics, _ *domain.ResourceInstance) (error, *domain.WorkflowVersionMetrics) {
+func (noopMetricsHandler) HandleAgentMetrics(_ context.Context, _ map[string]*boundflowv1.AgentInvocationMetrics, _ domain.WorkflowJobMetrics, _ *domain.ResourceInstance) (error, *domain.WorkflowVersionMetrics) {
 	return nil, nil
 }
 
@@ -180,7 +180,7 @@ func TestScheduleRequest_AgentStateInContext(t *testing.T) {
 		"my_agent": {
 			AgentName:         "my_agent",
 			LifecyclePolicy:   map[string]any{"rules": []any{}},
-			InvocationMetrics: []*convergeplanev1.AgentInvocationMetrics{{}},
+			InvocationMetrics: []*boundflowv1.AgentInvocationMetrics{{}},
 		},
 	}, nil)
 
@@ -214,8 +214,8 @@ func TestUpdateAgentMetrics_CallsRepoForEachAgent(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	s, _, _, _, _, agentStates := newTestScheduler(ctrl)
 
-	metrics1 := []*convergeplanev1.AgentInvocationMetrics{{TokensUsed: i32(100)}}
-	metrics2 := []*convergeplanev1.AgentInvocationMetrics{{TokensUsed: i32(200)}}
+	metrics1 := []*boundflowv1.AgentInvocationMetrics{{TokensUsed: i32(100)}}
+	metrics2 := []*boundflowv1.AgentInvocationMetrics{{TokensUsed: i32(200)}}
 
 	agentStates.EXPECT().
 		UpdateMetrics(gomock.Any(), "resource-1", "agent_a", metrics1).
@@ -224,7 +224,7 @@ func TestUpdateAgentMetrics_CallsRepoForEachAgent(t *testing.T) {
 		UpdateMetrics(gomock.Any(), "resource-1", "agent_b", metrics2).
 		Return(nil)
 
-	err := s.UpdateAgentMetrics(context.Background(), "resource-1", map[string][]*convergeplanev1.AgentInvocationMetrics{
+	err := s.UpdateAgentMetrics(context.Background(), "resource-1", map[string][]*boundflowv1.AgentInvocationMetrics{
 		"agent_a": metrics1,
 		"agent_b": metrics2,
 	})
@@ -242,7 +242,7 @@ func TestUpdateAgentMetrics_RepoErrorDoesNotStop(t *testing.T) {
 		Return(errors.New("db error"))
 
 	// UpdateAgentMetrics logs and continues — should return nil.
-	err := s.UpdateAgentMetrics(context.Background(), "resource-1", map[string][]*convergeplanev1.AgentInvocationMetrics{
+	err := s.UpdateAgentMetrics(context.Background(), "resource-1", map[string][]*boundflowv1.AgentInvocationMetrics{
 		"agent_a": {{TokensUsed: i32(50)}},
 	})
 	if err != nil {

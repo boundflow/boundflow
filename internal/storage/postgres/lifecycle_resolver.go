@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/convergeplane/convergeplane/internal/domain"
+	"github.com/boundflow/boundflow/internal/domain"
 )
 
 type LifecycleResolverRepo struct {

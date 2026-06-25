@@ -3,7 +3,7 @@ package domain
 import (
 	"time"
 
-	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
+	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
 )
 
 type JobStatus string
@@ -31,7 +31,7 @@ type Job struct {
 	RuntimeParams          WorkflowRuntimeParams
 	WorkflowVersion        int
 	// AgentMetrics is the per-agent invocation metrics accumulated across this job's operations.
-	AgentMetrics map[string]*convergeplanev1.AgentInvocationMetrics
+	AgentMetrics map[string]*boundflowv1.AgentInvocationMetrics
 	// WorkflowMetrics is workflow-level (non-agent) metrics accumulated across this job's operations.
 	WorkflowMetrics WorkflowJobMetrics
 	Owner           *string

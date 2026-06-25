@@ -1,14 +1,14 @@
 #!/bin/bash
-# run.sh — starts all three convergeplane processes locally for E2E testing.
+# run.sh — starts all three boundflow processes locally for E2E testing.
 # Usage: ./localrun/run.sh
-# Requires: postgres running, convergeplane binary built (make build)
+# Requires: postgres running, boundflow binary built (make build)
 
 set -e
 
 DB_USER="${USER}"
-DB_URL="postgres://${DB_USER}@localhost:5432/convergeplane?sslmode=disable"
+DB_URL="postgres://${DB_USER}@localhost:5432/boundflow?sslmode=disable"
 MIGRATIONS_DIR="./migrations"
-BIN="./bin/convergeplane"
+BIN="./bin/boundflow"
 
 if [ ! -f "$BIN" ]; then
   echo "Binary not found. Run 'make build' first."
@@ -22,14 +22,14 @@ if ! pg_isready -q; then
 fi
 
 echo "==> Setting up database..."
-psql -U "$DB_USER" postgres -c "DROP DATABASE IF EXISTS convergeplane;" 2>/dev/null || true
-psql -U "$DB_USER" postgres -c "CREATE DATABASE convergeplane;"
+psql -U "$DB_USER" postgres -c "DROP DATABASE IF EXISTS boundflow;" 2>/dev/null || true
+psql -U "$DB_USER" postgres -c "CREATE DATABASE boundflow;"
 migrate -path $MIGRATIONS_DIR -database "$DB_URL" up
 
-export CONVERGEPLANE_DATABASE_URL="$DB_URL"
-export CONVERGEPLANE_LOG_LEVEL="debug"
-export CONVERGEPLANE_DEBUG="true"
-export CONVERGEPLANE_NUM_PARTITIONS="10"
+export BOUNDFLOW_DATABASE_URL="$DB_URL"
+export BOUNDFLOW_LOG_LEVEL="debug"
+export BOUNDFLOW_DEBUG="true"
+export BOUNDFLOW_NUM_PARTITIONS="10"
 
 echo "==> Starting server (port 50051)..."
 $BIN -mode=server &
@@ -53,7 +53,7 @@ cleanup() {
   kill $SERVER_PID $SCHEDULER_PID $WORKER_PID $CLIENT_PID 2>/dev/null
   wait 2>/dev/null
   echo "==> Tearing down database..."
-  psql -U "$DB_USER" postgres -c "DROP DATABASE IF EXISTS convergeplane;" 2>/dev/null || true
+  psql -U "$DB_USER" postgres -c "DROP DATABASE IF EXISTS boundflow;" 2>/dev/null || true
   echo "==> Done."
 }
 trap cleanup SIGINT SIGTERM
@@ -62,15 +62,15 @@ echo ""
 echo "All processes running. Press Ctrl+C to stop."
 echo ""
 echo "Step 1 — Create a tenant group:"
-echo "  grpcurl -plaintext -d '{\"tenant_group\":{\"name\":\"test-group\"}}' localhost:50051 convergeplane.v1.RegistrationService/CreateTenantGroup"
+echo "  grpcurl -plaintext -d '{\"tenant_group\":{\"name\":\"test-group\"}}' localhost:50051 boundflow.v1.RegistrationService/CreateTenantGroup"
 echo ""
 echo "Step 2 — Create a tenant (use tenant_group_id from above):"
-echo "  grpcurl -plaintext -d '{\"tenant\":{\"tenant_group_id\":\"<group-id>\",\"name\":\"test-tenant\"}}' localhost:50051 convergeplane.v1.RegistrationService/CreateTenant"
+echo "  grpcurl -plaintext -d '{\"tenant\":{\"tenant_group_id\":\"<group-id>\",\"name\":\"test-tenant\"}}' localhost:50051 boundflow.v1.RegistrationService/CreateTenant"
 echo ""
 echo "Step 3 — Create a resource (use id from above as tenant_id):"
-echo "  grpcurl -plaintext -d '{\"resource_type\":\"database\",\"tenant_id\":\"<tenant-id>\",\"initial_state\":{\"sku\":\"standard\"}}' localhost:50051 convergeplane.v1.ResourceLifecycleService/CreateResource"
+echo "  grpcurl -plaintext -d '{\"resource_type\":\"database\",\"tenant_id\":\"<tenant-id>\",\"initial_state\":{\"sku\":\"standard\"}}' localhost:50051 boundflow.v1.ResourceLifecycleService/CreateResource"
 echo ""
 echo "Step 4 — Check resource state (use resource_instance_id from above):"
-echo "  grpcurl -plaintext -d '{\"resource_instance_id\":\"<resource-id>\"}' localhost:50051 convergeplane.v1.ResourceLifecycleService/GetResourceState"
+echo "  grpcurl -plaintext -d '{\"resource_instance_id\":\"<resource-id>\"}' localhost:50051 boundflow.v1.ResourceLifecycleService/GetResourceState"
 echo ""
 wait

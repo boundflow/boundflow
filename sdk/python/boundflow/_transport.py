@@ -19,9 +19,9 @@ log = logging.getLogger("boundflow.worker")
 from google.protobuf import json_format
 from google.protobuf.struct_pb2 import Struct
 
-from convergeplane.v1 import operation_pb2 as op_pb
-from convergeplane.v1 import worker_pb2 as wk_pb
-from convergeplane.v1 import worker_pb2_grpc as wk_grpc
+from boundflow.v1 import operation_pb2 as op_pb
+from boundflow.v1 import worker_pb2 as wk_pb
+from boundflow.v1 import worker_pb2_grpc as wk_grpc
 
 # dispatch: given the launched operation proto, produce the result proto.
 Dispatch = Callable[[op_pb.AtomicOperation], Awaitable[op_pb.AtomicOperationResult]]

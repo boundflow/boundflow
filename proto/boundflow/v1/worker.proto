@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package boundflow.v1;
+
+option go_package = "github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1";
+
+import "boundflow/v1/operation.proto";
+
+// WorkerService is implemented by the control plane server.
+// The worker (customer SDK) connects as a gRPC client and opens a
+// bidirectional stream. The server drives the session — sending
+// LaunchOperation and PollOperation commands — while the worker
+// responds with status updates.
+service WorkerService {
+  rpc WorkerSession(stream WorkerMessage) returns (stream ServerCommand);
+}
+
+// WorkerMessage is sent from the worker (client) to the server.
+// session_id identifies the session and is present on every message so
+// the server can route it to the correct handler when multiplexing
+// many concurrent streams.
+message WorkerMessage {
+  string session_id = 1;
+  oneof payload {
+    ReadyForWork   ready  = 2;
+    OperationUpdate update = 3;
+  }
+}
+
+// WorkerCapability declares a (resource_type, workflow_version) pair
+// that the worker has a registered handler for.
+message WorkerCapability {
+  string resource_type    = 1;
+  int32  workflow_version = 2;
+}
+
+// ReadyForWork signals that the worker has connected and is available
+// to accept a new operation.
+message ReadyForWork {
+  repeated WorkerCapability capabilities = 1;
+}
+
+// OperationUpdate carries the current status of an in-progress operation.
+message OperationUpdate {
+  string operation_id          = 1;
+  AtomicOperationResult result = 2;
+}
+
+// ServerCommand is sent from the server to the worker.
+message ServerCommand {
+  oneof payload {
+    LaunchOperation  launch = 1;
+    CancelOperation  cancel = 2;
+  }
+}
+
+// LaunchOperation instructs the worker to start executing an operation.
+message LaunchOperation {
+  AtomicOperation operation = 1;
+}
+
+// CancelOperation instructs the worker to abort the current operation.
+// The worker should respond with an OperationUpdate with status CANCELLED.
+message CancelOperation {
+  string operation_id = 1;
+}

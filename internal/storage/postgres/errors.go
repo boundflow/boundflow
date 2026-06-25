@@ -6,7 +6,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/convergeplane/convergeplane/internal/storage"
+	"github.com/boundflow/boundflow/internal/storage"
 )
 
 func handleError(err error, entity string) error {

@@ -8,9 +8,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/convergeplane/convergeplane/internal/domain"
-	"github.com/convergeplane/convergeplane/internal/service"
-	"github.com/convergeplane/convergeplane/internal/storage"
+	"github.com/boundflow/boundflow/internal/domain"
+	"github.com/boundflow/boundflow/internal/service"
+	"github.com/boundflow/boundflow/internal/storage"
 )
 
 type PeriodicWorkflowHandler struct {

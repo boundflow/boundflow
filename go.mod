@@ -1,4 +1,4 @@
-module github.com/convergeplane/convergeplane
+module github.com/boundflow/boundflow
 
 go 1.25.0
 

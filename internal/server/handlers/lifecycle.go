@@ -7,16 +7,16 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
-	"github.com/convergeplane/convergeplane/internal/auth"
-	"github.com/convergeplane/convergeplane/internal/convert"
-	"github.com/convergeplane/convergeplane/internal/domain"
-	"github.com/convergeplane/convergeplane/internal/service"
-	"github.com/convergeplane/convergeplane/internal/storage"
+	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
+	"github.com/boundflow/boundflow/internal/auth"
+	"github.com/boundflow/boundflow/internal/convert"
+	"github.com/boundflow/boundflow/internal/domain"
+	"github.com/boundflow/boundflow/internal/service"
+	"github.com/boundflow/boundflow/internal/storage"
 )
 
 type ResourceLifecycleHandler struct {
-	convergeplanev1.UnimplementedResourceLifecycleServiceServer
+	boundflowv1.UnimplementedResourceLifecycleServiceServer
 	svc *service.LifecycleService
 }
 
@@ -63,7 +63,7 @@ func (h *ResourceLifecycleHandler) checkTenantOwner(ctx context.Context, tenantI
 	return nil
 }
 
-func (h *ResourceLifecycleHandler) CreateResource(ctx context.Context, req *convergeplanev1.CreateResourceRequest) (*convergeplanev1.CreateResourceResponse, error) {
+func (h *ResourceLifecycleHandler) CreateResource(ctx context.Context, req *boundflowv1.CreateResourceRequest) (*boundflowv1.CreateResourceResponse, error) {
 	if req.ResourceType == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "resource_type is required")
 	}
@@ -89,12 +89,12 @@ func (h *ResourceLifecycleHandler) CreateResource(ctx context.Context, req *conv
 		return nil, status.Errorf(codes.Internal, "create resource: %v", err)
 	}
 
-	return &convergeplanev1.CreateResourceResponse{
+	return &boundflowv1.CreateResourceResponse{
 		ResourceInstance: convert.ResourceInstanceToProto(instance),
 	}, nil
 }
 
-func (h *ResourceLifecycleHandler) ReconcileResource(ctx context.Context, req *convergeplanev1.ReconcileResourceRequest) (*convergeplanev1.ReconcileResourceResponse, error) {
+func (h *ResourceLifecycleHandler) ReconcileResource(ctx context.Context, req *boundflowv1.ReconcileResourceRequest) (*boundflowv1.ReconcileResourceResponse, error) {
 	if req.ResourceInstanceId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
 	}
@@ -124,10 +124,10 @@ func (h *ResourceLifecycleHandler) ReconcileResource(ctx context.Context, req *c
 		return nil, status.Errorf(codes.Internal, "reconcile resource: %v", err)
 	}
 
-	return &convergeplanev1.ReconcileResourceResponse{}, nil
+	return &boundflowv1.ReconcileResourceResponse{}, nil
 }
 
-func (h *ResourceLifecycleHandler) DeleteResource(ctx context.Context, req *convergeplanev1.DeleteResourceRequest) (*convergeplanev1.DeleteResourceResponse, error) {
+func (h *ResourceLifecycleHandler) DeleteResource(ctx context.Context, req *boundflowv1.DeleteResourceRequest) (*boundflowv1.DeleteResourceResponse, error) {
 	if req.ResourceInstanceId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
 	}
@@ -143,10 +143,10 @@ func (h *ResourceLifecycleHandler) DeleteResource(ctx context.Context, req *conv
 		return nil, status.Errorf(codes.Internal, "delete resource: %v", err)
 	}
 
-	return &convergeplanev1.DeleteResourceResponse{}, nil
+	return &boundflowv1.DeleteResourceResponse{}, nil
 }
 
-func (h *ResourceLifecycleHandler) GetResourceState(ctx context.Context, req *convergeplanev1.GetResourceStateRequest) (*convergeplanev1.GetResourceStateResponse, error) {
+func (h *ResourceLifecycleHandler) GetResourceState(ctx context.Context, req *boundflowv1.GetResourceStateRequest) (*boundflowv1.GetResourceStateResponse, error) {
 	if req.ResourceInstanceId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
 	}
@@ -162,12 +162,12 @@ func (h *ResourceLifecycleHandler) GetResourceState(ctx context.Context, req *co
 		}
 		return nil, status.Errorf(codes.Internal, "get resource state: %v", err)
 	}
-	return &convergeplanev1.GetResourceStateResponse{
+	return &boundflowv1.GetResourceStateResponse{
 		ResourceInstance: convert.ResourceInstanceToProto(instance),
 	}, nil
 }
 
-func (h *ResourceLifecycleHandler) SetAgentRuntimePolicy(ctx context.Context, req *convergeplanev1.SetAgentRuntimePolicyRequest) (*convergeplanev1.SetAgentRuntimePolicyResponse, error) {
+func (h *ResourceLifecycleHandler) SetAgentRuntimePolicy(ctx context.Context, req *boundflowv1.SetAgentRuntimePolicyRequest) (*boundflowv1.SetAgentRuntimePolicyResponse, error) {
 	if req.ResourceInstanceId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
 	}
@@ -186,10 +186,10 @@ func (h *ResourceLifecycleHandler) SetAgentRuntimePolicy(ctx context.Context, re
 	if err := h.svc.SetAgentRuntimePolicy(ctx, req.ResourceInstanceId, req.AgentName, policy); err != nil {
 		return nil, status.Errorf(codes.Internal, "set agent runtime policy: %v", err)
 	}
-	return &convergeplanev1.SetAgentRuntimePolicyResponse{}, nil
+	return &boundflowv1.SetAgentRuntimePolicyResponse{}, nil
 }
 
-func (h *ResourceLifecycleHandler) SetAgentLifecyclePolicy(ctx context.Context, req *convergeplanev1.SetAgentLifecyclePolicyRequest) (*convergeplanev1.SetAgentLifecyclePolicyResponse, error) {
+func (h *ResourceLifecycleHandler) SetAgentLifecyclePolicy(ctx context.Context, req *boundflowv1.SetAgentLifecyclePolicyRequest) (*boundflowv1.SetAgentLifecyclePolicyResponse, error) {
 	if req.ResourceInstanceId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
 	}
@@ -208,10 +208,10 @@ func (h *ResourceLifecycleHandler) SetAgentLifecyclePolicy(ctx context.Context, 
 	if err := h.svc.SetAgentLifecyclePolicy(ctx, req.ResourceInstanceId, req.AgentName, policy); err != nil {
 		return nil, status.Errorf(codes.Internal, "set agent lifecycle policy: %v", err)
 	}
-	return &convergeplanev1.SetAgentLifecyclePolicyResponse{}, nil
+	return &boundflowv1.SetAgentLifecyclePolicyResponse{}, nil
 }
 
-func (h *ResourceLifecycleHandler) DeleteAgent(ctx context.Context, req *convergeplanev1.DeleteAgentRequest) (*convergeplanev1.DeleteAgentResponse, error) {
+func (h *ResourceLifecycleHandler) DeleteAgent(ctx context.Context, req *boundflowv1.DeleteAgentRequest) (*boundflowv1.DeleteAgentResponse, error) {
 	if req.ResourceInstanceId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
 	}
@@ -226,10 +226,10 @@ func (h *ResourceLifecycleHandler) DeleteAgent(ctx context.Context, req *converg
 	if err := h.svc.DeleteAgent(ctx, req.ResourceInstanceId, req.AgentName); err != nil {
 		return nil, status.Errorf(codes.Internal, "delete agent: %v", err)
 	}
-	return &convergeplanev1.DeleteAgentResponse{}, nil
+	return &boundflowv1.DeleteAgentResponse{}, nil
 }
 
-func (h *ResourceLifecycleHandler) SetWorkflowLifecyclePolicy(ctx context.Context, req *convergeplanev1.SetWorkflowLifecyclePolicyRequest) (*convergeplanev1.SetWorkflowLifecyclePolicyResponse, error) {
+func (h *ResourceLifecycleHandler) SetWorkflowLifecyclePolicy(ctx context.Context, req *boundflowv1.SetWorkflowLifecyclePolicyRequest) (*boundflowv1.SetWorkflowLifecyclePolicyResponse, error) {
 	if req.ResourceInstanceId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
 	}
@@ -237,7 +237,7 @@ func (h *ResourceLifecycleHandler) SetWorkflowLifecyclePolicy(ctx context.Contex
 		if rule.Action == nil {
 			return nil, status.Errorf(codes.InvalidArgument, "rule %d: action is required", i)
 		}
-		if rule.Action.Type != convergeplanev1.WorkflowPolicyActionType_WORKFLOW_POLICY_ACTION_SET_VERSION && rule.Window <= 0 {
+		if rule.Action.Type != boundflowv1.WorkflowPolicyActionType_WORKFLOW_POLICY_ACTION_SET_VERSION && rule.Window <= 0 {
 			return nil, status.Errorf(codes.InvalidArgument, "rule %d: window must be > 0 for %s actions", i, rule.Action.Type)
 		}
 	}
@@ -253,10 +253,10 @@ func (h *ResourceLifecycleHandler) SetWorkflowLifecyclePolicy(ctx context.Contex
 		}
 		return nil, status.Errorf(codes.Internal, "set workflow lifecycle policy: %v", err)
 	}
-	return &convergeplanev1.SetWorkflowLifecyclePolicyResponse{}, nil
+	return &boundflowv1.SetWorkflowLifecyclePolicyResponse{}, nil
 }
 
-func (h *ResourceLifecycleHandler) ActivateWorkflow(ctx context.Context, req *convergeplanev1.ActivateWorkflowRequest) (*convergeplanev1.ActivateWorkflowResponse, error) {
+func (h *ResourceLifecycleHandler) ActivateWorkflow(ctx context.Context, req *boundflowv1.ActivateWorkflowRequest) (*boundflowv1.ActivateWorkflowResponse, error) {
 	if req.ResourceInstanceId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
 	}
@@ -271,10 +271,10 @@ func (h *ResourceLifecycleHandler) ActivateWorkflow(ctx context.Context, req *co
 		}
 		return nil, status.Errorf(codes.Internal, "activate workflow: %v", err)
 	}
-	return &convergeplanev1.ActivateWorkflowResponse{}, nil
+	return &boundflowv1.ActivateWorkflowResponse{}, nil
 }
 
-func (h *ResourceLifecycleHandler) ApproveWorkflow(ctx context.Context, req *convergeplanev1.ApproveWorkflowRequest) (*convergeplanev1.ApproveWorkflowResponse, error) {
+func (h *ResourceLifecycleHandler) ApproveWorkflow(ctx context.Context, req *boundflowv1.ApproveWorkflowRequest) (*boundflowv1.ApproveWorkflowResponse, error) {
 	if req.ResourceInstanceId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
 	}
@@ -292,10 +292,10 @@ func (h *ResourceLifecycleHandler) ApproveWorkflow(ctx context.Context, req *con
 		}
 		return nil, status.Errorf(codes.Internal, "approve workflow: %v", err)
 	}
-	return &convergeplanev1.ApproveWorkflowResponse{}, nil
+	return &boundflowv1.ApproveWorkflowResponse{}, nil
 }
 
-func (h *ResourceLifecycleHandler) RejectWorkflow(ctx context.Context, req *convergeplanev1.RejectWorkflowRequest) (*convergeplanev1.RejectWorkflowResponse, error) {
+func (h *ResourceLifecycleHandler) RejectWorkflow(ctx context.Context, req *boundflowv1.RejectWorkflowRequest) (*boundflowv1.RejectWorkflowResponse, error) {
 	if req.ResourceInstanceId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
 	}
@@ -313,5 +313,5 @@ func (h *ResourceLifecycleHandler) RejectWorkflow(ctx context.Context, req *conv
 		}
 		return nil, status.Errorf(codes.Internal, "reject workflow: %v", err)
 	}
-	return &convergeplanev1.RejectWorkflowResponse{}, nil
+	return &boundflowv1.RejectWorkflowResponse{}, nil
 }

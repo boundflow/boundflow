@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package boundflow.v1;
+
+option go_package = "github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1";
+
+// ModelPricing is the per-1M-token rate for a model, in USD. Shared by the
+// RegistrationService pricing RPCs and the per-operation pricing the server
+// ships to the worker.
+message ModelPricing {
+  string model_id = 1;
+  double input_per_1m = 2;
+  double output_per_1m = 3;
+}

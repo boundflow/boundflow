@@ -9,13 +9,13 @@ import (
 	"sync"
 	"time"
 
-	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
-	"github.com/convergeplane/convergeplane/internal/domain"
-	"github.com/convergeplane/convergeplane/internal/storage"
+	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
+	"github.com/boundflow/boundflow/internal/domain"
+	"github.com/boundflow/boundflow/internal/storage"
 )
 
 type MetricsHandler interface {
-	HandleAgentMetrics(ctx context.Context, invocationMetrics map[string]*convergeplanev1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics, workflow *domain.ResourceInstance) (error, *domain.WorkflowVersionMetrics)
+	HandleAgentMetrics(ctx context.Context, invocationMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics, workflow *domain.ResourceInstance) (error, *domain.WorkflowVersionMetrics)
 }
 
 type PolicyResolver interface {
@@ -435,7 +435,7 @@ func (s *Scheduler) ScheduleRequest(ctx context.Context, req string) error {
 	return nil
 }
 
-func (s *Scheduler) UpdateAgentMetrics(ctx context.Context, resourceInstanceID string, updates map[string][]*convergeplanev1.AgentInvocationMetrics) error {
+func (s *Scheduler) UpdateAgentMetrics(ctx context.Context, resourceInstanceID string, updates map[string][]*boundflowv1.AgentInvocationMetrics) error {
 	for agentName, metrics := range updates {
 		if err := s.agentStates.UpdateMetrics(ctx, resourceInstanceID, agentName, metrics); err != nil {
 			s.log.Warn("failed to update agent metrics", "resource_id", resourceInstanceID, "agent", agentName, "error", err)

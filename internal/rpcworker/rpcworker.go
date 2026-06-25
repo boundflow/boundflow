@@ -6,10 +6,10 @@ import (
 	"log/slog"
 	"time"
 
-	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
-	"github.com/convergeplane/convergeplane/internal/auth"
-	"github.com/convergeplane/convergeplane/internal/domain"
-	"github.com/convergeplane/convergeplane/internal/storage"
+	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
+	"github.com/boundflow/boundflow/internal/auth"
+	"github.com/boundflow/boundflow/internal/domain"
+	"github.com/boundflow/boundflow/internal/storage"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -23,12 +23,12 @@ type RequestScheduler interface {
 }
 
 type MetricsHandler interface {
-	MergeAgentMetrics(opMetrics map[string]*convergeplanev1.AgentInvocationMetrics, jobMetrics *map[string]*convergeplanev1.AgentInvocationMetrics)
+	MergeAgentMetrics(opMetrics map[string]*boundflowv1.AgentInvocationMetrics, jobMetrics *map[string]*boundflowv1.AgentInvocationMetrics)
 	MergeWorkflowMetrics(opMetrics domain.WorkflowJobMetrics, jobMetrics *domain.WorkflowJobMetrics)
 }
 
 type RpcWorker struct {
-	convergeplanev1.UnimplementedWorkerServiceServer
+	boundflowv1.UnimplementedWorkerServiceServer
 	scheduler         RequestScheduler
 	jobs              storage.JobRepository
 	id                string
@@ -90,7 +90,7 @@ func NewRpcWorker(jobs storage.JobRepository, id string, jobTimeout int, schedul
 //	-> Disconnected
 
 // TOOD: Make lease expiry reset the state to ConnectedIdle instead of closing the stream
-func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev1.WorkerMessage, convergeplanev1.ServerCommand]) error {
+func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.WorkerMessage, boundflowv1.ServerCommand]) error {
 	tenantGroupID, ok := auth.TenantGroupFromContext(stream.Context())
 	if !ok {
 		return status.Error(codes.Unauthenticated, "missing auth")
@@ -99,7 +99,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 	log := s.log
 
 	leaseExpired := make(chan bool)
-	recvStream := make(chan *convergeplanev1.WorkerMessage)
+	recvStream := make(chan *boundflowv1.WorkerMessage)
 	controlCodeCancelled := make(chan bool)
 
 	go func() {
@@ -117,9 +117,9 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 
 	cancelOperation := func(operationId string) error {
 		log.Warn("sending cancel to client", "operation_id", operationId)
-		return stream.Send(&convergeplanev1.ServerCommand{
-			Payload: &convergeplanev1.ServerCommand_Cancel{
-				Cancel: &convergeplanev1.CancelOperation{
+		return stream.Send(&boundflowv1.ServerCommand{
+			Payload: &boundflowv1.ServerCommand_Cancel{
+				Cancel: &boundflowv1.CancelOperation{
 					OperationId: operationId,
 				},
 			},
@@ -133,7 +133,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 		}
 	}
 
-	completeOperation := func(cancelLease chan bool, job *domain.Job, result *convergeplanev1.AtomicOperationResult) error {
+	completeOperation := func(cancelLease chan bool, job *domain.Job, result *boundflowv1.AtomicOperationResult) error {
 		ctx := context.Background() // request completion doesnt depend on stream context
 		defer cancelLeaseIfExists(cancelLease)
 
@@ -245,7 +245,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 					return nil
 				case msg := <-recvStream:
 
-					ready, ok := msg.Payload.(*convergeplanev1.WorkerMessage_Ready)
+					ready, ok := msg.Payload.(*boundflowv1.WorkerMessage_Ready)
 					if !ok {
 						log.Warn("unexpected message in idle state, expected ReadyForWork")
 						return errors.New("protocol error") // protocol error
@@ -326,8 +326,8 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 							}
 							// nil branch = Complete() — finish the job without launching an operation.
 							log.Info("approval branch is complete, finishing job", "request_id", job.RequestID, "branch", label)
-							completeOperation(cancelLease, job, &convergeplanev1.AtomicOperationResult{
-								Status: convergeplanev1.OperationStatus_OPERATION_STATUS_COMPLETED,
+							completeOperation(cancelLease, job, &boundflowv1.AtomicOperationResult{
+								Status: boundflowv1.OperationStatus_OPERATION_STATUS_COMPLETED,
 							})
 							return false
 						}
@@ -372,10 +372,10 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 						}
 
 						log.Info("sending LaunchOperation to client", "request_id", job.RequestID, "operation", job.CurrentAtomicOperation)
-						err = stream.Send(&convergeplanev1.ServerCommand{
-							Payload: &convergeplanev1.ServerCommand_Launch{
-								Launch: &convergeplanev1.LaunchOperation{
-									Operation: &convergeplanev1.AtomicOperation{
+						err = stream.Send(&boundflowv1.ServerCommand{
+							Payload: &boundflowv1.ServerCommand_Launch{
+								Launch: &boundflowv1.LaunchOperation{
+									Operation: &boundflowv1.AtomicOperation{
 										Id:              job.RequestID,
 										ResourceId:      job.ResourceInstanceID,
 										OperationType:   job.JobType,
@@ -413,7 +413,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 					}
 					return nil
 				case ack := <-recvStream:
-					update, ok := ack.Payload.(*convergeplanev1.WorkerMessage_Update)
+					update, ok := ack.Payload.(*boundflowv1.WorkerMessage_Update)
 					if !ok {
 						log.Warn("unexpected message type while waiting for ack", "request_id", currentJob.RequestID)
 						return errors.New("protocol error") // protocol error
@@ -422,7 +422,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 						log.Warn("wrong operation id in ack", "expected", currentJob.RequestID, "got", update.Update.OperationId)
 						return errors.New("wrong operation id from client")
 					}
-					if update.Update.Result.Status != convergeplanev1.OperationStatus_OPERATION_STATUS_IN_PROGRESS {
+					if update.Update.Result.Status != boundflowv1.OperationStatus_OPERATION_STATUS_IN_PROGRESS {
 						log.Warn("unexpected status in ack", "request_id", currentJob.RequestID, "status", update.Update.Result.Status)
 						return errors.New("unexpected status from client")
 					}
@@ -450,7 +450,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 						failOperation(cancelLease, currentJob)
 						return nil
 					case msg := <-recvStream:
-						update, ok := msg.Payload.(*convergeplanev1.WorkerMessage_Update)
+						update, ok := msg.Payload.(*boundflowv1.WorkerMessage_Update)
 						if !ok {
 							log.Warn("unexpected message type while busy", "request_id", currentJob.RequestID)
 							failOperation(cancelLease, currentJob)
@@ -462,16 +462,16 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 							return errors.New("wrong operation id from client")
 						}
 						switch update.Update.Result.Status {
-						case convergeplanev1.OperationStatus_OPERATION_STATUS_COMPLETED:
+						case boundflowv1.OperationStatus_OPERATION_STATUS_COMPLETED:
 							log.Info("operation completed", "request_id", currentJob.RequestID, "resource_id", currentJob.ResourceInstanceID)
 							completeOperation(cancelLease, currentJob, update.Update.Result)
-						case convergeplanev1.OperationStatus_OPERATION_STATUS_FAILED:
+						case boundflowv1.OperationStatus_OPERATION_STATUS_FAILED:
 							log.Warn("operation failed by client", "request_id", currentJob.RequestID)
 							failOperation(cancelLease, currentJob)
-						case convergeplanev1.OperationStatus_OPERATION_STATUS_IN_PROGRESS:
+						case boundflowv1.OperationStatus_OPERATION_STATUS_IN_PROGRESS:
 							log.Debug("operation still in progress", "request_id", currentJob.RequestID)
 							continue ConnectedBusyLoop
-						case convergeplanev1.OperationStatus_OPERATION_STATUS_CANCELLED: // This is unexpected
+						case boundflowv1.OperationStatus_OPERATION_STATUS_CANCELLED: // This is unexpected
 							log.Warn("unexpected CANCELLED status while busy", "request_id", currentJob.RequestID)
 							failOperation(cancelLease, currentJob)
 						}
@@ -506,7 +506,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 						failOperation(cancelLease, currentJob)
 						return errors.New("cancel ack timed out")
 					case msg := <-recvStream:
-						ack, ok := msg.Payload.(*convergeplanev1.WorkerMessage_Update)
+						ack, ok := msg.Payload.(*boundflowv1.WorkerMessage_Update)
 						if !ok {
 							log.Warn("unexpected message type while awaiting cancel ack", "request_id", currentJob.RequestID)
 							failOperation(cancelLease, currentJob)
@@ -517,14 +517,14 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[convergeplanev
 							return errors.New("wrong operation id")
 						}
 						switch ack.Update.Result.Status {
-						case convergeplanev1.OperationStatus_OPERATION_STATUS_COMPLETED:
+						case boundflowv1.OperationStatus_OPERATION_STATUS_COMPLETED:
 							log.Info("operation completed despite cancel request", "request_id", currentJob.RequestID)
 							completeOperation(cancelLease, currentJob, ack.Update.Result)
-						case convergeplanev1.OperationStatus_OPERATION_STATUS_FAILED,
-							convergeplanev1.OperationStatus_OPERATION_STATUS_CANCELLED:
+						case boundflowv1.OperationStatus_OPERATION_STATUS_FAILED,
+							boundflowv1.OperationStatus_OPERATION_STATUS_CANCELLED:
 							log.Info("operation cancelled/failed", "request_id", currentJob.RequestID, "status", ack.Update.Result.Status)
 							failOperation(cancelLease, currentJob)
-						case convergeplanev1.OperationStatus_OPERATION_STATUS_IN_PROGRESS:
+						case boundflowv1.OperationStatus_OPERATION_STATUS_IN_PROGRESS:
 							log.Debug("still in progress during cancel, waiting", "request_id", currentJob.RequestID)
 							continue
 						}

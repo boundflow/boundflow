@@ -9,9 +9,9 @@ import (
 
 	"go.uber.org/mock/gomock"
 
-	"github.com/convergeplane/convergeplane/internal/domain"
-	"github.com/convergeplane/convergeplane/internal/service"
-	"github.com/convergeplane/convergeplane/internal/storage/mocks"
+	"github.com/boundflow/boundflow/internal/domain"
+	"github.com/boundflow/boundflow/internal/service"
+	"github.com/boundflow/boundflow/internal/storage/mocks"
 )
 
 var discardLogger = slog.New(slog.NewTextHandler(io.Discard, nil))

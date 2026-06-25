@@ -7,15 +7,15 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
-	"github.com/convergeplane/convergeplane/internal/auth"
-	"github.com/convergeplane/convergeplane/internal/convert"
-	"github.com/convergeplane/convergeplane/internal/service"
-	"github.com/convergeplane/convergeplane/internal/storage"
+	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
+	"github.com/boundflow/boundflow/internal/auth"
+	"github.com/boundflow/boundflow/internal/convert"
+	"github.com/boundflow/boundflow/internal/service"
+	"github.com/boundflow/boundflow/internal/storage"
 )
 
 type RegistrationHandler struct {
-	convergeplanev1.UnimplementedRegistrationServiceServer
+	boundflowv1.UnimplementedRegistrationServiceServer
 	svc *service.RegistrationService
 }
 
@@ -32,7 +32,7 @@ func callerTenantGroup(ctx context.Context) (string, error) {
 	return id, nil
 }
 
-func (h *RegistrationHandler) SetModelPricing(ctx context.Context, req *convergeplanev1.SetModelPricingRequest) (*convergeplanev1.SetModelPricingResponse, error) {
+func (h *RegistrationHandler) SetModelPricing(ctx context.Context, req *boundflowv1.SetModelPricingRequest) (*boundflowv1.SetModelPricingResponse, error) {
 	p, err := convert.ModelPricingFromProto(req.GetPricing())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "%v", err)
@@ -47,12 +47,12 @@ func (h *RegistrationHandler) SetModelPricing(ctx context.Context, req *converge
 		return nil, status.Errorf(codes.Internal, "set model pricing: %v", err)
 	}
 
-	return &convergeplanev1.SetModelPricingResponse{
+	return &boundflowv1.SetModelPricingResponse{
 		Pricing: convert.ModelPricingToProto(p),
 	}, nil
 }
 
-func (h *RegistrationHandler) ListModelPricing(ctx context.Context, req *convergeplanev1.ListModelPricingRequest) (*convergeplanev1.ListModelPricingResponse, error) {
+func (h *RegistrationHandler) ListModelPricing(ctx context.Context, req *boundflowv1.ListModelPricingRequest) (*boundflowv1.ListModelPricingResponse, error) {
 	group, err := callerTenantGroup(ctx)
 	if err != nil {
 		return nil, err
@@ -63,14 +63,14 @@ func (h *RegistrationHandler) ListModelPricing(ctx context.Context, req *converg
 		return nil, status.Errorf(codes.Internal, "list model pricing: %v", err)
 	}
 
-	out := make([]*convergeplanev1.ModelPricing, 0, len(pricing))
+	out := make([]*boundflowv1.ModelPricing, 0, len(pricing))
 	for _, p := range pricing {
 		out = append(out, convert.ModelPricingToProto(p))
 	}
-	return &convergeplanev1.ListModelPricingResponse{Pricing: out}, nil
+	return &boundflowv1.ListModelPricingResponse{Pricing: out}, nil
 }
 
-func (h *RegistrationHandler) GetTenantGroup(ctx context.Context, req *convergeplanev1.GetTenantGroupRequest) (*convergeplanev1.GetTenantGroupResponse, error) {
+func (h *RegistrationHandler) GetTenantGroup(ctx context.Context, req *boundflowv1.GetTenantGroupRequest) (*boundflowv1.GetTenantGroupResponse, error) {
 	if req.Id == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "id is required")
 	}
@@ -91,12 +91,12 @@ func (h *RegistrationHandler) GetTenantGroup(ctx context.Context, req *convergep
 		return nil, status.Errorf(codes.Internal, "get tenant group: %v", err)
 	}
 
-	return &convergeplanev1.GetTenantGroupResponse{
+	return &boundflowv1.GetTenantGroupResponse{
 		TenantGroup: convert.TenantGroupToProto(group),
 	}, nil
 }
 
-func (h *RegistrationHandler) DeleteTenantGroup(ctx context.Context, req *convergeplanev1.DeleteTenantGroupRequest) (*convergeplanev1.DeleteTenantGroupResponse, error) {
+func (h *RegistrationHandler) DeleteTenantGroup(ctx context.Context, req *boundflowv1.DeleteTenantGroupRequest) (*boundflowv1.DeleteTenantGroupResponse, error) {
 	if req.Id == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "id is required")
 	}
@@ -116,10 +116,10 @@ func (h *RegistrationHandler) DeleteTenantGroup(ctx context.Context, req *conver
 		return nil, status.Errorf(codes.Internal, "delete tenant group: %v", err)
 	}
 
-	return &convergeplanev1.DeleteTenantGroupResponse{}, nil
+	return &boundflowv1.DeleteTenantGroupResponse{}, nil
 }
 
-func (h *RegistrationHandler) CreateTenant(ctx context.Context, req *convergeplanev1.CreateTenantRequest) (*convergeplanev1.CreateTenantResponse, error) {
+func (h *RegistrationHandler) CreateTenant(ctx context.Context, req *boundflowv1.CreateTenantRequest) (*boundflowv1.CreateTenantResponse, error) {
 	tenant, err := convert.TenantFromProto(req.GetTenant())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "%v", err)
@@ -137,12 +137,12 @@ func (h *RegistrationHandler) CreateTenant(ctx context.Context, req *convergepla
 		return nil, status.Errorf(codes.Internal, "create tenant: %v", err)
 	}
 
-	return &convergeplanev1.CreateTenantResponse{
+	return &boundflowv1.CreateTenantResponse{
 		Tenant: convert.TenantToProto(result),
 	}, nil
 }
 
-func (h *RegistrationHandler) GetTenant(ctx context.Context, req *convergeplanev1.GetTenantRequest) (*convergeplanev1.GetTenantResponse, error) {
+func (h *RegistrationHandler) GetTenant(ctx context.Context, req *boundflowv1.GetTenantRequest) (*boundflowv1.GetTenantResponse, error) {
 	if req.Id == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "id is required")
 	}
@@ -163,12 +163,12 @@ func (h *RegistrationHandler) GetTenant(ctx context.Context, req *convergeplanev
 		return nil, status.Error(codes.NotFound, "tenant not found")
 	}
 
-	return &convergeplanev1.GetTenantResponse{
+	return &boundflowv1.GetTenantResponse{
 		Tenant: convert.TenantToProto(tenant),
 	}, nil
 }
 
-func (h *RegistrationHandler) DeleteTenant(ctx context.Context, req *convergeplanev1.DeleteTenantRequest) (*convergeplanev1.DeleteTenantResponse, error) {
+func (h *RegistrationHandler) DeleteTenant(ctx context.Context, req *boundflowv1.DeleteTenantRequest) (*boundflowv1.DeleteTenantResponse, error) {
 	if req.Id == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "id is required")
 	}
@@ -196,5 +196,5 @@ func (h *RegistrationHandler) DeleteTenant(ctx context.Context, req *convergepla
 		return nil, status.Errorf(codes.Internal, "delete tenant: %v", err)
 	}
 
-	return &convergeplanev1.DeleteTenantResponse{}, nil
+	return &boundflowv1.DeleteTenantResponse{}, nil
 }

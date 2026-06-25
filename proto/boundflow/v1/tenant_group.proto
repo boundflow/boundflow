@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package boundflow.v1;
+
+option go_package = "github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1";
+
+import "google/protobuf/timestamp.proto";
+import "boundflow/v1/tenant.proto";
+import "boundflow/v1/policy.proto";
+
+message TenantGroup {
+  string id = 1;
+  string name = 2;
+  repeated Tenant tenants = 3;
+  PolicySet policies = 4;
+  google.protobuf.Timestamp created_at = 5;
+}

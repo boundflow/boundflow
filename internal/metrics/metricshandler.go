@@ -5,10 +5,10 @@ import (
 	"log/slog"
 	"time"
 
-	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
+	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
 
-	"github.com/convergeplane/convergeplane/internal/domain"
-	"github.com/convergeplane/convergeplane/internal/storage"
+	"github.com/boundflow/boundflow/internal/domain"
+	"github.com/boundflow/boundflow/internal/storage"
 )
 
 type MetricsHandler struct {
@@ -29,7 +29,7 @@ func NewMetricsHandler(workflow storage.ResourceInstanceRepository, agentState s
 	}
 }
 
-func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, invocationMetrics map[string]*convergeplanev1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics, workflow *domain.ResourceInstance) (error, *domain.WorkflowVersionMetrics) {
+func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, invocationMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics, workflow *domain.ResourceInstance) (error, *domain.WorkflowVersionMetrics) {
 
 	workFlowId := workflow.ID
 
@@ -72,7 +72,7 @@ func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, invocationMetri
 			agentStates[agent] = &domain.AgentState{
 				ResourceInstanceID: workFlowId,
 				AgentName:          agent,
-				InvocationMetrics:  []*convergeplanev1.AgentInvocationMetrics{metrics},
+				InvocationMetrics:  []*boundflowv1.AgentInvocationMetrics{metrics},
 			}
 		}
 
@@ -116,7 +116,7 @@ func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, invocationMetri
 	}
 
 	// Collect the updated histories for only the agents touched this run.
-	agentMetrics := make(map[string][]*convergeplanev1.AgentInvocationMetrics, len(invocationMetrics))
+	agentMetrics := make(map[string][]*boundflowv1.AgentInvocationMetrics, len(invocationMetrics))
 	for agent := range invocationMetrics {
 		agentMetrics[agent] = agentStates[agent].InvocationMetrics
 	}
@@ -154,7 +154,7 @@ func (m *MetricsHandler) accInt(dst **int, v int) {
 	**dst += v
 }
 
-func (m *MetricsHandler) MergeAgentMetrics(opMetrics map[string]*convergeplanev1.AgentInvocationMetrics, jobMetrics *map[string]*convergeplanev1.AgentInvocationMetrics) {
+func (m *MetricsHandler) MergeAgentMetrics(opMetrics map[string]*boundflowv1.AgentInvocationMetrics, jobMetrics *map[string]*boundflowv1.AgentInvocationMetrics) {
 	m.log.Debug("merging operation agent metrics into job accumulator", "agents_in_operation", len(opMetrics), "agents_in_job", len(*jobMetrics))
 	for agent, opMetric := range opMetrics {
 		if opMetric == nil {

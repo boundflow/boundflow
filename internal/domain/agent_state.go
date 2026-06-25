@@ -3,7 +3,7 @@ package domain
 import (
 	"time"
 
-	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
+	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
 )
 
 // AgentState holds the server-managed policy and rolling invocation history for a named agent
@@ -15,6 +15,6 @@ type AgentState struct {
 	LifecyclePolicy    map[string]any
 	// InvocationMetrics is a rolling history of this agent's per-run metric snapshots,
 	// ordered oldest-first (by RanAt).
-	InvocationMetrics []*convergeplanev1.AgentInvocationMetrics
+	InvocationMetrics []*boundflowv1.AgentInvocationMetrics
 	UpdatedAt         time.Time
 }
