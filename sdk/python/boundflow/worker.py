@@ -65,6 +65,7 @@ class AgentDefinition:
     model: str
     tools: list[Tool] = field(default_factory=list)
     output_schema: dict | None = None
+    cache: bool = False  # opt-in prompt caching of the stable prefix (system + tools)
 
 
 # ── Operation results ────────────────────────────────────────────────────────
@@ -155,6 +156,8 @@ class OperationContext:
             tools=agent.tools,
             output_schema=agent.output_schema,
             llm_context=self._llm_context,
+            pricing=(self.context.get("modelPricing") or {}),
+            cache=agent.cache,
         )
 
         result = await self._orchestrator.run_step(cfg)

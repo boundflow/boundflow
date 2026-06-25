@@ -15,6 +15,7 @@ from google.protobuf.struct_pb2 import Struct
 
 from convergeplane.v1 import lifecycle_pb2 as lc
 from convergeplane.v1 import lifecycle_pb2_grpc as lc_grpc
+from convergeplane.v1 import pricing_pb2 as pricing_pb
 from convergeplane.v1 import registration_pb2 as reg
 from convergeplane.v1 import registration_pb2_grpc as reg_grpc
 from convergeplane.v1 import resource_instance_pb2 as ri
@@ -149,6 +150,23 @@ class ControlPlaneClient:
             reg.CreateTenantRequest(tenant=tn_pb.Tenant(name=name)),
             metadata=self._metadata)
         return Tenant(resp.tenant.id, resp.tenant.name, resp.tenant.tenant_group_id)
+
+    # ── Pricing ──────────────────────────────────────────────────────────────
+
+    async def set_model_pricing(self, model_id: str, input_per_1m: float, output_per_1m: float) -> None:
+        """Override this tenant group's per-1M-token rates (USD) for a model."""
+        await self._reg.SetModelPricing(
+            reg.SetModelPricingRequest(pricing=pricing_pb.ModelPricing(
+                model_id=model_id, input_per_1m=input_per_1m, output_per_1m=output_per_1m)),
+            metadata=self._metadata)
+
+    async def list_model_pricing(self) -> dict[str, dict[str, float]]:
+        """Effective rates for this tenant group (defaults merged with overrides),
+        as {model_id: {"input_per_1m", "output_per_1m"}}."""
+        resp = await self._reg.ListModelPricing(
+            reg.ListModelPricingRequest(), metadata=self._metadata)
+        return {p.model_id: {"input_per_1m": p.input_per_1m, "output_per_1m": p.output_per_1m}
+                for p in resp.pricing}
 
     # ── Workflows ────────────────────────────────────────────────────────────
 

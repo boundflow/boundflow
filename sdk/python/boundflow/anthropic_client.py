@@ -44,10 +44,17 @@ class AnthropicLlmClient:
             {"name": t.name, "description": t.description, "input_schema": t.input_schema}
             for t in request.tools
         ]
+        # Caching the system block also caches the tools (render order is
+        # tools -> system -> messages), so one breakpoint covers the stable prefix.
+        system = request.system
+        if request.cache:
+            system = [{"type": "text", "text": request.system,
+                       "cache_control": {"type": "ephemeral"}}]
+
         kwargs: dict = dict(
             model=request.model,
             max_tokens=request.max_tokens,
-            system=request.system,
+            system=system,
             messages=messages,
             tools=tools,
         )
@@ -59,8 +66,14 @@ class AnthropicLlmClient:
         # Treat max_tokens like end_turn so the orchestrator can re-prompt with submit_result.
         if stop == "max_tokens":
             stop = "end_turn"
+        u = resp.usage
         return LlmResponse(
             content=_decode(resp.content),
             stop_reason=stop,
-            usage=Usage(resp.usage.input_tokens, resp.usage.output_tokens),
+            usage=Usage(
+                u.input_tokens,
+                u.output_tokens,
+                getattr(u, "cache_creation_input_tokens", 0) or 0,
+                getattr(u, "cache_read_input_tokens", 0) or 0,
+            ),
         )

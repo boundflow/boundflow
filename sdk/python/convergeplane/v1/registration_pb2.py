@@ -24,9 +24,10 @@ _sym_db = _symbol_database.Default()
 
 from convergeplane.v1 import tenant_group_pb2 as convergeplane_dot_v1_dot_tenant__group__pb2
 from convergeplane.v1 import tenant_pb2 as convergeplane_dot_v1_dot_tenant__pb2
+from convergeplane.v1 import pricing_pb2 as convergeplane_dot_v1_dot_pricing__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n#convergeplane/v1/registration.proto\x12\x10\x63onvergeplane.v1\x1a#convergeplane/v1/tenant_group.proto\x1a\x1d\x63onvergeplane/v1/tenant.proto\"O\n\x18\x43reateTenantGroupRequest\x12\x33\n\x0ctenant_group\x18\x01 \x01(\x0b\x32\x1d.convergeplane.v1.TenantGroup\"P\n\x19\x43reateTenantGroupResponse\x12\x33\n\x0ctenant_group\x18\x01 \x01(\x0b\x32\x1d.convergeplane.v1.TenantGroup\"#\n\x15GetTenantGroupRequest\x12\n\n\x02id\x18\x01 \x01(\t\"M\n\x16GetTenantGroupResponse\x12\x33\n\x0ctenant_group\x18\x01 \x01(\x0b\x32\x1d.convergeplane.v1.TenantGroup\"?\n\x13\x43reateTenantRequest\x12(\n\x06tenant\x18\x01 \x01(\x0b\x32\x18.convergeplane.v1.Tenant\"@\n\x14\x43reateTenantResponse\x12(\n\x06tenant\x18\x01 \x01(\x0b\x32\x18.convergeplane.v1.Tenant\"\x1e\n\x10GetTenantRequest\x12\n\n\x02id\x18\x01 \x01(\t\"=\n\x11GetTenantResponse\x12(\n\x06tenant\x18\x01 \x01(\x0b\x32\x18.convergeplane.v1.Tenant\"&\n\x18\x44\x65leteTenantGroupRequest\x12\n\n\x02id\x18\x01 \x01(\t\"\x1b\n\x19\x44\x65leteTenantGroupResponse\"!\n\x13\x44\x65leteTenantRequest\x12\n\n\x02id\x18\x01 \x01(\t\"\x16\n\x14\x44\x65leteTenantResponse2\xea\x04\n\x13RegistrationService\x12l\n\x11\x43reateTenantGroup\x12*.convergeplane.v1.CreateTenantGroupRequest\x1a+.convergeplane.v1.CreateTenantGroupResponse\x12\x63\n\x0eGetTenantGroup\x12\'.convergeplane.v1.GetTenantGroupRequest\x1a(.convergeplane.v1.GetTenantGroupResponse\x12l\n\x11\x44\x65leteTenantGroup\x12*.convergeplane.v1.DeleteTenantGroupRequest\x1a+.convergeplane.v1.DeleteTenantGroupResponse\x12]\n\x0c\x43reateTenant\x12%.convergeplane.v1.CreateTenantRequest\x1a&.convergeplane.v1.CreateTenantResponse\x12T\n\tGetTenant\x12\".convergeplane.v1.GetTenantRequest\x1a#.convergeplane.v1.GetTenantResponse\x12]\n\x0c\x44\x65leteTenant\x12%.convergeplane.v1.DeleteTenantRequest\x1a&.convergeplane.v1.DeleteTenantResponseBMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n#convergeplane/v1/registration.proto\x12\x10\x63onvergeplane.v1\x1a#convergeplane/v1/tenant_group.proto\x1a\x1d\x63onvergeplane/v1/tenant.proto\x1a\x1e\x63onvergeplane/v1/pricing.proto\"I\n\x16SetModelPricingRequest\x12/\n\x07pricing\x18\x01 \x01(\x0b\x32\x1e.convergeplane.v1.ModelPricing\"J\n\x17SetModelPricingResponse\x12/\n\x07pricing\x18\x01 \x01(\x0b\x32\x1e.convergeplane.v1.ModelPricing\"\x19\n\x17ListModelPricingRequest\"K\n\x18ListModelPricingResponse\x12/\n\x07pricing\x18\x01 \x03(\x0b\x32\x1e.convergeplane.v1.ModelPricing\"O\n\x18\x43reateTenantGroupRequest\x12\x33\n\x0ctenant_group\x18\x01 \x01(\x0b\x32\x1d.convergeplane.v1.TenantGroup\"P\n\x19\x43reateTenantGroupResponse\x12\x33\n\x0ctenant_group\x18\x01 \x01(\x0b\x32\x1d.convergeplane.v1.TenantGroup\"#\n\x15GetTenantGroupRequest\x12\n\n\x02id\x18\x01 \x01(\t\"M\n\x16GetTenantGroupResponse\x12\x33\n\x0ctenant_group\x18\x01 \x01(\x0b\x32\x1d.convergeplane.v1.TenantGroup\"?\n\x13\x43reateTenantRequest\x12(\n\x06tenant\x18\x01 \x01(\x0b\x32\x18.convergeplane.v1.Tenant\"@\n\x14\x43reateTenantResponse\x12(\n\x06tenant\x18\x01 \x01(\x0b\x32\x18.convergeplane.v1.Tenant\"\x1e\n\x10GetTenantRequest\x12\n\n\x02id\x18\x01 \x01(\t\"=\n\x11GetTenantResponse\x12(\n\x06tenant\x18\x01 \x01(\x0b\x32\x18.convergeplane.v1.Tenant\"&\n\x18\x44\x65leteTenantGroupRequest\x12\n\n\x02id\x18\x01 \x01(\t\"\x1b\n\x19\x44\x65leteTenantGroupResponse\"!\n\x13\x44\x65leteTenantRequest\x12\n\n\x02id\x18\x01 \x01(\t\"\x16\n\x14\x44\x65leteTenantResponse2\xbd\x06\n\x13RegistrationService\x12l\n\x11\x43reateTenantGroup\x12*.convergeplane.v1.CreateTenantGroupRequest\x1a+.convergeplane.v1.CreateTenantGroupResponse\x12\x63\n\x0eGetTenantGroup\x12\'.convergeplane.v1.GetTenantGroupRequest\x1a(.convergeplane.v1.GetTenantGroupResponse\x12l\n\x11\x44\x65leteTenantGroup\x12*.convergeplane.v1.DeleteTenantGroupRequest\x1a+.convergeplane.v1.DeleteTenantGroupResponse\x12]\n\x0c\x43reateTenant\x12%.convergeplane.v1.CreateTenantRequest\x1a&.convergeplane.v1.CreateTenantResponse\x12T\n\tGetTenant\x12\".convergeplane.v1.GetTenantRequest\x1a#.convergeplane.v1.GetTenantResponse\x12]\n\x0c\x44\x65leteTenant\x12%.convergeplane.v1.DeleteTenantRequest\x1a&.convergeplane.v1.DeleteTenantResponse\x12\x66\n\x0fSetModelPricing\x12(.convergeplane.v1.SetModelPricingRequest\x1a).convergeplane.v1.SetModelPricingResponse\x12i\n\x10ListModelPricing\x12).convergeplane.v1.ListModelPricingRequest\x1a*.convergeplane.v1.ListModelPricingResponseBMZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,30 +35,38 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'convergeplane.v1.registrati
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'ZKgithub.com/convergeplane/convergeplane/gen/convergeplane/v1;convergeplanev1'
-  _globals['_CREATETENANTGROUPREQUEST']._serialized_start=125
-  _globals['_CREATETENANTGROUPREQUEST']._serialized_end=204
-  _globals['_CREATETENANTGROUPRESPONSE']._serialized_start=206
-  _globals['_CREATETENANTGROUPRESPONSE']._serialized_end=286
-  _globals['_GETTENANTGROUPREQUEST']._serialized_start=288
-  _globals['_GETTENANTGROUPREQUEST']._serialized_end=323
-  _globals['_GETTENANTGROUPRESPONSE']._serialized_start=325
-  _globals['_GETTENANTGROUPRESPONSE']._serialized_end=402
-  _globals['_CREATETENANTREQUEST']._serialized_start=404
-  _globals['_CREATETENANTREQUEST']._serialized_end=467
-  _globals['_CREATETENANTRESPONSE']._serialized_start=469
-  _globals['_CREATETENANTRESPONSE']._serialized_end=533
-  _globals['_GETTENANTREQUEST']._serialized_start=535
-  _globals['_GETTENANTREQUEST']._serialized_end=565
-  _globals['_GETTENANTRESPONSE']._serialized_start=567
-  _globals['_GETTENANTRESPONSE']._serialized_end=628
-  _globals['_DELETETENANTGROUPREQUEST']._serialized_start=630
-  _globals['_DELETETENANTGROUPREQUEST']._serialized_end=668
-  _globals['_DELETETENANTGROUPRESPONSE']._serialized_start=670
-  _globals['_DELETETENANTGROUPRESPONSE']._serialized_end=697
-  _globals['_DELETETENANTREQUEST']._serialized_start=699
-  _globals['_DELETETENANTREQUEST']._serialized_end=732
-  _globals['_DELETETENANTRESPONSE']._serialized_start=734
-  _globals['_DELETETENANTRESPONSE']._serialized_end=756
-  _globals['_REGISTRATIONSERVICE']._serialized_start=759
-  _globals['_REGISTRATIONSERVICE']._serialized_end=1377
+  _globals['_SETMODELPRICINGREQUEST']._serialized_start=157
+  _globals['_SETMODELPRICINGREQUEST']._serialized_end=230
+  _globals['_SETMODELPRICINGRESPONSE']._serialized_start=232
+  _globals['_SETMODELPRICINGRESPONSE']._serialized_end=306
+  _globals['_LISTMODELPRICINGREQUEST']._serialized_start=308
+  _globals['_LISTMODELPRICINGREQUEST']._serialized_end=333
+  _globals['_LISTMODELPRICINGRESPONSE']._serialized_start=335
+  _globals['_LISTMODELPRICINGRESPONSE']._serialized_end=410
+  _globals['_CREATETENANTGROUPREQUEST']._serialized_start=412
+  _globals['_CREATETENANTGROUPREQUEST']._serialized_end=491
+  _globals['_CREATETENANTGROUPRESPONSE']._serialized_start=493
+  _globals['_CREATETENANTGROUPRESPONSE']._serialized_end=573
+  _globals['_GETTENANTGROUPREQUEST']._serialized_start=575
+  _globals['_GETTENANTGROUPREQUEST']._serialized_end=610
+  _globals['_GETTENANTGROUPRESPONSE']._serialized_start=612
+  _globals['_GETTENANTGROUPRESPONSE']._serialized_end=689
+  _globals['_CREATETENANTREQUEST']._serialized_start=691
+  _globals['_CREATETENANTREQUEST']._serialized_end=754
+  _globals['_CREATETENANTRESPONSE']._serialized_start=756
+  _globals['_CREATETENANTRESPONSE']._serialized_end=820
+  _globals['_GETTENANTREQUEST']._serialized_start=822
+  _globals['_GETTENANTREQUEST']._serialized_end=852
+  _globals['_GETTENANTRESPONSE']._serialized_start=854
+  _globals['_GETTENANTRESPONSE']._serialized_end=915
+  _globals['_DELETETENANTGROUPREQUEST']._serialized_start=917
+  _globals['_DELETETENANTGROUPREQUEST']._serialized_end=955
+  _globals['_DELETETENANTGROUPRESPONSE']._serialized_start=957
+  _globals['_DELETETENANTGROUPRESPONSE']._serialized_end=984
+  _globals['_DELETETENANTREQUEST']._serialized_start=986
+  _globals['_DELETETENANTREQUEST']._serialized_end=1019
+  _globals['_DELETETENANTRESPONSE']._serialized_start=1021
+  _globals['_DELETETENANTRESPONSE']._serialized_end=1043
+  _globals['_REGISTRATIONSERVICE']._serialized_start=1046
+  _globals['_REGISTRATIONSERVICE']._serialized_end=1875
 # @@protoc_insertion_point(module_scope)
