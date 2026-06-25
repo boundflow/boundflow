@@ -7,6 +7,8 @@ plane (backend) plus a Python SDK you build against.
 
 - **Docker** (with Compose) — runs the backend + Postgres
 - **Python 3.10+** — for the SDK
+- **An Anthropic API key** — your agents run on Claude (inference is yours; the
+  backend never sees your key). `export ANTHROPIC_API_KEY=...`
 
 ## 1. Start the backend
 
@@ -45,29 +47,37 @@ import asyncio
 import os
 
 from boundflow import (
-    BoundFlowWorker, Complete, ControlPlaneClient,
-    LifecycleState, MockLlmClient, WorkflowConfig, submit,
+    AgentDefinition, BoundFlowWorker, Complete, ControlPlaneClient,
+    LifecycleState, WorkflowConfig,
 )
+from boundflow.anthropic_client import AnthropicLlmClient
 
-KEY = os.environ["BOUNDFLOW_API_KEY"]
-# Endpoints default to localhost:50051 (control plane) and :50052 (worker) for a
-# local stack. Pointing at a remote backend? Set BOUNDFLOW_SERVER_ADDRESS and
-# BOUNDFLOW_WORKER_ADDRESS (or pass the addresses explicitly).
+# Endpoints default to localhost:50051 (control plane) and :50052 (worker), and
+# BOUNDFLOW_API_KEY is read from the env. Pointing at a remote backend? Set
+# BOUNDFLOW_SERVER_ADDRESS / BOUNDFLOW_WORKER_ADDRESS (or pass them explicitly).
 
 
 async def main() -> None:
-    # A worker hosts your workflow handlers.
-    # MockLlmClient = scripted LLM, so no Anthropic key needed for this demo.
-    worker = BoundFlowWorker(llm=MockLlmClient(lambda _: submit()), api_key=KEY)
+    # A worker hosts your workflow handlers and runs agents on your Anthropic key.
+    worker = BoundFlowWorker(llm=AnthropicLlmClient(os.environ["ANTHROPIC_API_KEY"]))
+
+    summarizer = AgentDefinition(
+        name="summarizer",
+        system_prompt="You summarize text in one short, plain sentence.",
+        model="claude-haiku-4-5",
+        output_schema={"summary": {"type": "string"}},
+    )
 
     @worker.workflow("hello", version=1)
     async def hello(ctx):
-        print("  ✅ workflow handler ran")
+        ctx.add_context("text", "BoundFlow runs fleets of agents under governance.")
+        result = await ctx.run_agent(summarizer)
+        print("  agent summary:", result.output["summary"])
         return Complete()
 
     worker_task = asyncio.create_task(worker.run())
 
-    async with ControlPlaneClient(api_key=KEY) as cp:
+    async with ControlPlaneClient() as cp:
         tenant = await cp.create_tenant("quickstart")
         wf = await cp.create_workflow("hello", tenant.id, config=WorkflowConfig(version=1))
         await cp.activate_workflow(wf.id)
@@ -84,24 +94,24 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-Expected output:
+Expected output (the summary is the model's, so wording will vary):
 
 ```
-  ✅ workflow handler ran
+  agent summary: BoundFlow is a platform for running fleets of agents under governance.
   final state: LifecycleState.ACTIVE
 ```
 
 That's the full loop: your worker registered a workflow, the control plane
-scheduled and dispatched it, and your handler ran under the platform's governance.
+scheduled and dispatched it, and a real agent ran under the platform's governance.
 
-## Using a real LLM
+## More examples
 
-The demo uses a scripted mock so it runs for free. To drive agents with a real
-model, construct the SDK's Anthropic client with your own key (bring-your-own
-inference — it runs in your worker, not on the backend):
+Runnable examples ship with the package — same prerequisites (backend up,
+`BOUNDFLOW_API_KEY` + `ANTHROPIC_API_KEY` set):
 
-```python
-export ANTHROPIC_API_KEY=<your-anthropic-key>
+```bash
+python -m boundflow.examples.hello           # the above, as a script
+python -m boundflow.examples.approval_gate   # human-in-the-loop: pause for sign-off before a sensitive action
 ```
 
 ## Useful commands
