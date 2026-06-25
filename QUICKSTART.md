@@ -49,15 +49,16 @@ from boundflow import (
     LifecycleState, MockLlmClient, WorkflowConfig, submit,
 )
 
-SERVER = "http://localhost:50051"
-WORKER = "http://localhost:50052"
 KEY = os.environ["BOUNDFLOW_API_KEY"]
+# Endpoints default to localhost:50051 (control plane) and :50052 (worker) for a
+# local stack. Pointing at a remote backend? Set BOUNDFLOW_SERVER_ADDRESS and
+# BOUNDFLOW_WORKER_ADDRESS (or pass the addresses explicitly).
 
 
 async def main() -> None:
     # A worker hosts your workflow handlers.
     # MockLlmClient = scripted LLM, so no Anthropic key needed for this demo.
-    worker = BoundFlowWorker(WORKER, MockLlmClient(lambda _: submit()), api_key=KEY)
+    worker = BoundFlowWorker(llm=MockLlmClient(lambda _: submit()), api_key=KEY)
 
     @worker.workflow("hello", version=1)
     async def hello(ctx):
@@ -66,7 +67,7 @@ async def main() -> None:
 
     worker_task = asyncio.create_task(worker.run())
 
-    async with ControlPlaneClient(SERVER, api_key=KEY) as cp:
+    async with ControlPlaneClient(api_key=KEY) as cp:
         tenant = await cp.create_tenant("quickstart")
         wf = await cp.create_workflow("hello", tenant.id, config=WorkflowConfig(version=1))
         await cp.activate_workflow(wf.id)

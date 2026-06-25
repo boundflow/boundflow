@@ -118,13 +118,18 @@ def _make_channel(addr: str):
     return grpc.aio.insecure_channel(target)
 
 
+# Control-plane endpoint resolution order: explicit arg -> env -> self-host default.
+DEFAULT_SERVER_ADDRESS = "http://localhost:50051"
+
+
 class ControlPlaneClient:
-    def __init__(self, server_address: str, api_key: str | None = None) -> None:
+    def __init__(self, server_address: str | None = None, api_key: str | None = None) -> None:
+        address = server_address or os.environ.get("BOUNDFLOW_SERVER_ADDRESS") or DEFAULT_SERVER_ADDRESS
         key = api_key or os.environ.get("BOUNDFLOW_API_KEY") or ""
         if not key:
             raise ValueError("api_key must be provided or BOUNDFLOW_API_KEY must be set")
         self._metadata = (("x-api-key", key),)
-        self._channel = _make_channel(server_address)
+        self._channel = _make_channel(address)
         self._reg = reg_grpc.RegistrationServiceStub(self._channel)
         self._lc = lc_grpc.ResourceLifecycleServiceStub(self._channel)
 
