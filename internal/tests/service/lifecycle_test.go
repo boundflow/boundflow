@@ -54,8 +54,14 @@ func newSvcWithApproval(ctrl *gomock.Controller, approval service.ApprovalResolv
 	tenantRepo := mocks.NewMockTenantRepository(ctrl)
 	tenantGroupRepo := mocks.NewMockTenantGroupRepository(ctrl)
 	agentStateRepo := mocks.NewMockAgentStateRepository(ctrl)
+	modelPricingRepo := mocks.NewMockModelPricingRepository(ctrl)
 	sched := &mockRequestScheduler{}
-	svc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, sched, approval, 10, discardLogger)
+	// Permissive defaults for the pricing snapshot taken during invoke/reconcile;
+	// tests that don't assert on pricing are unaffected.
+	resourceInstanceRepo.EXPECT().TenantGroupIDForResource(gomock.Any(), gomock.Any()).Return("test-group", nil).AnyTimes()
+	modelPricingRepo.EXPECT().ListDefaults(gomock.Any()).Return(nil, nil).AnyTimes()
+	modelPricingRepo.EXPECT().ListForTenantGroup(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+	svc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, sched, approval, 10, discardLogger)
 	return svc, resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo
 }
 

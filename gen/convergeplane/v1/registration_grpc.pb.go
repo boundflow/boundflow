@@ -25,6 +25,8 @@ const (
 	RegistrationService_CreateTenant_FullMethodName      = "/convergeplane.v1.RegistrationService/CreateTenant"
 	RegistrationService_GetTenant_FullMethodName         = "/convergeplane.v1.RegistrationService/GetTenant"
 	RegistrationService_DeleteTenant_FullMethodName      = "/convergeplane.v1.RegistrationService/DeleteTenant"
+	RegistrationService_SetModelPricing_FullMethodName   = "/convergeplane.v1.RegistrationService/SetModelPricing"
+	RegistrationService_ListModelPricing_FullMethodName  = "/convergeplane.v1.RegistrationService/ListModelPricing"
 )
 
 // RegistrationServiceClient is the client API for RegistrationService service.
@@ -40,6 +42,11 @@ type RegistrationServiceClient interface {
 	CreateTenant(ctx context.Context, in *CreateTenantRequest, opts ...grpc.CallOption) (*CreateTenantResponse, error)
 	GetTenant(ctx context.Context, in *GetTenantRequest, opts ...grpc.CallOption) (*GetTenantResponse, error)
 	DeleteTenant(ctx context.Context, in *DeleteTenantRequest, opts ...grpc.CallOption) (*DeleteTenantResponse, error)
+	// Pricing is scoped to the caller's tenant group (resolved from the API key).
+	// SetModelPricing overrides a model's rate; ListModelPricing returns the
+	// effective rates (built-in defaults merged with the caller's overrides).
+	SetModelPricing(ctx context.Context, in *SetModelPricingRequest, opts ...grpc.CallOption) (*SetModelPricingResponse, error)
+	ListModelPricing(ctx context.Context, in *ListModelPricingRequest, opts ...grpc.CallOption) (*ListModelPricingResponse, error)
 }
 
 type registrationServiceClient struct {
@@ -110,6 +117,26 @@ func (c *registrationServiceClient) DeleteTenant(ctx context.Context, in *Delete
 	return out, nil
 }
 
+func (c *registrationServiceClient) SetModelPricing(ctx context.Context, in *SetModelPricingRequest, opts ...grpc.CallOption) (*SetModelPricingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetModelPricingResponse)
+	err := c.cc.Invoke(ctx, RegistrationService_SetModelPricing_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *registrationServiceClient) ListModelPricing(ctx context.Context, in *ListModelPricingRequest, opts ...grpc.CallOption) (*ListModelPricingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListModelPricingResponse)
+	err := c.cc.Invoke(ctx, RegistrationService_ListModelPricing_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RegistrationServiceServer is the server API for RegistrationService service.
 // All implementations must embed UnimplementedRegistrationServiceServer
 // for forward compatibility.
@@ -123,6 +150,11 @@ type RegistrationServiceServer interface {
 	CreateTenant(context.Context, *CreateTenantRequest) (*CreateTenantResponse, error)
 	GetTenant(context.Context, *GetTenantRequest) (*GetTenantResponse, error)
 	DeleteTenant(context.Context, *DeleteTenantRequest) (*DeleteTenantResponse, error)
+	// Pricing is scoped to the caller's tenant group (resolved from the API key).
+	// SetModelPricing overrides a model's rate; ListModelPricing returns the
+	// effective rates (built-in defaults merged with the caller's overrides).
+	SetModelPricing(context.Context, *SetModelPricingRequest) (*SetModelPricingResponse, error)
+	ListModelPricing(context.Context, *ListModelPricingRequest) (*ListModelPricingResponse, error)
 	mustEmbedUnimplementedRegistrationServiceServer()
 }
 
@@ -150,6 +182,12 @@ func (UnimplementedRegistrationServiceServer) GetTenant(context.Context, *GetTen
 }
 func (UnimplementedRegistrationServiceServer) DeleteTenant(context.Context, *DeleteTenantRequest) (*DeleteTenantResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteTenant not implemented")
+}
+func (UnimplementedRegistrationServiceServer) SetModelPricing(context.Context, *SetModelPricingRequest) (*SetModelPricingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetModelPricing not implemented")
+}
+func (UnimplementedRegistrationServiceServer) ListModelPricing(context.Context, *ListModelPricingRequest) (*ListModelPricingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListModelPricing not implemented")
 }
 func (UnimplementedRegistrationServiceServer) mustEmbedUnimplementedRegistrationServiceServer() {}
 func (UnimplementedRegistrationServiceServer) testEmbeddedByValue()                             {}
@@ -280,6 +318,42 @@ func _RegistrationService_DeleteTenant_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _RegistrationService_SetModelPricing_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetModelPricingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RegistrationServiceServer).SetModelPricing(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RegistrationService_SetModelPricing_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RegistrationServiceServer).SetModelPricing(ctx, req.(*SetModelPricingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RegistrationService_ListModelPricing_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListModelPricingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RegistrationServiceServer).ListModelPricing(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RegistrationService_ListModelPricing_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RegistrationServiceServer).ListModelPricing(ctx, req.(*ListModelPricingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // RegistrationService_ServiceDesc is the grpc.ServiceDesc for RegistrationService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -310,6 +384,14 @@ var RegistrationService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteTenant",
 			Handler:    _RegistrationService_DeleteTenant_Handler,
+		},
+		{
+			MethodName: "SetModelPricing",
+			Handler:    _RegistrationService_SetModelPricing_Handler,
+		},
+		{
+			MethodName: "ListModelPricing",
+			Handler:    _RegistrationService_ListModelPricing_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

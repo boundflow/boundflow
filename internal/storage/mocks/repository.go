@@ -1114,6 +1114,74 @@ func (mr *MockApiKeyRepositoryMockRecorder) Revoke(ctx, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Revoke", reflect.TypeOf((*MockApiKeyRepository)(nil).Revoke), ctx, id)
 }
 
+// MockModelPricingRepository is a mock of ModelPricingRepository interface.
+type MockModelPricingRepository struct {
+	ctrl     *gomock.Controller
+	recorder *MockModelPricingRepositoryMockRecorder
+	isgomock struct{}
+}
+
+// MockModelPricingRepositoryMockRecorder is the mock recorder for MockModelPricingRepository.
+type MockModelPricingRepositoryMockRecorder struct {
+	mock *MockModelPricingRepository
+}
+
+// NewMockModelPricingRepository creates a new mock instance.
+func NewMockModelPricingRepository(ctrl *gomock.Controller) *MockModelPricingRepository {
+	mock := &MockModelPricingRepository{ctrl: ctrl}
+	mock.recorder = &MockModelPricingRepositoryMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockModelPricingRepository) EXPECT() *MockModelPricingRepositoryMockRecorder {
+	return m.recorder
+}
+
+// ListDefaults mocks base method.
+func (m *MockModelPricingRepository) ListDefaults(ctx context.Context) ([]domain.ModelPricing, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDefaults", ctx)
+	ret0, _ := ret[0].([]domain.ModelPricing)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDefaults indicates an expected call of ListDefaults.
+func (mr *MockModelPricingRepositoryMockRecorder) ListDefaults(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDefaults", reflect.TypeOf((*MockModelPricingRepository)(nil).ListDefaults), ctx)
+}
+
+// ListForTenantGroup mocks base method.
+func (m *MockModelPricingRepository) ListForTenantGroup(ctx context.Context, tenantGroupID string) ([]domain.ModelPricing, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListForTenantGroup", ctx, tenantGroupID)
+	ret0, _ := ret[0].([]domain.ModelPricing)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListForTenantGroup indicates an expected call of ListForTenantGroup.
+func (mr *MockModelPricingRepositoryMockRecorder) ListForTenantGroup(ctx, tenantGroupID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForTenantGroup", reflect.TypeOf((*MockModelPricingRepository)(nil).ListForTenantGroup), ctx, tenantGroupID)
+}
+
+// Upsert mocks base method.
+func (m *MockModelPricingRepository) Upsert(ctx context.Context, tenantGroupID string, p domain.ModelPricing) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Upsert", ctx, tenantGroupID, p)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Upsert indicates an expected call of Upsert.
+func (mr *MockModelPricingRepositoryMockRecorder) Upsert(ctx, tenantGroupID, p any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upsert", reflect.TypeOf((*MockModelPricingRepository)(nil).Upsert), ctx, tenantGroupID, p)
+}
+
 // MockCustomerRequestRepository is a mock of CustomerRequestRepository interface.
 type MockCustomerRequestRepository struct {
 	ctrl     *gomock.Controller

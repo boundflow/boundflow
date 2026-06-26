@@ -65,6 +65,7 @@ class AgentDefinition:
     model: str
     tools: list[Tool] = field(default_factory=list)
     output_schema: dict | None = None
+    cache: bool = False  # opt-in prompt caching of the stable prefix (system + tools)
 
 
 # ── Operation results ────────────────────────────────────────────────────────
@@ -155,6 +156,8 @@ class OperationContext:
             tools=agent.tools,
             output_schema=agent.output_schema,
             llm_context=self._llm_context,
+            pricing=(self.context.get("modelPricing") or {}),
+            cache=agent.cache,
         )
 
         result = await self._orchestrator.run_step(cfg)
@@ -187,13 +190,22 @@ class ApprovalRequest:
 # ── Worker ───────────────────────────────────────────────────────────────────
 
 
+# Worker endpoint resolution order: explicit arg -> env -> self-host default.
+DEFAULT_WORKER_ADDRESS = "http://localhost:50052"
+
+
 class BoundFlowWorker:
-    def __init__(self, address: str, llm: LlmClient, api_key: str | None = None) -> None:
+    # address keeps its leading position so existing positional calls still work;
+    # to rely on the default/env, pass the client by keyword: BoundFlowWorker(llm=...).
+    def __init__(self, address: str | None = None, llm: LlmClient | None = None,
+                 api_key: str | None = None) -> None:
         import os
+        if llm is None:
+            raise ValueError("an LlmClient must be provided (e.g. BoundFlowWorker(llm=...))")
         key = api_key or os.environ.get("BOUNDFLOW_API_KEY") or ""
         if not key:
             raise ValueError("api_key must be provided or BOUNDFLOW_API_KEY must be set")
-        self._address = address
+        self._address = address or os.environ.get("BOUNDFLOW_WORKER_ADDRESS") or DEFAULT_WORKER_ADDRESS
         self._api_key = key
         self._orchestrator = Orchestrator(llm)
         self._workflows: dict[tuple[str, int], HandlerFn] = {}

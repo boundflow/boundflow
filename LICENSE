@@ -1,21 +1,16 @@
-MIT License
+BoundFlow — Licensing Overview
+Copyright (c) 2026 Arjun Lama.
 
-Copyright (c) 2026 arjunvlama
+This project is distributed under two separate licenses, depending on the
+component:
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+- Python SDK (sdk/python/): MIT License — open source.
+  See sdk/python/LICENSE.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+- Backend (server / scheduler / worker, distributed as a binary or container
+  image): proprietary Evaluation License — closed source, evaluation use only.
+  See BACKEND-LICENSE.txt.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+The backend source code is not open source and is not licensed for
+redistribution. Nothing in this repository grants a license to the backend
+source beyond the terms in BACKEND-LICENSE.txt.

@@ -15,8 +15,11 @@ from .policies import RuntimePolicy
 
 log = logging.getLogger("boundflow.orchestrator")
 
-INPUT_COST_PER_1M = 3.0
-OUTPUT_COST_PER_1M = 15.0
+# Prompt-cache cost multipliers vs. the base input rate (Anthropic, 5-min TTL):
+# cache writes bill at 1.25x, reads at 0.1x. Per-model $/1M rates are supplied by
+# the server at runtime (context["modelPricing"]) — there is no hardcoded table.
+CACHE_WRITE_MULT = 1.25
+CACHE_READ_MULT = 0.1
 SUBMIT_RESULT = "submit_result"
 
 
@@ -52,6 +55,12 @@ class Message:
 class Usage:
     input_tokens: int = 0
     output_tokens: int = 0
+    cache_creation_input_tokens: int = 0
+    cache_read_input_tokens: int = 0
+
+    def total_tokens(self) -> int:
+        return (self.input_tokens + self.output_tokens
+                + self.cache_creation_input_tokens + self.cache_read_input_tokens)
 
 
 @dataclass
@@ -69,6 +78,7 @@ class LlmRequest:
     messages: list[Message]
     tools: list[ToolSpec]
     forced_tool: str | None = None  # set → model MUST call this tool
+    cache: bool = False  # set → cache the stable prefix (system + tools)
 
 
 @dataclass
@@ -155,6 +165,9 @@ class AgentStepConfig:
     tools: list  # boundflow.worker.Tool
     output_schema: dict | None = None
     llm_context: list = field(default_factory=list)  # (key, metadata, payload)
+    # {model_id: {"input_per_1m": x, "output_per_1m": y}} — supplied by the server.
+    pricing: dict = field(default_factory=dict)
+    cache: bool = False  # opt-in prompt caching for this agent
 
 
 @dataclass
@@ -168,9 +181,32 @@ class StepResult:
     model_used: str
 
 
-def _estimate_cost(usage: Usage) -> float:
-    return usage.input_tokens / 1_000_000 * INPUT_COST_PER_1M + \
-        usage.output_tokens / 1_000_000 * OUTPUT_COST_PER_1M
+def _rate_for(model: str, pricing: dict) -> dict | None:
+    """Effective per-1M rates for a model. Exact match first, then prefix — so a
+    dated ID (claude-haiku-4-5-20251001) resolves to its alias entry."""
+    if model in pricing:
+        return pricing[model]
+    for key, rate in pricing.items():
+        if model.startswith(key):
+            return rate
+    return None
+
+
+def _estimate_cost(usage: Usage, model: str, pricing: dict) -> float:
+    """USD cost of one LLM call from exact token usage and server-supplied rates.
+    Token counts are exact (Anthropic usage); only the $/token rate is tabular."""
+    rate = _rate_for(model, pricing)
+    if rate is None:
+        log.warning("no pricing for model %s; recording cost as 0", model)
+        return 0.0
+    in_rate = rate.get("input_per_1m", 0.0)
+    out_rate = rate.get("output_per_1m", 0.0)
+    # Cache writes/reads bill against the input rate at fixed multipliers; plain
+    # input_tokens are the uncached remainder, so these don't double-count.
+    input_units = (usage.input_tokens
+                   + usage.cache_creation_input_tokens * CACHE_WRITE_MULT
+                   + usage.cache_read_input_tokens * CACHE_READ_MULT)
+    return input_units / 1_000_000 * in_rate + usage.output_tokens / 1_000_000 * out_rate
 
 
 def _wrap_schema(props: dict | None) -> dict:
@@ -195,6 +231,7 @@ class Orchestrator:
         cost = 0.0
         tokens = 0
         max_llm_calls = cfg.policy.max_llm_calls
+        max_tokens = cfg.policy.max_tokens_per_call or 4096  # 0 = unset → default
         call_counts: dict[str, int] = {}
         failure_counts: dict[str, int] = {}
         tool_limits = {l.tool: l.max_calls for l in cfg.policy.tool_call_limits}
@@ -206,7 +243,8 @@ class Orchestrator:
             limit_reached = max_llm_calls > 0 and llm_calls >= max_llm_calls
             req = LlmRequest(
                 model=cfg.model,
-                max_tokens=4096,
+                max_tokens=max_tokens,
+                cache=cfg.cache,
                 system=cfg.system_prompt + "\n\nWhen you have completed your objective, call submit_result.",
                 messages=messages,
                 tools=tools,
@@ -216,8 +254,8 @@ class Orchestrator:
             resp = await self._client.complete(req)
 
             llm_calls += 1
-            cost += _estimate_cost(resp.usage)
-            tokens += resp.usage.input_tokens + resp.usage.output_tokens
+            cost += _estimate_cost(resp.usage, cfg.model, cfg.pricing)
+            tokens += resp.usage.total_tokens()
             messages.append(Message("assistant", resp.content))
 
             if resp.stop_reason == "end_turn":

@@ -6,6 +6,7 @@ option go_package = "github.com/convergeplane/convergeplane/gen/convergeplane/v1
 
 import "convergeplane/v1/tenant_group.proto";
 import "convergeplane/v1/tenant.proto";
+import "convergeplane/v1/pricing.proto";
 
 // RegistrationService handles setup and configuration of tenant groups,
 // tenants, and policies.
@@ -17,6 +18,26 @@ service RegistrationService {
   rpc CreateTenant(CreateTenantRequest) returns (CreateTenantResponse);
   rpc GetTenant(GetTenantRequest) returns (GetTenantResponse);
   rpc DeleteTenant(DeleteTenantRequest) returns (DeleteTenantResponse);
+
+  // Pricing is scoped to the caller's tenant group (resolved from the API key).
+  // SetModelPricing overrides a model's rate; ListModelPricing returns the
+  // effective rates (built-in defaults merged with the caller's overrides).
+  rpc SetModelPricing(SetModelPricingRequest) returns (SetModelPricingResponse);
+  rpc ListModelPricing(ListModelPricingRequest) returns (ListModelPricingResponse);
+}
+
+message SetModelPricingRequest {
+  ModelPricing pricing = 1;
+}
+
+message SetModelPricingResponse {
+  ModelPricing pricing = 1;
+}
+
+message ListModelPricingRequest {}
+
+message ListModelPricingResponse {
+  repeated ModelPricing pricing = 1;
 }
 
 message CreateTenantGroupRequest {
