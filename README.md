@@ -136,10 +136,30 @@ async def triage(ctx):
     return Complete()
 ```
 
-Governance is applied from the control plane — e.g. cap a run's cost:
+Governance is applied from the control plane — three layers, from a per-run cap
+to self-healing version rollback:
 
 ```python
+from boundflow import (
+    RuntimePolicy, AgentRule, AgentMetric, Op, SetModel,
+    WorkflowRule, WorkflowMetric, SetVersion,
+)
+
+# 1. Runtime — a hard cap enforced *during* every run:
 await cp.set_agent_runtime_policy(wf.id, "analyst", RuntimePolicy(max_cost_usd=0.25))
+
+# 2. Agent lifecycle — after runs, downgrade the model if cost trends high:
+await cp.set_agent_lifecycle_policy(wf.id, "analyst", [
+    AgentRule(metric=AgentMetric.COST_USD, op=Op.GT, threshold=0.20, window=5,
+              action=SetModel(value="claude-haiku-4-5")),
+])
+
+# 3. Workflow lifecycle — after repeated failures, roll the whole workflow back
+#    to a known-good version automatically:
+await cp.set_workflow_lifecycle_policy(wf.id, [
+    WorkflowRule(metric=WorkflowMetric.NUM_FAILURES, threshold=3,
+                 action=SetVersion(target=1)),
+])
 ```
 
 See [`sdk/python/boundflow/examples/`](sdk/python/boundflow/examples/) for runnable examples.
