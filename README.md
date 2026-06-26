@@ -162,7 +162,8 @@ await cp.set_workflow_lifecycle_policy(wf.id, [
 ])
 ```
 
-See [`sdk/python/boundflow/examples/`](sdk/python/boundflow/examples/) for runnable examples.
+Workflow rules can also `Pause` a workflow or put it on `Cooldown` instead of
+rolling back. See [`sdk/python/boundflow/examples/`](sdk/python/boundflow/examples/) for runnable examples.
 
 ---
 
