@@ -19,7 +19,10 @@ from boundflow.trace import AgentRunTrace, OTelTraceSink, OperationTrace, Span
 
 def _op(trace_id: str, operation: str) -> OperationTrace:
     span = Span(kind="llm", name="chat claude-x", start_ms=1, end_ms=2,
-                attributes={"gen_ai.request.model": "claude-x", "gen_ai.system": "anthropic"})
+                attributes={"gen_ai.request.model": "claude-x", "gen_ai.system": "anthropic"},
+                input=[{"role": "system", "parts": [{"type": "text", "content": "sys"}]},
+                       {"role": "user", "parts": [{"type": "text", "content": "hello"}]}],
+                output=[{"role": "assistant", "parts": [{"type": "text", "content": "hi"}]}])
     run = AgentRunTrace(agent="analyst", model="claude-x", start_ms=1, end_ms=3, spans=[span])
     return OperationTrace(trace_id=trace_id, workflow_id="wf1", workflow_type="t", version=1,
                           operation=operation, outcome="completed", failed=False,
@@ -67,3 +70,12 @@ async def test_span_hierarchy_and_genai_attributes():
     assert chat.attributes["gen_ai.request.model"] == "claude-x"
     assert chat.attributes["gen_ai.system"] == "anthropic"
     assert op.attributes["gen_ai.conversation.id"] == "wf1"
+
+    # Content emitted as the canonical GenAI message attributes (JSON), so tools
+    # render the prompt/response.
+    import json as _json
+    inp = _json.loads(chat.attributes["gen_ai.input.messages"])
+    out = _json.loads(chat.attributes["gen_ai.output.messages"])
+    assert [m["role"] for m in inp] == ["system", "user"]
+    assert out[0]["role"] == "assistant"
+    assert out[0]["parts"][0]["content"] == "hi"

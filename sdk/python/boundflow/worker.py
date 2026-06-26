@@ -19,7 +19,15 @@ from .lifecycle import (
     load_runtime_policy,
 )
 from .llm import AgentStepConfig, LlmClient, Orchestrator, StepResult
-from .trace import AgentRunTrace, OperationTrace, TraceSink, now_ms
+from .trace import (
+    OUTCOME_AWAIT_APPROVAL,
+    OUTCOME_COMPLETED,
+    OUTCOME_NEXT,
+    AgentRunTrace,
+    OperationTrace,
+    TraceSink,
+    now_ms,
+)
 
 log = logging.getLogger("boundflow.worker")
 
@@ -291,9 +299,9 @@ class BoundFlowWorker:
         """Build the operation trace (its agent runs + outcome) and hand it to the
         sink. Tracing is best-effort: a sink failure is logged and dropped, never
         fatal to the run. All operations of one invocation share trace_id (= op.id)."""
-        outcome = ("await_approval" if isinstance(result, AwaitApproval)
-                   else "next" if isinstance(result, Next)
-                   else "completed")
+        outcome = (OUTCOME_AWAIT_APPROVAL if isinstance(result, AwaitApproval)
+                   else OUTCOME_NEXT if isinstance(result, Next)
+                   else OUTCOME_COMPLETED)
         try:
             await self._trace_sink.emit(OperationTrace(
                 trace_id=op.id,

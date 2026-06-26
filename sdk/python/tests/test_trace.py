@@ -89,10 +89,14 @@ async def test_trace_captures_operation_with_llm_and_tool_spans(cp):
 
             first = llm[0]
             assert first.attributes["gen_ai.request.model"] == "mock-model"
+            assert first.attributes["gen_ai.system"] == "unknown"  # mock-model -> unknown provider
             assert first.attributes["gen_ai.usage.input_tokens"] == 100
             assert first.attributes["gen_ai.usage.output_tokens"] == 50
-            assert first.input["messages"], "prompt captured"
-            assert first.output, "response captured"
+            # Content captured in the canonical GenAI message shape: [{role, parts}].
+            roles = [m["role"] for m in first.input]
+            assert "system" in roles and "user" in roles, "prompt captured as gen_ai messages"
+            assert first.output[0]["role"] == "assistant"
+            assert first.output[0]["parts"], "response captured as content parts"
         finally:
             await cp.delete_workflow(wf.id)
 

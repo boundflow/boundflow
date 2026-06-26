@@ -41,16 +41,48 @@ GEN_AI_USAGE_OUTPUT_TOKENS = "gen_ai.usage.output_tokens"
 GEN_AI_USAGE_CACHE_CREATION_INPUT_TOKENS = "gen_ai.usage.cache_creation_input_tokens"
 GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS = "gen_ai.usage.cache_read_input_tokens"
 GEN_AI_RESPONSE_FINISH_REASONS = "gen_ai.response.finish_reasons"
+GEN_AI_INPUT_MESSAGES = "gen_ai.input.messages"
+GEN_AI_OUTPUT_MESSAGES = "gen_ai.output.messages"
 GEN_AI_TOOL_NAME = "gen_ai.tool.name"
+GEN_AI_TOOL_CALL_ARGUMENTS = "gen_ai.tool.call.arguments"
+GEN_AI_TOOL_CALL_RESULT = "gen_ai.tool.call.result"
 GEN_AI_TOOL_CALL_ID = "gen_ai.tool.call.id"
 GEN_AI_TOOL_DESCRIPTION = "gen_ai.tool.description"
 GEN_AI_AGENT_NAME = "gen_ai.agent.name"
-# BoundFlow-specific attributes (not part of the GenAI spec):
+# BoundFlow-specific attribute keys (not part of the GenAI spec):
 BF_COST_USD = "boundflow.cost_usd"
 BF_RUN_ID = "boundflow.run_id"
 BF_WORKFLOW_ID = "boundflow.workflow_id"
 BF_WORKFLOW_TYPE = "boundflow.workflow_type"
 BF_WORKFLOW_VERSION = "boundflow.workflow_version"
+BF_OPERATION = "boundflow.operation"
+BF_OUTCOME = "boundflow.outcome"
+BF_FAILED = "boundflow.failed"
+
+# ── Vocabulary values (not attribute keys) ────────────────────────────────────
+# GenAI operation-name values (the value of gen_ai.operation.name):
+GEN_AI_OP_CHAT = "chat"
+GEN_AI_OP_EXECUTE_TOOL = "execute_tool"
+GEN_AI_OP_INVOKE_AGENT = "invoke_agent"
+# Chat message roles:
+ROLE_SYSTEM = "system"
+ROLE_USER = "user"
+ROLE_ASSISTANT = "assistant"
+ROLE_TOOL = "tool"
+# GenAI message part types:
+PART_TEXT = "text"
+PART_TOOL_CALL = "tool_call"
+PART_TOOL_CALL_RESPONSE = "tool_call_response"
+# BoundFlow span kinds:
+SPAN_KIND_LLM = "llm"
+SPAN_KIND_TOOL = "tool"
+# Operation outcomes:
+OUTCOME_COMPLETED = "completed"
+OUTCOME_NEXT = "next"
+OUTCOME_AWAIT_APPROVAL = "await_approval"
+# Generic error attribute keys:
+ERROR = "error"
+ERROR_MESSAGE = "error.message"
 
 
 @dataclass
@@ -197,14 +229,14 @@ class OTelTraceSink:
         op.set_attribute(BF_WORKFLOW_TYPE, trace.workflow_type)
         op.set_attribute(BF_WORKFLOW_VERSION, trace.version)
         op.set_attribute(GEN_AI_CONVERSATION_ID, trace.workflow_id)
-        op.set_attribute("boundflow.operation", trace.operation)
-        op.set_attribute("boundflow.outcome", trace.outcome)
-        op.set_attribute("boundflow.failed", trace.failed)
+        op.set_attribute(BF_OPERATION, trace.operation)
+        op.set_attribute(BF_OUTCOME, trace.outcome)
+        op.set_attribute(BF_FAILED, trace.failed)
         op_ctx = self._ot.set_span_in_context(op)
         for run in trace.agent_runs:
             agent = self._tracer.start_span(f"agent {run.agent}", context=op_ctx,
                                             start_time=run.start_ms * 1_000_000)
-            agent.set_attribute(GEN_AI_OPERATION_NAME, "invoke_agent")
+            agent.set_attribute(GEN_AI_OPERATION_NAME, GEN_AI_OP_INVOKE_AGENT)
             agent.set_attribute(GEN_AI_AGENT_NAME, run.agent)
             agent.set_attribute(GEN_AI_REQUEST_MODEL, run.model)
             agent.set_attribute(BF_COST_USD, run.cost_usd)
@@ -213,9 +245,21 @@ class OTelTraceSink:
                 child = self._tracer.start_span(s.name, context=agent_ctx, start_time=s.start_ms * 1_000_000)
                 for k, v in s.attributes.items():
                     child.set_attribute(k, self._attr(v))
+                # Content as GenAI-conventioned attributes (input/output are already
+                # in the canonical message shape; tools render them directly).
+                if s.kind == SPAN_KIND_LLM:
+                    if s.input is not None:
+                        child.set_attribute(GEN_AI_INPUT_MESSAGES, json.dumps(s.input, default=str))
+                    if s.output is not None:
+                        child.set_attribute(GEN_AI_OUTPUT_MESSAGES, json.dumps(s.output, default=str))
+                elif s.kind == SPAN_KIND_TOOL:
+                    if s.input is not None:
+                        child.set_attribute(GEN_AI_TOOL_CALL_ARGUMENTS, json.dumps(s.input, default=str))
+                    if s.output is not None:
+                        child.set_attribute(GEN_AI_TOOL_CALL_RESULT, json.dumps(s.output, default=str))
                 if s.error:
-                    child.set_attribute("error", True)
-                    child.set_attribute("error.message", s.error)
+                    child.set_attribute(ERROR, True)
+                    child.set_attribute(ERROR_MESSAGE, s.error)
                 child.end(end_time=s.end_ms * 1_000_000)
             agent.end(end_time=run.end_ms * 1_000_000)
         op.end(end_time=trace.end_ms * 1_000_000)

@@ -14,6 +14,8 @@ from typing import Any, Callable, Protocol
 from .policies import RuntimePolicy
 from .trace import (
     BF_COST_USD,
+    GEN_AI_OP_CHAT,
+    GEN_AI_OP_EXECUTE_TOOL,
     GEN_AI_OPERATION_NAME,
     GEN_AI_REQUEST_MAX_TOKENS,
     GEN_AI_REQUEST_MODEL,
@@ -26,6 +28,13 @@ from .trace import (
     GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS,
     GEN_AI_USAGE_INPUT_TOKENS,
     GEN_AI_USAGE_OUTPUT_TOKENS,
+    PART_TEXT,
+    PART_TOOL_CALL,
+    PART_TOOL_CALL_RESPONSE,
+    ROLE_ASSISTANT,
+    ROLE_SYSTEM,
+    SPAN_KIND_LLM,
+    SPAN_KIND_TOOL,
     Span,
     now_ms,
 )
@@ -211,19 +220,30 @@ class StepResult:
     spans: list[Span] = field(default_factory=list)  # ordered LLM + tool spans for the run trace
 
 
-def _block_to_dict(b: Any) -> dict:
+def _part_from_block(b: Any) -> dict:
+    """A message block -> a GenAI 'part' (text / tool_call / tool_call_response).
+    This is the OTel GenAI message shape, used as our canonical content form so
+    every sink (OTel, file, DB) emits interoperable, standard-shaped content."""
     if isinstance(b, TextBlock):
-        return {"type": "text", "text": b.text}
+        return {"type": PART_TEXT, "content": b.text}
     if isinstance(b, ToolUseBlock):
-        return {"type": "tool_use", "id": b.id, "name": b.name, "input": b.input}
+        return {"type": PART_TOOL_CALL, "id": b.id, "name": b.name, "arguments": b.input}
     if isinstance(b, ToolResultBlock):
-        return {"type": "tool_result", "tool_use_id": b.tool_use_id,
-                "content": b.content, "is_error": b.is_error}
-    return {"type": "unknown", "repr": repr(b)}
+        return {"type": PART_TOOL_CALL_RESPONSE, "id": b.tool_use_id,
+                "result": b.content, "is_error": b.is_error}
+    return {"type": PART_TEXT, "content": repr(b)}
 
 
-def _messages_to_list(messages: list) -> list:
-    return [{"role": m.role, "content": [_block_to_dict(b) for b in m.content]} for m in messages]
+def _gen_ai_message(role: str, blocks: list) -> dict:
+    return {"role": role, "parts": [_part_from_block(b) for b in blocks]}
+
+
+def _gen_ai_input_messages(req: LlmRequest) -> list:
+    """The full input as canonical GenAI messages: the system message, then the
+    conversation as-sent."""
+    msgs = [{"role": ROLE_SYSTEM, "parts": [{"type": PART_TEXT, "content": req.system}]}]
+    msgs += [_gen_ai_message(m.role, m.content) for m in req.messages]
+    return msgs
 
 
 def _rate_for(model: str, pricing: dict) -> dict | None:
@@ -300,7 +320,7 @@ class Orchestrator:
             _llm_start = now_ms()
             resp = await self._client.complete(req)
             _llm_end = now_ms()
-            _input_messages = _messages_to_list(req.messages)  # snapshot as-sent, before appending the reply
+            _input_messages = _gen_ai_input_messages(req)  # snapshot as-sent, before appending the reply
 
             llm_calls += 1
             call_cost = _estimate_cost(resp.usage, cfg.model, cfg.pricing)
@@ -309,11 +329,11 @@ class Orchestrator:
             messages.append(Message("assistant", resp.content))
 
             spans.append(Span(
-                kind="llm", name=f"chat {cfg.model}", start_ms=_llm_start, end_ms=_llm_end,
-                input={"system": req.system, "messages": _input_messages},
-                output=[_block_to_dict(b) for b in resp.content],
+                kind=SPAN_KIND_LLM, name=f"{GEN_AI_OP_CHAT} {cfg.model}", start_ms=_llm_start, end_ms=_llm_end,
+                input=_input_messages,
+                output=[_gen_ai_message(ROLE_ASSISTANT, resp.content)],
                 attributes={
-                    GEN_AI_OPERATION_NAME: "chat",
+                    GEN_AI_OPERATION_NAME: GEN_AI_OP_CHAT,
                     GEN_AI_SYSTEM: _gen_ai_system(cfg.model),
                     GEN_AI_REQUEST_MODEL: cfg.model,
                     GEN_AI_REQUEST_MAX_TOKENS: max_tokens,
@@ -360,7 +380,7 @@ class Orchestrator:
 
                 _tool_start = now_ms()
                 _tool_attrs = {
-                    GEN_AI_OPERATION_NAME: "execute_tool",
+                    GEN_AI_OPERATION_NAME: GEN_AI_OP_EXECUTE_TOOL,
                     GEN_AI_TOOL_NAME: block.name,
                     GEN_AI_TOOL_CALL_ID: block.id,
                     GEN_AI_TOOL_DESCRIPTION: callbacks[block.name].description or block.name,
@@ -369,12 +389,12 @@ class Orchestrator:
                     out = await callbacks[block.name].handler(block.input)
                 except Exception as ex:  # noqa: BLE001 — report tool failure to the model
                     failure_counts[block.name] = failure_counts.get(block.name, 0) + 1
-                    spans.append(Span(kind="tool", name=block.name, start_ms=_tool_start, end_ms=now_ms(),
+                    spans.append(Span(kind=SPAN_KIND_TOOL, name=block.name, start_ms=_tool_start, end_ms=now_ms(),
                                       input=block.input, error=str(ex), attributes=_tool_attrs))
                     tool_results.append(ToolResultBlock(block.id, str(ex), is_error=True))
                     continue
 
-                spans.append(Span(kind="tool", name=block.name, start_ms=_tool_start, end_ms=now_ms(),
+                spans.append(Span(kind=SPAN_KIND_TOOL, name=block.name, start_ms=_tool_start, end_ms=now_ms(),
                                   input=block.input, output=out, attributes=_tool_attrs))
                 import json
                 tool_results.append(ToolResultBlock(block.id, json.dumps(out) if out is not None else "{}"))
