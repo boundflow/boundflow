@@ -23,6 +23,9 @@ type TenantRepository interface {
 type WorkflowRepository interface {
 	Create(ctx context.Context, instance *domain.Workflow) error
 	Get(ctx context.Context, id string) (*domain.Workflow, error)
+	// ListForTenantGroup returns a lightweight view of all workflows owned by the
+	// tenant group (newest first), for read-only observability. Heavy fields are unset.
+	ListForTenantGroup(ctx context.Context, tenantGroupID string) ([]*domain.Workflow, error)
 	UpdateLifecycleState(ctx context.Context, id string, state domain.LifecycleState) error
 	UpdateWorkflowState(ctx context.Context, id string, state domain.WorkflowState) error
 	MarkDeleted(ctx context.Context, id string) error

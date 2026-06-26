@@ -49,6 +49,41 @@ func (r *WorkflowRepo) Create(ctx context.Context, instance *domain.Workflow) er
 	return nil
 }
 
+// ListForTenantGroup returns a lightweight view of every workflow owned by the
+// given tenant group (via the workflows→tenants join), newest first. Only the
+// dashboard-relevant columns are populated; heavy fields (policy, metrics) are
+// left zero — fetch a single workflow with Get for the full record.
+func (r *WorkflowRepo) ListForTenantGroup(ctx context.Context, tenantGroupID string) ([]*domain.Workflow, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT w.id, w.tenant_id, w.workflow_type, w.current_workflow_version,
+		        w.lifecycle_state, w.workflow_state, w.last_completed_request_at, w.created_at
+		 FROM workflows w
+		 JOIN tenants t ON w.tenant_id = t.id
+		 WHERE t.tenant_group_id = $1
+		 ORDER BY w.created_at DESC`, tenantGroupID,
+	)
+	if err != nil {
+		return nil, handleError(err, "workflow instance")
+	}
+	defer rows.Close()
+
+	var out []*domain.Workflow
+	for rows.Next() {
+		var w domain.Workflow
+		if err := rows.Scan(
+			&w.ID, &w.TenantID, &w.WorkflowType, &w.CurrentWorkflowVersion,
+			&w.LifecycleState, &w.WorkflowState, &w.LastCompletedRequestAt, &w.CreatedAt,
+		); err != nil {
+			return nil, handleError(err, "workflow instance")
+		}
+		out = append(out, &w)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, handleError(err, "workflow instance")
+	}
+	return out, nil
+}
+
 func (r *WorkflowRepo) Get(ctx context.Context, id string) (*domain.Workflow, error) {
 	var instance domain.Workflow
 	var lifecyclePolicyJSON, invocationMetricsJSON []byte

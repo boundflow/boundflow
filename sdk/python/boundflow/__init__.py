@@ -9,6 +9,7 @@ from .control_plane import (
     Workflow,
     WorkflowConfig,
     WorkflowState,
+    WorkflowSummary,
 )
 from .llm import MockLlmClient, MockContext, Turn, turn, submit
 from .policies import (
@@ -43,7 +44,7 @@ from .worker import (
 __all__ = [
     "AnthropicLlmClient",
     "ControlPlaneClient", "LifecycleState", "Tenant", "TenantGroup", "Workflow",
-    "WorkflowConfig", "WorkflowState", "MockLlmClient", "MockContext", "Turn",
+    "WorkflowConfig", "WorkflowState", "WorkflowSummary", "MockLlmClient", "MockContext", "Turn",
     "turn", "submit", "AgentMetric", "AgentRule", "Cooldown", "Op", "Pause",
     "RuntimePolicy", "SetMaxCostUsd", "SetMaxLlmCalls", "SetMaxTokensPerCall",
     "SetModel", "SetVersion", "ToolCallLimit", "WorkflowMetric", "WorkflowRule",
