@@ -17,9 +17,10 @@ from boundflow import (
     submit,
     turn,
 )
+from boundflow.anthropic_client import AnthropicLlmClient
 from boundflow.trace import OperationTrace
 
-from .conftest import WORKER_ADDRESS, create_isolated_tenant, run_worker, wait_for_completion
+from .conftest import HAIKU, WORKER_ADDRESS, create_isolated_tenant, run_worker, wait_for_completion
 
 AGENT = "tracer"
 
@@ -164,5 +165,63 @@ async def test_trace_captures_operation_failure_with_no_agent(cp):
             assert t.failed is True, "ctx.mark_failed() is captured at the operation level"
             assert t.outcome == "completed"
             assert t.agent_runs == [], "no agent ran, but the operation is still traced"
+        finally:
+            await cp.delete_workflow(wf.id)
+
+
+async def test_trace_captures_a_real_llm_run(cp, api_key):
+    # Validate capture against REAL Anthropic responses (real content blocks,
+    # token usage, tool_use) — not just the scripted mock. Skips without a key.
+    tool_calls = [0]
+
+    async def lookup(_args):
+        tool_calls[0] += 1
+        return {"answer": 42}
+
+    sink = CapturingSink()
+    worker = BoundFlowWorker(WORKER_ADDRESS, AnthropicLlmClient(api_key), trace_sink=sink)
+
+    @worker.workflow("trace_real_wf", version=1)
+    async def _entry(ctx):
+        await ctx.run_agent(AgentDefinition(
+            name=AGENT,
+            system_prompt="Call the `lookup` tool exactly once, then call submit_result with done=true.",
+            model=HAIKU,
+            tools=[Tool("lookup", "Look up the answer.", lookup)],
+            output_schema={"done": {"type": "boolean"}},
+        ))
+        return Complete()
+
+    async with run_worker(worker):
+        tenant = await create_isolated_tenant(cp, "trace-real")
+        wf = await cp.create_workflow("trace_real_wf", tenant.id, config=WorkflowConfig(version=1))
+        try:
+            await cp.set_agent_runtime_policy(wf.id, AGENT, RuntimePolicy(max_llm_calls=8))
+            await cp.activate_workflow(wf.id)
+            request_id = await cp.invoke_workflow(wf.id, operation_timeout_seconds=60)
+            await wait_for_completion(cp, wf.id)
+
+            assert len(sink.traces) == 1
+            t = sink.traces[0]
+            assert t.trace_id == request_id
+            run = t.agent_runs[0]
+
+            llm = [s for s in run.spans if s.kind == "llm"]
+            assert llm, "real LLM spans captured"
+            first = llm[0]
+            # Real Anthropic usage + provider, from an actual response.
+            assert first.attributes["gen_ai.system"] == "anthropic"
+            assert first.attributes["gen_ai.usage.input_tokens"] > 0
+            assert first.attributes["gen_ai.usage.output_tokens"] > 0
+            # Canonical message content survives a real response.
+            assert any(m["role"] == "system" for m in first.input)
+            assert first.output[0]["role"] == "assistant"
+            assert run.tokens > 0 and run.llm_calls >= 1
+
+            # The model actually drove the tool -> a real tool span with the result.
+            if tool_calls[0] > 0:
+                tool_spans = [s for s in run.spans if s.kind == "tool" and s.name == "lookup"]
+                assert tool_spans, "tool span captured for the real tool call"
+                assert tool_spans[0].output == {"answer": 42}
         finally:
             await cp.delete_workflow(wf.id)
