@@ -10,6 +10,10 @@ type BaseConfig struct {
 	DatabaseURL   string
 	Debug         bool
 	NumPartitions int
+	// MaxPartitionsPerScheduler caps how many partition goroutines one scheduler
+	// process spins up. Defaults to NumPartitions (one scheduler covers the whole
+	// shard space); lower it to spread shards across multiple scheduler replicas.
+	MaxPartitionsPerScheduler int
 }
 
 type ServerConfig struct {
@@ -29,8 +33,9 @@ type WorkerConfig struct {
 
 func loadBase() BaseConfig {
 	base := BaseConfig{
-		LogLevel:    "info",
-		DatabaseURL: "postgres://localhost:5432/boundflow?sslmode=disable",
+		LogLevel:      "info",
+		DatabaseURL:   "postgres://localhost:5432/boundflow?sslmode=disable",
+		NumPartitions: 1,
 	}
 	if v := os.Getenv("BOUNDFLOW_LOG_LEVEL"); v != "" {
 		base.LogLevel = v
@@ -42,8 +47,16 @@ func loadBase() BaseConfig {
 		base.Debug = true
 	}
 	if v := os.Getenv("BOUNDFLOW_NUM_PARTITIONS"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			base.NumPartitions = n
+		}
+	}
+	// Defaults to NumPartitions (C=N). Set BOUNDFLOW_MAX_PARTITIONS_PER_SCHEDULER
+	// lower than NumPartitions to distribute shards across scheduler replicas.
+	base.MaxPartitionsPerScheduler = base.NumPartitions
+	if v := os.Getenv("BOUNDFLOW_MAX_PARTITIONS_PER_SCHEDULER"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			base.MaxPartitionsPerScheduler = n
 		}
 	}
 	return base

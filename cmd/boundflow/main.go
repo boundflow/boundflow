@@ -94,6 +94,7 @@ func runServer(sigCh <-chan os.Signal) {
 	metricsRepo := postgres.NewMetricsRepo(pool)
 	lifecycleResolverRepo := postgres.NewLifecycleResolverRepo(pool)
 	metricsHandler := metrics.NewMetricsHandler(workflowRepo, agentStateRepo, versionMetricsRepo, metricsRepo, logger)
+
 	policyResolver := internalscheduler.NewLifecycleResolver(30, logger, lifecycleResolverRepo, workflowRepo, versionMetricsRepo)
 	sched := internalscheduler.NewScheduler("server", 30, partitionRepo, schedulerRepo, customerRequestRepo, workflowRepo, agentStateRepo, jobRepo, metricsHandler, policyResolver, logger)
 
@@ -120,7 +121,7 @@ func runServer(sigCh <-chan os.Signal) {
 func runScheduler(sigCh <-chan os.Signal) {
 	cfg := config.LoadScheduler()
 	logger := newLogger(cfg.LogLevel)
-	logger.Info("starting scheduler", "num_partitions", cfg.NumPartitions)
+	logger.Info("starting scheduler", "num_partitions", cfg.NumPartitions, "max_partitions_per_scheduler", cfg.MaxPartitionsPerScheduler)
 
 	pool := mustConnectDB(cfg.DatabaseURL, logger)
 	defer pool.Close()
@@ -142,7 +143,9 @@ func runScheduler(sigCh <-chan os.Signal) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	errCh := make(chan error, 1)
-	for i := range cfg.NumPartitions {
+	// One goroutine per partition this process will hold, capped at
+	// MaxPartitionsPerScheduler (defaults to NumPartitions → covers the whole space).
+	for i := range cfg.MaxPartitionsPerScheduler {
 		schedulerID := uuid.NewString()
 		resolver := internalscheduler.NewLifecycleResolver(30, logger, lifecycleResolverRepo, workflowRepo, versionMetricsRepo)
 		sched := internalscheduler.NewScheduler(schedulerID, 30, partitionRepo, schedulerRepo, customerRequestRepo, workflowRepo, agentStateRepo, jobRepo, metricsHandler, resolver, logger)
@@ -283,6 +286,16 @@ func runMigrate() {
 		log.Fatalf("apply migrations: %v", err)
 	}
 	logger.Info("migrations applied")
+
+	// Seed scheduler partitions [0, NUM_PARTITIONS) as part of DB setup. This is the
+	// one place env-driven seeding can live (the static migration can't read the env),
+	// and it belongs with schema setup — not smeared across every server/scheduler boot.
+	pool := mustConnectDB(cfg.DatabaseURL, logger)
+	defer pool.Close()
+	if err := postgres.NewSchedulerPartitionRepo(pool).SeedPartitions(context.Background(), cfg.NumPartitions); err != nil {
+		log.Fatalf("seed scheduler partitions: %v", err)
+	}
+	logger.Info("scheduler partitions seeded", "num_partitions", cfg.NumPartitions)
 }
 
 func generateKey() (string, error) {

@@ -21,6 +21,8 @@ services:
     command: ["-mode=migrate"]
     environment:
       BOUNDFLOW_DATABASE_URL: postgres://boundflow:boundflow@postgres:5432/boundflow?sslmode=disable
+      # Shard count — must match the server/scheduler. migrate seeds the partition rows.
+      BOUNDFLOW_NUM_PARTITIONS: "1"
     depends_on:
       postgres:
         condition: service_healthy

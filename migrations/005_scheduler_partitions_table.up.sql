@@ -4,7 +4,3 @@ CREATE TABLE scheduler_partitions (
     owner                   TEXT,
     lease_until             TIMESTAMPTZ
 );
-
-INSERT INTO scheduler_partitions (id) VALUES
-    ('0'), ('1'), ('2'), ('3'), ('4'),
-    ('5'), ('6'), ('7'), ('8'), ('9');

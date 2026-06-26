@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -17,6 +18,28 @@ type SchedulerPartitionRepo struct {
 
 func NewSchedulerPartitionRepo(pool *pgxpool.Pool) *SchedulerPartitionRepo {
 	return &SchedulerPartitionRepo{pool: pool}
+}
+
+// SeedPartitions creates the partition rows [0, numPartitions) if they don't
+// already exist, making NUM_PARTITIONS the single source of truth for the shard
+// count (it must match partitionForID's modulus). The migration can't do this —
+// it's static SQL and can't read the env — so it runs once at startup; it's a
+// no-op on every subsequent boot.
+//
+// It only INSERTs: it never removes partitions, so it never moves or drops data.
+// Changing the shard count on an existing database (resharding) is therefore a
+// deliberate, separate operation, not something this does silently.
+func (r *SchedulerPartitionRepo) SeedPartitions(ctx context.Context, numPartitions int) error {
+	if numPartitions < 1 {
+		return fmt.Errorf("numPartitions must be >= 1, got %d", numPartitions)
+	}
+	if _, err := r.pool.Exec(ctx,
+		`INSERT INTO scheduler_partitions (id)
+		 SELECT g::text FROM generate_series(0, $1 - 1) AS g
+		 ON CONFLICT (id) DO NOTHING`, numPartitions); err != nil {
+		return fmt.Errorf("seed partitions: %w", err)
+	}
+	return nil
 }
 
 func (r *SchedulerPartitionRepo) AcquireAvailable(ctx context.Context, ownerID string, leaseDuration time.Duration) (*domain.SchedulerPartition, error) {
