@@ -150,6 +150,7 @@ func (x *WorkflowConfig) GetTriggerable() bool {
 type Workflow struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	WorkflowType   string                 `protobuf:"bytes,2,opt,name=workflow_type,json=workflowType,proto3" json:"workflow_type,omitempty"`
 	TenantId       string                 `protobuf:"bytes,3,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
 	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	WorkflowConfig *WorkflowConfig        `protobuf:"bytes,8,opt,name=workflow_config,json=workflowConfig,proto3" json:"workflow_config,omitempty"`
@@ -192,6 +193,13 @@ func (*Workflow) Descriptor() ([]byte, []int) {
 func (x *Workflow) GetId() string {
 	if x != nil {
 		return x.Id
+	}
+	return ""
+}
+
+func (x *Workflow) GetWorkflowType() string {
+	if x != nil {
+		return x.WorkflowType
 	}
 	return ""
 }
@@ -240,9 +248,10 @@ const file_boundflow_v1_workflow_proto_rawDesc = "" +
 	"\aversion\x18\x01 \x01(\x05R\aversion\x124\n" +
 	"\x16invoke_timeout_seconds\x18\x02 \x01(\x05R\x14invokeTimeoutSeconds\x120\n" +
 	"\x14repeat_every_seconds\x18\x03 \x01(\x05R\x12repeatEverySeconds\x12 \n" +
-	"\vtriggerable\x18\x04 \x01(\bR\vtriggerable\"\xa6\x02\n" +
+	"\vtriggerable\x18\x04 \x01(\bR\vtriggerable\"\xcb\x02\n" +
 	"\bWorkflow\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
+	"\rworkflow_type\x18\x02 \x01(\tR\fworkflowType\x12\x1b\n" +
 	"\ttenant_id\x18\x03 \x01(\tR\btenantId\x129\n" +
 	"\n" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12E\n" +

@@ -12,6 +12,7 @@ service WorkflowService {
   rpc InvokeWorkflow(InvokeWorkflowRequest) returns (InvokeWorkflowResponse);
   rpc DeleteWorkflow(DeleteWorkflowRequest) returns (DeleteWorkflowResponse);
   rpc GetWorkflow(GetWorkflowRequest) returns (GetWorkflowResponse);
+  rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse);
 
   rpc SetAgentRuntimePolicy(SetAgentRuntimePolicyRequest) returns (SetAgentRuntimePolicyResponse);
   rpc SetAgentLifecyclePolicy(SetAgentLifecyclePolicyRequest) returns (SetAgentLifecyclePolicyResponse);
@@ -35,6 +36,14 @@ message CreateWorkflowRequest {
 
 message CreateWorkflowResponse {
   Workflow workflow = 1;
+}
+
+// ListWorkflows returns the caller's workflows (scoped to their tenant group by
+// the API-key auth interceptor). A read-only observability primitive.
+message ListWorkflowsRequest {}
+
+message ListWorkflowsResponse {
+  repeated Workflow workflows = 1;
 }
 
 message RuntimeOverrides {

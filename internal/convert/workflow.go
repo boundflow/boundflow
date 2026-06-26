@@ -19,9 +19,10 @@ func WorkflowToProto(r *domain.Workflow) *boundflowv1.Workflow {
 		return nil
 	}
 	return &boundflowv1.Workflow{
-		Id:        r.ID,
-		TenantId:  r.TenantID,
-		CreatedAt: timestamppb.New(r.CreatedAt),
+		Id:           r.ID,
+		WorkflowType: r.WorkflowType,
+		TenantId:     r.TenantID,
+		CreatedAt:    timestamppb.New(r.CreatedAt),
 		WorkflowConfig: &boundflowv1.WorkflowConfig{
 			Version:              int32(r.CurrentWorkflowVersion),
 			InvokeTimeoutSeconds: r.WorkflowConfig.InvokeTimeoutSeconds,
