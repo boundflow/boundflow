@@ -27,10 +27,10 @@ message WorkerMessage {
   }
 }
 
-// WorkerCapability declares a (resource_type, workflow_version) pair
+// WorkerCapability declares a (workflow_type, workflow_version) pair
 // that the worker has a registered handler for.
 message WorkerCapability {
-  string resource_type    = 1;
+  string workflow_type    = 1;
   int32  workflow_version = 2;
 }
 

@@ -81,13 +81,13 @@ func (OperationStatus) EnumDescriptor() ([]byte, []int) {
 type AtomicOperation struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ResourceId      string                 `protobuf:"bytes,2,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
+	WorkflowId      string                 `protobuf:"bytes,2,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
 	OperationType   string                 `protobuf:"bytes,3,opt,name=operation_type,json=operationType,proto3" json:"operation_type,omitempty"`
 	Name            string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
 	Context         *structpb.Struct       `protobuf:"bytes,5,opt,name=context,proto3" json:"context,omitempty"`
 	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	TimeoutSeconds  int32                  `protobuf:"varint,7,opt,name=timeout_seconds,json=timeoutSeconds,proto3" json:"timeout_seconds,omitempty"`
-	ResourceType    string                 `protobuf:"bytes,8,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
+	WorkflowType    string                 `protobuf:"bytes,8,opt,name=workflow_type,json=workflowType,proto3" json:"workflow_type,omitempty"`
 	WorkflowVersion int32                  `protobuf:"varint,9,opt,name=workflow_version,json=workflowVersion,proto3" json:"workflow_version,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
@@ -130,9 +130,9 @@ func (x *AtomicOperation) GetId() string {
 	return ""
 }
 
-func (x *AtomicOperation) GetResourceId() string {
+func (x *AtomicOperation) GetWorkflowId() string {
 	if x != nil {
-		return x.ResourceId
+		return x.WorkflowId
 	}
 	return ""
 }
@@ -172,9 +172,9 @@ func (x *AtomicOperation) GetTimeoutSeconds() int32 {
 	return 0
 }
 
-func (x *AtomicOperation) GetResourceType() string {
+func (x *AtomicOperation) GetWorkflowType() string {
 	if x != nil {
-		return x.ResourceType
+		return x.WorkflowType
 	}
 	return ""
 }
@@ -509,15 +509,15 @@ const file_boundflow_v1_operation_proto_rawDesc = "" +
 	"\x1cboundflow/v1/operation.proto\x12\fboundflow.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe4\x02\n" +
 	"\x0fAtomicOperation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
-	"\vresource_id\x18\x02 \x01(\tR\n" +
-	"resourceId\x12%\n" +
+	"\vworkflow_id\x18\x02 \x01(\tR\n" +
+	"workflowId\x12%\n" +
 	"\x0eoperation_type\x18\x03 \x01(\tR\roperationType\x12\x12\n" +
 	"\x04name\x18\x04 \x01(\tR\x04name\x121\n" +
 	"\acontext\x18\x05 \x01(\v2\x17.google.protobuf.StructR\acontext\x129\n" +
 	"\n" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12'\n" +
 	"\x0ftimeout_seconds\x18\a \x01(\x05R\x0etimeoutSeconds\x12#\n" +
-	"\rresource_type\x18\b \x01(\tR\fresourceType\x12)\n" +
+	"\rworkflow_type\x18\b \x01(\tR\fworkflowType\x12)\n" +
 	"\x10workflow_version\x18\t \x01(\x05R\x0fworkflowVersion\"\xd2\x01\n" +
 	"\fApprovalGate\x12<\n" +
 	"\n" +

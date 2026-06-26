@@ -69,7 +69,7 @@ func readyMsg() *boundflowv1.WorkerMessage {
 		Payload: &boundflowv1.WorkerMessage_Ready{
 			Ready: &boundflowv1.ReadyForWork{
 				Capabilities: []*boundflowv1.WorkerCapability{
-					{ResourceType: testResourceType, WorkflowVersion: testWorkflowVersion},
+					{WorkflowType: testWorkflowType, WorkflowVersion: testWorkflowVersion},
 				},
 			},
 		},
@@ -138,10 +138,10 @@ func (m *mockMetrics) MergeWorkflowMetrics(opMetrics domain.WorkflowJobMetrics, 
 
 const (
 	testWorkerID          = "test-worker"
-	testResourceID        = "resource-1"
+	testWorkflowID        = "workflow-1"
 	testRequestID         = "req-1"
 	testTenantGroupID     = "test-group"
-	testResourceType      = "test-resource"
+	testWorkflowType      = "test-workflow"
 	testWorkflowVersion   = int32(1)
 )
 
@@ -154,7 +154,7 @@ func newTestWorker(ctrl *gomock.Controller) (*rpcworker.RpcWorker, *mocks.MockJo
 
 func testJob() *domain.Job {
 	return &domain.Job{
-		ResourceInstanceID:     testResourceID,
+		WorkflowID:     testWorkflowID,
 		RequestID:              testRequestID,
 		CurrentAtomicOperation: "create",
 		JobType:                "create",
@@ -174,11 +174,11 @@ func runSession(worker *rpcworker.RpcWorker, stream *mockStream) chan error {
 // RenewJobLease and ReleaseJob are AnyTimes since they're managed by the lease
 // goroutine and are hard to time deterministically relative to the test.
 func expectJobAcquired(jobRepo *mocks.MockJobRepository) {
-	resID := testResourceID
+	resID := testWorkflowID
 	jobRepo.EXPECT().GetAvailableJob(gomock.Any(), testTenantGroupID, gomock.Any(), gomock.Any()).Return(&resID, nil)
-	jobRepo.EXPECT().AcquireJob(gomock.Any(), testResourceID, testWorkerID, gomock.Any(), testTenantGroupID).Return(testJob(), nil)
-	jobRepo.EXPECT().RenewJobLease(gomock.Any(), testResourceID, testWorkerID, gomock.Any()).Return(true, nil).AnyTimes()
-	jobRepo.EXPECT().ReleaseJob(gomock.Any(), testResourceID, testWorkerID).Return(nil).AnyTimes()
+	jobRepo.EXPECT().AcquireJob(gomock.Any(), testWorkflowID, testWorkerID, gomock.Any(), testTenantGroupID).Return(testJob(), nil)
+	jobRepo.EXPECT().RenewJobLease(gomock.Any(), testWorkflowID, testWorkerID, gomock.Any()).Return(true, nil).AnyTimes()
+	jobRepo.EXPECT().ReleaseJob(gomock.Any(), testWorkflowID, testWorkerID).Return(nil).AnyTimes()
 }
 
 // driveToConnectedBusy sets up the UpdateJobStatus(running) expectation, pushes the
@@ -190,7 +190,7 @@ func driveToConnectedBusy(t *testing.T, jobRepo *mocks.MockJobRepository, stream
 
 	runningSet := make(chan struct{})
 	jobRepo.EXPECT().
-		UpdateJobStatus(gomock.Any(), testResourceID, testWorkerID, domain.JobStatusRunning).
+		UpdateJobStatus(gomock.Any(), testWorkflowID, testWorkerID, domain.JobStatusRunning).
 		DoAndReturn(func(_ context.Context, _, _ string, _ domain.JobStatus) (bool, error) {
 			close(runningSet)
 			return true, nil
@@ -292,11 +292,11 @@ func TestWorkerSession_AcquireJob_Fails_StreamDisconnects(t *testing.T) {
 
 	worker, jobRepo, _ := newTestWorker(ctrl)
 
-	resID := testResourceID
+	resID := testWorkflowID
 	jobRepo.EXPECT().GetAvailableJob(gomock.Any(), testTenantGroupID, gomock.Any(), gomock.Any()).Return(&resID, nil)
 
 	acquired := make(chan struct{})
-	jobRepo.EXPECT().AcquireJob(gomock.Any(), testResourceID, testWorkerID, gomock.Any(), testTenantGroupID).
+	jobRepo.EXPECT().AcquireJob(gomock.Any(), testWorkflowID, testWorkerID, gomock.Any(), testTenantGroupID).
 		DoAndReturn(func(_ context.Context, _, _ string, _ time.Duration, _ string) (*domain.Job, error) {
 			close(acquired)
 			return nil, nil // failed to acquire
@@ -322,8 +322,8 @@ func TestWorkerSession_CompleteOperation(t *testing.T) {
 
 	worker, jobRepo, sched := newTestWorker(ctrl)
 	expectJobAcquired(jobRepo)
-	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testResourceID, testWorkerID, domain.JobStatusRunning).Return(true, nil)
-	jobRepo.EXPECT().UpdateJobStatusWithMetrics(gomock.Any(), testResourceID, testWorkerID, domain.JobStatusCompleted, gomock.Any(), gomock.Any()).Return(true, nil)
+	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, testWorkerID, domain.JobStatusRunning).Return(true, nil)
+	jobRepo.EXPECT().UpdateJobStatusWithMetrics(gomock.Any(), testWorkflowID, testWorkerID, domain.JobStatusCompleted, gomock.Any(), gomock.Any()).Return(true, nil)
 
 	stream := newMockStream(ctx)
 	errCh := runSession(worker, stream)
@@ -357,8 +357,8 @@ func TestWorkerSession_FailOperation(t *testing.T) {
 
 	worker, jobRepo, sched := newTestWorker(ctrl)
 	expectJobAcquired(jobRepo)
-	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testResourceID, testWorkerID, domain.JobStatusRunning).Return(true, nil)
-	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testResourceID, testWorkerID, domain.JobStatusFailed).Return(true, nil)
+	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, testWorkerID, domain.JobStatusRunning).Return(true, nil)
+	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, testWorkerID, domain.JobStatusFailed).Return(true, nil)
 
 	stream := newMockStream(ctx)
 	errCh := runSession(worker, stream)
@@ -383,7 +383,7 @@ func TestWorkerSession_ConnectedBusy_StreamDisconnect(t *testing.T) {
 
 	worker, jobRepo, sched := newTestWorker(ctrl)
 	expectJobAcquired(jobRepo)
-	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testResourceID, testWorkerID, domain.JobStatusFailed).Return(true, nil)
+	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, testWorkerID, domain.JobStatusFailed).Return(true, nil)
 
 	stream := newMockStream(ctx)
 	errCh := runSession(worker, stream)
@@ -461,7 +461,7 @@ func TestWorkerSession_ConnectedBusy_WrongOperationId(t *testing.T) {
 
 	worker, jobRepo, sched := newTestWorker(ctrl)
 	expectJobAcquired(jobRepo)
-	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testResourceID, testWorkerID, domain.JobStatusFailed).Return(true, nil)
+	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, testWorkerID, domain.JobStatusFailed).Return(true, nil)
 
 	stream := newMockStream(ctx)
 	errCh := runSession(worker, stream)

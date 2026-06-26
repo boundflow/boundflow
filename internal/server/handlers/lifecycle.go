@@ -15,37 +15,37 @@ import (
 	"github.com/boundflow/boundflow/internal/storage"
 )
 
-type ResourceLifecycleHandler struct {
-	boundflowv1.UnimplementedResourceLifecycleServiceServer
+type WorkflowServiceHandler struct {
+	boundflowv1.UnimplementedWorkflowServiceServer
 	svc *service.LifecycleService
 }
 
-func NewResourceLifecycleHandler(svc *service.LifecycleService) *ResourceLifecycleHandler {
-	return &ResourceLifecycleHandler{svc: svc}
+func NewWorkflowServiceHandler(svc *service.LifecycleService) *WorkflowServiceHandler {
+	return &WorkflowServiceHandler{svc: svc}
 }
 
-// checkResourceOwner verifies the caller owns the given resource instance.
+// checkWorkflowOwner verifies the caller owns the given workflow instance.
 // Returns NotFound (not PermissionDenied) on failure to avoid leaking existence.
-func (h *ResourceLifecycleHandler) checkResourceOwner(ctx context.Context, resourceInstanceID string) error {
+func (h *WorkflowServiceHandler) checkWorkflowOwner(ctx context.Context, workflowID string) error {
 	callerGroup, ok := auth.TenantGroupFromContext(ctx)
 	if !ok {
 		return status.Error(codes.Unauthenticated, "missing auth")
 	}
-	ownerGroup, err := h.svc.TenantGroupIDForResource(ctx, resourceInstanceID)
+	ownerGroup, err := h.svc.TenantGroupIDForWorkflow(ctx, workflowID)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
-			return status.Error(codes.NotFound, "resource instance not found")
+			return status.Error(codes.NotFound, "workflow instance not found")
 		}
-		return status.Errorf(codes.Internal, "check resource owner: %v", err)
+		return status.Errorf(codes.Internal, "check workflow owner: %v", err)
 	}
 	if ownerGroup != callerGroup {
-		return status.Error(codes.NotFound, "resource instance not found")
+		return status.Error(codes.NotFound, "workflow instance not found")
 	}
 	return nil
 }
 
 // checkTenantOwner verifies the caller owns the given tenant.
-func (h *ResourceLifecycleHandler) checkTenantOwner(ctx context.Context, tenantID string) error {
+func (h *WorkflowServiceHandler) checkTenantOwner(ctx context.Context, tenantID string) error {
 	callerGroup, ok := auth.TenantGroupFromContext(ctx)
 	if !ok {
 		return status.Error(codes.Unauthenticated, "missing auth")
@@ -63,9 +63,9 @@ func (h *ResourceLifecycleHandler) checkTenantOwner(ctx context.Context, tenantI
 	return nil
 }
 
-func (h *ResourceLifecycleHandler) CreateResource(ctx context.Context, req *boundflowv1.CreateResourceRequest) (*boundflowv1.CreateResourceResponse, error) {
-	if req.ResourceType == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "resource_type is required")
+func (h *WorkflowServiceHandler) CreateWorkflow(ctx context.Context, req *boundflowv1.CreateWorkflowRequest) (*boundflowv1.CreateWorkflowResponse, error) {
+	if req.WorkflowType == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_type is required")
 	}
 	if req.TenantId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "tenant_id is required")
@@ -81,25 +81,25 @@ func (h *ResourceLifecycleHandler) CreateResource(ctx context.Context, req *boun
 		version = int(req.WorkflowConfig.Version)
 	}
 
-	instance, err := h.svc.CreateResource(ctx, req.CorrelationId, req.ResourceType, req.TenantId, cfg, version)
+	instance, err := h.svc.CreateWorkflow(ctx, req.CorrelationId, req.WorkflowType, req.TenantId, cfg, version)
 	if err != nil {
 		if errors.Is(err, storage.ErrAlreadyExists) {
-			return nil, status.Errorf(codes.AlreadyExists, "resource instance already exists")
+			return nil, status.Errorf(codes.AlreadyExists, "workflow instance already exists")
 		}
-		return nil, status.Errorf(codes.Internal, "create resource: %v", err)
+		return nil, status.Errorf(codes.Internal, "create workflow: %v", err)
 	}
 
-	return &boundflowv1.CreateResourceResponse{
-		ResourceInstance: convert.ResourceInstanceToProto(instance),
+	return &boundflowv1.CreateWorkflowResponse{
+		Workflow: convert.WorkflowToProto(instance),
 	}, nil
 }
 
-func (h *ResourceLifecycleHandler) ReconcileResource(ctx context.Context, req *boundflowv1.ReconcileResourceRequest) (*boundflowv1.ReconcileResourceResponse, error) {
-	if req.ResourceInstanceId == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
+func (h *WorkflowServiceHandler) InvokeWorkflow(ctx context.Context, req *boundflowv1.InvokeWorkflowRequest) (*boundflowv1.InvokeWorkflowResponse, error) {
+	if req.WorkflowId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
 	}
 
-	if err := h.checkResourceOwner(ctx, req.ResourceInstanceId); err != nil {
+	if err := h.checkWorkflowOwner(ctx, req.WorkflowId); err != nil {
 		return nil, err
 	}
 
@@ -108,9 +108,9 @@ func (h *ResourceLifecycleHandler) ReconcileResource(ctx context.Context, req *b
 		params.OperationTimeoutSeconds = int(req.RuntimeOverrides.OperationTimeoutSeconds)
 	}
 
-	if err := h.svc.ReconcileResource(ctx, req.CorrelationId, req.ResourceInstanceId, params); err != nil {
+	if err := h.svc.InvokeWorkflow(ctx, req.CorrelationId, req.WorkflowId, params); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Errorf(codes.NotFound, "resource instance not found")
+			return nil, status.Errorf(codes.NotFound, "workflow instance not found")
 		}
 		if errors.Is(err, storage.ErrInvalidLifecycleState) {
 			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
@@ -121,61 +121,61 @@ func (h *ResourceLifecycleHandler) ReconcileResource(ctx context.Context, req *b
 		if errors.Is(err, service.ErrInvalidWorkflowState) {
 			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
 		}
-		return nil, status.Errorf(codes.Internal, "reconcile resource: %v", err)
+		return nil, status.Errorf(codes.Internal, "invoke workflow: %v", err)
 	}
 
-	return &boundflowv1.ReconcileResourceResponse{}, nil
+	return &boundflowv1.InvokeWorkflowResponse{}, nil
 }
 
-func (h *ResourceLifecycleHandler) DeleteResource(ctx context.Context, req *boundflowv1.DeleteResourceRequest) (*boundflowv1.DeleteResourceResponse, error) {
-	if req.ResourceInstanceId == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
+func (h *WorkflowServiceHandler) DeleteWorkflow(ctx context.Context, req *boundflowv1.DeleteWorkflowRequest) (*boundflowv1.DeleteWorkflowResponse, error) {
+	if req.WorkflowId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
 	}
 
-	if err := h.checkResourceOwner(ctx, req.ResourceInstanceId); err != nil {
+	if err := h.checkWorkflowOwner(ctx, req.WorkflowId); err != nil {
 		return nil, err
 	}
 
-	if err := h.svc.DeleteResource(ctx, req.CorrelationId, req.ResourceInstanceId); err != nil {
+	if err := h.svc.DeleteWorkflow(ctx, req.CorrelationId, req.WorkflowId); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Errorf(codes.NotFound, "resource instance not found")
+			return nil, status.Errorf(codes.NotFound, "workflow instance not found")
 		}
-		return nil, status.Errorf(codes.Internal, "delete resource: %v", err)
+		return nil, status.Errorf(codes.Internal, "delete workflow: %v", err)
 	}
 
-	return &boundflowv1.DeleteResourceResponse{}, nil
+	return &boundflowv1.DeleteWorkflowResponse{}, nil
 }
 
-func (h *ResourceLifecycleHandler) GetResourceState(ctx context.Context, req *boundflowv1.GetResourceStateRequest) (*boundflowv1.GetResourceStateResponse, error) {
-	if req.ResourceInstanceId == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
+func (h *WorkflowServiceHandler) GetWorkflow(ctx context.Context, req *boundflowv1.GetWorkflowRequest) (*boundflowv1.GetWorkflowResponse, error) {
+	if req.WorkflowId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
 	}
 
-	if err := h.checkResourceOwner(ctx, req.ResourceInstanceId); err != nil {
+	if err := h.checkWorkflowOwner(ctx, req.WorkflowId); err != nil {
 		return nil, err
 	}
 
-	instance, err := h.svc.GetResourceState(ctx, req.ResourceInstanceId)
+	instance, err := h.svc.GetWorkflow(ctx, req.WorkflowId)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Errorf(codes.NotFound, "resource instance not found")
+			return nil, status.Errorf(codes.NotFound, "workflow instance not found")
 		}
-		return nil, status.Errorf(codes.Internal, "get resource state: %v", err)
+		return nil, status.Errorf(codes.Internal, "get workflow state: %v", err)
 	}
-	return &boundflowv1.GetResourceStateResponse{
-		ResourceInstance: convert.ResourceInstanceToProto(instance),
+	return &boundflowv1.GetWorkflowResponse{
+		Workflow: convert.WorkflowToProto(instance),
 	}, nil
 }
 
-func (h *ResourceLifecycleHandler) SetAgentRuntimePolicy(ctx context.Context, req *boundflowv1.SetAgentRuntimePolicyRequest) (*boundflowv1.SetAgentRuntimePolicyResponse, error) {
-	if req.ResourceInstanceId == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
+func (h *WorkflowServiceHandler) SetAgentRuntimePolicy(ctx context.Context, req *boundflowv1.SetAgentRuntimePolicyRequest) (*boundflowv1.SetAgentRuntimePolicyResponse, error) {
+	if req.WorkflowId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
 	}
 	if req.AgentName == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "agent_name is required")
 	}
 
-	if err := h.checkResourceOwner(ctx, req.ResourceInstanceId); err != nil {
+	if err := h.checkWorkflowOwner(ctx, req.WorkflowId); err != nil {
 		return nil, err
 	}
 
@@ -183,21 +183,21 @@ func (h *ResourceLifecycleHandler) SetAgentRuntimePolicy(ctx context.Context, re
 	if req.RuntimePolicy != nil {
 		policy = req.RuntimePolicy.AsMap()
 	}
-	if err := h.svc.SetAgentRuntimePolicy(ctx, req.ResourceInstanceId, req.AgentName, policy); err != nil {
+	if err := h.svc.SetAgentRuntimePolicy(ctx, req.WorkflowId, req.AgentName, policy); err != nil {
 		return nil, status.Errorf(codes.Internal, "set agent runtime policy: %v", err)
 	}
 	return &boundflowv1.SetAgentRuntimePolicyResponse{}, nil
 }
 
-func (h *ResourceLifecycleHandler) SetAgentLifecyclePolicy(ctx context.Context, req *boundflowv1.SetAgentLifecyclePolicyRequest) (*boundflowv1.SetAgentLifecyclePolicyResponse, error) {
-	if req.ResourceInstanceId == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
+func (h *WorkflowServiceHandler) SetAgentLifecyclePolicy(ctx context.Context, req *boundflowv1.SetAgentLifecyclePolicyRequest) (*boundflowv1.SetAgentLifecyclePolicyResponse, error) {
+	if req.WorkflowId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
 	}
 	if req.AgentName == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "agent_name is required")
 	}
 
-	if err := h.checkResourceOwner(ctx, req.ResourceInstanceId); err != nil {
+	if err := h.checkWorkflowOwner(ctx, req.WorkflowId); err != nil {
 		return nil, err
 	}
 
@@ -205,33 +205,33 @@ func (h *ResourceLifecycleHandler) SetAgentLifecyclePolicy(ctx context.Context, 
 	if req.LifecyclePolicy != nil {
 		policy = req.LifecyclePolicy.AsMap()
 	}
-	if err := h.svc.SetAgentLifecyclePolicy(ctx, req.ResourceInstanceId, req.AgentName, policy); err != nil {
+	if err := h.svc.SetAgentLifecyclePolicy(ctx, req.WorkflowId, req.AgentName, policy); err != nil {
 		return nil, status.Errorf(codes.Internal, "set agent lifecycle policy: %v", err)
 	}
 	return &boundflowv1.SetAgentLifecyclePolicyResponse{}, nil
 }
 
-func (h *ResourceLifecycleHandler) DeleteAgent(ctx context.Context, req *boundflowv1.DeleteAgentRequest) (*boundflowv1.DeleteAgentResponse, error) {
-	if req.ResourceInstanceId == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
+func (h *WorkflowServiceHandler) DeleteAgent(ctx context.Context, req *boundflowv1.DeleteAgentRequest) (*boundflowv1.DeleteAgentResponse, error) {
+	if req.WorkflowId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
 	}
 	if req.AgentName == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "agent_name is required")
 	}
 
-	if err := h.checkResourceOwner(ctx, req.ResourceInstanceId); err != nil {
+	if err := h.checkWorkflowOwner(ctx, req.WorkflowId); err != nil {
 		return nil, err
 	}
 
-	if err := h.svc.DeleteAgent(ctx, req.ResourceInstanceId, req.AgentName); err != nil {
+	if err := h.svc.DeleteAgent(ctx, req.WorkflowId, req.AgentName); err != nil {
 		return nil, status.Errorf(codes.Internal, "delete agent: %v", err)
 	}
 	return &boundflowv1.DeleteAgentResponse{}, nil
 }
 
-func (h *ResourceLifecycleHandler) SetWorkflowLifecyclePolicy(ctx context.Context, req *boundflowv1.SetWorkflowLifecyclePolicyRequest) (*boundflowv1.SetWorkflowLifecyclePolicyResponse, error) {
-	if req.ResourceInstanceId == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
+func (h *WorkflowServiceHandler) SetWorkflowLifecyclePolicy(ctx context.Context, req *boundflowv1.SetWorkflowLifecyclePolicyRequest) (*boundflowv1.SetWorkflowLifecyclePolicyResponse, error) {
+	if req.WorkflowId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
 	}
 	for i, rule := range req.GetLifecyclePolicy().GetRules() {
 		if rule.Action == nil {
@@ -242,51 +242,51 @@ func (h *ResourceLifecycleHandler) SetWorkflowLifecyclePolicy(ctx context.Contex
 		}
 	}
 
-	if err := h.checkResourceOwner(ctx, req.ResourceInstanceId); err != nil {
+	if err := h.checkWorkflowOwner(ctx, req.WorkflowId); err != nil {
 		return nil, err
 	}
 
 	policy := convert.WorkflowLifecyclePolicyFromProto(req.LifecyclePolicy)
-	if err := h.svc.SetWorkflowLifecyclePolicy(ctx, req.ResourceInstanceId, policy); err != nil {
+	if err := h.svc.SetWorkflowLifecyclePolicy(ctx, req.WorkflowId, policy); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Errorf(codes.NotFound, "resource instance not found")
+			return nil, status.Errorf(codes.NotFound, "workflow instance not found")
 		}
 		return nil, status.Errorf(codes.Internal, "set workflow lifecycle policy: %v", err)
 	}
 	return &boundflowv1.SetWorkflowLifecyclePolicyResponse{}, nil
 }
 
-func (h *ResourceLifecycleHandler) ActivateWorkflow(ctx context.Context, req *boundflowv1.ActivateWorkflowRequest) (*boundflowv1.ActivateWorkflowResponse, error) {
-	if req.ResourceInstanceId == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
+func (h *WorkflowServiceHandler) ActivateWorkflow(ctx context.Context, req *boundflowv1.ActivateWorkflowRequest) (*boundflowv1.ActivateWorkflowResponse, error) {
+	if req.WorkflowId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
 	}
 
-	if err := h.checkResourceOwner(ctx, req.ResourceInstanceId); err != nil {
+	if err := h.checkWorkflowOwner(ctx, req.WorkflowId); err != nil {
 		return nil, err
 	}
 
-	if err := h.svc.ActivateWorkflow(ctx, req.ResourceInstanceId); err != nil {
+	if err := h.svc.ActivateWorkflow(ctx, req.WorkflowId); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Errorf(codes.NotFound, "resource instance not found")
+			return nil, status.Errorf(codes.NotFound, "workflow instance not found")
 		}
 		return nil, status.Errorf(codes.Internal, "activate workflow: %v", err)
 	}
 	return &boundflowv1.ActivateWorkflowResponse{}, nil
 }
 
-func (h *ResourceLifecycleHandler) ApproveWorkflow(ctx context.Context, req *boundflowv1.ApproveWorkflowRequest) (*boundflowv1.ApproveWorkflowResponse, error) {
-	if req.ResourceInstanceId == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
+func (h *WorkflowServiceHandler) ApproveWorkflow(ctx context.Context, req *boundflowv1.ApproveWorkflowRequest) (*boundflowv1.ApproveWorkflowResponse, error) {
+	if req.WorkflowId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
 	}
 	if req.ApprovalId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "approval_id is required")
 	}
 
-	if err := h.checkResourceOwner(ctx, req.ResourceInstanceId); err != nil {
+	if err := h.checkWorkflowOwner(ctx, req.WorkflowId); err != nil {
 		return nil, err
 	}
 
-	if err := h.svc.ApproveWorkflow(ctx, req.ResourceInstanceId, req.ApprovalId); err != nil {
+	if err := h.svc.ApproveWorkflow(ctx, req.WorkflowId, req.ApprovalId); err != nil {
 		if errors.Is(err, service.ErrInvalidWorkflowState) {
 			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
 		}
@@ -295,19 +295,19 @@ func (h *ResourceLifecycleHandler) ApproveWorkflow(ctx context.Context, req *bou
 	return &boundflowv1.ApproveWorkflowResponse{}, nil
 }
 
-func (h *ResourceLifecycleHandler) RejectWorkflow(ctx context.Context, req *boundflowv1.RejectWorkflowRequest) (*boundflowv1.RejectWorkflowResponse, error) {
-	if req.ResourceInstanceId == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "resource_instance_id is required")
+func (h *WorkflowServiceHandler) RejectWorkflow(ctx context.Context, req *boundflowv1.RejectWorkflowRequest) (*boundflowv1.RejectWorkflowResponse, error) {
+	if req.WorkflowId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
 	}
 	if req.ApprovalId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "approval_id is required")
 	}
 
-	if err := h.checkResourceOwner(ctx, req.ResourceInstanceId); err != nil {
+	if err := h.checkWorkflowOwner(ctx, req.WorkflowId); err != nil {
 		return nil, err
 	}
 
-	if err := h.svc.RejectWorkflow(ctx, req.ResourceInstanceId, req.ApprovalId); err != nil {
+	if err := h.svc.RejectWorkflow(ctx, req.WorkflowId, req.ApprovalId); err != nil {
 		if errors.Is(err, service.ErrInvalidWorkflowState) {
 			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
 		}

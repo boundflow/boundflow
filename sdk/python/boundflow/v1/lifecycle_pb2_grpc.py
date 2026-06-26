@@ -25,7 +25,7 @@ if _version_not_supported:
     )
 
 
-class ResourceLifecycleServiceStub:
+class WorkflowServiceStub:
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -34,85 +34,85 @@ class ResourceLifecycleServiceStub:
         Args:
             channel: A grpc.Channel.
         """
-        self.CreateResource = channel.unary_unary(
-                '/boundflow.v1.ResourceLifecycleService/CreateResource',
-                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.CreateResourceRequest.SerializeToString,
-                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.CreateResourceResponse.FromString,
+        self.CreateWorkflow = channel.unary_unary(
+                '/boundflow.v1.WorkflowService/CreateWorkflow',
+                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.CreateWorkflowRequest.SerializeToString,
+                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.CreateWorkflowResponse.FromString,
                 _registered_method=True)
-        self.ReconcileResource = channel.unary_unary(
-                '/boundflow.v1.ResourceLifecycleService/ReconcileResource',
-                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.ReconcileResourceRequest.SerializeToString,
-                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.ReconcileResourceResponse.FromString,
+        self.InvokeWorkflow = channel.unary_unary(
+                '/boundflow.v1.WorkflowService/InvokeWorkflow',
+                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.InvokeWorkflowRequest.SerializeToString,
+                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.InvokeWorkflowResponse.FromString,
                 _registered_method=True)
-        self.DeleteResource = channel.unary_unary(
-                '/boundflow.v1.ResourceLifecycleService/DeleteResource',
-                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.DeleteResourceRequest.SerializeToString,
-                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.DeleteResourceResponse.FromString,
+        self.DeleteWorkflow = channel.unary_unary(
+                '/boundflow.v1.WorkflowService/DeleteWorkflow',
+                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.DeleteWorkflowRequest.SerializeToString,
+                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.DeleteWorkflowResponse.FromString,
                 _registered_method=True)
-        self.GetResourceState = channel.unary_unary(
-                '/boundflow.v1.ResourceLifecycleService/GetResourceState',
-                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetResourceStateRequest.SerializeToString,
-                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetResourceStateResponse.FromString,
+        self.GetWorkflow = channel.unary_unary(
+                '/boundflow.v1.WorkflowService/GetWorkflow',
+                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowRequest.SerializeToString,
+                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowResponse.FromString,
                 _registered_method=True)
         self.SetAgentRuntimePolicy = channel.unary_unary(
-                '/boundflow.v1.ResourceLifecycleService/SetAgentRuntimePolicy',
+                '/boundflow.v1.WorkflowService/SetAgentRuntimePolicy',
                 request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.SetAgentRuntimePolicyRequest.SerializeToString,
                 response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.SetAgentRuntimePolicyResponse.FromString,
                 _registered_method=True)
         self.SetAgentLifecyclePolicy = channel.unary_unary(
-                '/boundflow.v1.ResourceLifecycleService/SetAgentLifecyclePolicy',
+                '/boundflow.v1.WorkflowService/SetAgentLifecyclePolicy',
                 request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.SetAgentLifecyclePolicyRequest.SerializeToString,
                 response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.SetAgentLifecyclePolicyResponse.FromString,
                 _registered_method=True)
         self.DeleteAgent = channel.unary_unary(
-                '/boundflow.v1.ResourceLifecycleService/DeleteAgent',
+                '/boundflow.v1.WorkflowService/DeleteAgent',
                 request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.DeleteAgentRequest.SerializeToString,
                 response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.DeleteAgentResponse.FromString,
                 _registered_method=True)
         self.SetWorkflowLifecyclePolicy = channel.unary_unary(
-                '/boundflow.v1.ResourceLifecycleService/SetWorkflowLifecyclePolicy',
+                '/boundflow.v1.WorkflowService/SetWorkflowLifecyclePolicy',
                 request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.SetWorkflowLifecyclePolicyRequest.SerializeToString,
                 response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.SetWorkflowLifecyclePolicyResponse.FromString,
                 _registered_method=True)
         self.ApproveWorkflow = channel.unary_unary(
-                '/boundflow.v1.ResourceLifecycleService/ApproveWorkflow',
+                '/boundflow.v1.WorkflowService/ApproveWorkflow',
                 request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.ApproveWorkflowRequest.SerializeToString,
                 response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.ApproveWorkflowResponse.FromString,
                 _registered_method=True)
         self.RejectWorkflow = channel.unary_unary(
-                '/boundflow.v1.ResourceLifecycleService/RejectWorkflow',
+                '/boundflow.v1.WorkflowService/RejectWorkflow',
                 request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.RejectWorkflowRequest.SerializeToString,
                 response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.RejectWorkflowResponse.FromString,
                 _registered_method=True)
         self.ActivateWorkflow = channel.unary_unary(
-                '/boundflow.v1.ResourceLifecycleService/ActivateWorkflow',
+                '/boundflow.v1.WorkflowService/ActivateWorkflow',
                 request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.ActivateWorkflowRequest.SerializeToString,
                 response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.ActivateWorkflowResponse.FromString,
                 _registered_method=True)
 
 
-class ResourceLifecycleServiceServicer:
+class WorkflowServiceServicer:
     """Missing associated documentation comment in .proto file."""
 
-    def CreateResource(self, request, context):
+    def CreateWorkflow(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def ReconcileResource(self, request, context):
+    def InvokeWorkflow(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def DeleteResource(self, request, context):
+    def DeleteWorkflow(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def GetResourceState(self, request, context):
+    def GetWorkflow(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -161,27 +161,27 @@ class ResourceLifecycleServiceServicer:
         raise NotImplementedError('Method not implemented!')
 
 
-def add_ResourceLifecycleServiceServicer_to_server(servicer, server):
+def add_WorkflowServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'CreateResource': grpc.unary_unary_rpc_method_handler(
-                    servicer.CreateResource,
-                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.CreateResourceRequest.FromString,
-                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.CreateResourceResponse.SerializeToString,
+            'CreateWorkflow': grpc.unary_unary_rpc_method_handler(
+                    servicer.CreateWorkflow,
+                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.CreateWorkflowRequest.FromString,
+                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.CreateWorkflowResponse.SerializeToString,
             ),
-            'ReconcileResource': grpc.unary_unary_rpc_method_handler(
-                    servicer.ReconcileResource,
-                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.ReconcileResourceRequest.FromString,
-                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.ReconcileResourceResponse.SerializeToString,
+            'InvokeWorkflow': grpc.unary_unary_rpc_method_handler(
+                    servicer.InvokeWorkflow,
+                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.InvokeWorkflowRequest.FromString,
+                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.InvokeWorkflowResponse.SerializeToString,
             ),
-            'DeleteResource': grpc.unary_unary_rpc_method_handler(
-                    servicer.DeleteResource,
-                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.DeleteResourceRequest.FromString,
-                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.DeleteResourceResponse.SerializeToString,
+            'DeleteWorkflow': grpc.unary_unary_rpc_method_handler(
+                    servicer.DeleteWorkflow,
+                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.DeleteWorkflowRequest.FromString,
+                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.DeleteWorkflowResponse.SerializeToString,
             ),
-            'GetResourceState': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetResourceState,
-                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetResourceStateRequest.FromString,
-                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetResourceStateResponse.SerializeToString,
+            'GetWorkflow': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetWorkflow,
+                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowRequest.FromString,
+                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowResponse.SerializeToString,
             ),
             'SetAgentRuntimePolicy': grpc.unary_unary_rpc_method_handler(
                     servicer.SetAgentRuntimePolicy,
@@ -220,17 +220,17 @@ def add_ResourceLifecycleServiceServicer_to_server(servicer, server):
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'boundflow.v1.ResourceLifecycleService', rpc_method_handlers)
+            'boundflow.v1.WorkflowService', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('boundflow.v1.ResourceLifecycleService', rpc_method_handlers)
+    server.add_registered_method_handlers('boundflow.v1.WorkflowService', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
-class ResourceLifecycleService:
+class WorkflowService:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def CreateResource(request,
+    def CreateWorkflow(request,
             target,
             options=(),
             channel_credentials=None,
@@ -243,9 +243,9 @@ class ResourceLifecycleService:
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/boundflow.v1.ResourceLifecycleService/CreateResource',
-            boundflow_dot_v1_dot_lifecycle__pb2.CreateResourceRequest.SerializeToString,
-            boundflow_dot_v1_dot_lifecycle__pb2.CreateResourceResponse.FromString,
+            '/boundflow.v1.WorkflowService/CreateWorkflow',
+            boundflow_dot_v1_dot_lifecycle__pb2.CreateWorkflowRequest.SerializeToString,
+            boundflow_dot_v1_dot_lifecycle__pb2.CreateWorkflowResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -257,7 +257,7 @@ class ResourceLifecycleService:
             _registered_method=True)
 
     @staticmethod
-    def ReconcileResource(request,
+    def InvokeWorkflow(request,
             target,
             options=(),
             channel_credentials=None,
@@ -270,9 +270,9 @@ class ResourceLifecycleService:
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/boundflow.v1.ResourceLifecycleService/ReconcileResource',
-            boundflow_dot_v1_dot_lifecycle__pb2.ReconcileResourceRequest.SerializeToString,
-            boundflow_dot_v1_dot_lifecycle__pb2.ReconcileResourceResponse.FromString,
+            '/boundflow.v1.WorkflowService/InvokeWorkflow',
+            boundflow_dot_v1_dot_lifecycle__pb2.InvokeWorkflowRequest.SerializeToString,
+            boundflow_dot_v1_dot_lifecycle__pb2.InvokeWorkflowResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -284,7 +284,7 @@ class ResourceLifecycleService:
             _registered_method=True)
 
     @staticmethod
-    def DeleteResource(request,
+    def DeleteWorkflow(request,
             target,
             options=(),
             channel_credentials=None,
@@ -297,9 +297,9 @@ class ResourceLifecycleService:
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/boundflow.v1.ResourceLifecycleService/DeleteResource',
-            boundflow_dot_v1_dot_lifecycle__pb2.DeleteResourceRequest.SerializeToString,
-            boundflow_dot_v1_dot_lifecycle__pb2.DeleteResourceResponse.FromString,
+            '/boundflow.v1.WorkflowService/DeleteWorkflow',
+            boundflow_dot_v1_dot_lifecycle__pb2.DeleteWorkflowRequest.SerializeToString,
+            boundflow_dot_v1_dot_lifecycle__pb2.DeleteWorkflowResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -311,7 +311,7 @@ class ResourceLifecycleService:
             _registered_method=True)
 
     @staticmethod
-    def GetResourceState(request,
+    def GetWorkflow(request,
             target,
             options=(),
             channel_credentials=None,
@@ -324,9 +324,9 @@ class ResourceLifecycleService:
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/boundflow.v1.ResourceLifecycleService/GetResourceState',
-            boundflow_dot_v1_dot_lifecycle__pb2.GetResourceStateRequest.SerializeToString,
-            boundflow_dot_v1_dot_lifecycle__pb2.GetResourceStateResponse.FromString,
+            '/boundflow.v1.WorkflowService/GetWorkflow',
+            boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowRequest.SerializeToString,
+            boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -351,7 +351,7 @@ class ResourceLifecycleService:
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/boundflow.v1.ResourceLifecycleService/SetAgentRuntimePolicy',
+            '/boundflow.v1.WorkflowService/SetAgentRuntimePolicy',
             boundflow_dot_v1_dot_lifecycle__pb2.SetAgentRuntimePolicyRequest.SerializeToString,
             boundflow_dot_v1_dot_lifecycle__pb2.SetAgentRuntimePolicyResponse.FromString,
             options,
@@ -378,7 +378,7 @@ class ResourceLifecycleService:
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/boundflow.v1.ResourceLifecycleService/SetAgentLifecyclePolicy',
+            '/boundflow.v1.WorkflowService/SetAgentLifecyclePolicy',
             boundflow_dot_v1_dot_lifecycle__pb2.SetAgentLifecyclePolicyRequest.SerializeToString,
             boundflow_dot_v1_dot_lifecycle__pb2.SetAgentLifecyclePolicyResponse.FromString,
             options,
@@ -405,7 +405,7 @@ class ResourceLifecycleService:
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/boundflow.v1.ResourceLifecycleService/DeleteAgent',
+            '/boundflow.v1.WorkflowService/DeleteAgent',
             boundflow_dot_v1_dot_lifecycle__pb2.DeleteAgentRequest.SerializeToString,
             boundflow_dot_v1_dot_lifecycle__pb2.DeleteAgentResponse.FromString,
             options,
@@ -432,7 +432,7 @@ class ResourceLifecycleService:
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/boundflow.v1.ResourceLifecycleService/SetWorkflowLifecyclePolicy',
+            '/boundflow.v1.WorkflowService/SetWorkflowLifecyclePolicy',
             boundflow_dot_v1_dot_lifecycle__pb2.SetWorkflowLifecyclePolicyRequest.SerializeToString,
             boundflow_dot_v1_dot_lifecycle__pb2.SetWorkflowLifecyclePolicyResponse.FromString,
             options,
@@ -459,7 +459,7 @@ class ResourceLifecycleService:
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/boundflow.v1.ResourceLifecycleService/ApproveWorkflow',
+            '/boundflow.v1.WorkflowService/ApproveWorkflow',
             boundflow_dot_v1_dot_lifecycle__pb2.ApproveWorkflowRequest.SerializeToString,
             boundflow_dot_v1_dot_lifecycle__pb2.ApproveWorkflowResponse.FromString,
             options,
@@ -486,7 +486,7 @@ class ResourceLifecycleService:
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/boundflow.v1.ResourceLifecycleService/RejectWorkflow',
+            '/boundflow.v1.WorkflowService/RejectWorkflow',
             boundflow_dot_v1_dot_lifecycle__pb2.RejectWorkflowRequest.SerializeToString,
             boundflow_dot_v1_dot_lifecycle__pb2.RejectWorkflowResponse.FromString,
             options,
@@ -513,7 +513,7 @@ class ResourceLifecycleService:
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/boundflow.v1.ResourceLifecycleService/ActivateWorkflow',
+            '/boundflow.v1.WorkflowService/ActivateWorkflow',
             boundflow_dot_v1_dot_lifecycle__pb2.ActivateWorkflowRequest.SerializeToString,
             boundflow_dot_v1_dot_lifecycle__pb2.ActivateWorkflowResponse.FromString,
             options,

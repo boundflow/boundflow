@@ -10,14 +10,14 @@ CREATE TYPE job_status AS ENUM (
 );
 
 CREATE TABLE jobs (
-    resource_instance_id     TEXT PRIMARY KEY REFERENCES resource_instances(id),
+    workflow_id     TEXT PRIMARY KEY REFERENCES workflows(id),
     request_id               TEXT NOT NULL,
     version                  BIGINT NOT NULL,
     current_atomic_operation TEXT NOT NULL,
     context                  JSONB NOT NULL DEFAULT '{}',
     status                   job_status NOT NULL,
     job_type                 TEXT NOT NULL,
-    resource_type            TEXT NOT NULL,
+    workflow_type            TEXT NOT NULL,
     timeout_seconds          INTEGER NOT NULL,
     workflow_version         INTEGER NOT NULL DEFAULT 0,
     agent_metrics            JSONB NOT NULL DEFAULT '{}',

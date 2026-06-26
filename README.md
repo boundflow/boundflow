@@ -105,7 +105,7 @@ database. Your SDK worker connects over gRPC and runs the actual agents.
 ## Core concepts
 
 - **Workflow** — the managed entity. Belongs to a tenant, has a type + version,
-  and moves through lifecycle states (`active → reconciling → awaiting_approval → …`).
+  and moves through lifecycle states (`active → invoking → awaiting_approval → …`).
 - **Agent** — a named LLM executor inside an operation handler: a model, system
   prompt, tool callbacks, and an output schema. Metrics are collected per run.
 - **Approval gate** — a workflow can pause mid-execution for a human to approve or

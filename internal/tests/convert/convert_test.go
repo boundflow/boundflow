@@ -3,35 +3,10 @@ package convert_test
 import (
 	"testing"
 
-	"google.golang.org/protobuf/types/known/structpb"
-
 	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
 	"github.com/boundflow/boundflow/internal/convert"
 	"github.com/boundflow/boundflow/internal/domain"
 )
-
-func TestResourceStateFromProto(t *testing.T) {
-	t.Run("nil struct", func(t *testing.T) {
-		state := convert.ResourceStateFromProto(nil)
-		if state != nil {
-			t.Error("expected nil for nil struct")
-		}
-	})
-
-	t.Run("with values", func(t *testing.T) {
-		s, _ := structpb.NewStruct(map[string]any{
-			"sku":      "v2",
-			"replicas": float64(3),
-		})
-		state := convert.ResourceStateFromProto(s)
-		if state["sku"] != "v2" {
-			t.Errorf("expected sku=v2, got %v", state["sku"])
-		}
-		if state["replicas"] != float64(3) {
-			t.Errorf("expected replicas=3, got %v", state["replicas"])
-		}
-	})
-}
 
 func TestTenantGroupFromProto(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {

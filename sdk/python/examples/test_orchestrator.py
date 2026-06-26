@@ -18,7 +18,7 @@ SONNET, OPUS = "claude-sonnet-4-6", "claude-opus-4-8"
 
 class FakeOp:
     def __init__(self, context):
-        self.name = "reconcile_entry"
+        self.name = "invoke_entry"
         self.workflow_version = 1
         self.context = context
 

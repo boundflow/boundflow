@@ -15,11 +15,11 @@ import (
 )
 
 type MetricsHandler interface {
-	HandleAgentMetrics(ctx context.Context, invocationMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics, workflow *domain.ResourceInstance) (error, *domain.WorkflowVersionMetrics)
+	HandleAgentMetrics(ctx context.Context, invocationMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics, workflow *domain.Workflow) (error, *domain.WorkflowVersionMetrics)
 }
 
 type PolicyResolver interface {
-	ResolveLifecyclePolicy(ctx context.Context, workflow *domain.ResourceInstance, versionMetrics *domain.WorkflowVersionMetrics) error
+	ResolveLifecyclePolicy(ctx context.Context, workflow *domain.Workflow, versionMetrics *domain.WorkflowVersionMetrics) error
 }
 
 // PartitionWorker is a partition-scoped loop the scheduler owns. The scheduler starts each worker
@@ -34,7 +34,7 @@ type Scheduler struct {
 	partitions     storage.SchedulerPartitionRepository
 	scheduler      storage.SchedulerRepository
 	requests       storage.CustomerRequestRepository
-	resource       storage.ResourceInstanceRepository
+	workflow       storage.WorkflowRepository
 	agentStates    storage.AgentStateRepository
 	log            *slog.Logger
 	metricsHandler   MetricsHandler
@@ -44,18 +44,18 @@ type Scheduler struct {
 }
 
 // Functions of the scheduler:
-// 1, Grabs partition id from the partitions table, and manages the resources belonging to that partition
+// 1, Grabs partition id from the partitions table, and manages the workflows belonging to that partition
 // 2. Schedules unscheduled requests onto the job queue (picking priority by version number)
-// 3. Checks for completed jobs, and updates current config state of the resource and lifecycle state, then deletes the job
+// 3. Checks for completed jobs, and updates current config state of the workflow and lifecycle state, then deletes the job
 
-func NewScheduler(id string, interval int, parts storage.SchedulerPartitionRepository, scheduler storage.SchedulerRepository, requests storage.CustomerRequestRepository, resource storage.ResourceInstanceRepository, agentStates storage.AgentStateRepository, jobs storage.JobRepository, metricsHandler MetricsHandler, policyResolver PolicyResolver, log *slog.Logger) *Scheduler {
+func NewScheduler(id string, interval int, parts storage.SchedulerPartitionRepository, scheduler storage.SchedulerRepository, requests storage.CustomerRequestRepository, workflow storage.WorkflowRepository, agentStates storage.AgentStateRepository, jobs storage.JobRepository, metricsHandler MetricsHandler, policyResolver PolicyResolver, log *slog.Logger) *Scheduler {
 	return &Scheduler{
 		id:             id,
 		interval:       interval,
 		partitions:     parts,
 		scheduler:      scheduler,
 		requests:       requests,
-		resource:       resource,
+		workflow:       workflow,
 		agentStates:    agentStates,
 		jobs:           jobs,
 		metricsHandler: metricsHandler,
@@ -157,16 +157,16 @@ func (s *Scheduler) runPartition(ctx context.Context, partition *domain.Schedule
 	}
 }
 
-func (s *Scheduler) ApproveJob(ctx context.Context, resourceInstanceID string, approvalID string) (bool, error) {
-	return s.jobs.ResolveApproval(ctx, resourceInstanceID, approvalID, domain.JobStatusApproved)
+func (s *Scheduler) ApproveJob(ctx context.Context, workflowID string, approvalID string) (bool, error) {
+	return s.jobs.ResolveApproval(ctx, workflowID, approvalID, domain.JobStatusApproved)
 }
 
-func (s *Scheduler) RejectJob(ctx context.Context, resourceInstanceID string, approvalID string) (bool, error) {
-	return s.jobs.ResolveApproval(ctx, resourceInstanceID, approvalID, domain.JobStatusRejected)
+func (s *Scheduler) RejectJob(ctx context.Context, workflowID string, approvalID string) (bool, error) {
+	return s.jobs.ResolveApproval(ctx, workflowID, approvalID, domain.JobStatusRejected)
 }
 
-func (s *Scheduler) MarkAwaitingApproval(ctx context.Context, resourceInstanceID string) error {
-	return s.scheduler.MarkResourceAwaitingApproval(ctx, resourceInstanceID)
+func (s *Scheduler) MarkAwaitingApproval(ctx context.Context, workflowID string) error {
+	return s.scheduler.MarkWorkflowAwaitingApproval(ctx, workflowID)
 }
 
 func (s *Scheduler) syncAwaitingApprovalStates(ctx context.Context, partitionID string) {
@@ -176,7 +176,7 @@ func (s *Scheduler) syncAwaitingApprovalStates(ctx context.Context, partitionID 
 		return
 	}
 	if len(synced) > 0 {
-		s.log.Info("synced awaiting approval lifecycle states", "partition_id", partitionID, "count", len(synced), "resource_ids", synced)
+		s.log.Info("synced awaiting approval lifecycle states", "partition_id", partitionID, "count", len(synced), "workflow_ids", synced)
 	}
 }
 
@@ -215,19 +215,19 @@ func (s *Scheduler) FailRequest(ctx context.Context, req string) (bool, error) {
 		return false, fmt.Errorf("error failing request %s: %w", req, err)
 	}
 
-	applied, err := s.resource.ApplyCompletedJob(ctx, request.ResourceInstanceID, domain.LifecycleStateFailed, request.Version)
+	applied, err := s.workflow.ApplyCompletedJob(ctx, request.WorkflowID, domain.LifecycleStateFailed, request.Version)
 	if err != nil {
-		s.log.Error("failed to apply failed job to resource", "request_id", req, "resource_id", request.ResourceInstanceID, "error", err)
+		s.log.Error("failed to apply failed job to workflow", "request_id", req, "workflow_id", request.WorkflowID, "error", err)
 		return false, err
 	}
 	if applied {
-		s.log.Info("request failed, resource updated", "request_id", req, "resource_id", request.ResourceInstanceID, "version", request.Version)
+		s.log.Info("request failed, workflow updated", "request_id", req, "workflow_id", request.WorkflowID, "version", request.Version)
 	} else {
-		s.log.Warn("request failed but resource version check skipped update (newer version already applied)", "request_id", req, "resource_id", request.ResourceInstanceID, "version", request.Version)
+		s.log.Warn("request failed but workflow version check skipped update (newer version already applied)", "request_id", req, "workflow_id", request.WorkflowID, "version", request.Version)
 	}
 
-	if _, err := s.scheduler.DeleteTerminalJob(ctx, request.ResourceInstanceID, req); err != nil {
-		s.log.Error("failed to delete terminal job", "request_id", req, "resource_id", request.ResourceInstanceID, "error", err)
+	if _, err := s.scheduler.DeleteTerminalJob(ctx, request.WorkflowID, req); err != nil {
+		s.log.Error("failed to delete terminal job", "request_id", req, "workflow_id", request.WorkflowID, "error", err)
 	}
 	return applied, nil
 }
@@ -272,33 +272,33 @@ func (s *Scheduler) CompleteRequest(ctx context.Context, req string) (bool, erro
 	switch request.RequestType {
 	case domain.CustomerRequestTypeCreate:
 		lifecycleState = domain.LifecycleStateActive
-	case domain.CustomerRequestTypeReconcile:
+	case domain.CustomerRequestTypeInvoke:
 		lifecycleState = domain.LifecycleStateActive
 	case domain.CustomerRequestTypeDelete:
 		lifecycleState = domain.LifecycleStateDeleted
 	}
 
-	applied, err := s.resource.ApplyCompletedJob(ctx, request.ResourceInstanceID, lifecycleState, request.Version)
+	applied, err := s.workflow.ApplyCompletedJob(ctx, request.WorkflowID, lifecycleState, request.Version)
 	if err != nil {
-		s.log.Error("failed to apply completed job to resource", "request_id", req, "resource_id", request.ResourceInstanceID, "error", err)
+		s.log.Error("failed to apply completed job to workflow", "request_id", req, "workflow_id", request.WorkflowID, "error", err)
 		return false, err
 	}
 	if applied {
-		s.log.Info("request completed, resource updated", "request_id", req, "resource_id", request.ResourceInstanceID, "request_type", request.RequestType, "lifecycle_state", lifecycleState, "version", request.Version)
+		s.log.Info("request completed, workflow updated", "request_id", req, "workflow_id", request.WorkflowID, "request_type", request.RequestType, "lifecycle_state", lifecycleState, "version", request.Version)
 	} else {
-		s.log.Warn("request completed but resource version check skipped update (newer version already applied)", "request_id", req, "resource_id", request.ResourceInstanceID, "version", request.Version)
+		s.log.Warn("request completed but workflow version check skipped update (newer version already applied)", "request_id", req, "workflow_id", request.WorkflowID, "version", request.Version)
 	}
 
 	// get the accumulated metrics for this job
-	metrics, workflowMetrics, err := s.jobs.GetJobMetrics(ctx, request.ResourceInstanceID, request.ID)
+	metrics, workflowMetrics, err := s.jobs.GetJobMetrics(ctx, request.WorkflowID, request.ID)
 	if err != nil {
-		s.log.Error("failed to get job metrics", "request_id", req, "resource_id", request.ResourceInstanceID, "error", err)
+		s.log.Error("failed to get job metrics", "request_id", req, "workflow_id", request.WorkflowID, "error", err)
 		return false, err
 	}
 
-	workflow, err := s.resource.Get(ctx, request.ResourceInstanceID)
+	workflow, err := s.workflow.Get(ctx, request.WorkflowID)
 	if err != nil {
-		s.log.Error("failed to get resource instance for metrics handling", "request_id", req, "resource_id", request.ResourceInstanceID, "error", err)
+		s.log.Error("failed to get workflow instance for metrics handling", "request_id", req, "workflow_id", request.WorkflowID, "error", err)
 		return false, err
 	}
 
@@ -306,19 +306,19 @@ func (s *Scheduler) CompleteRequest(ctx context.Context, req string) (bool, erro
 	var versionMetrics *domain.WorkflowVersionMetrics
 	err, versionMetrics = s.metricsHandler.HandleAgentMetrics(ctx, metrics, workflowMetrics, workflow)
 	if err != nil {
-		s.log.Error("failed to handle agent metrics", "request_id", req, "resource_id", request.ResourceInstanceID, "error", err)
+		s.log.Error("failed to handle agent metrics", "request_id", req, "workflow_id", request.WorkflowID, "error", err)
 		return false, err
 	}
 
 	// resolve policy
 	err = s.policyResolver.ResolveLifecyclePolicy(ctx, workflow, versionMetrics)
 	if err != nil {
-		s.log.Error("failed to resolve lifecycle policy", "request_id", req, "resource_id", request.ResourceInstanceID, "error", err)
+		s.log.Error("failed to resolve lifecycle policy", "request_id", req, "workflow_id", request.WorkflowID, "error", err)
 		return false, err
 	}
 
-	if _, err := s.scheduler.DeleteTerminalJob(ctx, request.ResourceInstanceID, req); err != nil {
-		s.log.Error("failed to delete terminal job", "request_id", req, "resource_id", request.ResourceInstanceID, "error", err)
+	if _, err := s.scheduler.DeleteTerminalJob(ctx, request.WorkflowID, req); err != nil {
+		s.log.Error("failed to delete terminal job", "request_id", req, "workflow_id", request.WorkflowID, "error", err)
 	}
 	return applied, nil
 }
@@ -351,15 +351,15 @@ func (s *Scheduler) scheduleJobs(ctx context.Context, partitionID string) error 
 	return nil
 }
 
-func (s *Scheduler) validateWorkflowState(workflow *domain.ResourceInstance) bool {
+func (s *Scheduler) validateWorkflowState(workflow *domain.Workflow) bool {
 
 	if workflow.WorkflowState != domain.WorkflowStateActive {
-		s.log.Debug("skipping schedule: workflow not active", "resource_id", workflow.ID, "workflow_state", workflow.WorkflowState)
+		s.log.Debug("skipping schedule: workflow not active", "workflow_id", workflow.ID, "workflow_state", workflow.WorkflowState)
 		return false
 	}
 
 	if workflow.LifecycleLastResolved != workflow.CurrentVersion {
-		s.log.Debug("skipping schedule: metrics not resolved up to current run", "resource_id", workflow.ID, "lifecycle_last_resolved", workflow.LifecycleLastResolved, "current_version", workflow.CurrentVersion)
+		s.log.Debug("skipping schedule: metrics not resolved up to current run", "workflow_id", workflow.ID, "lifecycle_last_resolved", workflow.LifecycleLastResolved, "current_version", workflow.CurrentVersion)
 		return false
 	}
 
@@ -374,20 +374,20 @@ func (s *Scheduler) ScheduleRequest(ctx context.Context, req string) error {
 		return fmt.Errorf("get customer request %s: %w", req, err)
 	}
 
-	workflow, err := s.resource.Get(ctx, request.ResourceInstanceID)
+	workflow, err := s.workflow.Get(ctx, request.WorkflowID)
 	if err != nil {
-		s.log.Error("failed to get resource instance for scheduling", "request_id", req, "resource_id", request.ResourceInstanceID, "error", err)
-		return fmt.Errorf("get resource instance %s: %w", request.ResourceInstanceID, err)
+		s.log.Error("failed to get workflow instance for scheduling", "request_id", req, "workflow_id", request.WorkflowID, "error", err)
+		return fmt.Errorf("get workflow instance %s: %w", request.WorkflowID, err)
 	}
 
 	if !s.validateWorkflowState(workflow) {
-		s.log.Debug("request not scheduled, workflow state validation failed", "request_id", req, "resource_id", request.ResourceInstanceID)
+		s.log.Debug("request not scheduled, workflow state validation failed", "request_id", req, "workflow_id", request.WorkflowID)
 		return fmt.Errorf("workflow validation failed")
 	}
 
-	agentStates, err := s.agentStates.GetAllForResource(ctx, request.ResourceInstanceID)
+	agentStates, err := s.agentStates.GetAllForWorkflow(ctx, request.WorkflowID)
 	if err != nil {
-		return fmt.Errorf("get agent states for resource %s: %w", request.ResourceInstanceID, err)
+		return fmt.Errorf("get agent states for workflow %s: %w", request.WorkflowID, err)
 	}
 
 	// Build the full job context in memory: start from the snapshotted request info
@@ -415,7 +415,7 @@ func (s *Scheduler) ScheduleRequest(ctx context.Context, req string) error {
 	// Both values are always float64 after JSON unmarshal from JSONB.
 	timeoutSeconds := int(request.RequestInfo["operationTimeoutSeconds"].(float64))
 
-	resourceID, ver, written, err := s.scheduler.UpsertJobAndSchedule(ctx, req, string(contextJSON), currentAtomicOperation, timeoutSeconds, workflow.CurrentWorkflowVersion, workflow.CurrentVersion)
+	workflowID, ver, written, err := s.scheduler.UpsertJobAndSchedule(ctx, req, string(contextJSON), currentAtomicOperation, timeoutSeconds, workflow.CurrentWorkflowVersion, workflow.CurrentVersion)
 	if err != nil {
 		return fmt.Errorf("error scheduling request %s: %w", req, err)
 	}
@@ -425,20 +425,20 @@ func (s *Scheduler) ScheduleRequest(ctx context.Context, req string) error {
 		return nil
 	}
 
-	s.log.Info("request scheduled", "request_id", req, "resource_id", resourceID, "version", ver)
+	s.log.Info("request scheduled", "request_id", req, "workflow_id", workflowID, "version", ver)
 
-	if err := s.scheduler.SupercedeOlderRequests(ctx, resourceID, ver); err != nil {
+	if err := s.scheduler.SupercedeOlderRequests(ctx, workflowID, ver); err != nil {
 		return fmt.Errorf("error with supercede requests with request %s: %w", req, err)
 	}
-	s.log.Debug("older requests superceded", "resource_id", resourceID, "version", ver)
+	s.log.Debug("older requests superceded", "workflow_id", workflowID, "version", ver)
 
 	return nil
 }
 
-func (s *Scheduler) UpdateAgentMetrics(ctx context.Context, resourceInstanceID string, updates map[string][]*boundflowv1.AgentInvocationMetrics) error {
+func (s *Scheduler) UpdateAgentMetrics(ctx context.Context, workflowID string, updates map[string][]*boundflowv1.AgentInvocationMetrics) error {
 	for agentName, metrics := range updates {
-		if err := s.agentStates.UpdateMetrics(ctx, resourceInstanceID, agentName, metrics); err != nil {
-			s.log.Warn("failed to update agent metrics", "resource_id", resourceInstanceID, "agent", agentName, "error", err)
+		if err := s.agentStates.UpdateMetrics(ctx, workflowID, agentName, metrics); err != nil {
+			s.log.Warn("failed to update agent metrics", "workflow_id", workflowID, "agent", agentName, "error", err)
 		}
 	}
 	return nil

@@ -4,7 +4,7 @@ import "time"
 
 type SchedulerPartition struct {
 	ID                    string
-	ResourceInstanceCount int
+	WorkflowCount int
 	Owner                 *string
 	LeaseUntil            *time.Time
 }

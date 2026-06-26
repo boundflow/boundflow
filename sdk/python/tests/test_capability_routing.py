@@ -1,5 +1,5 @@
 """
-Verifies that workers only receive jobs matching their registered (resource_type, workflow_version).
+Verifies that workers only receive jobs matching their registered (workflow_type, workflow_version).
 
 Worker v2 runs alone first — without capability filtering it would pick up the v1 job
 (no handler → FAILED). With filtering it correctly ignores it. Worker v1 then starts

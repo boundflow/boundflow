@@ -17,14 +17,14 @@ type CustomerRequestType string
 
 const (
 	CustomerRequestTypeCreate      CustomerRequestType = "create"
-	CustomerRequestTypeReconcile   CustomerRequestType = "reconcile"
+	CustomerRequestTypeInvoke   CustomerRequestType = "invoke"
 	CustomerRequestTypeDelete      CustomerRequestType = "delete"
 	CusomterRequestTypeHealthCheck CustomerRequestType = "healthcheck"
 )
 
 type CustomerRequest struct {
 	ID                 string
-	ResourceInstanceID string
+	WorkflowID string
 	Status             CustomerRequestStatus
 	RequestType        CustomerRequestType
 	RequestInfo        map[string]any

@@ -30,9 +30,9 @@ func (r *SchedulerPartitionRepo) AcquireAvailable(ctx context.Context, ownerID s
 		   LIMIT 1
 		   FOR UPDATE SKIP LOCKED
 		 )
-		 RETURNING id, resource_instance_count, owner, lease_until`,
+		 RETURNING id, workflow_count, owner, lease_until`,
 		ownerID, leaseDuration.String(),
-	).Scan(&p.ID, &p.ResourceInstanceCount, &p.Owner, &p.LeaseUntil)
+	).Scan(&p.ID, &p.WorkflowCount, &p.Owner, &p.LeaseUntil)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil

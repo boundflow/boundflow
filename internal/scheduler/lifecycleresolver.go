@@ -14,17 +14,17 @@ type LifecycleResolver struct {
 	interval              int
 	log                   *slog.Logger
 	resolver              storage.LifecycleResolverRepository
-	resource              storage.ResourceInstanceRepository
+	workflow              storage.WorkflowRepository
 	versionMetrics        storage.VersionMetricsRepository
 	lifecyclePolicyEngine *LifecyclePolicyEngine
 }
 
-func NewLifecycleResolver(interval int, log *slog.Logger, resolver storage.LifecycleResolverRepository, resource storage.ResourceInstanceRepository, versionMetrics storage.VersionMetricsRepository) *LifecycleResolver {
+func NewLifecycleResolver(interval int, log *slog.Logger, resolver storage.LifecycleResolverRepository, workflow storage.WorkflowRepository, versionMetrics storage.VersionMetricsRepository) *LifecycleResolver {
 	return &LifecycleResolver{
 		interval:              interval,
 		log:                   log.With("component", "lifecycle_resolver"),
 		resolver:              resolver,
-		resource:              resource,
+		workflow:              workflow,
 		versionMetrics:        versionMetrics,
 		lifecyclePolicyEngine: NewLifecyclePolicyEngine(log),
 	}
@@ -45,7 +45,7 @@ func (r *LifecycleResolver) Run(ctx context.Context, partitionID string) error {
 				continue
 			}
 			if len(resumed) > 0 {
-				r.log.Info("resumed workflows from expired cooldown", "partition_id", partitionID, "count", len(resumed), "resource_ids", resumed)
+				r.log.Info("resumed workflows from expired cooldown", "partition_id", partitionID, "count", len(resumed), "workflow_ids", resumed)
 			}
 		case <-ctx.Done():
 			r.log.Info("lifecycle resolver stopping", "partition_id", partitionID)
@@ -59,9 +59,9 @@ func (r *LifecycleResolver) Run(ctx context.Context, partitionID string) error {
 // This means a more correct name for this function is "Resolve Lifecycle Policy for latest run"
 // Example: if version 2 wasn't resolved, version 3's resolution may not necessarily fix it (if metric wasnt emitted in latest run),
 // but again this should be an impossible case due to invariant
-func (r *LifecycleResolver) ResolveLifecyclePolicy(ctx context.Context, workflow *domain.ResourceInstance, versionMetrics *domain.WorkflowVersionMetrics) error {
+func (r *LifecycleResolver) ResolveLifecyclePolicy(ctx context.Context, workflow *domain.Workflow, versionMetrics *domain.WorkflowVersionMetrics) error {
 
-	resourceInstanceId := workflow.ID
+	workflowId := workflow.ID
 
 	if versionMetrics == nil {
 		versionMetrics = &domain.WorkflowVersionMetrics{}
@@ -92,20 +92,20 @@ func (r *LifecycleResolver) ResolveLifecyclePolicy(ctx context.Context, workflow
 		}
 	}
 
-	resolved, err := r.resolver.TryApplyPolicyResolution(ctx, resourceInstanceId, workflow.CurrentVersion, version, state, cooldown)
+	resolved, err := r.resolver.TryApplyPolicyResolution(ctx, workflowId, workflow.CurrentVersion, version, state, cooldown)
 	if err != nil {
 		return fmt.Errorf("Applying resolved policy failed with error %w", err)
 	}
 
 	if !resolved {
-		r.log.Debug("policy resolution skipped, already resolved at this version", "resource_id", resourceInstanceId, "current_version", workflow.CurrentVersion)
+		r.log.Debug("policy resolution skipped, already resolved at this version", "workflow_id", workflowId, "current_version", workflow.CurrentVersion)
 		return nil
 	}
 
 	if updated {
-		r.log.Info("lifecycle policy applied", "resource_id", resourceInstanceId, "version", version, "state", state, "version_change", goalState.VersionChange)
+		r.log.Info("lifecycle policy applied", "workflow_id", workflowId, "version", version, "state", state, "version_change", goalState.VersionChange)
 	} else {
-		r.log.Debug("lifecycle policy resolved, no change", "resource_id", resourceInstanceId)
+		r.log.Debug("lifecycle policy resolved, no change", "workflow_id", workflowId)
 	}
 	return nil
 }

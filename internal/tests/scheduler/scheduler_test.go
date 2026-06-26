@@ -22,13 +22,13 @@ func i32(v int32) *int32 { return &v }
 // no-op doubles for the post-completion metric + policy steps in CompleteRequest.
 type noopMetricsHandler struct{}
 
-func (noopMetricsHandler) HandleAgentMetrics(_ context.Context, _ map[string]*boundflowv1.AgentInvocationMetrics, _ domain.WorkflowJobMetrics, _ *domain.ResourceInstance) (error, *domain.WorkflowVersionMetrics) {
+func (noopMetricsHandler) HandleAgentMetrics(_ context.Context, _ map[string]*boundflowv1.AgentInvocationMetrics, _ domain.WorkflowJobMetrics, _ *domain.Workflow) (error, *domain.WorkflowVersionMetrics) {
 	return nil, nil
 }
 
 type noopPolicyResolver struct{}
 
-func (noopPolicyResolver) ResolveLifecyclePolicy(_ context.Context, _ *domain.ResourceInstance, _ *domain.WorkflowVersionMetrics) error {
+func (noopPolicyResolver) ResolveLifecyclePolicy(_ context.Context, _ *domain.Workflow, _ *domain.WorkflowVersionMetrics) error {
 	return nil
 }
 
@@ -37,13 +37,13 @@ func newTestScheduler(ctrl *gomock.Controller) (
 	*mocks.MockSchedulerPartitionRepository,
 	*mocks.MockSchedulerRepository,
 	*mocks.MockCustomerRequestRepository,
-	*mocks.MockResourceInstanceRepository,
+	*mocks.MockWorkflowRepository,
 	*mocks.MockAgentStateRepository,
 ) {
 	partitions := mocks.NewMockSchedulerPartitionRepository(ctrl)
 	schedulerRepo := mocks.NewMockSchedulerRepository(ctrl)
 	requests := mocks.NewMockCustomerRequestRepository(ctrl)
-	resource := mocks.NewMockResourceInstanceRepository(ctrl)
+	workflow := mocks.NewMockWorkflowRepository(ctrl)
 	agentStates := mocks.NewMockAgentStateRepository(ctrl)
 	jobs := mocks.NewMockJobRepository(ctrl)
 	// CompleteRequest pulls agent metrics off the job; default to none so tests that don't
@@ -51,16 +51,16 @@ func newTestScheduler(ctrl *gomock.Controller) (
 	// keep the post-completion metric+policy steps inert.
 	jobs.EXPECT().GetJobMetrics(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, domain.WorkflowJobMetrics{}, nil).AnyTimes()
 	// Default workflow passes validateWorkflowState (active + metrics resolved up to current run).
-	resource.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.ResourceInstance{
-		ID:                     "resource-1",
+	workflow.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Workflow{
+		ID:                     "workflow-1",
 		CurrentWorkflowVersion: 1,
 		CurrentVersion:         1,
 		LifecycleLastResolved:  1,
 		LifecycleState:         domain.LifecycleStateActive,
 		WorkflowState:          domain.WorkflowStateActive,
 	}, nil).AnyTimes()
-	s := scheduler.NewScheduler("test", 30, partitions, schedulerRepo, requests, resource, agentStates, jobs, noopMetricsHandler{}, noopPolicyResolver{}, discardLogger)
-	return s, partitions, schedulerRepo, requests, resource, agentStates
+	s := scheduler.NewScheduler("test", 30, partitions, schedulerRepo, requests, workflow, agentStates, jobs, noopMetricsHandler{}, noopPolicyResolver{}, discardLogger)
+	return s, partitions, schedulerRepo, requests, workflow, agentStates
 }
 
 // --- ScheduleRequest ---
@@ -68,8 +68,8 @@ func newTestScheduler(ctrl *gomock.Controller) (
 // testCustomerRequest is a minimal CustomerRequest used across ScheduleRequest tests.
 var testCustomerRequest = &domain.CustomerRequest{
 	ID:                 "req-1",
-	ResourceInstanceID: "resource-1",
-	RequestType:        domain.CustomerRequestTypeReconcile,
+	WorkflowID: "workflow-1",
+	RequestType:        domain.CustomerRequestTypeInvoke,
 	RequestInfo:        map[string]any{"correlationId": "corr-1", "operationTimeoutSeconds": float64(30), "initialVersion": float64(1)},
 }
 
@@ -78,14 +78,14 @@ func TestScheduleRequest_WrittenSupercedes(t *testing.T) {
 	s, _, schedulerRepo, requests, _, agentStates := newTestScheduler(ctrl)
 
 	requests.EXPECT().Get(gomock.Any(), "req-1").Return(testCustomerRequest, nil)
-	agentStates.EXPECT().GetAllForResource(gomock.Any(), "resource-1").Return(nil, nil)
+	agentStates.EXPECT().GetAllForWorkflow(gomock.Any(), "workflow-1").Return(nil, nil)
 
 	schedulerRepo.EXPECT().
-		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any(), "reconcile_entry", 30, 1, int64(1)).
-		Return("resource-1", int64(3), true, nil)
+		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any(), "invoke_entry", 30, 1, int64(1)).
+		Return("workflow-1", int64(3), true, nil)
 
 	schedulerRepo.EXPECT().
-		SupercedeOlderRequests(gomock.Any(), "resource-1", int64(3)).
+		SupercedeOlderRequests(gomock.Any(), "workflow-1", int64(3)).
 		Return(nil)
 
 	if err := s.ScheduleRequest(context.Background(), "req-1"); err != nil {
@@ -98,10 +98,10 @@ func TestScheduleRequest_NotWritten_NoSupercede(t *testing.T) {
 	s, _, schedulerRepo, requests, _, agentStates := newTestScheduler(ctrl)
 
 	requests.EXPECT().Get(gomock.Any(), "req-1").Return(testCustomerRequest, nil)
-	agentStates.EXPECT().GetAllForResource(gomock.Any(), "resource-1").Return(nil, nil)
+	agentStates.EXPECT().GetAllForWorkflow(gomock.Any(), "workflow-1").Return(nil, nil)
 
 	schedulerRepo.EXPECT().
-		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any(), "reconcile_entry", 30, 1, int64(1)).
+		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any(), "invoke_entry", 30, 1, int64(1)).
 		Return("", int64(0), false, nil)
 
 	// SupercedeOlderRequests must NOT be called
@@ -115,10 +115,10 @@ func TestScheduleRequest_UpsertError(t *testing.T) {
 	s, _, schedulerRepo, requests, _, agentStates := newTestScheduler(ctrl)
 
 	requests.EXPECT().Get(gomock.Any(), "req-1").Return(testCustomerRequest, nil)
-	agentStates.EXPECT().GetAllForResource(gomock.Any(), "resource-1").Return(nil, nil)
+	agentStates.EXPECT().GetAllForWorkflow(gomock.Any(), "workflow-1").Return(nil, nil)
 
 	schedulerRepo.EXPECT().
-		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any(), "reconcile_entry", 30, 1, int64(1)).
+		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any(), "invoke_entry", 30, 1, int64(1)).
 		Return("", int64(0), false, errors.New("db error"))
 
 	if err := s.ScheduleRequest(context.Background(), "req-1"); err == nil {
@@ -131,14 +131,14 @@ func TestScheduleRequest_SupercedeError(t *testing.T) {
 	s, _, schedulerRepo, requests, _, agentStates := newTestScheduler(ctrl)
 
 	requests.EXPECT().Get(gomock.Any(), "req-1").Return(testCustomerRequest, nil)
-	agentStates.EXPECT().GetAllForResource(gomock.Any(), "resource-1").Return(nil, nil)
+	agentStates.EXPECT().GetAllForWorkflow(gomock.Any(), "workflow-1").Return(nil, nil)
 
 	schedulerRepo.EXPECT().
-		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any(), "reconcile_entry", 30, 1, int64(1)).
-		Return("resource-1", int64(3), true, nil)
+		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any(), "invoke_entry", 30, 1, int64(1)).
+		Return("workflow-1", int64(3), true, nil)
 
 	schedulerRepo.EXPECT().
-		SupercedeOlderRequests(gomock.Any(), "resource-1", int64(3)).
+		SupercedeOlderRequests(gomock.Any(), "workflow-1", int64(3)).
 		Return(errors.New("db error"))
 
 	if err := s.ScheduleRequest(context.Background(), "req-1"); err == nil {
@@ -162,7 +162,7 @@ func TestScheduleRequest_GetAgentStatesError(t *testing.T) {
 	s, _, _, requests, _, agentStates := newTestScheduler(ctrl)
 
 	requests.EXPECT().Get(gomock.Any(), "req-1").Return(testCustomerRequest, nil)
-	agentStates.EXPECT().GetAllForResource(gomock.Any(), "resource-1").Return(nil, errors.New("db error"))
+	agentStates.EXPECT().GetAllForWorkflow(gomock.Any(), "workflow-1").Return(nil, errors.New("db error"))
 
 	if err := s.ScheduleRequest(context.Background(), "req-1"); err == nil {
 		t.Fatal("expected error, got nil")
@@ -176,7 +176,7 @@ func TestScheduleRequest_AgentStateInContext(t *testing.T) {
 	s, _, schedulerRepo, requests, _, agentStates := newTestScheduler(ctrl)
 
 	requests.EXPECT().Get(gomock.Any(), "req-1").Return(testCustomerRequest, nil)
-	agentStates.EXPECT().GetAllForResource(gomock.Any(), "resource-1").Return(map[string]*domain.AgentState{
+	agentStates.EXPECT().GetAllForWorkflow(gomock.Any(), "workflow-1").Return(map[string]*domain.AgentState{
 		"my_agent": {
 			AgentName:         "my_agent",
 			LifecyclePolicy:   map[string]any{"rules": []any{}},
@@ -185,22 +185,22 @@ func TestScheduleRequest_AgentStateInContext(t *testing.T) {
 	}, nil)
 
 	schedulerRepo.EXPECT().
-		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.AssignableToTypeOf(""), "reconcile_entry", 30, 1, int64(1)).
+		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.AssignableToTypeOf(""), "invoke_entry", 30, 1, int64(1)).
 		DoAndReturn(func(_ context.Context, _ string, contextJSON string, op string, timeout int, wfVersion int, expectedCurrentVersion int64) (string, int64, bool, error) {
 			if contextJSON == "" || contextJSON == "{}" {
 				t.Error("expected non-empty context JSON")
 			}
-			if op != "reconcile_entry" {
-				t.Errorf("expected op reconcile_entry, got %s", op)
+			if op != "invoke_entry" {
+				t.Errorf("expected op invoke_entry, got %s", op)
 			}
 			if timeout != 30 {
 				t.Errorf("expected timeout 30, got %d", timeout)
 			}
-			return "resource-1", int64(1), true, nil
+			return "workflow-1", int64(1), true, nil
 		})
 
 	schedulerRepo.EXPECT().
-		SupercedeOlderRequests(gomock.Any(), "resource-1", int64(1)).
+		SupercedeOlderRequests(gomock.Any(), "workflow-1", int64(1)).
 		Return(nil)
 
 	if err := s.ScheduleRequest(context.Background(), "req-1"); err != nil {
@@ -218,13 +218,13 @@ func TestUpdateAgentMetrics_CallsRepoForEachAgent(t *testing.T) {
 	metrics2 := []*boundflowv1.AgentInvocationMetrics{{TokensUsed: i32(200)}}
 
 	agentStates.EXPECT().
-		UpdateMetrics(gomock.Any(), "resource-1", "agent_a", metrics1).
+		UpdateMetrics(gomock.Any(), "workflow-1", "agent_a", metrics1).
 		Return(nil)
 	agentStates.EXPECT().
-		UpdateMetrics(gomock.Any(), "resource-1", "agent_b", metrics2).
+		UpdateMetrics(gomock.Any(), "workflow-1", "agent_b", metrics2).
 		Return(nil)
 
-	err := s.UpdateAgentMetrics(context.Background(), "resource-1", map[string][]*boundflowv1.AgentInvocationMetrics{
+	err := s.UpdateAgentMetrics(context.Background(), "workflow-1", map[string][]*boundflowv1.AgentInvocationMetrics{
 		"agent_a": metrics1,
 		"agent_b": metrics2,
 	})
@@ -238,11 +238,11 @@ func TestUpdateAgentMetrics_RepoErrorDoesNotStop(t *testing.T) {
 	s, _, _, _, _, agentStates := newTestScheduler(ctrl)
 
 	agentStates.EXPECT().
-		UpdateMetrics(gomock.Any(), "resource-1", "agent_a", gomock.Any()).
+		UpdateMetrics(gomock.Any(), "workflow-1", "agent_a", gomock.Any()).
 		Return(errors.New("db error"))
 
 	// UpdateAgentMetrics logs and continues — should return nil.
-	err := s.UpdateAgentMetrics(context.Background(), "resource-1", map[string][]*boundflowv1.AgentInvocationMetrics{
+	err := s.UpdateAgentMetrics(context.Background(), "workflow-1", map[string][]*boundflowv1.AgentInvocationMetrics{
 		"agent_a": {{TokensUsed: i32(50)}},
 	})
 	if err != nil {
@@ -254,23 +254,23 @@ func TestUpdateAgentMetrics_RepoErrorDoesNotStop(t *testing.T) {
 
 func TestCompleteRequest_Create_TransitionsToActive(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, schedulerRepo, requests, resource, _ := newTestScheduler(ctrl)
+	s, _, schedulerRepo, requests, workflow, _ := newTestScheduler(ctrl)
 
 	requests.EXPECT().
 		CompleteRequest(gomock.Any(), "req-1").
 		Return(&domain.CustomerRequest{
 			ID:                 "req-1",
-			ResourceInstanceID: "resource-1",
+			WorkflowID: "workflow-1",
 			RequestType:        domain.CustomerRequestTypeCreate,
 						Version:            1,
 		}, nil)
 
-	resource.EXPECT().
-		ApplyCompletedJob(gomock.Any(), "resource-1", domain.LifecycleStateActive, int64(1)).
+	workflow.EXPECT().
+		ApplyCompletedJob(gomock.Any(), "workflow-1", domain.LifecycleStateActive, int64(1)).
 		Return(true, nil)
 
 	schedulerRepo.EXPECT().
-		DeleteTerminalJob(gomock.Any(), "resource-1", "req-1").
+		DeleteTerminalJob(gomock.Any(), "workflow-1", "req-1").
 		Return(true, nil)
 
 	applied, err := s.CompleteRequest(context.Background(), "req-1")
@@ -284,23 +284,23 @@ func TestCompleteRequest_Create_TransitionsToActive(t *testing.T) {
 
 func TestCompleteRequest_Delete_TransitionsToDeleted(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, schedulerRepo, requests, resource, _ := newTestScheduler(ctrl)
+	s, _, schedulerRepo, requests, workflow, _ := newTestScheduler(ctrl)
 
 	requests.EXPECT().
 		CompleteRequest(gomock.Any(), "req-1").
 		Return(&domain.CustomerRequest{
 			ID:                 "req-1",
-			ResourceInstanceID: "resource-1",
+			WorkflowID: "workflow-1",
 			RequestType:        domain.CustomerRequestTypeDelete,
 			Version:            2,
 		}, nil)
 
-	resource.EXPECT().
-		ApplyCompletedJob(gomock.Any(), "resource-1", domain.LifecycleStateDeleted, int64(2)).
+	workflow.EXPECT().
+		ApplyCompletedJob(gomock.Any(), "workflow-1", domain.LifecycleStateDeleted, int64(2)).
 		Return(true, nil)
 
 	schedulerRepo.EXPECT().
-		DeleteTerminalJob(gomock.Any(), "resource-1", "req-1").
+		DeleteTerminalJob(gomock.Any(), "workflow-1", "req-1").
 		Return(true, nil)
 
 	applied, err := s.CompleteRequest(context.Background(), "req-1")
@@ -314,23 +314,23 @@ func TestCompleteRequest_Delete_TransitionsToDeleted(t *testing.T) {
 
 func TestCompleteRequest_VersionSkipped_ReturnsFalse(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, schedulerRepo, requests, resource, _ := newTestScheduler(ctrl)
+	s, _, schedulerRepo, requests, workflow, _ := newTestScheduler(ctrl)
 
 	requests.EXPECT().
 		CompleteRequest(gomock.Any(), "req-1").
 		Return(&domain.CustomerRequest{
 			ID:                 "req-1",
-			ResourceInstanceID: "resource-1",
-			RequestType:        domain.CustomerRequestTypeReconcile,
+			WorkflowID: "workflow-1",
+			RequestType:        domain.CustomerRequestTypeInvoke,
 						Version:            1,
 		}, nil)
 
-	resource.EXPECT().
-		ApplyCompletedJob(gomock.Any(), "resource-1", domain.LifecycleStateActive, int64(1)).
+	workflow.EXPECT().
+		ApplyCompletedJob(gomock.Any(), "workflow-1", domain.LifecycleStateActive, int64(1)).
 		Return(false, nil)
 
 	schedulerRepo.EXPECT().
-		DeleteTerminalJob(gomock.Any(), "resource-1", "req-1").
+		DeleteTerminalJob(gomock.Any(), "workflow-1", "req-1").
 		Return(true, nil)
 
 	applied, err := s.CompleteRequest(context.Background(), "req-1")
@@ -359,22 +359,22 @@ func TestCompleteRequest_FailRequestError(t *testing.T) {
 
 func TestFailRequest_AppliesFailedState(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, schedulerRepo, requests, resource, _ := newTestScheduler(ctrl)
+	s, _, schedulerRepo, requests, workflow, _ := newTestScheduler(ctrl)
 
 	requests.EXPECT().
 		FailRequest(gomock.Any(), "req-1").
 		Return(&domain.CustomerRequest{
 			ID:                 "req-1",
-			ResourceInstanceID: "resource-1",
+			WorkflowID: "workflow-1",
 						Version:            2,
 		}, nil)
 
-	resource.EXPECT().
-		ApplyCompletedJob(gomock.Any(), "resource-1", domain.LifecycleStateFailed, int64(2)).
+	workflow.EXPECT().
+		ApplyCompletedJob(gomock.Any(), "workflow-1", domain.LifecycleStateFailed, int64(2)).
 		Return(true, nil)
 
 	schedulerRepo.EXPECT().
-		DeleteTerminalJob(gomock.Any(), "resource-1", "req-1").
+		DeleteTerminalJob(gomock.Any(), "workflow-1", "req-1").
 		Return(true, nil)
 
 	applied, err := s.FailRequest(context.Background(), "req-1")
@@ -388,22 +388,22 @@ func TestFailRequest_AppliesFailedState(t *testing.T) {
 
 func TestFailRequest_VersionSkipped_ReturnsFalse(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, schedulerRepo, requests, resource, _ := newTestScheduler(ctrl)
+	s, _, schedulerRepo, requests, workflow, _ := newTestScheduler(ctrl)
 
 	requests.EXPECT().
 		FailRequest(gomock.Any(), "req-1").
 		Return(&domain.CustomerRequest{
 			ID:                 "req-1",
-			ResourceInstanceID: "resource-1",
+			WorkflowID: "workflow-1",
 						Version:            1,
 		}, nil)
 
-	resource.EXPECT().
-		ApplyCompletedJob(gomock.Any(), "resource-1", domain.LifecycleStateFailed, int64(1)).
+	workflow.EXPECT().
+		ApplyCompletedJob(gomock.Any(), "workflow-1", domain.LifecycleStateFailed, int64(1)).
 		Return(false, nil)
 
 	schedulerRepo.EXPECT().
-		DeleteTerminalJob(gomock.Any(), "resource-1", "req-1").
+		DeleteTerminalJob(gomock.Any(), "workflow-1", "req-1").
 		Return(true, nil)
 
 	applied, err := s.FailRequest(context.Background(), "req-1")

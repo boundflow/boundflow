@@ -19,56 +19,56 @@ func NewAgentStateRepo(pool *pgxpool.Pool) *AgentStateRepo {
 	return &AgentStateRepo{pool: pool}
 }
 
-func (r *AgentStateRepo) UpsertRuntimePolicy(ctx context.Context, resourceInstanceID, agentName string, policy map[string]any) error {
+func (r *AgentStateRepo) UpsertRuntimePolicy(ctx context.Context, workflowID, agentName string, policy map[string]any) error {
 	policyJSON, err := json.Marshal(policy)
 	if err != nil {
 		return fmt.Errorf("marshal runtime policy: %w", err)
 	}
 	_, err = r.pool.Exec(ctx,
-		`INSERT INTO agent_state (resource_instance_id, agent_name, runtime_policy)
+		`INSERT INTO agent_state (workflow_id, agent_name, runtime_policy)
 		 VALUES ($1, $2, $3)
-		 ON CONFLICT (resource_instance_id, agent_name)
+		 ON CONFLICT (workflow_id, agent_name)
 		 DO UPDATE SET runtime_policy = $3, updated_at = now()`,
-		resourceInstanceID, agentName, policyJSON,
+		workflowID, agentName, policyJSON,
 	)
 	return err
 }
 
-func (r *AgentStateRepo) UpsertLifecyclePolicy(ctx context.Context, resourceInstanceID, agentName string, policy map[string]any) error {
+func (r *AgentStateRepo) UpsertLifecyclePolicy(ctx context.Context, workflowID, agentName string, policy map[string]any) error {
 	policyJSON, err := json.Marshal(policy)
 	if err != nil {
 		return fmt.Errorf("marshal lifecycle policy: %w", err)
 	}
 	_, err = r.pool.Exec(ctx,
-		`INSERT INTO agent_state (resource_instance_id, agent_name, lifecycle_policy)
+		`INSERT INTO agent_state (workflow_id, agent_name, lifecycle_policy)
 		 VALUES ($1, $2, $3)
-		 ON CONFLICT (resource_instance_id, agent_name)
+		 ON CONFLICT (workflow_id, agent_name)
 		 DO UPDATE SET lifecycle_policy = $3, updated_at = now()`,
-		resourceInstanceID, agentName, policyJSON,
+		workflowID, agentName, policyJSON,
 	)
 	return err
 }
 
-func (r *AgentStateRepo) UpdateMetrics(ctx context.Context, resourceInstanceID, agentName string, metrics []*boundflowv1.AgentInvocationMetrics) error {
+func (r *AgentStateRepo) UpdateMetrics(ctx context.Context, workflowID, agentName string, metrics []*boundflowv1.AgentInvocationMetrics) error {
 	metricsJSON, err := json.Marshal(metrics)
 	if err != nil {
 		return fmt.Errorf("marshal metrics: %w", err)
 	}
 	_, err = r.pool.Exec(ctx,
-		`INSERT INTO agent_state (resource_instance_id, agent_name, invocation_metrics)
+		`INSERT INTO agent_state (workflow_id, agent_name, invocation_metrics)
 		 VALUES ($1, $2, $3)
-		 ON CONFLICT (resource_instance_id, agent_name)
+		 ON CONFLICT (workflow_id, agent_name)
 		 DO UPDATE SET invocation_metrics = $3, updated_at = now()`,
-		resourceInstanceID, agentName, metricsJSON,
+		workflowID, agentName, metricsJSON,
 	)
 	return err
 }
 
-func (r *AgentStateRepo) GetAllForResource(ctx context.Context, resourceInstanceID string) (map[string]*domain.AgentState, error) {
+func (r *AgentStateRepo) GetAllForWorkflow(ctx context.Context, workflowID string) (map[string]*domain.AgentState, error) {
 	rows, err := r.pool.Query(ctx,
 		`SELECT agent_name, runtime_policy, lifecycle_policy, invocation_metrics, updated_at
-		 FROM agent_state WHERE resource_instance_id = $1`,
-		resourceInstanceID,
+		 FROM agent_state WHERE workflow_id = $1`,
+		workflowID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get agent states: %w", err)
@@ -82,7 +82,7 @@ func (r *AgentStateRepo) GetAllForResource(ctx context.Context, resourceInstance
 		if err := rows.Scan(&s.AgentName, &runtimeJSON, &lifecycleJSON, &metricsJSON, &s.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scan agent state: %w", err)
 		}
-		s.ResourceInstanceID = resourceInstanceID
+		s.WorkflowID = workflowID
 		if err := json.Unmarshal(runtimeJSON, &s.RuntimePolicy); err != nil {
 			return nil, fmt.Errorf("unmarshal runtime policy: %w", err)
 		}
@@ -97,10 +97,10 @@ func (r *AgentStateRepo) GetAllForResource(ctx context.Context, resourceInstance
 	return states, rows.Err()
 }
 
-func (r *AgentStateRepo) Delete(ctx context.Context, resourceInstanceID, agentName string) error {
+func (r *AgentStateRepo) Delete(ctx context.Context, workflowID, agentName string) error {
 	_, err := r.pool.Exec(ctx,
-		`DELETE FROM agent_state WHERE resource_instance_id = $1 AND agent_name = $2`,
-		resourceInstanceID, agentName,
+		`DELETE FROM agent_state WHERE workflow_id = $1 AND agent_name = $2`,
+		workflowID, agentName,
 	)
 	return err
 }

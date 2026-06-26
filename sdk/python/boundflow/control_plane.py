@@ -18,7 +18,7 @@ from boundflow.v1 import lifecycle_pb2_grpc as lc_grpc
 from boundflow.v1 import pricing_pb2 as pricing_pb
 from boundflow.v1 import registration_pb2 as reg
 from boundflow.v1 import registration_pb2_grpc as reg_grpc
-from boundflow.v1 import resource_instance_pb2 as ri
+from boundflow.v1 import workflow_pb2 as ri
 from boundflow.v1 import tenant_group_pb2 as tg_pb
 from boundflow.v1 import tenant_pb2 as tn_pb
 
@@ -77,7 +77,7 @@ class WorkflowState(str, Enum):
 _LIFECYCLE = {
     "creating": LifecycleState.CREATING,
     "active": LifecycleState.ACTIVE,
-    "reconciling": LifecycleState.INVOKING,
+    "invoking": LifecycleState.INVOKING,
     "awaiting_approval": LifecycleState.AWAITING_APPROVAL,
     "deleting": LifecycleState.DELETING,
     "deleted": LifecycleState.DELETED,
@@ -131,7 +131,7 @@ class ControlPlaneClient:
         self._metadata = (("x-api-key", key),)
         self._channel = _make_channel(address)
         self._reg = reg_grpc.RegistrationServiceStub(self._channel)
-        self._lc = lc_grpc.ResourceLifecycleServiceStub(self._channel)
+        self._lc = lc_grpc.WorkflowServiceStub(self._channel)
 
     async def __aenter__(self) -> "ControlPlaneClient":
         return self
@@ -179,8 +179,8 @@ class ControlPlaneClient:
         self, workflow_type: str, tenant_id: str, config: WorkflowConfig | None = None
     ) -> Workflow:
         cfg = config or WorkflowConfig()
-        resp = await self._lc.CreateResource(lc.CreateResourceRequest(
-            resource_type=workflow_type,
+        resp = await self._lc.CreateWorkflow(lc.CreateWorkflowRequest(
+            workflow_type=workflow_type,
             tenant_id=tenant_id,
             workflow_config=ri.WorkflowConfig(
                 version=cfg.version,
@@ -189,50 +189,50 @@ class ControlPlaneClient:
                 triggerable=cfg.triggerable,
             ),
         ), metadata=self._metadata)
-        inst = resp.resource_instance
+        inst = resp.workflow
         wc = inst.workflow_config
         return Workflow(inst.id, inst.tenant_id, WorkflowConfig(
             wc.version, wc.invoke_timeout_seconds, wc.repeat_every_seconds, wc.triggerable))
 
     async def activate_workflow(self, workflow_id: str) -> None:
         await self._lc.ActivateWorkflow(
-            lc.ActivateWorkflowRequest(resource_instance_id=workflow_id),
+            lc.ActivateWorkflowRequest(workflow_id=workflow_id),
             metadata=self._metadata)
 
     async def invoke_workflow(self, workflow_id: str, *, operation_timeout_seconds: int = 0) -> None:
-        await self._lc.ReconcileResource(lc.ReconcileResourceRequest(
-            resource_instance_id=workflow_id,
+        await self._lc.InvokeWorkflow(lc.InvokeWorkflowRequest(
+            workflow_id=workflow_id,
             runtime_overrides=lc.RuntimeOverrides(operation_timeout_seconds=operation_timeout_seconds),
         ), metadata=self._metadata)
 
     async def get_workflow_state(self, workflow_id: str) -> WorkflowState | None:
-        resp = await self._lc.GetResourceState(
-            lc.GetResourceStateRequest(resource_instance_id=workflow_id),
+        resp = await self._lc.GetWorkflow(
+            lc.GetWorkflowRequest(workflow_id=workflow_id),
             metadata=self._metadata)
-        inst = resp.resource_instance
+        inst = resp.workflow
         if inst.lifecycle_state == "deleted":
             return None
         return _WF_STATE.get(inst.workflow_state, WorkflowState.UNSPECIFIED)
 
     async def get_workflow_lifecycle_state(self, workflow_id: str) -> LifecycleState:
-        resp = await self._lc.GetResourceState(
-            lc.GetResourceStateRequest(resource_instance_id=workflow_id),
+        resp = await self._lc.GetWorkflow(
+            lc.GetWorkflowRequest(workflow_id=workflow_id),
             metadata=self._metadata)
-        return _LIFECYCLE.get(resp.resource_instance.lifecycle_state, LifecycleState.UNKNOWN)
+        return _LIFECYCLE.get(resp.workflow.lifecycle_state, LifecycleState.UNKNOWN)
 
     async def approve_workflow(self, workflow_id: str, approval_id: str) -> None:
         await self._lc.ApproveWorkflow(
-            lc.ApproveWorkflowRequest(resource_instance_id=workflow_id, approval_id=approval_id),
+            lc.ApproveWorkflowRequest(workflow_id=workflow_id, approval_id=approval_id),
             metadata=self._metadata)
 
     async def reject_workflow(self, workflow_id: str, approval_id: str) -> None:
         await self._lc.RejectWorkflow(
-            lc.RejectWorkflowRequest(resource_instance_id=workflow_id, approval_id=approval_id),
+            lc.RejectWorkflowRequest(workflow_id=workflow_id, approval_id=approval_id),
             metadata=self._metadata)
 
     async def delete_workflow(self, workflow_id: str) -> None:
-        await self._lc.DeleteResource(
-            lc.DeleteResourceRequest(resource_instance_id=workflow_id),
+        await self._lc.DeleteWorkflow(
+            lc.DeleteWorkflowRequest(workflow_id=workflow_id),
             metadata=self._metadata)
 
     # ── Policies ─────────────────────────────────────────────────────────────
@@ -241,7 +241,7 @@ class ControlPlaneClient:
         self, workflow_id: str, agent_name: str, policy: RuntimePolicy
     ) -> None:
         await self._lc.SetAgentRuntimePolicy(lc.SetAgentRuntimePolicyRequest(
-            resource_instance_id=workflow_id,
+            workflow_id=workflow_id,
             agent_name=agent_name,
             runtime_policy=_struct(policy.model_dump(mode="json", exclude_none=True)),
         ), metadata=self._metadata)
@@ -251,7 +251,7 @@ class ControlPlaneClient:
     ) -> None:
         payload = {"rules": [r.model_dump(mode="json", exclude_none=True) for r in rules]}
         await self._lc.SetAgentLifecyclePolicy(lc.SetAgentLifecyclePolicyRequest(
-            resource_instance_id=workflow_id,
+            workflow_id=workflow_id,
             agent_name=agent_name,
             lifecycle_policy=_struct(payload),
         ), metadata=self._metadata)
@@ -260,7 +260,7 @@ class ControlPlaneClient:
         self, workflow_id: str, rules: list[WorkflowRule]
     ) -> None:
         await self._lc.SetWorkflowLifecyclePolicy(lc.SetWorkflowLifecyclePolicyRequest(
-            resource_instance_id=workflow_id,
+            workflow_id=workflow_id,
             lifecycle_policy=lc.WorkflowLifecyclePolicy(
                 rules=[_workflow_rule_proto(r) for r in rules]),
         ), metadata=self._metadata)

@@ -75,7 +75,7 @@ func runSession(client boundflowv1.WorkerServiceClient, log *slog.Logger) error 
 			op := p.Launch.GetOperation()
 			log.Info("received LaunchOperation",
 				"operation_id", op.GetId(),
-				"resource_id", op.GetResourceId(),
+				"workflow_id", op.GetWorkflowId(),
 				"operation_type", op.GetOperationType(),
 				"name", op.GetName(),
 				"context", op.GetContext(),
