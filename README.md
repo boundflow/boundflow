@@ -148,7 +148,7 @@ See [`sdk/python/boundflow/examples/`](sdk/python/boundflow/examples/) for runna
 ## Configuration
 
 Backend (env vars, all `BOUNDFLOW_*`): `DATABASE_URL`, `GRPC_PORT` (server),
-`WORKER_GRPC_PORT` (worker), `NUM_PARTITIONS`, `NUM_WORKERS`, `JOB_TIMEOUT_SECS`,
+`WORKER_GRPC_PORT` (worker), `NUM_PARTITIONS` (scheduler), `JOB_TIMEOUT_SECS`,
 `LOG_LEVEL`, `DEBUG`.
 
 SDK: `BOUNDFLOW_API_KEY`, `BOUNDFLOW_SERVER_ADDRESS` / `BOUNDFLOW_WORKER_ADDRESS`

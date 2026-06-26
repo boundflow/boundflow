@@ -170,7 +170,7 @@ func runScheduler(sigCh <-chan os.Signal) {
 func runWorker(sigCh <-chan os.Signal) {
 	cfg := config.LoadWorker()
 	logger := newLogger(cfg.LogLevel)
-	logger.Info("starting worker", "num_workers", cfg.NumWorkers, "grpc_port", cfg.WorkerGRPCPort)
+	logger.Info("starting worker", "grpc_port", cfg.WorkerGRPCPort)
 
 	pool := mustConnectDB(cfg.DatabaseURL, logger)
 	defer pool.Close()
