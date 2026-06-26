@@ -159,16 +159,18 @@ func (s *LifecycleService) CreateWorkflow(ctx context.Context, correlationID, wo
 	return &workflow, nil
 }
 
-func (s *LifecycleService) InvokeWorkflow(ctx context.Context, correlationID, workflowID string, params domain.WorkflowRuntimeParams) error {
+// InvokeWorkflow triggers a run and returns the created request's id — the run id
+// the caller can use to correlate this invocation (e.g. with its trace).
+func (s *LifecycleService) InvokeWorkflow(ctx context.Context, correlationID, workflowID string, params domain.WorkflowRuntimeParams) (string, error) {
 	s.log.Info("invoking workflow", "correlation_id", correlationID, "workflow_id", workflowID)
 
 	instance, err := s.workflows.Get(ctx, workflowID)
 	if err != nil {
-		return fmt.Errorf("get workflow instance: %w", err)
+		return "", fmt.Errorf("get workflow instance: %w", err)
 	}
 
 	if instance.WorkflowState != domain.WorkflowStateActive {
-		return fmt.Errorf("%w: workflow is in state %s", ErrInvalidWorkflowState, instance.WorkflowState)
+		return "", fmt.Errorf("%w: workflow is in state %s", ErrInvalidWorkflowState, instance.WorkflowState)
 	}
 
 	requestInfo := map[string]any{
@@ -176,13 +178,13 @@ func (s *LifecycleService) InvokeWorkflow(ctx context.Context, correlationID, wo
 	}
 
 	if err := s.ResolveRuntimeParams(params, instance, true, requestInfo); err != nil {
-		return err
+		return "", err
 	}
 	if err := s.ResolveAgentRuntimeParams(ctx, workflowID, requestInfo); err != nil {
-		return err
+		return "", err
 	}
 	if err := s.ResolveModelPricing(ctx, workflowID, requestInfo); err != nil {
-		return err
+		return "", err
 	}
 
 	request := domain.CustomerRequest{
@@ -198,7 +200,7 @@ func (s *LifecycleService) InvokeWorkflow(ctx context.Context, correlationID, wo
 		[]domain.LifecycleState{domain.LifecycleStateDeleting, domain.LifecycleStateDeleted})
 	if err != nil {
 		s.log.Error("failed to create invoke request", "correlation_id", correlationID, "workflow_id", workflowID, "error", err)
-		return fmt.Errorf("create invocation request: %w", err)
+		return "", fmt.Errorf("create invocation request: %w", err)
 	}
 
 	s.log.Info("invoke request created, attempting immediate schedule", "correlation_id", correlationID, "workflow_id", workflowID, "request_id", request.ID, "version", ver)
@@ -206,7 +208,7 @@ func (s *LifecycleService) InvokeWorkflow(ctx context.Context, correlationID, wo
 		s.log.Warn("immediate schedule failed, scheduler will retry", "request_id", request.ID, "error", err)
 	}
 
-	return nil
+	return request.ID, nil
 }
 
 func (s *LifecycleService) DeleteWorkflow(ctx context.Context, correlationID, workflowID string) error {

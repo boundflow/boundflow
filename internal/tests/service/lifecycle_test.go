@@ -141,8 +141,12 @@ func TestInvokeWorkflow(t *testing.T) {
 			return 2, nil
 		})
 
-	if err := svc.InvokeWorkflow(context.Background(), "corr-2", "instance-1", testPolicy); err != nil {
+	requestID, err := svc.InvokeWorkflow(context.Background(), "corr-2", "instance-1", testPolicy)
+	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if requestID == "" {
+		t.Fatal("InvokeWorkflow should return the created request id")
 	}
 }
 

@@ -199,11 +199,14 @@ class ControlPlaneClient:
             lc.ActivateWorkflowRequest(workflow_id=workflow_id),
             metadata=self._metadata)
 
-    async def invoke_workflow(self, workflow_id: str, *, operation_timeout_seconds: int = 0) -> None:
-        await self._lc.InvokeWorkflow(lc.InvokeWorkflowRequest(
+    async def invoke_workflow(self, workflow_id: str, *, operation_timeout_seconds: int = 0) -> str:
+        """Trigger a run; returns the request_id — the run/trace id you can use to
+        find this invocation's trace later."""
+        resp = await self._lc.InvokeWorkflow(lc.InvokeWorkflowRequest(
             workflow_id=workflow_id,
             runtime_overrides=lc.RuntimeOverrides(operation_timeout_seconds=operation_timeout_seconds),
         ), metadata=self._metadata)
+        return resp.request_id
 
     async def get_workflow_state(self, workflow_id: str) -> WorkflowState | None:
         resp = await self._lc.GetWorkflow(

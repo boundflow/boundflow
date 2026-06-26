@@ -108,7 +108,8 @@ func (h *WorkflowServiceHandler) InvokeWorkflow(ctx context.Context, req *boundf
 		params.OperationTimeoutSeconds = int(req.RuntimeOverrides.OperationTimeoutSeconds)
 	}
 
-	if err := h.svc.InvokeWorkflow(ctx, req.CorrelationId, req.WorkflowId, params); err != nil {
+	requestID, err := h.svc.InvokeWorkflow(ctx, req.CorrelationId, req.WorkflowId, params)
+	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Errorf(codes.NotFound, "workflow instance not found")
 		}
@@ -124,7 +125,7 @@ func (h *WorkflowServiceHandler) InvokeWorkflow(ctx context.Context, req *boundf
 		return nil, status.Errorf(codes.Internal, "invoke workflow: %v", err)
 	}
 
-	return &boundflowv1.InvokeWorkflowResponse{}, nil
+	return &boundflowv1.InvokeWorkflowResponse{RequestId: requestID}, nil
 }
 
 func (h *WorkflowServiceHandler) DeleteWorkflow(ctx context.Context, req *boundflowv1.DeleteWorkflowRequest) (*boundflowv1.DeleteWorkflowResponse, error) {

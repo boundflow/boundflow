@@ -7,6 +7,7 @@ decorators for registration, plain async functions for tools and handlers.
 from __future__ import annotations
 
 import inspect
+import logging
 import time
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Union
@@ -18,6 +19,9 @@ from .lifecycle import (
     load_runtime_policy,
 )
 from .llm import AgentStepConfig, LlmClient, Orchestrator, StepResult
+from .trace import AgentRunTrace, OperationTrace, TraceSink, now_ms
+
+log = logging.getLogger("boundflow.worker")
 
 # ── Tools ────────────────────────────────────────────────────────────────────
 
@@ -102,9 +106,12 @@ OperationResult = Union[Complete, Next, AwaitApproval]
 
 
 class OperationContext:
-    def __init__(self, operation: Any, orchestrator: Orchestrator) -> None:
+    def __init__(self, operation: Any, orchestrator: Orchestrator,
+                 sink: TraceSink | None = None) -> None:
         self._op = operation
         self._orchestrator = orchestrator
+        self._sink = sink
+        self._agent_runs: list[AgentRunTrace] = []  # accumulated for the operation trace
         self._llm_context: list[tuple[str, str, Any]] = []  # (key, metadata, payload)
         self.failed = False
         # Per-agent metrics from this operation, sent back to the server in the
@@ -160,7 +167,9 @@ class OperationContext:
             cache=agent.cache,
         )
 
+        _run_start = now_ms()
         result = await self._orchestrator.run_step(cfg)
+        _run_end = now_ms()
 
         # Emit this run's snapshot; the server appends it to invocation_metrics.
         self.agent_state_updates[agent.name] = {
@@ -171,6 +180,14 @@ class OperationContext:
             "tool_failure_counts": dict(result.tool_failure_counts),
             "ran_at": int(time.time() * 1000),
         }
+        if self._sink is not None:
+            self._agent_runs.append(AgentRunTrace(
+                agent=agent.name, model=effective_model,
+                start_ms=_run_start, end_ms=_run_end,
+                spans=result.spans, output=result.output,
+                cost_usd=result.cost_usd, tokens=result.tokens_used,
+                llm_calls=result.llm_calls_used,
+            ))
         return result
 
 
@@ -198,7 +215,7 @@ class BoundFlowWorker:
     # address keeps its leading position so existing positional calls still work;
     # to rely on the default/env, pass the client by keyword: BoundFlowWorker(llm=...).
     def __init__(self, address: str | None = None, llm: LlmClient | None = None,
-                 api_key: str | None = None) -> None:
+                 api_key: str | None = None, trace_sink: TraceSink | None = None) -> None:
         import os
         if llm is None:
             raise ValueError("an LlmClient must be provided (e.g. BoundFlowWorker(llm=...))")
@@ -208,6 +225,7 @@ class BoundFlowWorker:
         self._address = address or os.environ.get("BOUNDFLOW_WORKER_ADDRESS") or DEFAULT_WORKER_ADDRESS
         self._api_key = key
         self._orchestrator = Orchestrator(llm)
+        self._trace_sink = trace_sink
         self._workflows: dict[tuple[str, int], HandlerFn] = {}
         self._operations: dict[tuple[str, str], HandlerFn] = {}
         self._on_approval: ApprovalFn | None = None
@@ -251,8 +269,13 @@ class BoundFlowWorker:
                 raise RuntimeError(
                     f"No handler for workflow '{rtype}' operation '{op.name}' v{op.workflow_version}")
 
-            ctx = OperationContext(_Operation(op), self._orchestrator)
+            ctx = OperationContext(_Operation(op), self._orchestrator, self._trace_sink)
+            _op_start = now_ms()
             result = await handler(ctx)
+            _op_end = now_ms()
+
+            if self._trace_sink is not None:
+                await self._emit_operation_trace(op, ctx, result, _op_start, _op_end)
 
             proto = await self._to_proto(result, op)
             for name, snap in ctx.agent_state_updates.items():
@@ -263,6 +286,29 @@ class BoundFlowWorker:
 
         capabilities = list(self._workflows.keys())
         await t.WorkerSession(self._address, self._api_key, capabilities).run(dispatch)
+
+    async def _emit_operation_trace(self, op, ctx, result, start_ms: int, end_ms: int) -> None:
+        """Build the operation trace (its agent runs + outcome) and hand it to the
+        sink. Tracing is best-effort: a sink failure is logged and dropped, never
+        fatal to the run. All operations of one invocation share trace_id (= op.id)."""
+        outcome = ("await_approval" if isinstance(result, AwaitApproval)
+                   else "next" if isinstance(result, Next)
+                   else "completed")
+        try:
+            await self._trace_sink.emit(OperationTrace(
+                trace_id=op.id,
+                workflow_id=op.workflow_id,
+                workflow_type=op.workflow_type,
+                version=op.workflow_version,
+                operation=op.name,
+                outcome=outcome,
+                failed=ctx.failed,
+                start_ms=start_ms,
+                end_ms=end_ms,
+                agent_runs=ctx._agent_runs,
+            ))
+        except Exception:  # noqa: BLE001 — tracing is best-effort, never fatal
+            log.exception("trace sink emit failed; dropping operation trace %s", op.name)
 
     async def _to_proto(self, result: OperationResult, op):
         """Map an OperationResult to an AtomicOperationResult proto."""
@@ -315,3 +361,7 @@ class _Operation:
         self.name = op.name
         self.workflow_version = op.workflow_version
         self.context = t.context_to_dict(op)
+        # Identifiers for the run trace (op.id is the request/invocation id = trace_id).
+        self.request_id = op.id
+        self.workflow_id = op.workflow_id
+        self.workflow_type = op.workflow_type

@@ -11,6 +11,15 @@ from .control_plane import (
     WorkflowState,
 )
 from .llm import MockLlmClient, MockContext, Turn, turn, submit
+from .trace import (
+    AgentRunTrace,
+    JsonlFileTraceSink,
+    LoggingTraceSink,
+    OperationTrace,
+    OTelTraceSink,
+    Span,
+    TraceSink,
+)
 from .policies import (
     AgentMetric,
     AgentRule,
@@ -49,4 +58,6 @@ __all__ = [
     "SetModel", "SetVersion", "ToolCallLimit", "WorkflowMetric", "WorkflowRule",
     "AgentDefinition", "ApprovalRequest", "AwaitApproval", "BoundFlowWorker",
     "Complete", "Next", "OperationContext", "OperationResult", "Tool", "tool",
+    "AgentRunTrace", "OperationTrace", "Span", "TraceSink", "LoggingTraceSink",
+    "JsonlFileTraceSink", "OTelTraceSink",
 ]
