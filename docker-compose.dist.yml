@@ -7,7 +7,7 @@
 # Pin a specific version by setting BOUNDFLOW_IMAGE, e.g.:
 #   BOUNDFLOW_IMAGE=ghcr.io/boundflow/boundflow:v0.1.0 docker compose -f docker-compose.dist.yml up -d
 #
-# The backend is provided under BACKEND-LICENSE.txt (evaluation use only).
+# The backend is open source under Apache-2.0 (see LICENSE).
 services:
   postgres:
     image: postgres:16-alpine

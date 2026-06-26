@@ -132,5 +132,4 @@ docker compose -f docker-compose.dist.yml down -v
 
 ---
 
-**License:** the Python SDK is open source (MIT). The backend is free for local
-evaluation and development — see [BACKEND-LICENSE.txt](BACKEND-LICENSE.txt).
+**License:** the backend is Apache-2.0; the Python SDK is MIT. See [LICENSE](LICENSE).
