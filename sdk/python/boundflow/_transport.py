@@ -73,7 +73,7 @@ class WorkerSession:
         self._write_lock = asyncio.Lock()
         self._metadata = (("x-api-key", api_key),)
         self._capabilities = [
-            wk_pb.WorkerCapability(resource_type=rt, workflow_version=v)
+            wk_pb.WorkerCapability(workflow_type=rt, workflow_version=v)
             for rt, v in (capabilities or [])
         ]
 
@@ -95,8 +95,8 @@ class WorkerSession:
                 if which == "launch":
                     op = command.launch.operation
                     op_id = op.id
-                    log.debug("launch: op_id=%s resource_type=%s name=%s version=%d",
-                              op.id, op.resource_type, op.name, op.workflow_version)
+                    log.debug("launch: op_id=%s workflow_type=%s name=%s version=%d",
+                              op.id, op.workflow_type, op.name, op.workflow_version)
                     # Ack IN_PROGRESS before starting; keep the receive loop free.
                     await self._write(call, self._update(op.id, op_pb.OPERATION_STATUS_IN_PROGRESS))
                     op_task = asyncio.create_task(self._run_operation(call, op, dispatch))

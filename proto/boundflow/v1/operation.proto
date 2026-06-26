@@ -9,13 +9,13 @@ import "google/protobuf/timestamp.proto";
 
 message AtomicOperation {
   string id = 1;
-  string resource_id = 2;
+  string workflow_id = 2;
   string operation_type = 3;
   string name = 4;
   google.protobuf.Struct context = 5;
   google.protobuf.Timestamp created_at = 6;
   int32 timeout_seconds = 7;
-  string resource_type = 8;
+  string workflow_type = 8;
   int32 workflow_version = 9;
 }
 

@@ -44,44 +44,44 @@ func (m *mockApprovalResolver) RejectJob(_ context.Context, _ string, _ string) 
 // policy used in all tests — non-zero so resolveJobPolicy returns immediately.
 var testPolicy = domain.WorkflowRuntimeParams{OperationTimeoutSeconds: 30}
 
-func newSvc(ctrl *gomock.Controller) (*service.LifecycleService, *mocks.MockResourceInstanceRepository, *mocks.MockCustomerRequestRepository, *mocks.MockTenantRepository, *mocks.MockTenantGroupRepository, *mocks.MockAgentStateRepository) {
+func newSvc(ctrl *gomock.Controller) (*service.LifecycleService, *mocks.MockWorkflowRepository, *mocks.MockCustomerRequestRepository, *mocks.MockTenantRepository, *mocks.MockTenantGroupRepository, *mocks.MockAgentStateRepository) {
 	return newSvcWithApproval(ctrl, &mockApprovalResolver{approveResult: true, rejectResult: true})
 }
 
-func newSvcWithApproval(ctrl *gomock.Controller, approval service.ApprovalResolver) (*service.LifecycleService, *mocks.MockResourceInstanceRepository, *mocks.MockCustomerRequestRepository, *mocks.MockTenantRepository, *mocks.MockTenantGroupRepository, *mocks.MockAgentStateRepository) {
-	resourceInstanceRepo := mocks.NewMockResourceInstanceRepository(ctrl)
+func newSvcWithApproval(ctrl *gomock.Controller, approval service.ApprovalResolver) (*service.LifecycleService, *mocks.MockWorkflowRepository, *mocks.MockCustomerRequestRepository, *mocks.MockTenantRepository, *mocks.MockTenantGroupRepository, *mocks.MockAgentStateRepository) {
+	workflowRepo := mocks.NewMockWorkflowRepository(ctrl)
 	customerRequestRepo := mocks.NewMockCustomerRequestRepository(ctrl)
 	tenantRepo := mocks.NewMockTenantRepository(ctrl)
 	tenantGroupRepo := mocks.NewMockTenantGroupRepository(ctrl)
 	agentStateRepo := mocks.NewMockAgentStateRepository(ctrl)
 	modelPricingRepo := mocks.NewMockModelPricingRepository(ctrl)
 	sched := &mockRequestScheduler{}
-	// Permissive defaults for the pricing snapshot taken during invoke/reconcile;
+	// Permissive defaults for the pricing snapshot taken during invoke/invoke;
 	// tests that don't assert on pricing are unaffected.
-	resourceInstanceRepo.EXPECT().TenantGroupIDForResource(gomock.Any(), gomock.Any()).Return("test-group", nil).AnyTimes()
+	workflowRepo.EXPECT().TenantGroupIDForWorkflow(gomock.Any(), gomock.Any()).Return("test-group", nil).AnyTimes()
 	modelPricingRepo.EXPECT().ListDefaults(gomock.Any()).Return(nil, nil).AnyTimes()
 	modelPricingRepo.EXPECT().ListForTenantGroup(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
-	svc := service.NewLifecycleService(resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, sched, approval, 10, discardLogger)
-	return svc, resourceInstanceRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo
+	svc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, sched, approval, 10, discardLogger)
+	return svc, workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo
 }
 
-func TestCreateResource(t *testing.T) {
+func TestCreateWorkflow(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	svc, resourceInstanceRepo, _, _, _, _ := newSvc(ctrl)
+	svc, workflowRepo, _, _, _, _ := newSvc(ctrl)
 
 	cfg := domain.WorkflowConfig{Triggerable: true}
 
-	resourceInstanceRepo.EXPECT().
+	workflowRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, r *domain.ResourceInstance) error {
+		DoAndReturn(func(_ context.Context, r *domain.Workflow) error {
 			if r.ID == "" {
 				t.Error("expected ID to be generated")
 			}
 			if r.TenantID != "tenant-1" {
 				t.Errorf("expected tenant_id tenant-1, got %s", r.TenantID)
 			}
-			if r.ResourceType != "database" {
-				t.Errorf("expected resource_type database, got %s", r.ResourceType)
+			if r.WorkflowType != "database" {
+				t.Errorf("expected workflow_type database, got %s", r.WorkflowType)
 			}
 			if r.LifecycleState != domain.LifecycleStateActive {
 				t.Errorf("expected lifecycle_state active, got %s", r.LifecycleState)
@@ -101,7 +101,7 @@ func TestCreateResource(t *testing.T) {
 			return nil
 		})
 
-	instance, err := svc.CreateResource(context.Background(), "corr-1", "database", "tenant-1", cfg, 1)
+	instance, err := svc.CreateWorkflow(context.Background(), "corr-1", "database", "tenant-1", cfg, 1)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -110,13 +110,13 @@ func TestCreateResource(t *testing.T) {
 	}
 }
 
-func TestReconcileResource(t *testing.T) {
+func TestInvokeWorkflow(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	svc, resourceInstanceRepo, customerRequestRepo, _, _, agentStateRepo := newSvc(ctrl)
+	svc, workflowRepo, customerRequestRepo, _, _, agentStateRepo := newSvc(ctrl)
 
-	resourceInstanceRepo.EXPECT().
+	workflowRepo.EXPECT().
 		Get(gomock.Any(), "instance-1").
-		Return(&domain.ResourceInstance{
+		Return(&domain.Workflow{
 			ID:                     "instance-1",
 			TenantID:               "tenant-1",
 			CurrentWorkflowVersion: 1,
@@ -125,15 +125,15 @@ func TestReconcileResource(t *testing.T) {
 		}, nil)
 
 	agentStateRepo.EXPECT().
-		GetAllForResource(gomock.Any(), "instance-1").
+		GetAllForWorkflow(gomock.Any(), "instance-1").
 		Return(nil, nil)
 
 	customerRequestRepo.EXPECT().
 		CreateInvocationRequest(gomock.Any(), gomock.Any(),
 			[]domain.LifecycleState{domain.LifecycleStateDeleting, domain.LifecycleStateDeleted}).
 		DoAndReturn(func(_ context.Context, r *domain.CustomerRequest, _ []domain.LifecycleState) (int64, error) {
-			if r.RequestType != domain.CustomerRequestTypeReconcile {
-				t.Errorf("expected request_type reconcile, got %s", r.RequestType)
+			if r.RequestType != domain.CustomerRequestTypeInvoke {
+				t.Errorf("expected request_type invoke, got %s", r.RequestType)
 			}
 			if r.RequestInfo["operationTimeoutSeconds"] != 30 {
 				t.Errorf("expected timeout 30 in requestInfo, got %v", r.RequestInfo["operationTimeoutSeconds"])
@@ -141,51 +141,51 @@ func TestReconcileResource(t *testing.T) {
 			return 2, nil
 		})
 
-	if err := svc.ReconcileResource(context.Background(), "corr-2", "instance-1", testPolicy); err != nil {
+	if err := svc.InvokeWorkflow(context.Background(), "corr-2", "instance-1", testPolicy); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
-func TestDeleteResource(t *testing.T) {
+func TestDeleteWorkflow(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	svc, resourceInstanceRepo, _, _, _, _ := newSvc(ctrl)
+	svc, workflowRepo, _, _, _, _ := newSvc(ctrl)
 
-	resourceInstanceRepo.EXPECT().
+	workflowRepo.EXPECT().
 		Get(gomock.Any(), "instance-1").
-		Return(&domain.ResourceInstance{ID: "instance-1", TenantID: "tenant-1"}, nil)
+		Return(&domain.Workflow{ID: "instance-1", TenantID: "tenant-1"}, nil)
 
-	resourceInstanceRepo.EXPECT().
+	workflowRepo.EXPECT().
 		MarkDeleted(gomock.Any(), "instance-1").
 		Return(nil)
 
-	if err := svc.DeleteResource(context.Background(), "corr-3", "instance-1"); err != nil {
+	if err := svc.DeleteWorkflow(context.Background(), "corr-3", "instance-1"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
-func TestGetResourceState(t *testing.T) {
+func TestGetWorkflow(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	svc, resourceInstanceRepo, _, _, _, _ := newSvc(ctrl)
+	svc, workflowRepo, _, _, _, _ := newSvc(ctrl)
 
-	expected := &domain.ResourceInstance{
+	expected := &domain.Workflow{
 		ID:                     "instance-1",
 		TenantID:               "tenant-1",
-		ResourceType:           "database",
+		WorkflowType:           "database",
 		CurrentWorkflowVersion: 2,
 		WorkflowConfig:         domain.WorkflowConfig{Triggerable: true},
-		LifecycleState:         domain.LifecycleStateReconciling,
+		LifecycleState:         domain.LifecycleStateInvoking,
 	}
 
-	resourceInstanceRepo.EXPECT().
+	workflowRepo.EXPECT().
 		Get(gomock.Any(), "instance-1").
 		Return(expected, nil)
 
-	instance, err := svc.GetResourceState(context.Background(), "instance-1")
+	instance, err := svc.GetWorkflow(context.Background(), "instance-1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if instance.LifecycleState != domain.LifecycleStateReconciling {
-		t.Errorf("expected lifecycle_state reconciling, got %s", instance.LifecycleState)
+	if instance.LifecycleState != domain.LifecycleStateInvoking {
+		t.Errorf("expected lifecycle_state invoking, got %s", instance.LifecycleState)
 	}
 	if instance.CurrentWorkflowVersion != 2 {
 		t.Errorf("expected current_workflow_version 2, got %d", instance.CurrentWorkflowVersion)

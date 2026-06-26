@@ -239,17 +239,17 @@ class BoundFlowWorker:
         from . import _transport as t
         from boundflow.v1 import operation_pb2 as op_pb
 
-        ENTRY = "reconcile_entry"
+        ENTRY = "invoke_entry"
 
         async def dispatch(op):  # op: AtomicOperation proto
-            rtype = op.resource_type
+            rtype = op.workflow_type
             if op.name == ENTRY:
                 handler = self._workflows.get((rtype, op.workflow_version))
             else:
                 handler = self._operations.get((rtype, op.name))
             if handler is None:
                 raise RuntimeError(
-                    f"No handler for resource '{rtype}' operation '{op.name}' v{op.workflow_version}")
+                    f"No handler for workflow '{rtype}' operation '{op.name}' v{op.workflow_version}")
 
             ctx = OperationContext(_Operation(op), self._orchestrator)
             result = await handler(ctx)
@@ -292,7 +292,7 @@ class BoundFlowWorker:
             approval_id = t.new_approval_id()
             if self._on_approval is not None:
                 await self._on_approval(ApprovalRequest(
-                    workflow_id=op.resource_id, operation_name=op.name,
+                    workflow_id=op.workflow_id, operation_name=op.name,
                     timeout=result.timeout, approval_id=approval_id,
                     justification=result.justification))
             gate = op_pb.ApprovalGate(timeout_seconds=result.timeout, approval_id=approval_id)

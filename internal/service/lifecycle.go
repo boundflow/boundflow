@@ -27,12 +27,12 @@ type RequestScheduler interface {
 // ApprovalResolver handles approve/reject for jobs awaiting approval.
 // Satisfied by *scheduler.Scheduler.
 type ApprovalResolver interface {
-	ApproveJob(ctx context.Context, resourceInstanceID string, approvalID string) (bool, error)
-	RejectJob(ctx context.Context, resourceInstanceID string, approvalID string) (bool, error)
+	ApproveJob(ctx context.Context, workflowID string, approvalID string) (bool, error)
+	RejectJob(ctx context.Context, workflowID string, approvalID string) (bool, error)
 }
 
 type LifecycleService struct {
-	resourceInstances storage.ResourceInstanceRepository
+	workflows storage.WorkflowRepository
 	customerRequests  storage.CustomerRequestRepository
 	tenants           storage.TenantRepository
 	tenantGroups      storage.TenantGroupRepository
@@ -45,7 +45,7 @@ type LifecycleService struct {
 }
 
 func NewLifecycleService(
-	resourceInstances storage.ResourceInstanceRepository,
+	workflows storage.WorkflowRepository,
 	customerRequests storage.CustomerRequestRepository,
 	tenants storage.TenantRepository,
 	tenantGroups storage.TenantGroupRepository,
@@ -57,7 +57,7 @@ func NewLifecycleService(
 	log *slog.Logger,
 ) *LifecycleService {
 	return &LifecycleService{
-		resourceInstances: resourceInstances,
+		workflows: workflows,
 		customerRequests:  customerRequests,
 		tenants:           tenants,
 		tenantGroups:      tenantGroups,
@@ -73,8 +73,8 @@ func NewLifecycleService(
 // ResolveModelPricing snapshots the tenant group's effective per-model rates
 // (built-in defaults merged with overrides) into the request context, so the
 // worker can price token usage without a hardcoded table.
-func (s *LifecycleService) ResolveModelPricing(ctx context.Context, resourceInstanceID string, requestInfo map[string]any) error {
-	groupID, err := s.resourceInstances.TenantGroupIDForResource(ctx, resourceInstanceID)
+func (s *LifecycleService) ResolveModelPricing(ctx context.Context, workflowID string, requestInfo map[string]any) error {
+	groupID, err := s.workflows.TenantGroupIDForWorkflow(ctx, workflowID)
 	if err != nil {
 		return fmt.Errorf("resolve tenant group for pricing: %w", err)
 	}
@@ -95,13 +95,13 @@ func (s *LifecycleService) ResolveModelPricing(ctx context.Context, resourceInst
 	return nil
 }
 
-func (s *LifecycleService) ResolveRuntimeParams(params domain.WorkflowRuntimeParams, instance *domain.ResourceInstance, userTriggered bool, requestInfo map[string]any) error {
+func (s *LifecycleService) ResolveRuntimeParams(params domain.WorkflowRuntimeParams, instance *domain.Workflow, userTriggered bool, requestInfo map[string]any) error {
 	if !instance.WorkflowConfig.Triggerable && userTriggered {
 		return fmt.Errorf("workflow is not triggerable")
 	}
 
 	// The workflow version to run is resolved dynamically at schedule time from the live
-	// resource (CurrentWorkflowVersion); it is intentionally not snapshotted here. This is
+	// workflow (CurrentWorkflowVersion); it is intentionally not snapshotted here. This is
 	// just a validation that a runnable version is configured.
 	if instance.CurrentWorkflowVersion == 0 {
 		return fmt.Errorf("no workflow version specified")
@@ -119,8 +119,8 @@ func (s *LifecycleService) ResolveRuntimeParams(params domain.WorkflowRuntimePar
 	return nil
 }
 
-func (s *LifecycleService) ResolveAgentRuntimeParams(ctx context.Context, resourceInstanceID string, requestInfo map[string]any) error {
-	agents, err := s.agentStates.GetAllForResource(ctx, resourceInstanceID)
+func (s *LifecycleService) ResolveAgentRuntimeParams(ctx context.Context, workflowID string, requestInfo map[string]any) error {
+	agents, err := s.agentStates.GetAllForWorkflow(ctx, workflowID)
 	if err != nil {
 		return fmt.Errorf("get agent states: %w", err)
 	}
@@ -132,14 +132,14 @@ func (s *LifecycleService) ResolveAgentRuntimeParams(ctx context.Context, resour
 	return nil
 }
 
-func (s *LifecycleService) CreateResource(ctx context.Context, correlationID, resourceType, tenantID string, cfg domain.WorkflowConfig, version int) (*domain.ResourceInstance, error) {
-	s.log.Info("creating resource", "correlation_id", correlationID, "resource_type", resourceType, "tenant_id", tenantID)
+func (s *LifecycleService) CreateWorkflow(ctx context.Context, correlationID, workflowType, tenantID string, cfg domain.WorkflowConfig, version int) (*domain.Workflow, error) {
+	s.log.Info("creating workflow", "correlation_id", correlationID, "workflow_type", workflowType, "tenant_id", tenantID)
 
 	id := uuid.New().String()
-	resourceInstance := domain.ResourceInstance{
+	workflow := domain.Workflow{
 		ID:                     id,
 		TenantID:               tenantID,
-		ResourceType:           resourceType,
+		WorkflowType:           workflowType,
 		WorkflowConfig:         cfg,
 		LifecycleState:         domain.LifecycleStateActive,
 		WorkflowState:          domain.WorkflowStatePaused,
@@ -150,21 +150,21 @@ func (s *LifecycleService) CreateResource(ctx context.Context, correlationID, re
 		CurrentVersion:         0,
 	}
 
-	if err := s.resourceInstances.Create(ctx, &resourceInstance); err != nil {
-		s.log.Error("failed to create resource instance", "correlation_id", correlationID, "error", err)
-		return nil, fmt.Errorf("create resource: %w", err)
+	if err := s.workflows.Create(ctx, &workflow); err != nil {
+		s.log.Error("failed to create workflow instance", "correlation_id", correlationID, "error", err)
+		return nil, fmt.Errorf("create workflow: %w", err)
 	}
 
-	s.log.Info("resource created and paused", "correlation_id", correlationID, "resource_id", resourceInstance.ID)
-	return &resourceInstance, nil
+	s.log.Info("workflow created and paused", "correlation_id", correlationID, "workflow_id", workflow.ID)
+	return &workflow, nil
 }
 
-func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID, resourceInstanceID string, params domain.WorkflowRuntimeParams) error {
-	s.log.Info("reconciling resource", "correlation_id", correlationID, "resource_id", resourceInstanceID)
+func (s *LifecycleService) InvokeWorkflow(ctx context.Context, correlationID, workflowID string, params domain.WorkflowRuntimeParams) error {
+	s.log.Info("invoking workflow", "correlation_id", correlationID, "workflow_id", workflowID)
 
-	instance, err := s.resourceInstances.Get(ctx, resourceInstanceID)
+	instance, err := s.workflows.Get(ctx, workflowID)
 	if err != nil {
-		return fmt.Errorf("get resource instance: %w", err)
+		return fmt.Errorf("get workflow instance: %w", err)
 	}
 
 	if instance.WorkflowState != domain.WorkflowStateActive {
@@ -178,30 +178,30 @@ func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID,
 	if err := s.ResolveRuntimeParams(params, instance, true, requestInfo); err != nil {
 		return err
 	}
-	if err := s.ResolveAgentRuntimeParams(ctx, resourceInstanceID, requestInfo); err != nil {
+	if err := s.ResolveAgentRuntimeParams(ctx, workflowID, requestInfo); err != nil {
 		return err
 	}
-	if err := s.ResolveModelPricing(ctx, resourceInstanceID, requestInfo); err != nil {
+	if err := s.ResolveModelPricing(ctx, workflowID, requestInfo); err != nil {
 		return err
 	}
 
 	request := domain.CustomerRequest{
 		ID:                 uuid.New().String(),
-		ResourceInstanceID: resourceInstanceID,
+		WorkflowID: workflowID,
 		Status:             domain.CustomerRequestStatusUnscheduled,
-		RequestType:        domain.CustomerRequestTypeReconcile,
+		RequestType:        domain.CustomerRequestTypeInvoke,
 		RequestInfo:        requestInfo,
 	}
 
-	// Atomically allocates the version, flips to reconciling, and inserts the request.
+	// Atomically allocates the version, flips to invoking, and inserts the request.
 	ver, err := s.customerRequests.CreateInvocationRequest(ctx, &request,
 		[]domain.LifecycleState{domain.LifecycleStateDeleting, domain.LifecycleStateDeleted})
 	if err != nil {
-		s.log.Error("failed to create reconcile request", "correlation_id", correlationID, "resource_id", resourceInstanceID, "error", err)
+		s.log.Error("failed to create invoke request", "correlation_id", correlationID, "workflow_id", workflowID, "error", err)
 		return fmt.Errorf("create invocation request: %w", err)
 	}
 
-	s.log.Info("reconcile request created, attempting immediate schedule", "correlation_id", correlationID, "resource_id", resourceInstanceID, "request_id", request.ID, "version", ver)
+	s.log.Info("invoke request created, attempting immediate schedule", "correlation_id", correlationID, "workflow_id", workflowID, "request_id", request.ID, "version", ver)
 	if err := s.scheduler.ScheduleRequest(ctx, request.ID); err != nil {
 		s.log.Warn("immediate schedule failed, scheduler will retry", "request_id", request.ID, "error", err)
 	}
@@ -209,62 +209,62 @@ func (s *LifecycleService) ReconcileResource(ctx context.Context, correlationID,
 	return nil
 }
 
-func (s *LifecycleService) DeleteResource(ctx context.Context, correlationID, resourceInstanceID string) error {
-	s.log.Info("deleting resource", "correlation_id", correlationID, "resource_id", resourceInstanceID)
+func (s *LifecycleService) DeleteWorkflow(ctx context.Context, correlationID, workflowID string) error {
+	s.log.Info("deleting workflow", "correlation_id", correlationID, "workflow_id", workflowID)
 
-	if _, err := s.resourceInstances.Get(ctx, resourceInstanceID); err != nil {
-		return fmt.Errorf("get resource instance: %w", err)
+	if _, err := s.workflows.Get(ctx, workflowID); err != nil {
+		return fmt.Errorf("get workflow instance: %w", err)
 	}
 
-	if err := s.resourceInstances.MarkDeleted(ctx, resourceInstanceID); err != nil {
-		s.log.Error("failed to delete resource", "correlation_id", correlationID, "resource_id", resourceInstanceID, "error", err)
-		return fmt.Errorf("delete resource: %w", err)
+	if err := s.workflows.MarkDeleted(ctx, workflowID); err != nil {
+		s.log.Error("failed to delete workflow", "correlation_id", correlationID, "workflow_id", workflowID, "error", err)
+		return fmt.Errorf("delete workflow: %w", err)
 	}
 
-	s.log.Info("resource deleted", "correlation_id", correlationID, "resource_id", resourceInstanceID)
+	s.log.Info("workflow deleted", "correlation_id", correlationID, "workflow_id", workflowID)
 	return nil
 }
 
-func (s *LifecycleService) GetResourceState(ctx context.Context, resourceInstanceID string) (*domain.ResourceInstance, error) {
-	s.log.Debug("getting resource state", "resource_id", resourceInstanceID)
-	return s.resourceInstances.Get(ctx, resourceInstanceID)
+func (s *LifecycleService) GetWorkflow(ctx context.Context, workflowID string) (*domain.Workflow, error) {
+	s.log.Debug("getting workflow state", "workflow_id", workflowID)
+	return s.workflows.Get(ctx, workflowID)
 }
 
-func (s *LifecycleService) SetAgentRuntimePolicy(ctx context.Context, resourceInstanceID, agentName string, policy map[string]any) error {
-	s.log.Info("setting agent runtime policy", "resource_id", resourceInstanceID, "agent", agentName)
-	if err := s.agentStates.UpsertRuntimePolicy(ctx, resourceInstanceID, agentName, policy); err != nil {
+func (s *LifecycleService) SetAgentRuntimePolicy(ctx context.Context, workflowID, agentName string, policy map[string]any) error {
+	s.log.Info("setting agent runtime policy", "workflow_id", workflowID, "agent", agentName)
+	if err := s.agentStates.UpsertRuntimePolicy(ctx, workflowID, agentName, policy); err != nil {
 		return fmt.Errorf("upsert agent runtime policy: %w", err)
 	}
 	return nil
 }
 
-func (s *LifecycleService) SetAgentLifecyclePolicy(ctx context.Context, resourceInstanceID, agentName string, policy map[string]any) error {
-	s.log.Info("setting agent lifecycle policy", "resource_id", resourceInstanceID, "agent", agentName)
-	if err := s.agentStates.UpsertLifecyclePolicy(ctx, resourceInstanceID, agentName, policy); err != nil {
+func (s *LifecycleService) SetAgentLifecyclePolicy(ctx context.Context, workflowID, agentName string, policy map[string]any) error {
+	s.log.Info("setting agent lifecycle policy", "workflow_id", workflowID, "agent", agentName)
+	if err := s.agentStates.UpsertLifecyclePolicy(ctx, workflowID, agentName, policy); err != nil {
 		return fmt.Errorf("upsert agent lifecycle policy: %w", err)
 	}
 	return nil
 }
 
-func (s *LifecycleService) DeleteAgent(ctx context.Context, resourceInstanceID, agentName string) error {
-	s.log.Info("deleting agent state", "resource_id", resourceInstanceID, "agent", agentName)
-	if err := s.agentStates.Delete(ctx, resourceInstanceID, agentName); err != nil {
+func (s *LifecycleService) DeleteAgent(ctx context.Context, workflowID, agentName string) error {
+	s.log.Info("deleting agent state", "workflow_id", workflowID, "agent", agentName)
+	if err := s.agentStates.Delete(ctx, workflowID, agentName); err != nil {
 		return fmt.Errorf("delete agent state: %w", err)
 	}
 	return nil
 }
 
-func (s *LifecycleService) SetWorkflowLifecyclePolicy(ctx context.Context, resourceInstanceID string, policy domain.WorkflowLifecyclePolicy) error {
-	s.log.Info("setting workflow lifecycle policy", "resource_id", resourceInstanceID)
-	if err := s.resourceInstances.UpdateLifecyclePolicy(ctx, resourceInstanceID, policy); err != nil {
+func (s *LifecycleService) SetWorkflowLifecyclePolicy(ctx context.Context, workflowID string, policy domain.WorkflowLifecyclePolicy) error {
+	s.log.Info("setting workflow lifecycle policy", "workflow_id", workflowID)
+	if err := s.workflows.UpdateLifecyclePolicy(ctx, workflowID, policy); err != nil {
 		return fmt.Errorf("set workflow lifecycle policy: %w", err)
 	}
 	return nil
 }
 
-func (s *LifecycleService) ActivateWorkflow(ctx context.Context, resourceInstanceID string) error {
-	s.log.Info("activating workflow", "resource_id", resourceInstanceID)
-	if err := s.resourceInstances.UpdateWorkflowState(ctx, resourceInstanceID, domain.WorkflowStateActive); err != nil {
+func (s *LifecycleService) ActivateWorkflow(ctx context.Context, workflowID string) error {
+	s.log.Info("activating workflow", "workflow_id", workflowID)
+	if err := s.workflows.UpdateWorkflowState(ctx, workflowID, domain.WorkflowStateActive); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return err
 		}
@@ -273,9 +273,9 @@ func (s *LifecycleService) ActivateWorkflow(ctx context.Context, resourceInstanc
 	return nil
 }
 
-func (s *LifecycleService) ApproveWorkflow(ctx context.Context, resourceInstanceID string, approvalID string) error {
-	s.log.Info("approving workflow", "resource_id", resourceInstanceID, "approval_id", approvalID)
-	resolved, err := s.approvalResolver.ApproveJob(ctx, resourceInstanceID, approvalID)
+func (s *LifecycleService) ApproveWorkflow(ctx context.Context, workflowID string, approvalID string) error {
+	s.log.Info("approving workflow", "workflow_id", workflowID, "approval_id", approvalID)
+	resolved, err := s.approvalResolver.ApproveJob(ctx, workflowID, approvalID)
 	if err != nil {
 		return fmt.Errorf("approve workflow: %w", err)
 	}
@@ -285,9 +285,9 @@ func (s *LifecycleService) ApproveWorkflow(ctx context.Context, resourceInstance
 	return nil
 }
 
-func (s *LifecycleService) RejectWorkflow(ctx context.Context, resourceInstanceID string, approvalID string) error {
-	s.log.Info("rejecting workflow", "resource_id", resourceInstanceID, "approval_id", approvalID)
-	resolved, err := s.approvalResolver.RejectJob(ctx, resourceInstanceID, approvalID)
+func (s *LifecycleService) RejectWorkflow(ctx context.Context, workflowID string, approvalID string) error {
+	s.log.Info("rejecting workflow", "workflow_id", workflowID, "approval_id", approvalID)
+	resolved, err := s.approvalResolver.RejectJob(ctx, workflowID, approvalID)
 	if err != nil {
 		return fmt.Errorf("reject workflow: %w", err)
 	}
@@ -297,10 +297,10 @@ func (s *LifecycleService) RejectWorkflow(ctx context.Context, resourceInstanceI
 	return nil
 }
 
-// TenantGroupIDForResource returns the tenant_group_id that owns a resource (single JOIN).
-// Returns storage.ErrNotFound if the resource does not exist.
-func (s *LifecycleService) TenantGroupIDForResource(ctx context.Context, resourceInstanceID string) (string, error) {
-	return s.resourceInstances.TenantGroupIDForResource(ctx, resourceInstanceID)
+// TenantGroupIDForWorkflow returns the tenant_group_id that owns a workflow (single JOIN).
+// Returns storage.ErrNotFound if the workflow does not exist.
+func (s *LifecycleService) TenantGroupIDForWorkflow(ctx context.Context, workflowID string) (string, error) {
+	return s.workflows.TenantGroupIDForWorkflow(ctx, workflowID)
 }
 
 // TenantGroupIDForTenant returns the tenant_group_id for a tenant.

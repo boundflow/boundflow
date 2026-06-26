@@ -9,7 +9,7 @@ CREATE TYPE customer_request_status AS ENUM (
 
 CREATE TABLE customer_requests (
     id                    TEXT NOT NULL PRIMARY KEY,
-    resource_instance_id  TEXT NOT NULL REFERENCES resource_instances(id),
+    workflow_id  TEXT NOT NULL REFERENCES workflows(id),
     status                customer_request_status NOT NULL,
     request_type          TEXT NOT NULL,
     request_info          JSONB NOT NULL DEFAULT '{}',

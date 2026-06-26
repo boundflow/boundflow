@@ -7,9 +7,9 @@ import (
 )
 
 // AgentState holds the server-managed policy and rolling invocation history for a named agent
-// within a specific workflow (resource instance). Keyed by (ResourceInstanceID, AgentName).
+// within a specific workflow (workflow instance). Keyed by (WorkflowID, AgentName).
 type AgentState struct {
-	ResourceInstanceID string
+	WorkflowID string
 	AgentName          string
 	RuntimePolicy      map[string]any
 	LifecyclePolicy    map[string]any

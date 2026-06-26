@@ -20,14 +20,14 @@ const (
 )
 
 type Job struct {
-	ResourceInstanceID     string
+	WorkflowID     string
 	RequestID              string
 	Version                int64
 	CurrentAtomicOperation string
 	Context                map[string]any
 	Status                 JobStatus
 	JobType                string
-	ResourceType           string
+	WorkflowType           string
 	RuntimeParams          WorkflowRuntimeParams
 	WorkflowVersion        int
 	// AgentMetrics is the per-agent invocation metrics accumulated across this job's operations.

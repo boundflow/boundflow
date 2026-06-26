@@ -19,7 +19,7 @@ import (
 type RequestScheduler interface {
 	CompleteRequest(ctx context.Context, req string) (bool, error)
 	FailRequest(ctx context.Context, req string) (bool, error)
-	MarkAwaitingApproval(ctx context.Context, resourceInstanceID string) error
+	MarkAwaitingApproval(ctx context.Context, workflowID string) error
 }
 
 type MetricsHandler interface {
@@ -147,12 +147,12 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 
 		if result.NextOperation != nil {
 			log.Info("operation completed with next operation, advancing job", "request_id", job.RequestID, "next_operation", result.NextOperation.Name)
-			_, err := s.jobs.UpdateJobWithMetrics(ctx, job.ResourceInstanceID, s.id, domain.JobStatusAwaitingNext,
+			_, err := s.jobs.UpdateJobWithMetrics(ctx, job.WorkflowID, s.id, domain.JobStatusAwaitingNext,
 				result.NextOperation.Name, int(result.NextOperation.TimeoutSeconds), result.NextOperation.Context.AsMap(), job.AgentMetrics, job.WorkflowMetrics)
 
 			return err
 		} else if result.ApprovalGate != nil {
-			log.Info("operation requires approval, parking job", "request_id", job.RequestID, "resource_id", job.ResourceInstanceID, "approval_id", result.ApprovalGate.ApprovalId)
+			log.Info("operation requires approval, parking job", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "approval_id", result.ApprovalGate.ApprovalId)
 
 			var onApprove *domain.ApprovalBranch
 			if result.ApprovalGate.OnApprove != nil {
@@ -179,25 +179,25 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 			}
 
 			timeoutAt := time.Now().Add(time.Duration(result.ApprovalGate.TimeoutSeconds) * time.Second)
-			parked, err := s.jobs.ParkForApproval(ctx, job.ResourceInstanceID, s.id, result.ApprovalGate.ApprovalId, timeoutAt, jobMetadata, job.AgentMetrics, job.WorkflowMetrics)
+			parked, err := s.jobs.ParkForApproval(ctx, job.WorkflowID, s.id, result.ApprovalGate.ApprovalId, timeoutAt, jobMetadata, job.AgentMetrics, job.WorkflowMetrics)
 			if err != nil {
-				log.Error("failed to park job for approval", "request_id", job.RequestID, "resource_id", job.ResourceInstanceID, "error", err)
+				log.Error("failed to park job for approval", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "error", err)
 				return err
 			}
 			if !parked {
-				log.Warn("lost ownership while parking job for approval", "request_id", job.RequestID, "resource_id", job.ResourceInstanceID)
+				log.Warn("lost ownership while parking job for approval", "request_id", job.RequestID, "workflow_id", job.WorkflowID)
 			}
-			if err := s.scheduler.MarkAwaitingApproval(ctx, job.ResourceInstanceID); err != nil {
-				log.Warn("failed to mark resource awaiting approval, scheduler will sync", "resource_id", job.ResourceInstanceID, "error", err)
+			if err := s.scheduler.MarkAwaitingApproval(ctx, job.WorkflowID); err != nil {
+				log.Warn("failed to mark workflow awaiting approval, scheduler will sync", "workflow_id", job.WorkflowID, "error", err)
 			}
 		} else {
-			updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.ResourceInstanceID, s.id, domain.JobStatusCompleted, job.AgentMetrics, job.WorkflowMetrics)
+			updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.WorkflowID, s.id, domain.JobStatusCompleted, job.AgentMetrics, job.WorkflowMetrics)
 			if err != nil {
-				log.Error("failed to mark job completed", "request_id", job.RequestID, "resource_id", job.ResourceInstanceID, "error", err)
+				log.Error("failed to mark job completed", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "error", err)
 				return err
 			}
 			if updated {
-				log.Info("job completed, notifying scheduler", "request_id", job.RequestID, "resource_id", job.ResourceInstanceID)
+				log.Info("job completed, notifying scheduler", "request_id", job.RequestID, "workflow_id", job.WorkflowID)
 				s.scheduler.CompleteRequest(ctx, job.RequestID)
 			}
 			return nil
@@ -210,11 +210,11 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 		ctx := context.Background()
 		defer cancelLeaseIfExists(cancelLease)
 
-		updated, err := s.jobs.UpdateJobStatus(ctx, job.ResourceInstanceID, s.id, domain.JobStatusFailed)
+		updated, err := s.jobs.UpdateJobStatus(ctx, job.WorkflowID, s.id, domain.JobStatusFailed)
 		if err != nil {
-			log.Error("failed to mark job failed", "request_id", job.RequestID, "resource_id", job.ResourceInstanceID, "error", err)
+			log.Error("failed to mark job failed", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "error", err)
 		} else if updated {
-			log.Info("job failed, notifying scheduler", "request_id", job.RequestID, "resource_id", job.ResourceInstanceID)
+			log.Info("job failed, notifying scheduler", "request_id", job.RequestID, "workflow_id", job.WorkflowID)
 			s.scheduler.FailRequest(ctx, job.RequestID)
 		}
 
@@ -251,16 +251,16 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 						return errors.New("protocol error") // protocol error
 					}
 
-					var resourceTypes []string
+					var workflowTypes []string
 					var workflowVersions []int32
 					for _, cap := range ready.Ready.GetCapabilities() {
-						resourceTypes = append(resourceTypes, cap.GetResourceType())
+						workflowTypes = append(workflowTypes, cap.GetWorkflowType())
 						workflowVersions = append(workflowVersions, cap.GetWorkflowVersion())
 					}
-					log.Debug("client ready, polling for available job", "capabilities", len(resourceTypes))
+					log.Debug("client ready, polling for available job", "capabilities", len(workflowTypes))
 					for {
-						resourceInstID, err := s.jobs.GetAvailableJob(stream.Context(), tenantGroupID, resourceTypes, workflowVersions)
-						if resourceInstID == nil || err != nil {
+						workflowID, err := s.jobs.GetAvailableJob(stream.Context(), tenantGroupID, workflowTypes, workflowVersions)
+						if workflowID == nil || err != nil {
 							if err != nil {
 								log.Error("error polling for available job", "error", err)
 							} else {
@@ -274,12 +274,12 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 							}
 						}
 
-						job, err := s.jobs.AcquireJob(stream.Context(), *resourceInstID, s.id, leaseTime, tenantGroupID)
+						job, err := s.jobs.AcquireJob(stream.Context(), *workflowID, s.id, leaseTime, tenantGroupID)
 						if job == nil || err != nil {
 							if err != nil {
-								log.Error("error acquiring job", "resource_id", *resourceInstID, "error", err)
+								log.Error("error acquiring job", "workflow_id", *workflowID, "error", err)
 							} else {
-								log.Debug("failed to acquire job lease (race), retrying", "resource_id", *resourceInstID)
+								log.Debug("failed to acquire job lease (race), retrying", "workflow_id", *workflowID)
 							}
 							select {
 							case <-stream.Context().Done():
@@ -289,33 +289,33 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 							}
 						}
 
-						log.Info("job acquired", "request_id", job.RequestID, "resource_id", job.ResourceInstanceID, "operation", job.CurrentAtomicOperation)
+						log.Info("job acquired", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "operation", job.CurrentAtomicOperation)
 
 						// periodically re-up the lease
-						go func(resourceInstID *string) {
+						go func(workflowID *string) {
 							ticker := time.NewTicker(leaseWake)
 							defer ticker.Stop()
 							for {
 								select {
 								case <-cancelLease:
-									log.Debug("releasing job lease", "resource_id", *resourceInstID)
-									s.jobs.ReleaseJob(context.Background(), *resourceInstID, s.id)
+									log.Debug("releasing job lease", "workflow_id", *workflowID)
+									s.jobs.ReleaseJob(context.Background(), *workflowID, s.id)
 									return
 								case <-ticker.C:
-									renewed, err := s.jobs.RenewJobLease(stream.Context(), *resourceInstID, s.id, leaseTime)
+									renewed, err := s.jobs.RenewJobLease(stream.Context(), *workflowID, s.id, leaseTime)
 									if !renewed || err != nil {
-										log.Warn("failed to renew job lease, expiring session", "resource_id", *resourceInstID, "error", err)
+										log.Warn("failed to renew job lease, expiring session", "workflow_id", *workflowID, "error", err)
 										select {
 										case leaseExpired <- true:
 										case <-stream.Context().Done():
 										}
 										return
 									}
-									log.Debug("job lease renewed", "resource_id", *resourceInstID)
+									log.Debug("job lease renewed", "workflow_id", *workflowID)
 									ticker.Reset(leaseWake)
 								}
 							}
-						}(resourceInstID)
+						}(workflowID)
 
 						resolveBranch := func(branch *domain.ApprovalBranch, label string) bool {
 							if branch != nil {
@@ -377,9 +377,9 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 								Launch: &boundflowv1.LaunchOperation{
 									Operation: &boundflowv1.AtomicOperation{
 										Id:              job.RequestID,
-										ResourceId:      job.ResourceInstanceID,
+										WorkflowId:      job.WorkflowID,
 										OperationType:   job.JobType,
-										ResourceType:    job.ResourceType,
+										WorkflowType:    job.WorkflowType,
 										Context:         contextStruct,
 										Name:            job.CurrentAtomicOperation,
 										TimeoutSeconds:  int32(job.RuntimeParams.OperationTimeoutSeconds),
@@ -427,7 +427,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 						return errors.New("unexpected status from client")
 					}
 					log.Info("client acked IN_PROGRESS, marking job running", "request_id", currentJob.RequestID)
-					updated, err := s.jobs.UpdateJobStatus(stream.Context(), currentJob.ResourceInstanceID, s.id, domain.JobStatusRunning)
+					updated, err := s.jobs.UpdateJobStatus(stream.Context(), currentJob.WorkflowID, s.id, domain.JobStatusRunning)
 					if err != nil {
 						log.Error("failed to mark job running", "request_id", currentJob.RequestID, "error", err)
 						return err
@@ -463,7 +463,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 						}
 						switch update.Update.Result.Status {
 						case boundflowv1.OperationStatus_OPERATION_STATUS_COMPLETED:
-							log.Info("operation completed", "request_id", currentJob.RequestID, "resource_id", currentJob.ResourceInstanceID)
+							log.Info("operation completed", "request_id", currentJob.RequestID, "workflow_id", currentJob.WorkflowID)
 							completeOperation(cancelLease, currentJob, update.Update.Result)
 						case boundflowv1.OperationStatus_OPERATION_STATUS_FAILED:
 							log.Warn("operation failed by client", "request_id", currentJob.RequestID)

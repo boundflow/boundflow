@@ -115,11 +115,11 @@ func (*WorkerMessage_Ready) isWorkerMessage_Payload() {}
 
 func (*WorkerMessage_Update) isWorkerMessage_Payload() {}
 
-// WorkerCapability declares a (resource_type, workflow_version) pair
+// WorkerCapability declares a (workflow_type, workflow_version) pair
 // that the worker has a registered handler for.
 type WorkerCapability struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
-	ResourceType    string                 `protobuf:"bytes,1,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
+	WorkflowType    string                 `protobuf:"bytes,1,opt,name=workflow_type,json=workflowType,proto3" json:"workflow_type,omitempty"`
 	WorkflowVersion int32                  `protobuf:"varint,2,opt,name=workflow_version,json=workflowVersion,proto3" json:"workflow_version,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
@@ -155,9 +155,9 @@ func (*WorkerCapability) Descriptor() ([]byte, []int) {
 	return file_boundflow_v1_worker_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *WorkerCapability) GetResourceType() string {
+func (x *WorkerCapability) GetWorkflowType() string {
 	if x != nil {
-		return x.ResourceType
+		return x.WorkflowType
 	}
 	return ""
 }
@@ -454,7 +454,7 @@ const file_boundflow_v1_worker_proto_rawDesc = "" +
 	"\x06update\x18\x03 \x01(\v2\x1d.boundflow.v1.OperationUpdateH\x00R\x06updateB\t\n" +
 	"\apayload\"b\n" +
 	"\x10WorkerCapability\x12#\n" +
-	"\rresource_type\x18\x01 \x01(\tR\fresourceType\x12)\n" +
+	"\rworkflow_type\x18\x01 \x01(\tR\fworkflowType\x12)\n" +
 	"\x10workflow_version\x18\x02 \x01(\x05R\x0fworkflowVersion\"R\n" +
 	"\fReadyForWork\x12B\n" +
 	"\fcapabilities\x18\x01 \x03(\v2\x1e.boundflow.v1.WorkerCapabilityR\fcapabilities\"q\n" +

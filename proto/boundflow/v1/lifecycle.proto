@@ -5,13 +5,13 @@ package boundflow.v1;
 option go_package = "github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1";
 
 import "google/protobuf/struct.proto";
-import "boundflow/v1/resource_instance.proto";
+import "boundflow/v1/workflow.proto";
 
-service ResourceLifecycleService {
-  rpc CreateResource(CreateResourceRequest) returns (CreateResourceResponse);
-  rpc ReconcileResource(ReconcileResourceRequest) returns (ReconcileResourceResponse);
-  rpc DeleteResource(DeleteResourceRequest) returns (DeleteResourceResponse);
-  rpc GetResourceState(GetResourceStateRequest) returns (GetResourceStateResponse);
+service WorkflowService {
+  rpc CreateWorkflow(CreateWorkflowRequest) returns (CreateWorkflowResponse);
+  rpc InvokeWorkflow(InvokeWorkflowRequest) returns (InvokeWorkflowResponse);
+  rpc DeleteWorkflow(DeleteWorkflowRequest) returns (DeleteWorkflowResponse);
+  rpc GetWorkflow(GetWorkflowRequest) returns (GetWorkflowResponse);
 
   rpc SetAgentRuntimePolicy(SetAgentRuntimePolicyRequest) returns (SetAgentRuntimePolicyResponse);
   rpc SetAgentLifecyclePolicy(SetAgentLifecyclePolicyRequest) returns (SetAgentLifecyclePolicyResponse);
@@ -23,54 +23,54 @@ service ResourceLifecycleService {
   rpc ActivateWorkflow(ActivateWorkflowRequest) returns (ActivateWorkflowResponse);
 }
 
-message CreateResourceRequest {
+message CreateWorkflowRequest {
   string correlation_id = 1;
-  string resource_type = 2;
+  string workflow_type = 2;
   string tenant_id = 3;
-  google.protobuf.Struct initial_state = 4;
+  reserved 4; // was: initial_state (unused customer-state blob, removed with ConvergePlane cleanup)
   // Deprecated: use workflow_config.invoke_timeout_seconds instead.
   int32 operation_timeout_seconds = 5;
   WorkflowConfig workflow_config = 6;
 }
 
-message CreateResourceResponse {
-  ResourceInstance resource_instance = 1;
+message CreateWorkflowResponse {
+  Workflow workflow = 1;
 }
 
 message RuntimeOverrides {
   int32 operation_timeout_seconds = 2;
 }
 
-message ReconcileResourceRequest {
+message InvokeWorkflowRequest {
   string correlation_id = 1;
-  string resource_instance_id = 2;
+  string workflow_id = 2;
   RuntimeOverrides runtime_overrides = 3;
 }
 
-message ReconcileResourceResponse {
+message InvokeWorkflowResponse {
   string request_id = 1;
 }
 
-message DeleteResourceRequest {
+message DeleteWorkflowRequest {
   string correlation_id = 1;
-  string resource_instance_id = 2;
+  string workflow_id = 2;
   int32 operation_timeout_seconds = 3;
 }
 
-message DeleteResourceResponse {
+message DeleteWorkflowResponse {
   string request_id = 1;
 }
 
-message GetResourceStateRequest {
-  string resource_instance_id = 1;
+message GetWorkflowRequest {
+  string workflow_id = 1;
 }
 
-message GetResourceStateResponse {
-  ResourceInstance resource_instance = 1;
+message GetWorkflowResponse {
+  Workflow workflow = 1;
 }
 
 message SetAgentRuntimePolicyRequest {
-  string resource_instance_id = 1;
+  string workflow_id = 1;
   string agent_name            = 2;
   // Serialised AgentRuntimePolicy JSON.
   google.protobuf.Struct runtime_policy = 3;
@@ -79,7 +79,7 @@ message SetAgentRuntimePolicyRequest {
 message SetAgentRuntimePolicyResponse {}
 
 message SetAgentLifecyclePolicyRequest {
-  string resource_instance_id = 1;
+  string workflow_id = 1;
   string agent_name            = 2;
   // Serialised AgentLifecyclePolicy JSON.
   google.protobuf.Struct lifecycle_policy = 3;
@@ -88,7 +88,7 @@ message SetAgentLifecyclePolicyRequest {
 message SetAgentLifecyclePolicyResponse {}
 
 message DeleteAgentRequest {
-  string resource_instance_id = 1;
+  string workflow_id = 1;
   string agent_name            = 2;
 }
 
@@ -134,28 +134,28 @@ message WorkflowLifecyclePolicy {
 }
 
 message SetWorkflowLifecyclePolicyRequest {
-  string resource_instance_id = 1;
+  string workflow_id = 1;
   WorkflowLifecyclePolicy lifecycle_policy = 2;
 }
 
 message SetWorkflowLifecyclePolicyResponse {}
 
 message ApproveWorkflowRequest {
-  string resource_instance_id = 1;
+  string workflow_id = 1;
   string approval_id          = 2;
 }
 
 message ApproveWorkflowResponse {}
 
 message RejectWorkflowRequest {
-  string resource_instance_id = 1;
+  string workflow_id = 1;
   string approval_id          = 2;
 }
 
 message RejectWorkflowResponse {}
 
 message ActivateWorkflowRequest {
-  string resource_instance_id = 1;
+  string workflow_id = 1;
 }
 
 message ActivateWorkflowResponse {}

@@ -49,7 +49,7 @@ type WorkflowInvocationSnapshot struct {
 }
 
 type WorkflowVersionMetrics struct {
-	ResourceInstanceID      string
+	WorkflowID      string
 	Version                 int
 	Epoch                   int
 	TotalCost               float64

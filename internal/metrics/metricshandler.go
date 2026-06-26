@@ -12,14 +12,14 @@ import (
 )
 
 type MetricsHandler struct {
-	workflow       storage.ResourceInstanceRepository
+	workflow       storage.WorkflowRepository
 	agentState     storage.AgentStateRepository
 	versionMetrics storage.VersionMetricsRepository
 	metrics        storage.MetricsRepository
 	log            *slog.Logger
 }
 
-func NewMetricsHandler(workflow storage.ResourceInstanceRepository, agentState storage.AgentStateRepository, versionMetrics storage.VersionMetricsRepository, metrics storage.MetricsRepository, log *slog.Logger) *MetricsHandler {
+func NewMetricsHandler(workflow storage.WorkflowRepository, agentState storage.AgentStateRepository, versionMetrics storage.VersionMetricsRepository, metrics storage.MetricsRepository, log *slog.Logger) *MetricsHandler {
 	return &MetricsHandler{
 		workflow:       workflow,
 		agentState:     agentState,
@@ -29,18 +29,18 @@ func NewMetricsHandler(workflow storage.ResourceInstanceRepository, agentState s
 	}
 }
 
-func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, invocationMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics, workflow *domain.ResourceInstance) (error, *domain.WorkflowVersionMetrics) {
+func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, invocationMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics, workflow *domain.Workflow) (error, *domain.WorkflowVersionMetrics) {
 
 	workFlowId := workflow.ID
 
 	versionMetrics, err := m.versionMetrics.GetCurrentVersionMetrics(ctx, workFlowId, workflow.CurrentWorkflowVersion)
 	if err != nil {
-		m.log.Error("get current version metrics", "resource_id", workFlowId, "error", err)
+		m.log.Error("get current version metrics", "workflow_id", workFlowId, "error", err)
 		return err, nil
 	}
 	if versionMetrics == nil {
 		versionMetrics = &domain.WorkflowVersionMetrics{
-			ResourceInstanceID: workFlowId,
+			WorkflowID: workFlowId,
 			Version:            workflow.CurrentWorkflowVersion,
 			Epoch:              1,
 			ToolFailureCounts:  map[string]int{},
@@ -50,9 +50,9 @@ func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, invocationMetri
 		versionMetrics.ToolFailureCounts = map[string]int{}
 	}
 
-	agentStates, err := m.agentState.GetAllForResource(ctx, workFlowId)
+	agentStates, err := m.agentState.GetAllForWorkflow(ctx, workFlowId)
 	if err != nil {
-		m.log.Error("get agent states", "resource_id", workFlowId, "error", err)
+		m.log.Error("get agent states", "workflow_id", workFlowId, "error", err)
 		return err, nil
 	}
 
@@ -70,7 +70,7 @@ func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, invocationMetri
 			st.InvocationMetrics = append(st.InvocationMetrics, metrics)
 		} else {
 			agentStates[agent] = &domain.AgentState{
-				ResourceInstanceID: workFlowId,
+				WorkflowID: workFlowId,
 				AgentName:          agent,
 				InvocationMetrics:  []*boundflowv1.AgentInvocationMetrics{metrics},
 			}
@@ -125,11 +125,11 @@ func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, invocationMetri
 
 	applied, err := m.metrics.EmitMetrics(ctx, workFlowId, workflow.CurrentVersion, workflow.InvocationMetrics, versionMetrics, agentMetrics)
 	if err != nil {
-		m.log.Error("emit metrics", "resource_id", workFlowId, "error", err)
+		m.log.Error("emit metrics", "workflow_id", workFlowId, "error", err)
 		return err, nil
 	}
 	if !applied {
-		m.log.Debug("metrics already emitted for this run, skipping", "resource_id", workFlowId, "version", workflow.CurrentVersion)
+		m.log.Debug("metrics already emitted for this run, skipping", "workflow_id", workFlowId, "version", workflow.CurrentVersion)
 	}
 	return nil, versionMetrics
 }

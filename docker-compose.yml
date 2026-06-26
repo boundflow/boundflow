@@ -59,7 +59,6 @@ services:
     environment:
       BOUNDFLOW_DATABASE_URL: postgres://boundflow:boundflow@postgres:5432/boundflow?sslmode=disable
       BOUNDFLOW_WORKER_GRPC_PORT: "50052"
-      BOUNDFLOW_NUM_WORKERS: "1"
       BOUNDFLOW_LOG_LEVEL: info
     ports:
       - "50052:50052"

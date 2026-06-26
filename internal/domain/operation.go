@@ -14,7 +14,7 @@ const (
 
 type AtomicOperation struct {
 	ID            string
-	ResourceID    string
+	WorkflowID    string
 	OperationType string
 	Context       OperationContext
 	NextOperation *AtomicOperation

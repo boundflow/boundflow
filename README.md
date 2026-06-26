@@ -14,6 +14,7 @@ key, running in your worker. The backend never sees it and never pays for tokens
 
 - **Backend** — open source (Apache-2.0), self-hostable as a container.
 - **Python SDK** — open source (MIT), `pip install boundflow`.
+- **BoundFlow Cloud** — prefer not to self-host? Managed hosting, invite-based — see [below](#hosted-boundflow-cloud).
 
 ---
 
@@ -105,7 +106,7 @@ database. Your SDK worker connects over gRPC and runs the actual agents.
 ## Core concepts
 
 - **Workflow** — the managed entity. Belongs to a tenant, has a type + version,
-  and moves through lifecycle states (`active → reconciling → awaiting_approval → …`).
+  and moves through lifecycle states (`active → invoking → awaiting_approval → …`).
 - **Agent** — a named LLM executor inside an operation handler: a model, system
   prompt, tool callbacks, and an output schema. Metrics are collected per run.
 - **Approval gate** — a workflow can pause mid-execution for a human to approve or
@@ -135,20 +136,41 @@ async def triage(ctx):
     return Complete()
 ```
 
-Governance is applied from the control plane — e.g. cap a run's cost:
+Governance is applied from the control plane — three layers, from a per-run cap
+to self-healing version rollback:
 
 ```python
+from boundflow import (
+    RuntimePolicy, AgentRule, AgentMetric, Op, SetModel,
+    WorkflowRule, WorkflowMetric, SetVersion,
+)
+
+# 1. Runtime — a hard cap enforced *during* every run:
 await cp.set_agent_runtime_policy(wf.id, "analyst", RuntimePolicy(max_cost_usd=0.25))
+
+# 2. Agent lifecycle — after runs, downgrade the model if cost trends high:
+await cp.set_agent_lifecycle_policy(wf.id, "analyst", [
+    AgentRule(metric=AgentMetric.COST_USD, op=Op.GT, threshold=0.20, window=5,
+              action=SetModel(value="claude-haiku-4-5")),
+])
+
+# 3. Workflow lifecycle — after repeated failures, roll the whole workflow back
+#    to a known-good version automatically:
+await cp.set_workflow_lifecycle_policy(wf.id, [
+    WorkflowRule(metric=WorkflowMetric.NUM_FAILURES, threshold=3,
+                 action=SetVersion(target=1)),
+])
 ```
 
-See [`sdk/python/boundflow/examples/`](sdk/python/boundflow/examples/) for runnable examples.
+Workflow rules can also `Pause` a workflow or put it on `Cooldown` instead of
+rolling back. See [`sdk/python/boundflow/examples/`](sdk/python/boundflow/examples/) for runnable examples.
 
 ---
 
 ## Configuration
 
 Backend (env vars, all `BOUNDFLOW_*`): `DATABASE_URL`, `GRPC_PORT` (server),
-`WORKER_GRPC_PORT` (worker), `NUM_PARTITIONS`, `NUM_WORKERS`, `JOB_TIMEOUT_SECS`,
+`WORKER_GRPC_PORT` (worker), `NUM_PARTITIONS` (scheduler), `JOB_TIMEOUT_SECS`,
 `LOG_LEVEL`, `DEBUG`.
 
 SDK: `BOUNDFLOW_API_KEY`, `BOUNDFLOW_SERVER_ADDRESS` / `BOUNDFLOW_WORKER_ADDRESS`
@@ -179,6 +201,18 @@ BOUNDFLOW_API_KEY=<provisioned key> pytest        # mock-LLM suite, no Anthropic
 See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full setup, proto workflow, and
 PR guidelines. CI runs the Go + mock-LLM suites on every PR; real-LLM tests run
 nightly.
+
+---
+
+## Hosted: BoundFlow Cloud
+
+Don't want to run or manage the control plane yourself? **BoundFlow Cloud** is a
+fully managed deployment — same gRPC API, same `pip install boundflow` SDK, hosted
+and kept current. Inference stays bring-your-own, so your Anthropic key and token
+spend remain yours; we just run the control plane.
+
+It's invite-based while we onboard early users — **[reach out](mailto:arjunvlama1@gmail.com)**
+for an API key.
 
 ---
 

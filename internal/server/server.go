@@ -55,7 +55,7 @@ func New(cfg *config.ServerConfig, regSvc *service.RegistrationService, lifecycl
 	)
 
 	boundflowv1.RegisterRegistrationServiceServer(grpcServer, handlers.NewRegistrationHandler(regSvc))
-	boundflowv1.RegisterResourceLifecycleServiceServer(grpcServer, handlers.NewResourceLifecycleHandler(lifecycleSvc))
+	boundflowv1.RegisterWorkflowServiceServer(grpcServer, handlers.NewWorkflowServiceHandler(lifecycleSvc))
 
 	if debug {
 		reflection.Register(grpcServer)

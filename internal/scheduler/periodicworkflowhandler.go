@@ -48,19 +48,19 @@ func (r *PeriodicWorkflowHandler) Run(ctx context.Context, partitionID string) e
 	for {
 		select {
 		case <-ticker.C:
-			workflows, err := r.schedulerRepo.GetDuePeriodicResources(ctx, partitionID)
+			workflows, err := r.schedulerRepo.GetDuePeriodicWorkflows(ctx, partitionID)
 			if err != nil {
-				r.log.Error("failed to get due periodic resources", "partition_id", partitionID, "error", err)
+				r.log.Error("failed to get due periodic workflows", "partition_id", partitionID, "error", err)
 				continue
 			}
 			var wg sync.WaitGroup
 			for _, wf := range workflows {
 				wg.Add(1)
-				go func(wf *domain.ResourceInstance) {
+				go func(wf *domain.Workflow) {
 					defer wg.Done()
 					err := r.createPeriodicRequest(ctx, wf)
 					if err != nil {
-						r.log.Error("failed to create periodic request", "resource_id", wf.ID, "error", err)
+						r.log.Error("failed to create periodic request", "workflow_id", wf.ID, "error", err)
 					}
 				}(wf)
 			}
@@ -71,7 +71,7 @@ func (r *PeriodicWorkflowHandler) Run(ctx context.Context, partitionID string) e
 	}
 }
 
-func (r *PeriodicWorkflowHandler) createPeriodicRequest(ctx context.Context, workflow *domain.ResourceInstance) error {
+func (r *PeriodicWorkflowHandler) createPeriodicRequest(ctx context.Context, workflow *domain.Workflow) error {
 
 	correlationID := uuid.New().String()
 
@@ -81,40 +81,40 @@ func (r *PeriodicWorkflowHandler) createPeriodicRequest(ctx context.Context, wor
 
 	err := r.lifecycle.ResolveRuntimeParams(domain.WorkflowRuntimeParams{}, workflow, false, requestInfo)
 	if err != nil {
-		r.log.Error("failed to resolve runtime params", "correlation_id", correlationID, "resource_id", workflow.ID, "error", err)
+		r.log.Error("failed to resolve runtime params", "correlation_id", correlationID, "workflow_id", workflow.ID, "error", err)
 		return err
 	}
 
 	err = r.lifecycle.ResolveAgentRuntimeParams(ctx, workflow.ID, requestInfo)
 	if err != nil {
-		r.log.Error("failed to resolve agent runtime params", "correlation_id", correlationID, "resource_id", workflow.ID, "error", err)
+		r.log.Error("failed to resolve agent runtime params", "correlation_id", correlationID, "workflow_id", workflow.ID, "error", err)
 		return err
 	}
 
 	request := domain.CustomerRequest{
 		ID:                 uuid.New().String(),
-		ResourceInstanceID: workflow.ID,
+		WorkflowID: workflow.ID,
 		Status:             domain.CustomerRequestStatusUnscheduled,
-		RequestType:        domain.CustomerRequestTypeReconcile,
+		RequestType:        domain.CustomerRequestTypeInvoke,
 		RequestInfo:        requestInfo,
 	}
 
 	// Atomically guards (gap + no in-flight request + valid state), allocates the version,
-	// flips to reconciling, and inserts — all-or-nothing.
+	// flips to invoking, and inserts — all-or-nothing.
 	ver, created, err := r.requests.CreateDuePeriodicRequest(ctx, &request,
 		time.Duration(workflow.WorkflowConfig.RepeatEverySeconds)*time.Second,
 		[]domain.LifecycleState{domain.LifecycleStateDeleting, domain.LifecycleStateDeleted})
 	if err != nil {
-		r.log.Error("failed to create periodic request", "correlation_id", correlationID, "resource_id", workflow.ID, "error", err)
+		r.log.Error("failed to create periodic request", "correlation_id", correlationID, "workflow_id", workflow.ID, "error", err)
 		return err
 	}
 
 	if !created {
-		r.log.Debug("periodic request not created (gap not elapsed or request already in flight)", "correlation_id", correlationID, "resource_id", workflow.ID)
+		r.log.Debug("periodic request not created (gap not elapsed or request already in flight)", "correlation_id", correlationID, "workflow_id", workflow.ID)
 		return nil
 	}
 
-	r.log.Info("reconcile request created, attempting immediate schedule", "correlation_id", correlationID, "resource_id", workflow.ID, "request_id", request.ID, "version", ver)
+	r.log.Info("invoke request created, attempting immediate schedule", "correlation_id", correlationID, "workflow_id", workflow.ID, "request_id", request.ID, "version", ver)
 	if err := r.scheduler.ScheduleRequest(ctx, request.ID); err != nil {
 		r.log.Warn("immediate schedule failed, scheduler will retry", "request_id", request.ID, "error", err)
 	}

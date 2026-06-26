@@ -22,29 +22,29 @@ func NewLifecycleResolverRepo(pool *pgxpool.Pool) *LifecycleResolverRepo {
 	return &LifecycleResolverRepo{pool: pool}
 }
 
-func (r *LifecycleResolverRepo) GetExpiredCooldownResources(ctx context.Context, partitionID string) ([]*domain.ResourceInstance, error) {
+func (r *LifecycleResolverRepo) GetExpiredCooldownWorkflows(ctx context.Context, partitionID string) ([]*domain.Workflow, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT id, tenant_id, resource_type,
+		SELECT id, tenant_id, workflow_type,
 		       invoke_timeout_seconds, repeat_every_seconds, triggerable,
 		       lifecycle_state, workflow_state, lifecycle_policy, invocation_metrics, cooldown_until,
 		       lifecycle_last_resolved, current_workflow_version, scheduler_partition_id,
 		       target_version, current_version, last_completed_request_at, created_at
-		FROM resource_instances
+		FROM workflows
 		WHERE scheduler_partition_id = $1
 		  AND workflow_state = 'cooldown'
 		  AND cooldown_until <= now()
 	`, partitionID)
 	if err != nil {
-		return nil, fmt.Errorf("query expired cooldown resources: %w", err)
+		return nil, fmt.Errorf("query expired cooldown workflows: %w", err)
 	}
 	defer rows.Close()
 
-	var instances []*domain.ResourceInstance
+	var instances []*domain.Workflow
 	for rows.Next() {
-		var inst domain.ResourceInstance
+		var inst domain.Workflow
 		var lifecyclePolicyJSON, invocationMetricsJSON []byte
 		if err := rows.Scan(
-			&inst.ID, &inst.TenantID, &inst.ResourceType,
+			&inst.ID, &inst.TenantID, &inst.WorkflowType,
 			&inst.WorkflowConfig.InvokeTimeoutSeconds,
 			&inst.WorkflowConfig.RepeatEverySeconds,
 			&inst.WorkflowConfig.Triggerable,
@@ -54,7 +54,7 @@ func (r *LifecycleResolverRepo) GetExpiredCooldownResources(ctx context.Context,
 			&inst.TargetVersion, &inst.CurrentVersion,
 			&inst.LastCompletedRequestAt, &inst.CreatedAt,
 		); err != nil {
-			return nil, fmt.Errorf("scan resource instance: %w", err)
+			return nil, fmt.Errorf("scan workflow instance: %w", err)
 		}
 		if err := json.Unmarshal(lifecyclePolicyJSON, &inst.LifecyclePolicy); err != nil {
 			return nil, fmt.Errorf("unmarshal lifecycle_policy: %w", err)
@@ -75,7 +75,7 @@ func (r *LifecycleResolverRepo) GetExpiredCooldownResources(ctx context.Context,
 // no longer in cooldown (or not yet expired) at write time is skipped. Returns the IDs resumed.
 func (r *LifecycleResolverRepo) ExpireCooldowns(ctx context.Context, partitionID string) ([]string, error) {
 	rows, err := r.pool.Query(ctx, `
-		UPDATE resource_instances
+		UPDATE workflows
 		SET workflow_state = 'active',
 		    cooldown_until = NULL
 		WHERE scheduler_partition_id = $1
@@ -99,10 +99,10 @@ func (r *LifecycleResolverRepo) ExpireCooldowns(ctx context.Context, partitionID
 	return ids, rows.Err()
 }
 
-func (r *LifecycleResolverRepo) TryApplyPolicyResolution(ctx context.Context, resourceInstanceID string, resolved int64, workflowVersion int, workflowState domain.WorkflowState, cooldownUntil *time.Time) (bool, error) {
+func (r *LifecycleResolverRepo) TryApplyPolicyResolution(ctx context.Context, workflowID string, resolved int64, workflowVersion int, workflowState domain.WorkflowState, cooldownUntil *time.Time) (bool, error) {
 	var updatedID string
 	err := r.pool.QueryRow(ctx, `
-		UPDATE resource_instances
+		UPDATE workflows
 		SET lifecycle_last_resolved  = $2,
 		    current_workflow_version = $3,
 		    workflow_state           = $4,
@@ -110,7 +110,7 @@ func (r *LifecycleResolverRepo) TryApplyPolicyResolution(ctx context.Context, re
 		WHERE id = $1
 		  AND lifecycle_last_resolved < $2
 		RETURNING id
-	`, resourceInstanceID, resolved, workflowVersion, workflowState, cooldownUntil).Scan(&updatedID)
+	`, workflowID, resolved, workflowVersion, workflowState, cooldownUntil).Scan(&updatedID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil
