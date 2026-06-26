@@ -3,11 +3,11 @@ package convert
 import (
 	"google.golang.org/protobuf/types/known/durationpb"
 
-	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
-	"github.com/convergeplane/convergeplane/internal/domain"
+	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
+	"github.com/boundflow/boundflow/internal/domain"
 )
 
-func PolicySetFromProto(pb *convergeplanev1.PolicySet) domain.PolicySet {
+func PolicySetFromProto(pb *boundflowv1.PolicySet) domain.PolicySet {
 	if pb == nil {
 		return domain.PolicySet{}
 	}
@@ -62,29 +62,29 @@ func PolicySetFromProto(pb *convergeplanev1.PolicySet) domain.PolicySet {
 	return ps
 }
 
-func PolicySetToProto(ps domain.PolicySet) *convergeplanev1.PolicySet {
-	pb := &convergeplanev1.PolicySet{
-		Concurrency: &convergeplanev1.ConcurrencyPolicy{
+func PolicySetToProto(ps domain.PolicySet) *boundflowv1.PolicySet {
+	pb := &boundflowv1.PolicySet{
+		Concurrency: &boundflowv1.ConcurrencyPolicy{
 			MaxConcurrentOperations: ps.Concurrency.MaxConcurrentOperations,
 		},
-		Failure: &convergeplanev1.FailurePolicy{
+		Failure: &boundflowv1.FailurePolicy{
 			EnableRollback: ps.Failure.EnableRollback,
-			Retry: &convergeplanev1.RetryPolicy{
+			Retry: &boundflowv1.RetryPolicy{
 				MaxRetries:        ps.Failure.Retry.MaxRetries,
 				InitialBackoff:    durationpb.New(ps.Failure.Retry.InitialBackoff),
 				MaxBackoff:        durationpb.New(ps.Failure.Retry.MaxBackoff),
 				BackoffMultiplier: ps.Failure.Retry.BackoffMultiplier,
 			},
 		},
-		MaintenanceWindow: &convergeplanev1.MaintenanceWindowPolicy{},
-		Upgrade: &convergeplanev1.UpgradePolicy{
+		MaintenanceWindow: &boundflowv1.MaintenanceWindowPolicy{},
+		Upgrade: &boundflowv1.UpgradePolicy{
 			AutoPause: ps.Upgrade.AutoPause,
 			BakeTime:  durationpb.New(ps.Upgrade.BakeTime),
 		},
 	}
 
 	for _, w := range ps.MaintenanceWindow.Windows {
-		pb.MaintenanceWindow.Windows = append(pb.MaintenanceWindow.Windows, &convergeplanev1.MaintenanceWindow{
+		pb.MaintenanceWindow.Windows = append(pb.MaintenanceWindow.Windows, &boundflowv1.MaintenanceWindow{
 			CronExpression: w.CronExpression,
 			Duration:       durationpb.New(w.Duration),
 		})

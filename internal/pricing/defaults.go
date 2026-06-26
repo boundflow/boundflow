@@ -4,7 +4,7 @@
 // only does the merge.
 package pricing
 
-import "github.com/convergeplane/convergeplane/internal/domain"
+import "github.com/boundflow/boundflow/internal/domain"
 
 // Effective merges a tenant group's overrides over the global defaults, keyed by
 // model ID. An override replaces a default for the same model; a model that only

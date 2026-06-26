@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
-	"github.com/convergeplane/convergeplane/internal/auth"
-	"github.com/convergeplane/convergeplane/internal/domain"
-	"github.com/convergeplane/convergeplane/internal/rpcworker"
-	"github.com/convergeplane/convergeplane/internal/storage/mocks"
+	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
+	"github.com/boundflow/boundflow/internal/auth"
+	"github.com/boundflow/boundflow/internal/domain"
+	"github.com/boundflow/boundflow/internal/rpcworker"
+	"github.com/boundflow/boundflow/internal/storage/mocks"
 	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc/metadata"
 )
@@ -19,25 +19,25 @@ import (
 // ---- stream mock ----
 
 type recvResult struct {
-	msg *convergeplanev1.WorkerMessage
+	msg *boundflowv1.WorkerMessage
 	err error
 }
 
 type mockStream struct {
 	ctx    context.Context
 	recvCh chan recvResult
-	sendCh chan *convergeplanev1.ServerCommand
+	sendCh chan *boundflowv1.ServerCommand
 }
 
 func newMockStream(ctx context.Context) *mockStream {
 	return &mockStream{
 		ctx:    auth.WithTenantGroup(ctx, testTenantGroupID),
 		recvCh: make(chan recvResult, 10),
-		sendCh: make(chan *convergeplanev1.ServerCommand, 10),
+		sendCh: make(chan *boundflowv1.ServerCommand, 10),
 	}
 }
 
-func (m *mockStream) Recv() (*convergeplanev1.WorkerMessage, error) {
+func (m *mockStream) Recv() (*boundflowv1.WorkerMessage, error) {
 	select {
 	case r := <-m.recvCh:
 		return r.msg, r.err
@@ -46,7 +46,7 @@ func (m *mockStream) Recv() (*convergeplanev1.WorkerMessage, error) {
 	}
 }
 
-func (m *mockStream) Send(cmd *convergeplanev1.ServerCommand) error {
+func (m *mockStream) Send(cmd *boundflowv1.ServerCommand) error {
 	m.sendCh <- cmd
 	return nil
 }
@@ -58,17 +58,17 @@ func (m *mockStream) SetTrailer(metadata.MD)       {}
 func (m *mockStream) SendMsg(any) error            { return nil }
 func (m *mockStream) RecvMsg(any) error            { return nil }
 
-func (m *mockStream) push(msg *convergeplanev1.WorkerMessage) {
+func (m *mockStream) push(msg *boundflowv1.WorkerMessage) {
 	m.recvCh <- recvResult{msg: msg}
 }
 
 // ---- message helpers ----
 
-func readyMsg() *convergeplanev1.WorkerMessage {
-	return &convergeplanev1.WorkerMessage{
-		Payload: &convergeplanev1.WorkerMessage_Ready{
-			Ready: &convergeplanev1.ReadyForWork{
-				Capabilities: []*convergeplanev1.WorkerCapability{
+func readyMsg() *boundflowv1.WorkerMessage {
+	return &boundflowv1.WorkerMessage{
+		Payload: &boundflowv1.WorkerMessage_Ready{
+			Ready: &boundflowv1.ReadyForWork{
+				Capabilities: []*boundflowv1.WorkerCapability{
 					{ResourceType: testResourceType, WorkflowVersion: testWorkflowVersion},
 				},
 			},
@@ -76,12 +76,12 @@ func readyMsg() *convergeplanev1.WorkerMessage {
 	}
 }
 
-func updateMsg(opID string, status convergeplanev1.OperationStatus) *convergeplanev1.WorkerMessage {
-	return &convergeplanev1.WorkerMessage{
-		Payload: &convergeplanev1.WorkerMessage_Update{
-			Update: &convergeplanev1.OperationUpdate{
+func updateMsg(opID string, status boundflowv1.OperationStatus) *boundflowv1.WorkerMessage {
+	return &boundflowv1.WorkerMessage{
+		Payload: &boundflowv1.WorkerMessage_Update{
+			Update: &boundflowv1.OperationUpdate{
 				OperationId: opID,
-				Result: &convergeplanev1.AtomicOperationResult{
+				Result: &boundflowv1.AtomicOperationResult{
 					Status: status,
 				},
 			},
@@ -121,9 +121,9 @@ func (m *mockScheduler) MarkAwaitingApproval(_ context.Context, _ string) error 
 
 type mockMetrics struct{}
 
-func (m *mockMetrics) MergeAgentMetrics(opMetrics map[string]*convergeplanev1.AgentInvocationMetrics, jobMetrics *map[string]*convergeplanev1.AgentInvocationMetrics) {
+func (m *mockMetrics) MergeAgentMetrics(opMetrics map[string]*boundflowv1.AgentInvocationMetrics, jobMetrics *map[string]*boundflowv1.AgentInvocationMetrics) {
 	if *jobMetrics == nil {
-		*jobMetrics = map[string]*convergeplanev1.AgentInvocationMetrics{}
+		*jobMetrics = map[string]*boundflowv1.AgentInvocationMetrics{}
 	}
 	for k, v := range opMetrics {
 		(*jobMetrics)[k] = v
@@ -203,7 +203,7 @@ func driveToConnectedBusy(t *testing.T, jobRepo *mocks.MockJobRepository, stream
 		t.Fatal("expected LaunchOperation from server")
 	}
 
-	stream.push(updateMsg(testRequestID, convergeplanev1.OperationStatus_OPERATION_STATUS_IN_PROGRESS))
+	stream.push(updateMsg(testRequestID, boundflowv1.OperationStatus_OPERATION_STATUS_IN_PROGRESS))
 	<-runningSet
 }
 
@@ -232,7 +232,7 @@ func TestWorkerSession_ProtocolError_NonReadyInIdle(t *testing.T) {
 	stream := newMockStream(ctx)
 	errCh := runSession(worker, stream)
 
-	stream.push(updateMsg(testRequestID, convergeplanev1.OperationStatus_OPERATION_STATUS_IN_PROGRESS))
+	stream.push(updateMsg(testRequestID, boundflowv1.OperationStatus_OPERATION_STATUS_IN_PROGRESS))
 
 	// WorkerSession returns nil (inner goroutine error is not propagated), but the
 	// session should terminate and no job repo calls should be made.
@@ -338,8 +338,8 @@ func TestWorkerSession_CompleteOperation(t *testing.T) {
 		t.Errorf("operation id: got %q, want %q", got, testRequestID)
 	}
 
-	stream.push(updateMsg(testRequestID, convergeplanev1.OperationStatus_OPERATION_STATUS_IN_PROGRESS))
-	stream.push(updateMsg(testRequestID, convergeplanev1.OperationStatus_OPERATION_STATUS_COMPLETED))
+	stream.push(updateMsg(testRequestID, boundflowv1.OperationStatus_OPERATION_STATUS_IN_PROGRESS))
+	stream.push(updateMsg(testRequestID, boundflowv1.OperationStatus_OPERATION_STATUS_COMPLETED))
 
 	assertReceived(t, sched.completeCh, testRequestID, "CompleteRequest")
 
@@ -365,8 +365,8 @@ func TestWorkerSession_FailOperation(t *testing.T) {
 
 	stream.push(readyMsg())
 	<-stream.sendCh // LaunchOperation
-	stream.push(updateMsg(testRequestID, convergeplanev1.OperationStatus_OPERATION_STATUS_IN_PROGRESS))
-	stream.push(updateMsg(testRequestID, convergeplanev1.OperationStatus_OPERATION_STATUS_FAILED))
+	stream.push(updateMsg(testRequestID, boundflowv1.OperationStatus_OPERATION_STATUS_IN_PROGRESS))
+	stream.push(updateMsg(testRequestID, boundflowv1.OperationStatus_OPERATION_STATUS_FAILED))
 
 	assertReceived(t, sched.failCh, testRequestID, "FailRequest")
 
@@ -419,7 +419,7 @@ func TestWorkerSession_ConnectedWaiting_WrongOperationId(t *testing.T) {
 	stream.push(readyMsg())
 	<-stream.sendCh // LaunchOperation
 
-	stream.push(updateMsg("wrong-op-id", convergeplanev1.OperationStatus_OPERATION_STATUS_IN_PROGRESS))
+	stream.push(updateMsg("wrong-op-id", boundflowv1.OperationStatus_OPERATION_STATUS_IN_PROGRESS))
 
 	select {
 	case <-errCh:
@@ -444,7 +444,7 @@ func TestWorkerSession_ConnectedWaiting_UnexpectedStatus(t *testing.T) {
 	<-stream.sendCh // LaunchOperation
 
 	// Send COMPLETED before IN_PROGRESS — unexpected
-	stream.push(updateMsg(testRequestID, convergeplanev1.OperationStatus_OPERATION_STATUS_COMPLETED))
+	stream.push(updateMsg(testRequestID, boundflowv1.OperationStatus_OPERATION_STATUS_COMPLETED))
 
 	select {
 	case <-errCh:
@@ -468,7 +468,7 @@ func TestWorkerSession_ConnectedBusy_WrongOperationId(t *testing.T) {
 
 	driveToConnectedBusy(t, jobRepo, stream)
 
-	stream.push(updateMsg("wrong-op-id", convergeplanev1.OperationStatus_OPERATION_STATUS_COMPLETED))
+	stream.push(updateMsg("wrong-op-id", boundflowv1.OperationStatus_OPERATION_STATUS_COMPLETED))
 
 	assertReceived(t, sched.failCh, testRequestID, "FailRequest")
 

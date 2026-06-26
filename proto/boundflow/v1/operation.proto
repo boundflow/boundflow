@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package boundflow.v1;
+
+option go_package = "github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1";
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+message AtomicOperation {
+  string id = 1;
+  string resource_id = 2;
+  string operation_type = 3;
+  string name = 4;
+  google.protobuf.Struct context = 5;
+  google.protobuf.Timestamp created_at = 6;
+  int32 timeout_seconds = 7;
+  string resource_type = 8;
+  int32 workflow_version = 9;
+}
+
+message ApprovalGate {
+  // null means Complete (terminal) for that branch.
+  AtomicOperation on_approve = 1;
+  AtomicOperation on_reject  = 2;
+  int32 timeout_seconds      = 3;
+  string approval_id         = 4;
+}
+
+message AtomicOperationResult {
+  OperationStatus status = 1;
+  string message = 2;
+  AtomicOperation next_operation = 3;
+  // Per-agent invocation metrics observed during this operation, keyed by agent name.
+  map<string, AgentInvocationMetrics> agent_state_updates = 4;
+  ApprovalGate approval_gate = 5;
+  // Workflow-level metrics the customer emits for this operation (e.g. a failed run).
+  // Accumulated across the job's operations and folded into the rolling snapshot.
+  WorkflowInvocationMetrics workflow_metrics = 6;
+}
+
+// WorkflowInvocationMetrics holds workflow-level (non-agent) metrics the customer
+// reports for an operation. A customer failure is a completed operation from
+// BoundFlow's perspective that simply reports failures here.
+message WorkflowInvocationMetrics {
+  optional int32 failures = 1;
+}
+
+// AgentInvocationMetrics holds the metrics a single agent emitted during one operation.
+// Every field is optional: a null value means the agent did not emit that metric this run
+// (distinct from emitting a zero), so windowed policy evaluation can skip non-emitting runs.
+message AgentInvocationMetrics {
+  optional double cost_usd            = 1;
+  optional int32  llm_calls           = 2;
+  optional int32  tokens_used         = 3;
+  optional double latency_seconds     = 5;
+  optional int32  failures            = 6;
+  optional int32  approval_rejections = 7;
+  map<string, int32> tool_failure_counts = 8;
+  // Per-tool call counts for this run, keyed by tool name. Empty = no tools called.
+  map<string, int32> calls_per_tool = 10;
+  // Unix milliseconds when this agent run occurred. Always set (used to order history).
+  int64 ran_at = 9;
+}
+
+enum OperationStatus {
+  OPERATION_STATUS_UNSPECIFIED = 0;
+  OPERATION_STATUS_IN_PROGRESS = 1;
+  OPERATION_STATUS_COMPLETED   = 2;
+  OPERATION_STATUS_FAILED      = 3;
+  OPERATION_STATUS_CANCELLED   = 4;
+}

@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package boundflow.v1;
+
+option go_package = "github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1";
+
+import "google/protobuf/timestamp.proto";
+import "boundflow/v1/policy.proto";
+
+message Tenant {
+  string id = 1;
+  string name = 2;
+  optional string tenant_group_id = 3;
+  PolicySet policy_overrides = 4;
+  google.protobuf.Timestamp created_at = 5;
+}

@@ -1,0 +1,65 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main, boundflow]
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    name: Go (build, vet, test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go build ./...
+      - run: go vet ./...
+      - run: go test ./...
+
+  python:
+    name: Python SDK (integration)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Build + start the backend (postgres + server + scheduler + worker).
+      # --wait blocks until postgres is healthy and migrate has completed.
+      - name: Start backend
+        run: docker compose up -d --build --wait
+
+      - name: Wait for gRPC ports
+        run: timeout 60 bash -c 'until nc -z localhost 50051 && nc -z localhost 50052; do sleep 1; done'
+
+      - name: Provision an API key
+        id: provision
+        run: |
+          key=$(docker compose run --rm server -mode=provision -name=ci | awk '/^api_key[[:space:]]+:/{print $NF}')
+          test -n "$key"  # fail fast if provisioning didn't return a key
+          echo "::add-mask::$key"
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install SDK + test deps
+        working-directory: sdk/python
+        run: pip install -e ".[dev]"
+
+      # Mock-LLM suite only — free, deterministic, no API key. The ~10 tests that
+      # need a real model skip here (no ANTHROPIC_API_KEY); they run in test-live.yml.
+      - name: Run tests
+        working-directory: sdk/python
+        env:
+          BOUNDFLOW_API_KEY: ${{ steps.provision.outputs.key }}
+        run: python -m pytest -v
+
+      - name: Backend logs on failure
+        if: failure()
+        run: docker compose logs --tail 100 server scheduler worker

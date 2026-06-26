@@ -3,7 +3,7 @@ package scheduler
 import (
 	"log/slog"
 
-	"github.com/convergeplane/convergeplane/internal/domain"
+	"github.com/boundflow/boundflow/internal/domain"
 )
 
 type LifecyclePolicyEngine struct {

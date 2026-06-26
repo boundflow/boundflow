@@ -13,13 +13,13 @@ proto:
 # Python-only regeneration. Use a single grpcio-tools version (the sdk dev extra
 # pins grpcio-tools>=1.81.0) so the generated stubs' version stamps stay aligned.
 proto-python:
-	python -m grpc_tools.protoc -I proto --python_out=sdk/python --grpc_python_out=sdk/python proto/convergeplane/v1/*.proto
+	python -m grpc_tools.protoc -I proto --python_out=sdk/python --grpc_python_out=sdk/python proto/boundflow/v1/*.proto
 
 build:
-	go build -o bin/convergeplane ./cmd/convergeplane
+	go build -o bin/boundflow ./cmd/boundflow
 
 run: build
-	./bin/convergeplane
+	./bin/boundflow
 
 test:
 	go test ./...
@@ -34,7 +34,7 @@ lint:
 	buf lint
 	golangci-lint run ./...
 
-DB_URL ?= postgres://localhost:5432/convergeplane?sslmode=disable
+DB_URL ?= postgres://localhost:5432/boundflow?sslmode=disable
 MIGRATIONS_DIR := migrations
 
 db-start:
@@ -44,7 +44,7 @@ db-stop:
 	pg_ctl -D /usr/local/var/postgres stop
 
 db-create:
-	psql postgres -c "CREATE DATABASE convergeplane;"
+	psql postgres -c "CREATE DATABASE boundflow;"
 
 db-migrate:
 	migrate -path $(MIGRATIONS_DIR) -database "$(DB_URL)" up

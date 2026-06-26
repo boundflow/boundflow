@@ -7,8 +7,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
-	"github.com/convergeplane/convergeplane/internal/domain"
+	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
+	"github.com/boundflow/boundflow/internal/domain"
 )
 
 type AgentStateRepo struct {
@@ -49,7 +49,7 @@ func (r *AgentStateRepo) UpsertLifecyclePolicy(ctx context.Context, resourceInst
 	return err
 }
 
-func (r *AgentStateRepo) UpdateMetrics(ctx context.Context, resourceInstanceID, agentName string, metrics []*convergeplanev1.AgentInvocationMetrics) error {
+func (r *AgentStateRepo) UpdateMetrics(ctx context.Context, resourceInstanceID, agentName string, metrics []*boundflowv1.AgentInvocationMetrics) error {
 	metricsJSON, err := json.Marshal(metrics)
 	if err != nil {
 		return fmt.Errorf("marshal metrics: %w", err)

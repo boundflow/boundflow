@@ -1,11 +1,11 @@
 package handlers
 
 import (
-	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
+	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
 )
 
 type WorkerHandler struct {
-	convergeplanev1.UnimplementedWorkerServiceServer
+	boundflowv1.UnimplementedWorkerServiceServer
 }
 
 func NewWorkerHandler() *WorkerHandler {

@@ -5,11 +5,11 @@ import (
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
-	"github.com/convergeplane/convergeplane/internal/domain"
+	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
+	"github.com/boundflow/boundflow/internal/domain"
 )
 
-func TenantGroupFromProto(pb *convergeplanev1.TenantGroup) (*domain.TenantGroup, error) {
+func TenantGroupFromProto(pb *boundflowv1.TenantGroup) (*domain.TenantGroup, error) {
 	if pb == nil {
 		return nil, fmt.Errorf("tenant_group is required")
 	}
@@ -23,8 +23,8 @@ func TenantGroupFromProto(pb *convergeplanev1.TenantGroup) (*domain.TenantGroup,
 	}, nil
 }
 
-func TenantGroupToProto(g *domain.TenantGroup) *convergeplanev1.TenantGroup {
-	return &convergeplanev1.TenantGroup{
+func TenantGroupToProto(g *domain.TenantGroup) *boundflowv1.TenantGroup {
+	return &boundflowv1.TenantGroup{
 		Id:        g.ID,
 		Name:      g.Name,
 		Policies:  PolicySetToProto(g.Policies),

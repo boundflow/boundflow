@@ -10,8 +10,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
-	"github.com/convergeplane/convergeplane/internal/domain"
+	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
+	"github.com/boundflow/boundflow/internal/domain"
 )
 
 type JobRepo struct {
@@ -121,7 +121,7 @@ func (r *JobRepo) UpdateJobStatus(ctx context.Context, resourceInstanceID string
 	return tag.RowsAffected() == 1, nil
 }
 
-func (r *JobRepo) UpdateJobStatusWithMetrics(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
+func (r *JobRepo) UpdateJobStatusWithMetrics(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
 	agentMetricsJSON, err := json.Marshal(agentMetrics)
 	if err != nil {
 		return false, fmt.Errorf("marshal agent metrics: %w", err)
@@ -141,7 +141,7 @@ func (r *JobRepo) UpdateJobStatusWithMetrics(ctx context.Context, resourceInstan
 	return tag.RowsAffected() == 1, nil
 }
 
-func (r *JobRepo) GetJobMetrics(ctx context.Context, resourceInstanceID string, requestID string) (map[string]*convergeplanev1.AgentInvocationMetrics, domain.WorkflowJobMetrics, error) {
+func (r *JobRepo) GetJobMetrics(ctx context.Context, resourceInstanceID string, requestID string) (map[string]*boundflowv1.AgentInvocationMetrics, domain.WorkflowJobMetrics, error) {
 	var agentMetricsJSON, workflowMetricsJSON []byte
 	err := r.pool.QueryRow(ctx,
 		`SELECT agent_metrics, workflow_metrics FROM jobs WHERE resource_instance_id = $1 AND request_id = $2`,
@@ -154,7 +154,7 @@ func (r *JobRepo) GetJobMetrics(ctx context.Context, resourceInstanceID string, 
 		return nil, domain.WorkflowJobMetrics{}, fmt.Errorf("get job metrics: %w", err)
 	}
 
-	var agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics
+	var agentMetrics map[string]*boundflowv1.AgentInvocationMetrics
 	if err := json.Unmarshal(agentMetricsJSON, &agentMetrics); err != nil {
 		return nil, domain.WorkflowJobMetrics{}, fmt.Errorf("unmarshal agent metrics: %w", err)
 	}
@@ -191,7 +191,7 @@ func (r *JobRepo) ResolveApproval(ctx context.Context, resourceInstanceID string
 	return true, nil
 }
 
-func (r *JobRepo) ParkForApproval(ctx context.Context, resourceInstanceID string, ownerID string, approvalID string, timeoutAt time.Time, metadata domain.JobMetadata, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
+func (r *JobRepo) ParkForApproval(ctx context.Context, resourceInstanceID string, ownerID string, approvalID string, timeoutAt time.Time, metadata domain.JobMetadata, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
 	metadataJSON, err := json.Marshal(metadata)
 	if err != nil {
 		return false, fmt.Errorf("marshal job metadata: %w", err)
@@ -250,7 +250,7 @@ func (r *JobRepo) UpdateJob(ctx context.Context, resourceInstanceID string, owne
 	return tag.RowsAffected() == 1, nil
 }
 
-func (r *JobRepo) UpdateJobWithMetrics(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any, agentMetrics map[string]*convergeplanev1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
+func (r *JobRepo) UpdateJobWithMetrics(ctx context.Context, resourceInstanceID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
 	contextJSON, err := json.Marshal(jobContext)
 	if err != nil {
 		return false, fmt.Errorf("marshal job context: %w", err)

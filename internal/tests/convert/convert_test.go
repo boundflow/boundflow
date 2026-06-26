@@ -5,9 +5,9 @@ import (
 
 	"google.golang.org/protobuf/types/known/structpb"
 
-	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
-	"github.com/convergeplane/convergeplane/internal/convert"
-	"github.com/convergeplane/convergeplane/internal/domain"
+	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
+	"github.com/boundflow/boundflow/internal/convert"
+	"github.com/boundflow/boundflow/internal/domain"
 )
 
 func TestResourceStateFromProto(t *testing.T) {
@@ -35,7 +35,7 @@ func TestResourceStateFromProto(t *testing.T) {
 
 func TestTenantGroupFromProto(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
-		group, err := convert.TenantGroupFromProto(&convergeplanev1.TenantGroup{Name: "prod"})
+		group, err := convert.TenantGroupFromProto(&boundflowv1.TenantGroup{Name: "prod"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -52,7 +52,7 @@ func TestTenantGroupFromProto(t *testing.T) {
 	})
 
 	t.Run("missing name", func(t *testing.T) {
-		_, err := convert.TenantGroupFromProto(&convergeplanev1.TenantGroup{})
+		_, err := convert.TenantGroupFromProto(&boundflowv1.TenantGroup{})
 		if err == nil {
 			t.Fatal("expected error for missing name")
 		}
@@ -76,7 +76,7 @@ func TestTenantGroupToProto(t *testing.T) {
 func TestTenantFromProto(t *testing.T) {
 	t.Run("valid with tenant_group_id", func(t *testing.T) {
 		gid := "group-1"
-		tenant, err := convert.TenantFromProto(&convergeplanev1.Tenant{
+		tenant, err := convert.TenantFromProto(&boundflowv1.Tenant{
 			Name:          "acme",
 			TenantGroupId: &gid,
 		})
@@ -92,7 +92,7 @@ func TestTenantFromProto(t *testing.T) {
 	})
 
 	t.Run("valid without tenant_group_id", func(t *testing.T) {
-		tenant, err := convert.TenantFromProto(&convergeplanev1.Tenant{Name: "acme"})
+		tenant, err := convert.TenantFromProto(&boundflowv1.Tenant{Name: "acme"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -109,7 +109,7 @@ func TestTenantFromProto(t *testing.T) {
 	})
 
 	t.Run("missing name", func(t *testing.T) {
-		_, err := convert.TenantFromProto(&convergeplanev1.Tenant{})
+		_, err := convert.TenantFromProto(&boundflowv1.Tenant{})
 		if err == nil {
 			t.Fatal("expected error for missing name")
 		}

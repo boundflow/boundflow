@@ -12,7 +12,7 @@ import (
 	"os"
 	"time"
 
-	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
+	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -31,7 +31,7 @@ func main() {
 	}
 	defer conn.Close()
 
-	client := convergeplanev1.NewWorkerServiceClient(conn)
+	client := boundflowv1.NewWorkerServiceClient(conn)
 
 	for {
 		if err := runSession(client, log); err != nil {
@@ -44,7 +44,7 @@ func main() {
 	}
 }
 
-func runSession(client convergeplanev1.WorkerServiceClient, log *slog.Logger) error {
+func runSession(client boundflowv1.WorkerServiceClient, log *slog.Logger) error {
 	ctx := context.Background()
 
 	stream, err := client.WorkerSession(ctx)
@@ -53,9 +53,9 @@ func runSession(client convergeplanev1.WorkerServiceClient, log *slog.Logger) er
 	}
 
 	log.Info("stream opened, sending ReadyForWork")
-	if err := stream.Send(&convergeplanev1.WorkerMessage{
-		Payload: &convergeplanev1.WorkerMessage_Ready{
-			Ready: &convergeplanev1.ReadyForWork{},
+	if err := stream.Send(&boundflowv1.WorkerMessage{
+		Payload: &boundflowv1.WorkerMessage_Ready{
+			Ready: &boundflowv1.ReadyForWork{},
 		},
 	}); err != nil {
 		return fmt.Errorf("send ReadyForWork: %w", err)
@@ -71,7 +71,7 @@ func runSession(client convergeplanev1.WorkerServiceClient, log *slog.Logger) er
 		}
 
 		switch p := cmd.Payload.(type) {
-		case *convergeplanev1.ServerCommand_Launch:
+		case *boundflowv1.ServerCommand_Launch:
 			op := p.Launch.GetOperation()
 			log.Info("received LaunchOperation",
 				"operation_id", op.GetId(),
@@ -82,12 +82,12 @@ func runSession(client convergeplanev1.WorkerServiceClient, log *slog.Logger) er
 			)
 
 			// Ack with IN_PROGRESS
-			if err := stream.Send(&convergeplanev1.WorkerMessage{
-				Payload: &convergeplanev1.WorkerMessage_Update{
-					Update: &convergeplanev1.OperationUpdate{
+			if err := stream.Send(&boundflowv1.WorkerMessage{
+				Payload: &boundflowv1.WorkerMessage_Update{
+					Update: &boundflowv1.OperationUpdate{
 						OperationId: op.GetId(),
-						Result: &convergeplanev1.AtomicOperationResult{
-							Status: convergeplanev1.OperationStatus_OPERATION_STATUS_IN_PROGRESS,
+						Result: &boundflowv1.AtomicOperationResult{
+							Status: boundflowv1.OperationStatus_OPERATION_STATUS_IN_PROGRESS,
 						},
 					},
 				},
@@ -99,12 +99,12 @@ func runSession(client convergeplanev1.WorkerServiceClient, log *slog.Logger) er
 			time.Sleep(sleepDuration)
 
 			// Mark complete
-			if err := stream.Send(&convergeplanev1.WorkerMessage{
-				Payload: &convergeplanev1.WorkerMessage_Update{
-					Update: &convergeplanev1.OperationUpdate{
+			if err := stream.Send(&boundflowv1.WorkerMessage{
+				Payload: &boundflowv1.WorkerMessage_Update{
+					Update: &boundflowv1.OperationUpdate{
 						OperationId: op.GetId(),
-						Result: &convergeplanev1.AtomicOperationResult{
-							Status: convergeplanev1.OperationStatus_OPERATION_STATUS_COMPLETED,
+						Result: &boundflowv1.AtomicOperationResult{
+							Status: boundflowv1.OperationStatus_OPERATION_STATUS_COMPLETED,
 						},
 					},
 				},
@@ -112,32 +112,32 @@ func runSession(client convergeplanev1.WorkerServiceClient, log *slog.Logger) er
 				return fmt.Errorf("send COMPLETED: %w", err)
 			}
 			log.Info("sent COMPLETED, signalling ready for next job", "operation_id", op.GetId())
-			if err := stream.Send(&convergeplanev1.WorkerMessage{
-				Payload: &convergeplanev1.WorkerMessage_Ready{
-					Ready: &convergeplanev1.ReadyForWork{},
+			if err := stream.Send(&boundflowv1.WorkerMessage{
+				Payload: &boundflowv1.WorkerMessage_Ready{
+					Ready: &boundflowv1.ReadyForWork{},
 				},
 			}); err != nil {
 				return fmt.Errorf("send ReadyForWork: %w", err)
 			}
 
-		case *convergeplanev1.ServerCommand_Cancel:
+		case *boundflowv1.ServerCommand_Cancel:
 			opID := p.Cancel.GetOperationId()
 			log.Warn("received CancelOperation, acking with CANCELLED", "operation_id", opID)
-			if err := stream.Send(&convergeplanev1.WorkerMessage{
-				Payload: &convergeplanev1.WorkerMessage_Update{
-					Update: &convergeplanev1.OperationUpdate{
+			if err := stream.Send(&boundflowv1.WorkerMessage{
+				Payload: &boundflowv1.WorkerMessage_Update{
+					Update: &boundflowv1.OperationUpdate{
 						OperationId: opID,
-						Result: &convergeplanev1.AtomicOperationResult{
-							Status: convergeplanev1.OperationStatus_OPERATION_STATUS_CANCELLED,
+						Result: &boundflowv1.AtomicOperationResult{
+							Status: boundflowv1.OperationStatus_OPERATION_STATUS_CANCELLED,
 						},
 					},
 				},
 			}); err != nil {
 				return fmt.Errorf("send CANCELLED: %w", err)
 			}
-			if err := stream.Send(&convergeplanev1.WorkerMessage{
-				Payload: &convergeplanev1.WorkerMessage_Ready{
-					Ready: &convergeplanev1.ReadyForWork{},
+			if err := stream.Send(&boundflowv1.WorkerMessage{
+				Payload: &boundflowv1.WorkerMessage_Ready{
+					Ready: &boundflowv1.ReadyForWork{},
 				},
 			}); err != nil {
 				return fmt.Errorf("send ReadyForWork after cancel: %w", err)

@@ -31,18 +31,18 @@ type WorkerConfig struct {
 func loadBase() BaseConfig {
 	base := BaseConfig{
 		LogLevel:    "info",
-		DatabaseURL: "postgres://localhost:5432/convergeplane?sslmode=disable",
+		DatabaseURL: "postgres://localhost:5432/boundflow?sslmode=disable",
 	}
-	if v := os.Getenv("CONVERGEPLANE_LOG_LEVEL"); v != "" {
+	if v := os.Getenv("BOUNDFLOW_LOG_LEVEL"); v != "" {
 		base.LogLevel = v
 	}
-	if v := os.Getenv("CONVERGEPLANE_DATABASE_URL"); v != "" {
+	if v := os.Getenv("BOUNDFLOW_DATABASE_URL"); v != "" {
 		base.DatabaseURL = v
 	}
-	if os.Getenv("CONVERGEPLANE_DEBUG") == "true" {
+	if os.Getenv("BOUNDFLOW_DEBUG") == "true" {
 		base.Debug = true
 	}
-	if v := os.Getenv("CONVERGEPLANE_NUM_PARTITIONS"); v != "" {
+	if v := os.Getenv("BOUNDFLOW_NUM_PARTITIONS"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			base.NumPartitions = n
 		}
@@ -55,7 +55,7 @@ func LoadServer() *ServerConfig {
 		BaseConfig: loadBase(),
 		GRPCPort:   50051,
 	}
-	if v := os.Getenv("CONVERGEPLANE_GRPC_PORT"); v != "" {
+	if v := os.Getenv("BOUNDFLOW_GRPC_PORT"); v != "" {
 		if port, err := strconv.Atoi(v); err == nil {
 			cfg.GRPCPort = port
 		}
@@ -76,17 +76,17 @@ func LoadWorker() *WorkerConfig {
 		WorkerGRPCPort: 50052,
 		JobTimeoutSecs: 300,
 	}
-	if v := os.Getenv("CONVERGEPLANE_NUM_WORKERS"); v != "" {
+	if v := os.Getenv("BOUNDFLOW_NUM_WORKERS"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			cfg.NumWorkers = n
 		}
 	}
-	if v := os.Getenv("CONVERGEPLANE_WORKER_GRPC_PORT"); v != "" {
+	if v := os.Getenv("BOUNDFLOW_WORKER_GRPC_PORT"); v != "" {
 		if port, err := strconv.Atoi(v); err == nil {
 			cfg.WorkerGRPCPort = port
 		}
 	}
-	if v := os.Getenv("CONVERGEPLANE_JOB_TIMEOUT_SECS"); v != "" {
+	if v := os.Getenv("BOUNDFLOW_JOB_TIMEOUT_SECS"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			cfg.JobTimeoutSecs = n
 		}

@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"testing"
 
-	convergeplanev1 "github.com/convergeplane/convergeplane/gen/convergeplane/v1"
-	"github.com/convergeplane/convergeplane/internal/metrics"
+	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
+	"github.com/boundflow/boundflow/internal/metrics"
 )
 
 func i32(v int32) *int32     { return &v }
@@ -18,8 +18,8 @@ func newTestHandler() *metrics.MetricsHandler {
 
 func TestMergeAgentMetrics_CarriesFreshIntoEmpty(t *testing.T) {
 	h := newTestHandler()
-	job := map[string]*convergeplanev1.AgentInvocationMetrics{}
-	op := map[string]*convergeplanev1.AgentInvocationMetrics{
+	job := map[string]*boundflowv1.AgentInvocationMetrics{}
+	op := map[string]*boundflowv1.AgentInvocationMetrics{
 		"a": {CostUsd: f64(1.5), LlmCalls: i32(2)},
 	}
 
@@ -36,10 +36,10 @@ func TestMergeAgentMetrics_CarriesFreshIntoEmpty(t *testing.T) {
 
 func TestMergeAgentMetrics_SumsExistingAgent(t *testing.T) {
 	h := newTestHandler()
-	job := map[string]*convergeplanev1.AgentInvocationMetrics{
+	job := map[string]*boundflowv1.AgentInvocationMetrics{
 		"a": {CostUsd: f64(1), LlmCalls: i32(3), ToolFailureCounts: map[string]int32{"x": 1}},
 	}
-	op := map[string]*convergeplanev1.AgentInvocationMetrics{
+	op := map[string]*boundflowv1.AgentInvocationMetrics{
 		"a": {CostUsd: f64(2), LlmCalls: i32(4), ToolFailureCounts: map[string]int32{"x": 2, "y": 5}},
 	}
 
@@ -61,10 +61,10 @@ func TestMergeAgentMetrics_NilFieldStaysNil_EmittedCarries(t *testing.T) {
 	h := newTestHandler()
 	// existing emitted only cost; op emits only llm_calls. Result should have both,
 	// and a field neither emitted (failures) must stay nil.
-	job := map[string]*convergeplanev1.AgentInvocationMetrics{
+	job := map[string]*boundflowv1.AgentInvocationMetrics{
 		"a": {CostUsd: f64(1)},
 	}
-	op := map[string]*convergeplanev1.AgentInvocationMetrics{
+	op := map[string]*boundflowv1.AgentInvocationMetrics{
 		"a": {LlmCalls: i32(2)},
 	}
 
@@ -84,8 +84,8 @@ func TestMergeAgentMetrics_NilFieldStaysNil_EmittedCarries(t *testing.T) {
 
 func TestMergeAgentMetrics_NilOpMetricSkipped(t *testing.T) {
 	h := newTestHandler()
-	job := map[string]*convergeplanev1.AgentInvocationMetrics{}
-	op := map[string]*convergeplanev1.AgentInvocationMetrics{"a": nil}
+	job := map[string]*boundflowv1.AgentInvocationMetrics{}
+	op := map[string]*boundflowv1.AgentInvocationMetrics{"a": nil}
 
 	h.MergeAgentMetrics(op, &job)
 
@@ -96,10 +96,10 @@ func TestMergeAgentMetrics_NilOpMetricSkipped(t *testing.T) {
 
 func TestMergeAgentMetrics_MultipleAgentsIndependent(t *testing.T) {
 	h := newTestHandler()
-	job := map[string]*convergeplanev1.AgentInvocationMetrics{
+	job := map[string]*boundflowv1.AgentInvocationMetrics{
 		"a": {CostUsd: f64(1)},
 	}
-	op := map[string]*convergeplanev1.AgentInvocationMetrics{
+	op := map[string]*boundflowv1.AgentInvocationMetrics{
 		"a": {CostUsd: f64(1)},
 		"b": {CostUsd: f64(9)},
 	}

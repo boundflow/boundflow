@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/convergeplane/convergeplane/internal/domain"
-	"github.com/convergeplane/convergeplane/internal/storage"
+	"github.com/boundflow/boundflow/internal/domain"
+	"github.com/boundflow/boundflow/internal/storage"
 )
 
 type LifecycleResolver struct {

@@ -1,5 +1,5 @@
 #!/bin/bash
-# dev.sh — interactive dev runner for convergeplane.
+# dev.sh — interactive dev runner for boundflow.
 # Prompts for config, starts all components, resets DB on start, drops on exit.
 # Usage: ./localrun/dev.sh
 
@@ -20,20 +20,20 @@ prompt() {
 
 # ── Prerequisites ─────────────────────────────────────────────────────────────
 section "Killing existing processes"
-pkill convergeplane 2>/dev/null && info "Killed existing convergeplane processes." || info "No existing processes found."
+pkill boundflow 2>/dev/null && info "Killed existing boundflow processes." || info "No existing processes found."
 sleep 1
 
 section "Checking prerequisites"
 pg_isready -q || die "Postgres is not running."
 command -v migrate &>/dev/null || die "'migrate' not found. Install with: brew install golang-migrate"
-[ -f "./bin/convergeplane" ] || die "Binary not found. Run 'make build' first."
+[ -f "./bin/boundflow" ] || die "Binary not found. Run 'make build' first."
 info "All prerequisites met."
 
 # ── Config prompts ─────────────────────────────────────────────────────────────
 section "Configuration"
 prompt DB_HOST       "DB host"              "localhost"
 prompt DB_PORT       "DB port"              "5432"
-prompt DB_NAME       "DB name"              "convergeplane"
+prompt DB_NAME       "DB name"              "boundflow"
 prompt DB_USER       "DB user"              "$USER"
 prompt SERVER_PORT   "Server gRPC port"     "50051"
 prompt WORKER_PORT   "Worker gRPC port"     "50052"
@@ -66,8 +66,8 @@ PIDS=()
 LOG_DIR="/tmp/cp-dev"
 mkdir -p "$LOG_DIR"
 
-BIN="./bin/convergeplane"
-BASE_ENV="CONVERGEPLANE_DATABASE_URL=$DB_URL CONVERGEPLANE_LOG_LEVEL=$LOG_LEVEL CONVERGEPLANE_DEBUG=true CONVERGEPLANE_NUM_PARTITIONS=$NUM_SCHEDULERS"
+BIN="./bin/boundflow"
+BASE_ENV="BOUNDFLOW_DATABASE_URL=$DB_URL BOUNDFLOW_LOG_LEVEL=$LOG_LEVEL BOUNDFLOW_DEBUG=true BOUNDFLOW_NUM_PARTITIONS=$NUM_SCHEDULERS"
 
 start_proc() {
   local label="$1" mode="$2" log="$3"
@@ -81,7 +81,7 @@ start_proc() {
 section "Starting components"
 
 start_proc "server" "server" "$LOG_DIR/server.log" \
-  CONVERGEPLANE_GRPC_PORT=$SERVER_PORT
+  BOUNDFLOW_GRPC_PORT=$SERVER_PORT
 
 for i in $(seq 1 $NUM_SCHEDULERS); do
   start_proc "scheduler-$i" "scheduler" "$LOG_DIR/scheduler-${i}.log"
@@ -89,7 +89,7 @@ done
 
 for i in $(seq 1 $NUM_WORKERS); do
   start_proc "worker-$i" "worker" "$LOG_DIR/worker-${i}.log" \
-    CONVERGEPLANE_WORKER_GRPC_PORT=$WORKER_PORT
+    BOUNDFLOW_WORKER_GRPC_PORT=$WORKER_PORT
 done
 
 sleep 1
@@ -99,13 +99,13 @@ section "Ready"
 echo -e "Logs:  tail -f $LOG_DIR/*.log"
 echo ""
 echo -e "${CYAN}Create tenant group:${NC}"
-echo "  grpcurl -plaintext -d '{\"tenant_group\":{\"name\":\"test-group\"}}' localhost:$SERVER_PORT convergeplane.v1.RegistrationService/CreateTenantGroup"
+echo "  grpcurl -plaintext -d '{\"tenant_group\":{\"name\":\"test-group\"}}' localhost:$SERVER_PORT boundflow.v1.RegistrationService/CreateTenantGroup"
 echo ""
 echo -e "${CYAN}Create tenant (replace <group-id>):${NC}"
-echo "  grpcurl -plaintext -d '{\"tenant\":{\"tenant_group_id\":\"<group-id>\",\"name\":\"test-tenant\"}}' localhost:$SERVER_PORT convergeplane.v1.RegistrationService/CreateTenant"
+echo "  grpcurl -plaintext -d '{\"tenant\":{\"tenant_group_id\":\"<group-id>\",\"name\":\"test-tenant\"}}' localhost:$SERVER_PORT boundflow.v1.RegistrationService/CreateTenant"
 echo ""
 echo -e "${CYAN}Create resource (replace <tenant-id>):${NC}"
-echo "  grpcurl -plaintext -d '{\"resource_type\":\"database\",\"tenant_id\":\"<tenant-id>\",\"initial_state\":{\"sku\":\"standard\"},\"operation_timeout_seconds\":30}' localhost:$SERVER_PORT convergeplane.v1.ResourceLifecycleService/CreateResource"
+echo "  grpcurl -plaintext -d '{\"resource_type\":\"database\",\"tenant_id\":\"<tenant-id>\",\"initial_state\":{\"sku\":\"standard\"},\"operation_timeout_seconds\":30}' localhost:$SERVER_PORT boundflow.v1.ResourceLifecycleService/CreateResource"
 echo ""
 echo -e "Press ${RED}Ctrl+C${NC} to stop."
 
