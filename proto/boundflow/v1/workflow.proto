@@ -25,6 +25,7 @@ enum WorkflowState {
 // tenant. Managed via the WorkflowService.
 message Workflow {
   string id = 1;
+  string workflow_type = 2;
   string tenant_id = 3;
   google.protobuf.Timestamp created_at = 6;
   WorkflowConfig workflow_config = 8;

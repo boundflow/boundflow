@@ -74,6 +74,18 @@ class WorkflowState(str, Enum):
     DISABLED = "disabled"
 
 
+@dataclass
+class WorkflowSummary:
+    """A lightweight, read-only view of a workflow — what `list_workflows` returns
+    for dashboards/observability. Fetch a single workflow for full detail."""
+    id: str
+    workflow_type: str
+    tenant_id: str
+    lifecycle_state: LifecycleState
+    workflow_state: WorkflowState
+    version: int
+
+
 _LIFECYCLE = {
     "creating": LifecycleState.CREATING,
     "active": LifecycleState.ACTIVE,
@@ -222,6 +234,22 @@ class ControlPlaneClient:
             lc.GetWorkflowRequest(workflow_id=workflow_id),
             metadata=self._metadata)
         return _LIFECYCLE.get(resp.workflow.lifecycle_state, LifecycleState.UNKNOWN)
+
+    async def list_workflows(self) -> list[WorkflowSummary]:
+        """List all workflows owned by this API key's tenant group (newest first)."""
+        resp = await self._lc.ListWorkflows(
+            lc.ListWorkflowsRequest(), metadata=self._metadata)
+        return [
+            WorkflowSummary(
+                id=w.id,
+                workflow_type=w.workflow_type,
+                tenant_id=w.tenant_id,
+                lifecycle_state=_LIFECYCLE.get(w.lifecycle_state, LifecycleState.UNKNOWN),
+                workflow_state=_WF_STATE.get(w.workflow_state, WorkflowState.UNSPECIFIED),
+                version=w.workflow_config.version,
+            )
+            for w in resp.workflows
+        ]
 
     async def approve_workflow(self, workflow_id: str, approval_id: str) -> None:
         await self._lc.ApproveWorkflow(

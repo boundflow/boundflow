@@ -54,6 +54,11 @@ class WorkflowServiceStub:
                 request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowRequest.SerializeToString,
                 response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowResponse.FromString,
                 _registered_method=True)
+        self.ListWorkflows = channel.unary_unary(
+                '/boundflow.v1.WorkflowService/ListWorkflows',
+                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.ListWorkflowsRequest.SerializeToString,
+                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.ListWorkflowsResponse.FromString,
+                _registered_method=True)
         self.SetAgentRuntimePolicy = channel.unary_unary(
                 '/boundflow.v1.WorkflowService/SetAgentRuntimePolicy',
                 request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.SetAgentRuntimePolicyRequest.SerializeToString,
@@ -113,6 +118,12 @@ class WorkflowServiceServicer:
         raise NotImplementedError('Method not implemented!')
 
     def GetWorkflow(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListWorkflows(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -182,6 +193,11 @@ def add_WorkflowServiceServicer_to_server(servicer, server):
                     servicer.GetWorkflow,
                     request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowRequest.FromString,
                     response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowResponse.SerializeToString,
+            ),
+            'ListWorkflows': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListWorkflows,
+                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.ListWorkflowsRequest.FromString,
+                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.ListWorkflowsResponse.SerializeToString,
             ),
             'SetAgentRuntimePolicy': grpc.unary_unary_rpc_method_handler(
                     servicer.SetAgentRuntimePolicy,
@@ -327,6 +343,33 @@ class WorkflowService:
             '/boundflow.v1.WorkflowService/GetWorkflow',
             boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowRequest.SerializeToString,
             boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListWorkflows(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/boundflow.v1.WorkflowService/ListWorkflows',
+            boundflow_dot_v1_dot_lifecycle__pb2.ListWorkflowsRequest.SerializeToString,
+            boundflow_dot_v1_dot_lifecycle__pb2.ListWorkflowsResponse.FromString,
             options,
             channel_credentials,
             insecure,

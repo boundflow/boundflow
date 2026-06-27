@@ -232,6 +232,12 @@ func (s *LifecycleService) GetWorkflow(ctx context.Context, workflowID string) (
 	return s.workflows.Get(ctx, workflowID)
 }
 
+// ListWorkflows returns all workflows owned by the given tenant group, newest first.
+func (s *LifecycleService) ListWorkflows(ctx context.Context, tenantGroupID string) ([]*domain.Workflow, error) {
+	s.log.Debug("listing workflows", "tenant_group_id", tenantGroupID)
+	return s.workflows.ListForTenantGroup(ctx, tenantGroupID)
+}
+
 func (s *LifecycleService) SetAgentRuntimePolicy(ctx context.Context, workflowID, agentName string, policy map[string]any) error {
 	s.log.Info("setting agent runtime policy", "workflow_id", workflowID, "agent", agentName)
 	if err := s.agentStates.UpsertRuntimePolicy(ctx, workflowID, agentName, policy); err != nil {

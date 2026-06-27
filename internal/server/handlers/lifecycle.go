@@ -168,6 +168,27 @@ func (h *WorkflowServiceHandler) GetWorkflow(ctx context.Context, req *boundflow
 	}, nil
 }
 
+// ListWorkflows returns all workflows owned by the caller's tenant group. Scoping
+// is implicit: the API-key auth interceptor injects the tenant group, so a caller
+// can only ever see their own workflows.
+func (h *WorkflowServiceHandler) ListWorkflows(ctx context.Context, _ *boundflowv1.ListWorkflowsRequest) (*boundflowv1.ListWorkflowsResponse, error) {
+	group, err := callerTenantGroup(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	instances, err := h.svc.ListWorkflows(ctx, group)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "list workflows: %v", err)
+	}
+
+	out := make([]*boundflowv1.Workflow, 0, len(instances))
+	for _, instance := range instances {
+		out = append(out, convert.WorkflowToProto(instance))
+	}
+	return &boundflowv1.ListWorkflowsResponse{Workflows: out}, nil
+}
+
 func (h *WorkflowServiceHandler) SetAgentRuntimePolicy(ctx context.Context, req *boundflowv1.SetAgentRuntimePolicyRequest) (*boundflowv1.SetAgentRuntimePolicyResponse, error) {
 	if req.WorkflowId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")

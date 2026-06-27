@@ -221,6 +221,21 @@ func (mr *MockWorkflowRepositoryMockRecorder) Get(ctx, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockWorkflowRepository)(nil).Get), ctx, id)
 }
 
+// ListForTenantGroup mocks base method.
+func (m *MockWorkflowRepository) ListForTenantGroup(ctx context.Context, tenantGroupID string) ([]*domain.Workflow, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListForTenantGroup", ctx, tenantGroupID)
+	ret0, _ := ret[0].([]*domain.Workflow)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListForTenantGroup indicates an expected call of ListForTenantGroup.
+func (mr *MockWorkflowRepositoryMockRecorder) ListForTenantGroup(ctx, tenantGroupID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForTenantGroup", reflect.TypeOf((*MockWorkflowRepository)(nil).ListForTenantGroup), ctx, tenantGroupID)
+}
+
 // IncrementTargetVersion mocks base method.
 func (m *MockWorkflowRepository) IncrementTargetVersion(ctx context.Context, id string) (int64, error) {
 	m.ctrl.T.Helper()
@@ -411,6 +426,20 @@ func NewMockSchedulerPartitionRepository(ctrl *gomock.Controller) *MockScheduler
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockSchedulerPartitionRepository) EXPECT() *MockSchedulerPartitionRepositoryMockRecorder {
 	return m.recorder
+}
+
+// SeedPartitions mocks base method.
+func (m *MockSchedulerPartitionRepository) SeedPartitions(ctx context.Context, numPartitions int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SeedPartitions", ctx, numPartitions)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SeedPartitions indicates an expected call of SeedPartitions.
+func (mr *MockSchedulerPartitionRepositoryMockRecorder) SeedPartitions(ctx, numPartitions any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SeedPartitions", reflect.TypeOf((*MockSchedulerPartitionRepository)(nil).SeedPartitions), ctx, numPartitions)
 }
 
 // AcquireAvailable mocks base method.
