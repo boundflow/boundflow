@@ -58,6 +58,7 @@ services:
     environment:
       BOUNDFLOW_DATABASE_URL: postgres://boundflow:boundflow@postgres:5432/boundflow?sslmode=disable
       BOUNDFLOW_NUM_PARTITIONS: "1"
+      BOUNDFLOW_MAX_PARTITIONS_PER_SCHEDULER: "1"
       BOUNDFLOW_LOG_LEVEL: info
     restart: unless-stopped
     depends_on:
@@ -70,6 +71,7 @@ services:
     environment:
       BOUNDFLOW_DATABASE_URL: postgres://boundflow:boundflow@postgres:5432/boundflow?sslmode=disable
       BOUNDFLOW_WORKER_GRPC_PORT: "50052"
+      BOUNDFLOW_JOB_TIMEOUT_SECS: "300"
       BOUNDFLOW_LOG_LEVEL: info
     ports:
       - "50052:50052"

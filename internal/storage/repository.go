@@ -49,9 +49,7 @@ type WorkflowRepository interface {
 }
 
 type SchedulerPartitionRepository interface {
-	// SeedPartitions creates the partition rows [0, numPartitions) if missing,
-	// making NUM_PARTITIONS the single source of truth for the shard count.
-	// INSERT-only (no resharding); runs once at startup.
+	// SeedPartitions creates partition rows [0, numPartitions) if missing (INSERT-only).
 	SeedPartitions(ctx context.Context, numPartitions int) error
 	// AcquireAvailable atomically claims any partition with no owner or an expired lease.
 	// Returns nil partition (and nil error) if none are available.

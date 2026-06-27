@@ -6,13 +6,10 @@ import (
 )
 
 type BaseConfig struct {
-	LogLevel      string
-	DatabaseURL   string
-	Debug         bool
-	NumPartitions int
-	// MaxPartitionsPerScheduler caps how many partition goroutines one scheduler
-	// process spins up. Defaults to NumPartitions (one scheduler covers the whole
-	// shard space); lower it to spread shards across multiple scheduler replicas.
+	LogLevel                  string
+	DatabaseURL               string
+	Debug                     bool
+	NumPartitions             int
 	MaxPartitionsPerScheduler int
 }
 
@@ -31,71 +28,41 @@ type WorkerConfig struct {
 	JobTimeoutSecs int
 }
 
+// Config is read entirely from the environment — no values are defaulted in Go.
+// Deployments set every var (see docker-compose); each mode validates the vars it
+// requires at startup (see cmd/boundflow), so misconfiguration fails fast.
+
 func loadBase() BaseConfig {
-	base := BaseConfig{
-		LogLevel:      "info",
-		DatabaseURL:   "postgres://localhost:5432/boundflow?sslmode=disable",
-		NumPartitions: 1,
+	return BaseConfig{
+		LogLevel:                  os.Getenv("BOUNDFLOW_LOG_LEVEL"),
+		DatabaseURL:               os.Getenv("BOUNDFLOW_DATABASE_URL"),
+		Debug:                     os.Getenv("BOUNDFLOW_DEBUG") == "true",
+		NumPartitions:             envInt("BOUNDFLOW_NUM_PARTITIONS"),
+		MaxPartitionsPerScheduler: envInt("BOUNDFLOW_MAX_PARTITIONS_PER_SCHEDULER"),
 	}
-	if v := os.Getenv("BOUNDFLOW_LOG_LEVEL"); v != "" {
-		base.LogLevel = v
-	}
-	if v := os.Getenv("BOUNDFLOW_DATABASE_URL"); v != "" {
-		base.DatabaseURL = v
-	}
-	if os.Getenv("BOUNDFLOW_DEBUG") == "true" {
-		base.Debug = true
-	}
-	if v := os.Getenv("BOUNDFLOW_NUM_PARTITIONS"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			base.NumPartitions = n
-		}
-	}
-	// Defaults to NumPartitions (C=N). Set BOUNDFLOW_MAX_PARTITIONS_PER_SCHEDULER
-	// lower than NumPartitions to distribute shards across scheduler replicas.
-	base.MaxPartitionsPerScheduler = base.NumPartitions
-	if v := os.Getenv("BOUNDFLOW_MAX_PARTITIONS_PER_SCHEDULER"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			base.MaxPartitionsPerScheduler = n
-		}
-	}
-	return base
 }
 
 func LoadServer() *ServerConfig {
-	cfg := &ServerConfig{
+	return &ServerConfig{
 		BaseConfig: loadBase(),
-		GRPCPort:   50051,
+		GRPCPort:   envInt("BOUNDFLOW_GRPC_PORT"),
 	}
-	if v := os.Getenv("BOUNDFLOW_GRPC_PORT"); v != "" {
-		if port, err := strconv.Atoi(v); err == nil {
-			cfg.GRPCPort = port
-		}
-	}
-	return cfg
 }
 
 func LoadScheduler() *SchedulerConfig {
-	return &SchedulerConfig{
-		BaseConfig: loadBase(),
-	}
+	return &SchedulerConfig{BaseConfig: loadBase()}
 }
 
 func LoadWorker() *WorkerConfig {
-	cfg := &WorkerConfig{
+	return &WorkerConfig{
 		BaseConfig:     loadBase(),
-		WorkerGRPCPort: 50052,
-		JobTimeoutSecs: 300,
+		WorkerGRPCPort: envInt("BOUNDFLOW_WORKER_GRPC_PORT"),
+		JobTimeoutSecs: envInt("BOUNDFLOW_JOB_TIMEOUT_SECS"),
 	}
-	if v := os.Getenv("BOUNDFLOW_WORKER_GRPC_PORT"); v != "" {
-		if port, err := strconv.Atoi(v); err == nil {
-			cfg.WorkerGRPCPort = port
-		}
-	}
-	if v := os.Getenv("BOUNDFLOW_JOB_TIMEOUT_SECS"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			cfg.JobTimeoutSecs = n
-		}
-	}
-	return cfg
+}
+
+// envInt returns the integer value of key, or 0 if unset or unparseable.
+func envInt(key string) int {
+	n, _ := strconv.Atoi(os.Getenv(key))
+	return n
 }
