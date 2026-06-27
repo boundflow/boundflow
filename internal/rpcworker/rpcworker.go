@@ -178,8 +178,8 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 				},
 			}
 
-			timeoutAt := time.Now().Add(time.Duration(result.ApprovalGate.TimeoutSeconds) * time.Second)
-			parked, err := s.jobs.ParkForApproval(ctx, job.WorkflowID, s.id, result.ApprovalGate.ApprovalId, timeoutAt, jobMetadata, job.AgentMetrics, job.WorkflowMetrics)
+			// opened_at + timeout_at are stamped server-side (DB now()) inside ParkForApproval.
+			parked, err := s.jobs.ParkForApproval(ctx, job.WorkflowID, s.id, result.ApprovalGate.ApprovalId, int(result.ApprovalGate.TimeoutSeconds), jobMetadata, job.AgentMetrics, job.WorkflowMetrics)
 			if err != nil {
 				log.Error("failed to park job for approval", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "error", err)
 				return err
@@ -336,10 +336,10 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 						switch job.Status {
 						case domain.JobStatusApproved:
 							shouldLaunch = resolveBranch(job.JobMetadata.ApprovalGate.OnApprove, "on_approve")
-						case domain.JobStatusRejected, domain.JobStatusAwaitingApproval:
-							// JobStatusAwaitingApproval here means the approval timed out.
-							// Both explicit rejection and timeout converge here — record the
-							// approval rejection so workflow lifecycle policies can act on it.
+						case domain.JobStatusRejected:
+							// Explicit rejection, or a timeout the scheduler already resolved
+							// to rejected. Record the approval rejection so workflow lifecycle
+							// policies can act on it.
 							job.WorkflowMetrics.ApprovalRejections++
 							shouldLaunch = resolveBranch(job.JobMetadata.ApprovalGate.OnReject, "on_reject")
 						case domain.JobStatusAwaitingNext, domain.JobStatusPending:

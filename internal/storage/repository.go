@@ -133,15 +133,29 @@ type JobRepository interface {
 	// GetJobMetrics returns the accumulated per-agent and workflow-level metrics stored on the
 	// job for the given workflow and request. Returns zero values if no such job exists.
 	GetJobMetrics(ctx context.Context, workflowID string, requestID string) (map[string]*boundflowv1.AgentInvocationMetrics, domain.WorkflowJobMetrics, error)
-	// ParkForApproval transitions a job to awaiting_approval, storing the approval ID,
-	// timeout, and job metadata. Only succeeds if ownerID holds the job.
-	// Returns false if ownership check fails.
-	ParkForApproval(ctx context.Context, workflowID string, ownerID string, approvalID string, timeoutAt time.Time, metadata domain.JobMetadata, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error)
+	// ParkForApproval transitions a job to awaiting_approval, storing the approval ID
+	// and job metadata, and stamping approval_opened_at = now() and approval_timeout_at
+	// = now() + timeoutSeconds. Only succeeds if ownerID holds the job.
+	ParkForApproval(ctx context.Context, workflowID string, ownerID string, approvalID string, timeoutSeconds int, metadata domain.JobMetadata, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error)
 	// ResolveApproval transitions a job from awaiting_approval to the given status (approved/rejected),
-	// guarded by approvalID match. Returns false if the ID doesn't match or the job isn't awaiting approval.
-	ResolveApproval(ctx context.Context, workflowID string, approvalID string, status domain.JobStatus) (bool, error)
+	// guarded by approvalID match. Returns false if the ID doesn't match or the job isn't awaiting
+	// approval; on success also returns the job bits needed to write the approval audit row.
+	ResolveApproval(ctx context.Context, workflowID string, approvalID string, status domain.JobStatus) (bool, domain.ResolvedApproval, error)
 	// ReleaseJob clears the owner and lease on a job, only if currently owned by ownerID.
 	ReleaseJob(ctx context.Context, workflowID string, ownerID string) error
+	// SweepExpiredApprovals atomically resolves the partition's approval gates whose
+	// timeout has passed (status awaiting_approval, approval_timeout_at <= now) to
+	// JobStatusRejected, returning the resolved gates so the caller can audit them.
+	SweepExpiredApprovals(ctx context.Context, partitionID string) ([]domain.ExpiredApproval, error)
+}
+
+// AuditRepository is the append-only governance audit log.
+type AuditRepository interface {
+	// Append writes one audit event (Details already marshaled).
+	Append(ctx context.Context, e domain.AuditEvent) error
+	// ListApprovals returns a tenant's approval events, newest first; workflowID and
+	// approvalID are optional filters (empty = no filter).
+	ListApprovals(ctx context.Context, tenantGroupID, workflowID, approvalID string) ([]domain.AuditEvent, error)
 }
 
 type AgentStateRepository interface {

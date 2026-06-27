@@ -282,10 +282,14 @@ class BoundFlowWorker:
             result = await handler(ctx)
             _op_end = now_ms()
 
-            if self._trace_sink is not None:
-                await self._emit_operation_trace(op, ctx, result, _op_start, _op_end)
+            # Mint the approval id once when the gate opens, so the trace's correlation
+            # id matches the one sent to the server (and recorded in the audit log).
+            approval_id = t.new_approval_id() if isinstance(result, AwaitApproval) else None
 
-            proto = await self._to_proto(result, op)
+            if self._trace_sink is not None:
+                await self._emit_operation_trace(op, ctx, result, _op_start, _op_end, approval_id)
+
+            proto = await self._to_proto(result, op, approval_id)
             for name, snap in ctx.agent_state_updates.items():
                 proto.agent_state_updates[name].CopyFrom(t.metrics_to_proto(snap))
             if ctx.failed:
@@ -295,10 +299,12 @@ class BoundFlowWorker:
         capabilities = list(self._workflows.keys())
         await t.WorkerSession(self._address, self._api_key, capabilities).run(dispatch)
 
-    async def _emit_operation_trace(self, op, ctx, result, start_ms: int, end_ms: int) -> None:
+    async def _emit_operation_trace(self, op, ctx, result, start_ms: int, end_ms: int, approval_id: str | None = None) -> None:
         """Build the operation trace (its agent runs + outcome) and hand it to the
         sink. Tracing is best-effort: a sink failure is logged and dropped, never
-        fatal to the run. All operations of one invocation share trace_id (= op.id)."""
+        fatal to the run. All operations of one invocation share trace_id (= op.id).
+        When the operation parks for approval, approval_id is the key to correlate
+        this trace with the server-side approval audit (GetApprovalAudit)."""
         outcome = (OUTCOME_AWAIT_APPROVAL if isinstance(result, AwaitApproval)
                    else OUTCOME_NEXT if isinstance(result, Next)
                    else OUTCOME_COMPLETED)
@@ -314,12 +320,15 @@ class BoundFlowWorker:
                 start_ms=start_ms,
                 end_ms=end_ms,
                 agent_runs=ctx._agent_runs,
+                approval_id=approval_id,
             ))
         except Exception:  # noqa: BLE001 — tracing is best-effort, never fatal
             log.exception("trace sink emit failed; dropping operation trace %s", op.name)
 
-    async def _to_proto(self, result: OperationResult, op):
-        """Map an OperationResult to an AtomicOperationResult proto."""
+    async def _to_proto(self, result: OperationResult, op, approval_id: str | None = None):
+        """Map an OperationResult to an AtomicOperationResult proto. approval_id, when
+        the result is an AwaitApproval, is the id minted by the caller (shared with
+        the trace) rather than minted here."""
         from . import _transport as t
         from boundflow.v1 import operation_pb2 as op_pb
 
@@ -343,7 +352,8 @@ class BoundFlowWorker:
                     context=t.dict_to_struct(result.context)))
 
         if isinstance(result, AwaitApproval):
-            approval_id = t.new_approval_id()
+            if approval_id is None:
+                approval_id = t.new_approval_id()
             if self._on_approval is not None:
                 await self._on_approval(ApprovalRequest(
                     workflow_id=op.workflow_id, operation_name=op.name,

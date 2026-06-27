@@ -157,11 +157,11 @@ func (s *Scheduler) runPartition(ctx context.Context, partition *domain.Schedule
 	}
 }
 
-func (s *Scheduler) ApproveJob(ctx context.Context, workflowID string, approvalID string) (bool, error) {
+func (s *Scheduler) ApproveJob(ctx context.Context, workflowID string, approvalID string) (bool, domain.ResolvedApproval, error) {
 	return s.jobs.ResolveApproval(ctx, workflowID, approvalID, domain.JobStatusApproved)
 }
 
-func (s *Scheduler) RejectJob(ctx context.Context, workflowID string, approvalID string) (bool, error) {
+func (s *Scheduler) RejectJob(ctx context.Context, workflowID string, approvalID string) (bool, domain.ResolvedApproval, error) {
 	return s.jobs.ResolveApproval(ctx, workflowID, approvalID, domain.JobStatusRejected)
 }
 

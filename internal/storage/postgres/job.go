@@ -26,10 +26,7 @@ func (r *JobRepo) GetAvailableJob(ctx context.Context, tenantGroupID string, wor
 	var workflowID string
 	err := r.pool.QueryRow(ctx,
 		`SELECT workflow_id FROM jobs
-		 WHERE (
-		     status IN ('pending', 'awaiting_next', 'approved', 'rejected')
-		     OR (status = 'awaiting_approval' AND approval_timeout_at <= now())
-		 )
+		 WHERE status IN ('pending', 'awaiting_next', 'approved', 'rejected')
 		   AND (owner IS NULL OR lease_expires_at < now())
 		   AND tenant_group_id = $1
 		   AND (workflow_type, workflow_version) IN (
@@ -55,10 +52,7 @@ func (r *JobRepo) AcquireJob(ctx context.Context, workflowID string, ownerID str
 		`UPDATE jobs
 		 SET owner = $2, lease_expires_at = now() + $3::interval
 		 WHERE workflow_id = $1
-		   AND (
-		       status IN ('pending', 'awaiting_next', 'approved', 'rejected')
-		       OR (status = 'awaiting_approval' AND approval_timeout_at <= now())
-		   )
+		   AND status IN ('pending', 'awaiting_next', 'approved', 'rejected')
 		   AND (owner IS NULL OR lease_expires_at < now())
 		   AND tenant_group_id = $4
 		 RETURNING workflow_id, request_id, version, current_atomic_operation, context, status,
@@ -165,8 +159,8 @@ func (r *JobRepo) GetJobMetrics(ctx context.Context, workflowID string, requestI
 	return agentMetrics, workflowMetrics, nil
 }
 
-func (r *JobRepo) ResolveApproval(ctx context.Context, workflowID string, approvalID string, status domain.JobStatus) (bool, error) {
-	var updated string
+func (r *JobRepo) ResolveApproval(ctx context.Context, workflowID string, approvalID string, status domain.JobStatus) (bool, domain.ResolvedApproval, error) {
+	var info domain.ResolvedApproval
 	err := r.pool.QueryRow(ctx,
 		`WITH job_update AS (
 		     UPDATE jobs
@@ -174,24 +168,65 @@ func (r *JobRepo) ResolveApproval(ctx context.Context, workflowID string, approv
 		     WHERE workflow_id = $1
 		       AND approval_id = $2
 		       AND status = 'awaiting_approval'
-		     RETURNING workflow_id
+		     RETURNING workflow_id, request_id, tenant_group_id, approval_opened_at
+		 ),
+		 wf AS (
+		     UPDATE workflows
+		     SET lifecycle_state = 'invoking'
+		     WHERE id IN (SELECT workflow_id FROM job_update)
 		 )
-		 UPDATE workflows
-		 SET lifecycle_state = 'invoking'
-		 WHERE id IN (SELECT workflow_id FROM job_update)
-		 RETURNING id`,
+		 SELECT request_id, tenant_group_id, approval_opened_at FROM job_update`,
 		workflowID, approvalID, status,
-	).Scan(&updated)
+	).Scan(&info.RequestID, &info.TenantGroupID, &info.OpenedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return false, nil
+			return false, domain.ResolvedApproval{}, nil
 		}
-		return false, fmt.Errorf("resolve approval: %w", err)
+		return false, domain.ResolvedApproval{}, fmt.Errorf("resolve approval: %w", err)
 	}
-	return true, nil
+	return true, info, nil
 }
 
-func (r *JobRepo) ParkForApproval(ctx context.Context, workflowID string, ownerID string, approvalID string, timeoutAt time.Time, metadata domain.JobMetadata, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
+// SweepExpiredApprovals atomically rejects the partition's approval gates past their
+// timeout and re-queues the workflows (lifecycle_state='invoking', so the rpcworker
+// dispatches the on_reject branch). Partition-scoped like ExpireCooldowns: the
+// partition owner is unique, so no cross-scheduler locking is needed. Returns the
+// resolved gates so the caller can write timed_out audit rows.
+func (r *JobRepo) SweepExpiredApprovals(ctx context.Context, partitionID string) ([]domain.ExpiredApproval, error) {
+	rows, err := r.pool.Query(ctx,
+		`WITH expired AS (
+		     UPDATE jobs
+		     SET status = 'rejected'
+		     WHERE workflow_id IN (SELECT id FROM workflows WHERE scheduler_partition_id = $1)
+		       AND status = 'awaiting_approval'
+		       AND approval_timeout_at <= now()
+		     RETURNING workflow_id, request_id, tenant_group_id, approval_id,
+		               approval_timeout_at, approval_opened_at
+		 ),
+		 wf AS (
+		     UPDATE workflows SET lifecycle_state = 'invoking'
+		     WHERE id IN (SELECT workflow_id FROM expired)
+		 )
+		 SELECT workflow_id, request_id, tenant_group_id, approval_id, approval_timeout_at, approval_opened_at FROM expired`,
+		partitionID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("sweep expired approvals: %w", err)
+	}
+	defer rows.Close()
+
+	var out []domain.ExpiredApproval
+	for rows.Next() {
+		var e domain.ExpiredApproval
+		if err := rows.Scan(&e.WorkflowID, &e.RequestID, &e.TenantGroupID, &e.ApprovalID, &e.TimedOutAt, &e.OpenedAt); err != nil {
+			return nil, fmt.Errorf("scan expired approval: %w", err)
+		}
+		out = append(out, e)
+	}
+	return out, rows.Err()
+}
+
+func (r *JobRepo) ParkForApproval(ctx context.Context, workflowID string, ownerID string, approvalID string, timeoutSeconds int, metadata domain.JobMetadata, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
 	metadataJSON, err := json.Marshal(metadata)
 	if err != nil {
 		return false, fmt.Errorf("marshal job metadata: %w", err)
@@ -206,11 +241,12 @@ func (r *JobRepo) ParkForApproval(ctx context.Context, workflowID string, ownerI
 	}
 	tag, err := r.pool.Exec(ctx,
 		`UPDATE jobs
-		 SET status = $3, approval_id = $4, approval_timeout_at = $5, job_metadata = $6,
-		     agent_metrics = $7, workflow_metrics = $8,
+		 SET status = $3, approval_id = $4,
+		     approval_opened_at = now(), approval_timeout_at = now() + make_interval(secs => $5),
+		     job_metadata = $6, agent_metrics = $7, workflow_metrics = $8,
 		     context = '{}'::jsonb, timeout_seconds = 0, current_atomic_operation = ''
 		 WHERE workflow_id = $1 AND owner = $2`,
-		workflowID, ownerID, domain.JobStatusAwaitingApproval, approvalID, timeoutAt, metadataJSON, agentMetricsJSON, workflowMetricsJSON,
+		workflowID, ownerID, domain.JobStatusAwaitingApproval, approvalID, timeoutSeconds, metadataJSON, agentMetricsJSON, workflowMetricsJSON,
 	)
 	if err != nil {
 		return false, fmt.Errorf("park job for approval: %w", err)

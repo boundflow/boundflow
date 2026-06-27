@@ -89,6 +89,11 @@ class WorkflowServiceStub:
                 request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.RejectWorkflowRequest.SerializeToString,
                 response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.RejectWorkflowResponse.FromString,
                 _registered_method=True)
+        self.GetApprovalAudit = channel.unary_unary(
+                '/boundflow.v1.WorkflowService/GetApprovalAudit',
+                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetApprovalAuditRequest.SerializeToString,
+                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetApprovalAuditResponse.FromString,
+                _registered_method=True)
         self.ActivateWorkflow = channel.unary_unary(
                 '/boundflow.v1.WorkflowService/ActivateWorkflow',
                 request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.ActivateWorkflowRequest.SerializeToString,
@@ -165,6 +170,12 @@ class WorkflowServiceServicer:
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetApprovalAudit(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def ActivateWorkflow(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -228,6 +239,11 @@ def add_WorkflowServiceServicer_to_server(servicer, server):
                     servicer.RejectWorkflow,
                     request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.RejectWorkflowRequest.FromString,
                     response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.RejectWorkflowResponse.SerializeToString,
+            ),
+            'GetApprovalAudit': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetApprovalAudit,
+                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetApprovalAuditRequest.FromString,
+                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetApprovalAuditResponse.SerializeToString,
             ),
             'ActivateWorkflow': grpc.unary_unary_rpc_method_handler(
                     servicer.ActivateWorkflow,
@@ -532,6 +548,33 @@ class WorkflowService:
             '/boundflow.v1.WorkflowService/RejectWorkflow',
             boundflow_dot_v1_dot_lifecycle__pb2.RejectWorkflowRequest.SerializeToString,
             boundflow_dot_v1_dot_lifecycle__pb2.RejectWorkflowResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetApprovalAudit(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/boundflow.v1.WorkflowService/GetApprovalAudit',
+            boundflow_dot_v1_dot_lifecycle__pb2.GetApprovalAuditRequest.SerializeToString,
+            boundflow_dot_v1_dot_lifecycle__pb2.GetApprovalAuditResponse.FromString,
             options,
             channel_credentials,
             insecure,
