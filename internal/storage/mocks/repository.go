@@ -428,6 +428,20 @@ func (m *MockSchedulerPartitionRepository) EXPECT() *MockSchedulerPartitionRepos
 	return m.recorder
 }
 
+// SeedPartitions mocks base method.
+func (m *MockSchedulerPartitionRepository) SeedPartitions(ctx context.Context, numPartitions int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SeedPartitions", ctx, numPartitions)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SeedPartitions indicates an expected call of SeedPartitions.
+func (mr *MockSchedulerPartitionRepositoryMockRecorder) SeedPartitions(ctx, numPartitions any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SeedPartitions", reflect.TypeOf((*MockSchedulerPartitionRepository)(nil).SeedPartitions), ctx, numPartitions)
+}
+
 // AcquireAvailable mocks base method.
 func (m *MockSchedulerPartitionRepository) AcquireAvailable(ctx context.Context, ownerID string, leaseDuration time.Duration) (*domain.SchedulerPartition, error) {
 	m.ctrl.T.Helper()

@@ -52,6 +52,8 @@ type WorkflowRepository interface {
 }
 
 type SchedulerPartitionRepository interface {
+	// SeedPartitions creates partition rows [0, numPartitions) if missing (INSERT-only).
+	SeedPartitions(ctx context.Context, numPartitions int) error
 	// AcquireAvailable atomically claims any partition with no owner or an expired lease.
 	// Returns nil partition (and nil error) if none are available.
 	AcquireAvailable(ctx context.Context, ownerID string, leaseDuration time.Duration) (*domain.SchedulerPartition, error)

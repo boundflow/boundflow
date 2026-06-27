@@ -78,6 +78,8 @@ func runServer(sigCh <-chan os.Signal) {
 	cfg := config.LoadServer()
 	logger := newLogger(cfg.LogLevel)
 	logger.Info("starting server", "grpc_port", cfg.GRPCPort)
+	requirePositive("BOUNDFLOW_GRPC_PORT", cfg.GRPCPort)
+	requirePositive("BOUNDFLOW_NUM_PARTITIONS", cfg.NumPartitions)
 
 	pool := mustConnectDB(cfg.DatabaseURL, logger)
 	defer pool.Close()
@@ -120,7 +122,9 @@ func runServer(sigCh <-chan os.Signal) {
 func runScheduler(sigCh <-chan os.Signal) {
 	cfg := config.LoadScheduler()
 	logger := newLogger(cfg.LogLevel)
-	logger.Info("starting scheduler", "num_partitions", cfg.NumPartitions)
+	logger.Info("starting scheduler", "num_partitions", cfg.NumPartitions, "max_partitions_per_scheduler", cfg.MaxPartitionsPerScheduler)
+	requirePositive("BOUNDFLOW_NUM_PARTITIONS", cfg.NumPartitions)
+	requirePositive("BOUNDFLOW_MAX_PARTITIONS_PER_SCHEDULER", cfg.MaxPartitionsPerScheduler)
 
 	pool := mustConnectDB(cfg.DatabaseURL, logger)
 	defer pool.Close()
@@ -142,7 +146,8 @@ func runScheduler(sigCh <-chan os.Signal) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	errCh := make(chan error, 1)
-	for i := range cfg.NumPartitions {
+	// One goroutine per partition this scheduler will hold.
+	for i := range cfg.MaxPartitionsPerScheduler {
 		schedulerID := uuid.NewString()
 		resolver := internalscheduler.NewLifecycleResolver(30, logger, lifecycleResolverRepo, workflowRepo, versionMetricsRepo)
 		sched := internalscheduler.NewScheduler(schedulerID, 30, partitionRepo, schedulerRepo, customerRequestRepo, workflowRepo, agentStateRepo, jobRepo, metricsHandler, resolver, logger)
@@ -171,6 +176,8 @@ func runWorker(sigCh <-chan os.Signal) {
 	cfg := config.LoadWorker()
 	logger := newLogger(cfg.LogLevel)
 	logger.Info("starting worker", "grpc_port", cfg.WorkerGRPCPort)
+	requirePositive("BOUNDFLOW_WORKER_GRPC_PORT", cfg.WorkerGRPCPort)
+	requirePositive("BOUNDFLOW_JOB_TIMEOUT_SECS", cfg.JobTimeoutSecs)
 
 	pool := mustConnectDB(cfg.DatabaseURL, logger)
 	defer pool.Close()
@@ -213,7 +220,8 @@ func runWorker(sigCh <-chan os.Signal) {
 // runProvision creates a tenant group and API key for a new customer, then prints
 // the raw key. The key is hashed before storage and cannot be recovered afterwards.
 // Self-hosters run this once against the running stack:
-//   docker compose run --rm server -mode=provision -name=me
+//
+//	docker compose run --rm server -mode=provision -name=me
 func runProvision(name string) {
 	if name == "" {
 		log.Fatal("usage: boundflow -mode=provision -name=<customer-name>")
@@ -267,6 +275,7 @@ func runMigrate() {
 	cfg := config.LoadScheduler()
 	logger := newLogger(cfg.LogLevel)
 	logger.Info("running migrations")
+	requirePositive("BOUNDFLOW_NUM_PARTITIONS", cfg.NumPartitions)
 
 	src, err := iofs.New(migrations.FS, ".")
 	if err != nil {
@@ -283,6 +292,14 @@ func runMigrate() {
 		log.Fatalf("apply migrations: %v", err)
 	}
 	logger.Info("migrations applied")
+
+	// Seed scheduler partitions [0, NUM_PARTITIONS) as part of one-time DB setup.
+	pool := mustConnectDB(cfg.DatabaseURL, logger)
+	defer pool.Close()
+	if err := postgres.NewSchedulerPartitionRepo(pool).SeedPartitions(context.Background(), cfg.NumPartitions); err != nil {
+		log.Fatalf("seed scheduler partitions: %v", err)
+	}
+	logger.Info("scheduler partitions seeded", "num_partitions", cfg.NumPartitions)
 }
 
 func generateKey() (string, error) {
@@ -293,7 +310,17 @@ func generateKey() (string, error) {
 	return base64.RawURLEncoding.EncodeToString(b), nil
 }
 
+// requirePositive fails fast if a required integer config var is unset or <= 0.
+func requirePositive(envVar string, v int) {
+	if v < 1 {
+		log.Fatalf("%s must be set to a positive integer", envVar)
+	}
+}
+
 func mustConnectDB(url string, logger *slog.Logger) *pgxpool.Pool {
+	if url == "" {
+		log.Fatal("BOUNDFLOW_DATABASE_URL must be set")
+	}
 	pool, err := pgxpool.New(context.Background(), url)
 	if err != nil {
 		logger.Error("unable to connect to database", "error", err)
