@@ -2,11 +2,13 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"hash/fnv"
 	"log/slog"
 	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -27,8 +29,8 @@ type RequestScheduler interface {
 // ApprovalResolver handles approve/reject for jobs awaiting approval.
 // Satisfied by *scheduler.Scheduler.
 type ApprovalResolver interface {
-	ApproveJob(ctx context.Context, workflowID string, approvalID string) (bool, error)
-	RejectJob(ctx context.Context, workflowID string, approvalID string) (bool, error)
+	ApproveJob(ctx context.Context, workflowID string, approvalID string) (bool, domain.ResolvedApproval, error)
+	RejectJob(ctx context.Context, workflowID string, approvalID string) (bool, domain.ResolvedApproval, error)
 }
 
 type LifecycleService struct {
@@ -40,6 +42,7 @@ type LifecycleService struct {
 	modelPricing      storage.ModelPricingRepository
 	scheduler         RequestScheduler
 	approvalResolver  ApprovalResolver
+	audit             storage.AuditRepository
 	numPartitions     int
 	log               *slog.Logger
 }
@@ -53,6 +56,7 @@ func NewLifecycleService(
 	modelPricing storage.ModelPricingRepository,
 	scheduler RequestScheduler,
 	approvalResolver ApprovalResolver,
+	audit storage.AuditRepository,
 	numPartitions int,
 	log *slog.Logger,
 ) *LifecycleService {
@@ -65,6 +69,7 @@ func NewLifecycleService(
 		modelPricing:      modelPricing,
 		scheduler:         scheduler,
 		approvalResolver:  approvalResolver,
+		audit:             audit,
 		numPartitions:     numPartitions,
 		log:               log.With("component", "lifecycle_service"),
 	}
@@ -159,16 +164,18 @@ func (s *LifecycleService) CreateWorkflow(ctx context.Context, correlationID, wo
 	return &workflow, nil
 }
 
-func (s *LifecycleService) InvokeWorkflow(ctx context.Context, correlationID, workflowID string, params domain.WorkflowRuntimeParams) error {
+// InvokeWorkflow triggers a run and returns the created request's id — the run id
+// the caller can use to correlate this invocation (e.g. with its trace).
+func (s *LifecycleService) InvokeWorkflow(ctx context.Context, correlationID, workflowID string, params domain.WorkflowRuntimeParams) (string, error) {
 	s.log.Info("invoking workflow", "correlation_id", correlationID, "workflow_id", workflowID)
 
 	instance, err := s.workflows.Get(ctx, workflowID)
 	if err != nil {
-		return fmt.Errorf("get workflow instance: %w", err)
+		return "", fmt.Errorf("get workflow instance: %w", err)
 	}
 
 	if instance.WorkflowState != domain.WorkflowStateActive {
-		return fmt.Errorf("%w: workflow is in state %s", ErrInvalidWorkflowState, instance.WorkflowState)
+		return "", fmt.Errorf("%w: workflow is in state %s", ErrInvalidWorkflowState, instance.WorkflowState)
 	}
 
 	requestInfo := map[string]any{
@@ -176,13 +183,13 @@ func (s *LifecycleService) InvokeWorkflow(ctx context.Context, correlationID, wo
 	}
 
 	if err := s.ResolveRuntimeParams(params, instance, true, requestInfo); err != nil {
-		return err
+		return "", err
 	}
 	if err := s.ResolveAgentRuntimeParams(ctx, workflowID, requestInfo); err != nil {
-		return err
+		return "", err
 	}
 	if err := s.ResolveModelPricing(ctx, workflowID, requestInfo); err != nil {
-		return err
+		return "", err
 	}
 
 	request := domain.CustomerRequest{
@@ -198,7 +205,7 @@ func (s *LifecycleService) InvokeWorkflow(ctx context.Context, correlationID, wo
 		[]domain.LifecycleState{domain.LifecycleStateDeleting, domain.LifecycleStateDeleted})
 	if err != nil {
 		s.log.Error("failed to create invoke request", "correlation_id", correlationID, "workflow_id", workflowID, "error", err)
-		return fmt.Errorf("create invocation request: %w", err)
+		return "", fmt.Errorf("create invocation request: %w", err)
 	}
 
 	s.log.Info("invoke request created, attempting immediate schedule", "correlation_id", correlationID, "workflow_id", workflowID, "request_id", request.ID, "version", ver)
@@ -206,7 +213,7 @@ func (s *LifecycleService) InvokeWorkflow(ctx context.Context, correlationID, wo
 		s.log.Warn("immediate schedule failed, scheduler will retry", "request_id", request.ID, "error", err)
 	}
 
-	return nil
+	return request.ID, nil
 }
 
 func (s *LifecycleService) DeleteWorkflow(ctx context.Context, correlationID, workflowID string) error {
@@ -231,6 +238,13 @@ func (s *LifecycleService) GetWorkflow(ctx context.Context, workflowID string) (
 }
 
 // ListWorkflows returns all workflows owned by the given tenant group, newest first.
+// GetApprovalAudit returns the tenant's approval audit events (newest first),
+// optionally filtered by workflow and/or approval id.
+func (s *LifecycleService) GetApprovalAudit(ctx context.Context, tenantGroupID, workflowID, approvalID string) ([]domain.AuditEvent, error) {
+	s.log.Debug("getting approval audit", "tenant_group_id", tenantGroupID, "workflow_id", workflowID, "approval_id", approvalID)
+	return s.audit.ListApprovals(ctx, tenantGroupID, workflowID, approvalID)
+}
+
 func (s *LifecycleService) ListWorkflows(ctx context.Context, tenantGroupID string) ([]*domain.Workflow, error) {
 	s.log.Debug("listing workflows", "tenant_group_id", tenantGroupID)
 	return s.workflows.ListForTenantGroup(ctx, tenantGroupID)
@@ -279,28 +293,58 @@ func (s *LifecycleService) ActivateWorkflow(ctx context.Context, workflowID stri
 	return nil
 }
 
-func (s *LifecycleService) ApproveWorkflow(ctx context.Context, workflowID string, approvalID string) error {
-	s.log.Info("approving workflow", "workflow_id", workflowID, "approval_id", approvalID)
-	resolved, err := s.approvalResolver.ApproveJob(ctx, workflowID, approvalID)
+func (s *LifecycleService) ApproveWorkflow(ctx context.Context, workflowID string, approvalID string, actor string) error {
+	s.log.Info("approving workflow", "workflow_id", workflowID, "approval_id", approvalID, "actor", actor)
+	resolved, info, err := s.approvalResolver.ApproveJob(ctx, workflowID, approvalID)
 	if err != nil {
 		return fmt.Errorf("approve workflow: %w", err)
 	}
 	if !resolved {
 		return fmt.Errorf("%w: approval ID did not match or workflow is not awaiting approval", ErrInvalidWorkflowState)
 	}
+	s.recordApprovalDecision(ctx, workflowID, approvalID, actor, domain.ApprovalApproved, info)
 	return nil
 }
 
-func (s *LifecycleService) RejectWorkflow(ctx context.Context, workflowID string, approvalID string) error {
-	s.log.Info("rejecting workflow", "workflow_id", workflowID, "approval_id", approvalID)
-	resolved, err := s.approvalResolver.RejectJob(ctx, workflowID, approvalID)
+func (s *LifecycleService) RejectWorkflow(ctx context.Context, workflowID string, approvalID string, actor string) error {
+	s.log.Info("rejecting workflow", "workflow_id", workflowID, "approval_id", approvalID, "actor", actor)
+	resolved, info, err := s.approvalResolver.RejectJob(ctx, workflowID, approvalID)
 	if err != nil {
 		return fmt.Errorf("reject workflow: %w", err)
 	}
 	if !resolved {
 		return fmt.Errorf("%w: approval ID did not match or workflow is not awaiting approval", ErrInvalidWorkflowState)
 	}
+	s.recordApprovalDecision(ctx, workflowID, approvalID, actor, domain.ApprovalRejected, info)
 	return nil
+}
+
+// recordApprovalDecision appends the approval audit row after an explicit decision.
+// Best-effort: the decision already committed, so a failed audit write is logged,
+// not surfaced as an error (matches the timeout sweep's behavior).
+func (s *LifecycleService) recordApprovalDecision(ctx context.Context, workflowID, approvalID, actor string, decision domain.ApprovalDecision, info domain.ResolvedApproval) {
+	now := time.Now()
+	details, err := json.Marshal(domain.ApprovalAuditDetails{
+		ApprovalID: approvalID,
+		OpenedAt:   info.OpenedAt,
+		DecidedAt:  &now,
+		Decision:   decision,
+	})
+	if err != nil {
+		s.log.Error("failed to marshal approval audit details", "approval_id", approvalID, "error", err)
+		return
+	}
+	if err := s.audit.Append(ctx, domain.AuditEvent{
+		TenantGroupID: info.TenantGroupID,
+		WorkflowID:    workflowID,
+		RequestID:     info.RequestID,
+		EventType:     domain.AuditEventApproval,
+		Actor:         actor,
+		OccurredAt:    now,
+		Details:       details,
+	}); err != nil {
+		s.log.Error("failed to append approval audit", "approval_id", approvalID, "error", err)
+	}
 }
 
 // TenantGroupIDForWorkflow returns the tenant_group_id that owns a workflow (single JOIN).

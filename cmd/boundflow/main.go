@@ -101,7 +101,8 @@ func runServer(sigCh <-chan os.Signal) {
 
 	modelPricingRepo := postgres.NewModelPricingRepo(pool)
 	regSvc := service.NewRegistrationService(tenantGroupRepo, tenantRepo, modelPricingRepo)
-	lifecycleSvc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, sched, sched, cfg.NumPartitions, logger)
+	auditRepo := postgres.NewAuditRepo(pool)
+	lifecycleSvc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, sched, sched, auditRepo, cfg.NumPartitions, logger)
 
 	authn := auth.NewAuthenticator(postgres.NewApiKeyRepo(pool))
 	srv := server.New(cfg, regSvc, lifecycleSvc, authn, cfg.Debug)
@@ -143,6 +144,8 @@ func runScheduler(sigCh <-chan os.Signal) {
 	modelPricingRepo := postgres.NewModelPricingRepo(pool)
 	metricsHandler := metrics.NewMetricsHandler(workflowRepo, agentStateRepo, versionMetricsRepo, metricsRepo, logger)
 
+	auditRepo := postgres.NewAuditRepo(pool)
+
 	ctx, cancel := context.WithCancel(context.Background())
 
 	errCh := make(chan error, 1)
@@ -152,11 +155,13 @@ func runScheduler(sigCh <-chan os.Signal) {
 		resolver := internalscheduler.NewLifecycleResolver(30, logger, lifecycleResolverRepo, workflowRepo, versionMetricsRepo)
 		sched := internalscheduler.NewScheduler(schedulerID, 30, partitionRepo, schedulerRepo, customerRequestRepo, workflowRepo, agentStateRepo, jobRepo, metricsHandler, resolver, logger)
 		// The periodic handler invokes due workflows via the scheduler + lifecycle service.
-		lifecycleSvc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, sched, sched, cfg.NumPartitions, logger)
+		lifecycleSvc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, sched, sched, auditRepo, cfg.NumPartitions, logger)
 		periodic := internalscheduler.NewPeriodicWorkflowHandler(30, logger, sched, lifecycleSvc, schedulerRepo, customerRequestRepo)
+		// Approval-gate timeouts resolve here (partition-scoped, like cooldown expiry)
+		approvalTimeouts := internalscheduler.NewApprovalTimeoutResolver(30, jobRepo, auditRepo, logger)
 		// Resolver (cooldown expiry) and periodic handler are partition-scoped: the scheduler
 		// starts them when it acquires a partition and cancels them when it loses it.
-		sched.SetPartitionWorkers(resolver, periodic)
+		sched.SetPartitionWorkers(resolver, periodic, approvalTimeouts)
 		logger.Info("starting scheduler partition worker", "index", i, "scheduler_id", schedulerID)
 		go func() { errCh <- sched.Run(ctx) }()
 	}

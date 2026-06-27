@@ -12,6 +12,44 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Protocol
 
 from .policies import RuntimePolicy
+from .trace import (
+    BF_COST_USD,
+    GEN_AI_OP_CHAT,
+    GEN_AI_OP_EXECUTE_TOOL,
+    GEN_AI_OPERATION_NAME,
+    GEN_AI_REQUEST_MAX_TOKENS,
+    GEN_AI_REQUEST_MODEL,
+    GEN_AI_RESPONSE_FINISH_REASONS,
+    GEN_AI_SYSTEM,
+    GEN_AI_TOOL_CALL_ID,
+    GEN_AI_TOOL_DESCRIPTION,
+    GEN_AI_TOOL_NAME,
+    GEN_AI_USAGE_CACHE_CREATION_INPUT_TOKENS,
+    GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS,
+    GEN_AI_USAGE_INPUT_TOKENS,
+    GEN_AI_USAGE_OUTPUT_TOKENS,
+    PART_TEXT,
+    PART_TOOL_CALL,
+    PART_TOOL_CALL_RESPONSE,
+    ROLE_ASSISTANT,
+    ROLE_SYSTEM,
+    SPAN_KIND_LLM,
+    SPAN_KIND_TOOL,
+    Span,
+    now_ms,
+)
+
+
+def _gen_ai_system(model: str) -> str:
+    """Best-effort provider for the gen_ai.system attribute, from the model id."""
+    m = model.lower()
+    if m.startswith("claude") or "anthropic" in m:
+        return "anthropic"
+    if m.startswith(("gpt", "o1", "o3", "o4")) or "openai" in m:
+        return "openai"
+    if m.startswith("gemini"):
+        return "gcp.gemini"
+    return "unknown"
 
 log = logging.getLogger("boundflow.orchestrator")
 
@@ -179,6 +217,33 @@ class StepResult:
     calls_per_tool: dict[str, int]
     tool_failure_counts: dict[str, int]
     model_used: str
+    spans: list[Span] = field(default_factory=list)  # ordered LLM + tool spans for the run trace
+
+
+def _part_from_block(b: Any) -> dict:
+    """A message block -> a GenAI 'part' (text / tool_call / tool_call_response).
+    This is the OTel GenAI message shape, used as our canonical content form so
+    every sink (OTel, file, DB) emits interoperable, standard-shaped content."""
+    if isinstance(b, TextBlock):
+        return {"type": PART_TEXT, "content": b.text}
+    if isinstance(b, ToolUseBlock):
+        return {"type": PART_TOOL_CALL, "id": b.id, "name": b.name, "arguments": b.input}
+    if isinstance(b, ToolResultBlock):
+        return {"type": PART_TOOL_CALL_RESPONSE, "id": b.tool_use_id,
+                "result": b.content, "is_error": b.is_error}
+    return {"type": PART_TEXT, "content": repr(b)}
+
+
+def _gen_ai_message(role: str, blocks: list) -> dict:
+    return {"role": role, "parts": [_part_from_block(b) for b in blocks]}
+
+
+def _gen_ai_input_messages(req: LlmRequest) -> list:
+    """The full input as canonical GenAI messages: the system message, then the
+    conversation as-sent."""
+    msgs = [{"role": ROLE_SYSTEM, "parts": [{"type": PART_TEXT, "content": req.system}]}]
+    msgs += [_gen_ai_message(m.role, m.content) for m in req.messages]
+    return msgs
 
 
 def _rate_for(model: str, pricing: dict) -> dict | None:
@@ -235,6 +300,7 @@ class Orchestrator:
         call_counts: dict[str, int] = {}
         failure_counts: dict[str, int] = {}
         tool_limits = {l.tool: l.max_calls for l in cfg.policy.tool_call_limits}
+        spans: list[Span] = []  # ordered LLM + tool spans, captured for the run trace
 
         log.debug("run_step start: objective=%s model=%s max_llm_calls=%s tool_limits=%s",
                   cfg.objective, cfg.model, max_llm_calls, tool_limits)
@@ -251,12 +317,34 @@ class Orchestrator:
                 forced_tool=SUBMIT_RESULT if limit_reached else None,
             )
             log.debug("llm_call #%d forced_tool=%s", llm_calls + 1, req.forced_tool)
+            _llm_start = now_ms()
             resp = await self._client.complete(req)
+            _llm_end = now_ms()
+            _input_messages = _gen_ai_input_messages(req)  # snapshot as-sent, before appending the reply
 
             llm_calls += 1
-            cost += _estimate_cost(resp.usage, cfg.model, cfg.pricing)
+            call_cost = _estimate_cost(resp.usage, cfg.model, cfg.pricing)
+            cost += call_cost
             tokens += resp.usage.total_tokens()
             messages.append(Message("assistant", resp.content))
+
+            spans.append(Span(
+                kind=SPAN_KIND_LLM, name=f"{GEN_AI_OP_CHAT} {cfg.model}", start_ms=_llm_start, end_ms=_llm_end,
+                input=_input_messages,
+                output=[_gen_ai_message(ROLE_ASSISTANT, resp.content)],
+                attributes={
+                    GEN_AI_OPERATION_NAME: GEN_AI_OP_CHAT,
+                    GEN_AI_SYSTEM: _gen_ai_system(cfg.model),
+                    GEN_AI_REQUEST_MODEL: cfg.model,
+                    GEN_AI_REQUEST_MAX_TOKENS: max_tokens,
+                    GEN_AI_USAGE_INPUT_TOKENS: resp.usage.input_tokens,
+                    GEN_AI_USAGE_OUTPUT_TOKENS: resp.usage.output_tokens,
+                    GEN_AI_USAGE_CACHE_CREATION_INPUT_TOKENS: resp.usage.cache_creation_input_tokens,
+                    GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS: resp.usage.cache_read_input_tokens,
+                    GEN_AI_RESPONSE_FINISH_REASONS: [resp.stop_reason],
+                    BF_COST_USD: call_cost,
+                },
+            ))
 
             if resp.stop_reason == "end_turn":
                 messages.append(Message("user", [TextBlock("Please call submit_result with your findings.")]))
@@ -273,7 +361,7 @@ class Orchestrator:
                 if block.name == SUBMIT_RESULT:
                     log.debug("submit_result: llm_calls=%d call_counts=%s", llm_calls, call_counts)
                     return StepResult(block.input, llm_calls, cost, tokens,
-                                      call_counts, failure_counts, cfg.model)
+                                      call_counts, failure_counts, cfg.model, spans)
 
                 if block.name not in callbacks:
                     tool_results.append(ToolResultBlock(block.id, f"Unknown callback: {block.name}", is_error=True))
@@ -290,13 +378,24 @@ class Orchestrator:
                 call_counts[block.name] = current_count + 1
                 log.debug("tool_call: tool=%s count_after=%d cap=%s", block.name, current_count + 1, cap or "unlimited")
 
+                _tool_start = now_ms()
+                _tool_attrs = {
+                    GEN_AI_OPERATION_NAME: GEN_AI_OP_EXECUTE_TOOL,
+                    GEN_AI_TOOL_NAME: block.name,
+                    GEN_AI_TOOL_CALL_ID: block.id,
+                    GEN_AI_TOOL_DESCRIPTION: callbacks[block.name].description or block.name,
+                }
                 try:
                     out = await callbacks[block.name].handler(block.input)
                 except Exception as ex:  # noqa: BLE001 — report tool failure to the model
                     failure_counts[block.name] = failure_counts.get(block.name, 0) + 1
+                    spans.append(Span(kind=SPAN_KIND_TOOL, name=block.name, start_ms=_tool_start, end_ms=now_ms(),
+                                      input=block.input, error=str(ex), attributes=_tool_attrs))
                     tool_results.append(ToolResultBlock(block.id, str(ex), is_error=True))
                     continue
 
+                spans.append(Span(kind=SPAN_KIND_TOOL, name=block.name, start_ms=_tool_start, end_ms=now_ms(),
+                                  input=block.input, output=out, attributes=_tool_attrs))
                 import json
                 tool_results.append(ToolResultBlock(block.id, json.dumps(out) if out is not None else "{}"))
 

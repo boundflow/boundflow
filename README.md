@@ -167,6 +167,43 @@ rolling back. See [`sdk/python/boundflow/examples/`](sdk/python/boundflow/exampl
 
 ---
 
+## Observability
+
+Two layers: **run traces** (execution telemetry you export to your own backend)
+and a **governance audit log** (decisions, kept server-side and queryable).
+
+**Run traces.** Every operation emits an `OperationTrace` — the `operation → agent
+→ llm/tool` tree with token usage and full prompt/response content — to a pluggable
+sink you own. Built-ins: `LoggingTraceSink`, `JsonlFileTraceSink`, and
+`OTelTraceSink`, which maps onto OpenTelemetry GenAI semantic conventions and ships
+spans over OTLP to any backend (Jaeger, Tempo, Langfuse, Phoenix, …); all operations
+of one run share a `trace_id`.
+
+```python
+from boundflow import BoundFlowWorker
+from boundflow.trace import OTelTraceSink
+
+worker = BoundFlowWorker(llm=..., trace_sink=OTelTraceSink(tracer))
+```
+
+See [`sdk/python/examples/otel/`](sdk/python/examples/otel/) for a runnable
+OTLP → Jaeger setup.
+
+**Approval audit.** Approval decisions are governance, not telemetry, so the
+decision / actor / timing live in a durable server-side audit log — the trace
+carries only the `approval_id` (on the `await_approval` span) as the correlation
+key. Look the record up by that id:
+
+```python
+records = await cp.get_approval_audit(approval_id="…")
+# -> decision (approved | rejected | timed_out), actor, opened_at, decided_at
+```
+
+**Inventory.** `cp.list_workflows()` returns every workflow with its current
+lifecycle / workflow state for dashboards.
+
+---
+
 ## Configuration
 
 Backend (env vars, all `BOUNDFLOW_*`): `DATABASE_URL`, `GRPC_PORT` (server),

@@ -30,6 +30,12 @@ dev = [
     "pytest",
     "pytest-asyncio",
 ]
+# Optional: export run traces as OpenTelemetry spans (OTelTraceSink). The core
+# trace capture has no OTel dependency; install this only if you use that sink.
+otel = [
+    "opentelemetry-sdk",
+    "opentelemetry-exporter-otlp",
+]
 
 [tool.setuptools.packages.find]
 # Ship the SDK and the generated gRPC stubs; keep tests/examples out of the wheel.

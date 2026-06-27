@@ -716,18 +716,18 @@ func (mr *MockJobRepositoryMockRecorder) GetJobMetrics(ctx, workflowID, requestI
 }
 
 // ParkForApproval mocks base method.
-func (m *MockJobRepository) ParkForApproval(ctx context.Context, workflowID, ownerID, approvalID string, timeoutAt time.Time, metadata domain.JobMetadata, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
+func (m *MockJobRepository) ParkForApproval(ctx context.Context, workflowID, ownerID, approvalID string, timeoutSeconds int, metadata domain.JobMetadata, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ParkForApproval", ctx, workflowID, ownerID, approvalID, timeoutAt, metadata, agentMetrics, workflowMetrics)
+	ret := m.ctrl.Call(m, "ParkForApproval", ctx, workflowID, ownerID, approvalID, timeoutSeconds, metadata, agentMetrics, workflowMetrics)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ParkForApproval indicates an expected call of ParkForApproval.
-func (mr *MockJobRepositoryMockRecorder) ParkForApproval(ctx, workflowID, ownerID, approvalID, timeoutAt, metadata, agentMetrics, workflowMetrics any) *gomock.Call {
+func (mr *MockJobRepositoryMockRecorder) ParkForApproval(ctx, workflowID, ownerID, approvalID, timeoutSeconds, metadata, agentMetrics, workflowMetrics any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParkForApproval", reflect.TypeOf((*MockJobRepository)(nil).ParkForApproval), ctx, workflowID, ownerID, approvalID, timeoutAt, metadata, agentMetrics, workflowMetrics)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParkForApproval", reflect.TypeOf((*MockJobRepository)(nil).ParkForApproval), ctx, workflowID, ownerID, approvalID, timeoutSeconds, metadata, agentMetrics, workflowMetrics)
 }
 
 // ReleaseJob mocks base method.
@@ -760,18 +760,86 @@ func (mr *MockJobRepositoryMockRecorder) RenewJobLease(ctx, workflowID, ownerID,
 }
 
 // ResolveApproval mocks base method.
-func (m *MockJobRepository) ResolveApproval(ctx context.Context, workflowID, approvalID string, status domain.JobStatus) (bool, error) {
+func (m *MockJobRepository) ResolveApproval(ctx context.Context, workflowID, approvalID string, status domain.JobStatus) (bool, domain.ResolvedApproval, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ResolveApproval", ctx, workflowID, approvalID, status)
 	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(domain.ResolvedApproval)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // ResolveApproval indicates an expected call of ResolveApproval.
 func (mr *MockJobRepositoryMockRecorder) ResolveApproval(ctx, workflowID, approvalID, status any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveApproval", reflect.TypeOf((*MockJobRepository)(nil).ResolveApproval), ctx, workflowID, approvalID, status)
+}
+
+// SweepExpiredApprovals mocks base method.
+func (m *MockJobRepository) SweepExpiredApprovals(ctx context.Context, partitionID string) ([]domain.ExpiredApproval, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SweepExpiredApprovals", ctx, partitionID)
+	ret0, _ := ret[0].([]domain.ExpiredApproval)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SweepExpiredApprovals indicates an expected call of SweepExpiredApprovals.
+func (mr *MockJobRepositoryMockRecorder) SweepExpiredApprovals(ctx, partitionID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SweepExpiredApprovals", reflect.TypeOf((*MockJobRepository)(nil).SweepExpiredApprovals), ctx, partitionID)
+}
+
+// MockAuditRepository is a mock of AuditRepository.
+type MockAuditRepository struct {
+	ctrl     *gomock.Controller
+	recorder *MockAuditRepositoryMockRecorder
+}
+
+// MockAuditRepositoryMockRecorder is the mock recorder for MockAuditRepository.
+type MockAuditRepositoryMockRecorder struct {
+	mock *MockAuditRepository
+}
+
+// NewMockAuditRepository creates a new mock instance.
+func NewMockAuditRepository(ctrl *gomock.Controller) *MockAuditRepository {
+	mock := &MockAuditRepository{ctrl: ctrl}
+	mock.recorder = &MockAuditRepositoryMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockAuditRepository) EXPECT() *MockAuditRepositoryMockRecorder {
+	return m.recorder
+}
+
+// Append mocks base method.
+func (m *MockAuditRepository) Append(ctx context.Context, e domain.AuditEvent) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Append", ctx, e)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Append indicates an expected call of Append.
+func (mr *MockAuditRepositoryMockRecorder) Append(ctx, e any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Append", reflect.TypeOf((*MockAuditRepository)(nil).Append), ctx, e)
+}
+
+// ListApprovals mocks base method.
+func (m *MockAuditRepository) ListApprovals(ctx context.Context, tenantGroupID, workflowID, approvalID string) ([]domain.AuditEvent, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListApprovals", ctx, tenantGroupID, workflowID, approvalID)
+	ret0, _ := ret[0].([]domain.AuditEvent)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListApprovals indicates an expected call of ListApprovals.
+func (mr *MockAuditRepositoryMockRecorder) ListApprovals(ctx, tenantGroupID, workflowID, approvalID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListApprovals", reflect.TypeOf((*MockAuditRepository)(nil).ListApprovals), ctx, tenantGroupID, workflowID, approvalID)
 }
 
 // UpdateJob mocks base method.

@@ -6,6 +6,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
 	"github.com/boundflow/boundflow/internal/auth"
@@ -108,7 +109,8 @@ func (h *WorkflowServiceHandler) InvokeWorkflow(ctx context.Context, req *boundf
 		params.OperationTimeoutSeconds = int(req.RuntimeOverrides.OperationTimeoutSeconds)
 	}
 
-	if err := h.svc.InvokeWorkflow(ctx, req.CorrelationId, req.WorkflowId, params); err != nil {
+	requestID, err := h.svc.InvokeWorkflow(ctx, req.CorrelationId, req.WorkflowId, params)
+	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Errorf(codes.NotFound, "workflow instance not found")
 		}
@@ -124,7 +126,7 @@ func (h *WorkflowServiceHandler) InvokeWorkflow(ctx context.Context, req *boundf
 		return nil, status.Errorf(codes.Internal, "invoke workflow: %v", err)
 	}
 
-	return &boundflowv1.InvokeWorkflowResponse{}, nil
+	return &boundflowv1.InvokeWorkflowResponse{RequestId: requestID}, nil
 }
 
 func (h *WorkflowServiceHandler) DeleteWorkflow(ctx context.Context, req *boundflowv1.DeleteWorkflowRequest) (*boundflowv1.DeleteWorkflowResponse, error) {
@@ -307,7 +309,7 @@ func (h *WorkflowServiceHandler) ApproveWorkflow(ctx context.Context, req *bound
 		return nil, err
 	}
 
-	if err := h.svc.ApproveWorkflow(ctx, req.WorkflowId, req.ApprovalId); err != nil {
+	if err := h.svc.ApproveWorkflow(ctx, req.WorkflowId, req.ApprovalId, req.Actor); err != nil {
 		if errors.Is(err, service.ErrInvalidWorkflowState) {
 			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
 		}
@@ -328,11 +330,58 @@ func (h *WorkflowServiceHandler) RejectWorkflow(ctx context.Context, req *boundf
 		return nil, err
 	}
 
-	if err := h.svc.RejectWorkflow(ctx, req.WorkflowId, req.ApprovalId); err != nil {
+	if err := h.svc.RejectWorkflow(ctx, req.WorkflowId, req.ApprovalId, req.Actor); err != nil {
 		if errors.Is(err, service.ErrInvalidWorkflowState) {
 			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
 		}
 		return nil, status.Errorf(codes.Internal, "reject workflow: %v", err)
 	}
 	return &boundflowv1.RejectWorkflowResponse{}, nil
+}
+
+func (h *WorkflowServiceHandler) GetApprovalAudit(ctx context.Context, req *boundflowv1.GetApprovalAuditRequest) (*boundflowv1.GetApprovalAuditResponse, error) {
+	group, err := callerTenantGroup(ctx)
+	if err != nil {
+		return nil, err
+	}
+	events, err := h.svc.GetApprovalAudit(ctx, group, req.WorkflowId, req.ApprovalId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "get approval audit: %v", err)
+	}
+
+	out := make([]*boundflowv1.ApprovalAuditRecord, 0, len(events))
+	for _, e := range events {
+		d, err := e.ApprovalDetails()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "resolve approval audit: %v", err)
+		}
+		rec := &boundflowv1.ApprovalAuditRecord{
+			ApprovalId: d.ApprovalID,
+			WorkflowId: e.WorkflowID,
+			RequestId:  e.RequestID,
+			Decision:   approvalDecisionToProto(d.Decision),
+			Actor:      e.Actor,
+		}
+		if d.OpenedAt != nil {
+			rec.OpenedAt = timestamppb.New(*d.OpenedAt)
+		}
+		if d.DecidedAt != nil {
+			rec.DecidedAt = timestamppb.New(*d.DecidedAt)
+		}
+		out = append(out, rec)
+	}
+	return &boundflowv1.GetApprovalAuditResponse{Records: out}, nil
+}
+
+func approvalDecisionToProto(d domain.ApprovalDecision) boundflowv1.ApprovalDecision {
+	switch d {
+	case domain.ApprovalApproved:
+		return boundflowv1.ApprovalDecision_APPROVAL_DECISION_APPROVED
+	case domain.ApprovalRejected:
+		return boundflowv1.ApprovalDecision_APPROVAL_DECISION_REJECTED
+	case domain.ApprovalTimedOut:
+		return boundflowv1.ApprovalDecision_APPROVAL_DECISION_TIMED_OUT
+	default:
+		return boundflowv1.ApprovalDecision_APPROVAL_DECISION_UNSPECIFIED
+	}
 }

@@ -5,6 +5,7 @@ package boundflow.v1;
 option go_package = "github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1";
 
 import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
 import "boundflow/v1/workflow.proto";
 
 service WorkflowService {
@@ -21,6 +22,7 @@ service WorkflowService {
   rpc SetWorkflowLifecyclePolicy(SetWorkflowLifecyclePolicyRequest) returns (SetWorkflowLifecyclePolicyResponse);
   rpc ApproveWorkflow(ApproveWorkflowRequest) returns (ApproveWorkflowResponse);
   rpc RejectWorkflow(RejectWorkflowRequest) returns (RejectWorkflowResponse);
+  rpc GetApprovalAudit(GetApprovalAuditRequest) returns (GetApprovalAuditResponse);
   rpc ActivateWorkflow(ActivateWorkflowRequest) returns (ActivateWorkflowResponse);
 }
 
@@ -152,6 +154,9 @@ message SetWorkflowLifecyclePolicyResponse {}
 message ApproveWorkflowRequest {
   string workflow_id = 1;
   string approval_id          = 2;
+  // Who made the decision, as the customer's gate identifies them (free-form,
+  // e.g. an email or user id). Recorded for the approval audit trace.
+  string actor                = 3;
 }
 
 message ApproveWorkflowResponse {}
@@ -159,6 +164,36 @@ message ApproveWorkflowResponse {}
 message RejectWorkflowRequest {
   string workflow_id = 1;
   string approval_id          = 2;
+  string actor                = 3;
+}
+
+enum ApprovalDecision {
+  APPROVAL_DECISION_UNSPECIFIED = 0;
+  APPROVAL_DECISION_APPROVED    = 1;
+  APPROVAL_DECISION_REJECTED    = 2;
+  APPROVAL_DECISION_TIMED_OUT   = 3;
+}
+
+// GetApprovalAudit reads approval-decision history (tenant-scoped via the API
+// key). Filters are optional and AND together; omit all to list the tenant's
+// recent approvals. Correlate with the trace via approval_id.
+message GetApprovalAuditRequest {
+  string workflow_id = 1;
+  string approval_id = 2;
+}
+
+message GetApprovalAuditResponse {
+  repeated ApprovalAuditRecord records = 1;
+}
+
+message ApprovalAuditRecord {
+  string approval_id                   = 1;
+  string workflow_id                   = 2;
+  string request_id                    = 3;
+  ApprovalDecision decision            = 4;
+  google.protobuf.Timestamp opened_at  = 5;
+  google.protobuf.Timestamp decided_at = 6;
+  string actor                         = 7;  // customer-supplied; empty on timeout
 }
 
 message RejectWorkflowResponse {}

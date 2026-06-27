@@ -29,5 +29,6 @@ CREATE TABLE jobs (
     job_metadata             JSONB NOT NULL DEFAULT '{}',
     -- Approval gate: only populated when status = awaiting_approval/approved/rejected.
     approval_id              TEXT,
+    approval_opened_at       TIMESTAMPTZ,
     approval_timeout_at      TIMESTAMPTZ
 );

@@ -58,7 +58,8 @@ type JobMetadata struct {
 }
 
 // ApprovalGateMetadata stores the two possible continuations of an approval gate.
-// A nil branch means that path completes the job with no further operation.
+// A nil branch means that path completes the job with no further operation. The
+// gate's audit data (opened_at, timeout_at) lives in jobs columns, not here.
 type ApprovalGateMetadata struct {
 	OnApprove *ApprovalBranch `json:"on_approve,omitempty"`
 	OnReject  *ApprovalBranch `json:"on_reject,omitempty"`
@@ -69,4 +70,23 @@ type ApprovalBranch struct {
 	OperationName  string         `json:"name"`
 	Context        map[string]any `json:"context"`
 	TimeoutSeconds int            `json:"timeout_seconds"`
+}
+
+// ResolvedApproval carries the job bits an approval resolution needs to write its
+// audit row (so the caller doesn't re-fetch the job after the status flip).
+type ResolvedApproval struct {
+	RequestID     string
+	TenantGroupID string
+	OpenedAt      *time.Time
+}
+
+// ExpiredApproval is a gate the scheduler resolved by timeout; carries everything
+// needed to write its timed_out audit row.
+type ExpiredApproval struct {
+	WorkflowID    string
+	RequestID     string
+	TenantGroupID string
+	ApprovalID    string
+	OpenedAt      *time.Time
+	TimedOutAt    time.Time // approval_timeout_at — the decided_at for a timeout
 }

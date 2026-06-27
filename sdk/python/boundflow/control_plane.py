@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 
 import grpc
@@ -84,6 +85,28 @@ class WorkflowSummary:
     lifecycle_state: LifecycleState
     workflow_state: WorkflowState
     version: int
+
+
+@dataclass
+class ApprovalAuditRecord:
+    """One approval decision from the BoundFlow audit log (GetApprovalAudit).
+    Correlate with a run trace via approval_id (the trace's boundflow.approval_id).
+    This is where the decision/actor/timing live — by design they're not in the
+    telemetry trace, only the approval_id is."""
+    approval_id: str
+    workflow_id: str
+    request_id: str
+    decision: str                  # "approved" | "rejected" | "timed_out" | "unspecified"
+    opened_at: datetime | None
+    decided_at: datetime | None
+    actor: str                     # customer-supplied; empty for timeouts
+
+
+_APPROVAL_DECISION = {
+    lc.APPROVAL_DECISION_APPROVED: "approved",
+    lc.APPROVAL_DECISION_REJECTED: "rejected",
+    lc.APPROVAL_DECISION_TIMED_OUT: "timed_out",
+}
 
 
 _LIFECYCLE = {
@@ -211,11 +234,14 @@ class ControlPlaneClient:
             lc.ActivateWorkflowRequest(workflow_id=workflow_id),
             metadata=self._metadata)
 
-    async def invoke_workflow(self, workflow_id: str, *, operation_timeout_seconds: int = 0) -> None:
-        await self._lc.InvokeWorkflow(lc.InvokeWorkflowRequest(
+    async def invoke_workflow(self, workflow_id: str, *, operation_timeout_seconds: int = 0) -> str:
+        """Trigger a run; returns the request_id — the run/trace id you can use to
+        find this invocation's trace later."""
+        resp = await self._lc.InvokeWorkflow(lc.InvokeWorkflowRequest(
             workflow_id=workflow_id,
             runtime_overrides=lc.RuntimeOverrides(operation_timeout_seconds=operation_timeout_seconds),
         ), metadata=self._metadata)
+        return resp.request_id
 
     async def get_workflow_state(self, workflow_id: str) -> WorkflowState | None:
         resp = await self._lc.GetWorkflow(
@@ -248,15 +274,38 @@ class ControlPlaneClient:
             for w in resp.workflows
         ]
 
-    async def approve_workflow(self, workflow_id: str, approval_id: str) -> None:
+    async def approve_workflow(self, workflow_id: str, approval_id: str, actor: str = "") -> None:
+        """Approve a parked gate. `actor` identifies the approver (e.g. an email or
+        user id); it's recorded in the approval audit log (auth is tenant-scoped, so
+        the customer's gate is the source of approver identity)."""
         await self._lc.ApproveWorkflow(
-            lc.ApproveWorkflowRequest(workflow_id=workflow_id, approval_id=approval_id),
+            lc.ApproveWorkflowRequest(workflow_id=workflow_id, approval_id=approval_id, actor=actor),
             metadata=self._metadata)
 
-    async def reject_workflow(self, workflow_id: str, approval_id: str) -> None:
+    async def reject_workflow(self, workflow_id: str, approval_id: str, actor: str = "") -> None:
         await self._lc.RejectWorkflow(
-            lc.RejectWorkflowRequest(workflow_id=workflow_id, approval_id=approval_id),
+            lc.RejectWorkflowRequest(workflow_id=workflow_id, approval_id=approval_id, actor=actor),
             metadata=self._metadata)
+
+    async def get_approval_audit(self, workflow_id: str = "", approval_id: str = "") -> list[ApprovalAuditRecord]:
+        """Approval decisions for this tenant (newest first), optionally filtered by
+        workflow and/or approval id. Look up by the approval_id seen in a trace to
+        get the decision, actor, and how long the gate was open."""
+        resp = await self._lc.GetApprovalAudit(
+            lc.GetApprovalAuditRequest(workflow_id=workflow_id, approval_id=approval_id),
+            metadata=self._metadata)
+        return [
+            ApprovalAuditRecord(
+                approval_id=r.approval_id,
+                workflow_id=r.workflow_id,
+                request_id=r.request_id,
+                decision=_APPROVAL_DECISION.get(r.decision, "unspecified"),
+                opened_at=r.opened_at.ToDatetime() if r.HasField("opened_at") else None,
+                decided_at=r.decided_at.ToDatetime() if r.HasField("decided_at") else None,
+                actor=r.actor,
+            )
+            for r in resp.records
+        ]
 
     async def delete_workflow(self, workflow_id: str) -> None:
         await self._lc.DeleteWorkflow(

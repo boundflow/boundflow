@@ -1,0 +1,20 @@
+# Jaeger all-in-one: OTLP ingest + storage + a web UI, in one container.
+# The example's OTelTraceSink ships spans here over OTLP/gRPC (4317); open the
+# UI at http://localhost:16686 to see them.
+#
+#   docker compose -f docker-compose.yml up -d
+#
+# Storage is in-memory (lost on restart) — fine for "see what it looks like".
+# For traces that survive restarts, swap to the embedded Badger DB by setting:
+#   SPAN_STORAGE_TYPE: badger
+#   BADGER_EPHEMERAL: "false"
+# and mounting a volume at /badger.
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"   # web UI
+      - "4317:4317"     # OTLP gRPC (where the sink sends spans)
+      - "4318:4318"     # OTLP HTTP
