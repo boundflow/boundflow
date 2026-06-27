@@ -10,6 +10,7 @@ from boundflow import (
     Complete,
     MockContext,
     MockLlmClient,
+    Next,
     RuntimePolicy,
     Tool,
     Turn,
@@ -165,6 +166,45 @@ async def test_trace_captures_operation_failure_with_no_agent(cp):
             assert t.failed is True, "ctx.mark_failed() is captured at the operation level"
             assert t.outcome == "completed"
             assert t.agent_runs == [], "no agent ran, but the operation is still traced"
+        finally:
+            await cp.delete_workflow(wf.id)
+
+
+async def test_multi_operation_run_shares_one_trace_id(cp):
+    # The docstring's core claim — all operations of one invocation share a
+    # trace_id — verified through a REAL Next-chain dispatch, not synthetic traces.
+    # A Next chain emits one OperationTrace per operation; both must carry the run id.
+    sink = CapturingSink()
+    worker = BoundFlowWorker(WORKER_ADDRESS, MockLlmClient(lambda _: submit()), trace_sink=sink)
+
+    def agent(prompt: str) -> AgentDefinition:
+        return AgentDefinition(name=AGENT, system_prompt=prompt, model="mock-model",
+                               output_schema={"done": {"type": "boolean"}})
+
+    @worker.workflow("trace_multi_wf", version=1)
+    async def _entry(ctx):
+        await ctx.run_agent(agent("entry"))
+        return Next("finalize", ctx.context, timeout=30)
+
+    @worker.operation("trace_multi_wf", "finalize")
+    async def _finalize(ctx):
+        await ctx.run_agent(agent("finalize"))
+        return Complete()
+
+    async with run_worker(worker):
+        tenant = await create_isolated_tenant(cp, "trace-multi")
+        wf = await cp.create_workflow("trace_multi_wf", tenant.id, config=WorkflowConfig(version=1))
+        try:
+            await cp.set_agent_runtime_policy(wf.id, AGENT, RuntimePolicy(max_llm_calls=8))
+            await cp.activate_workflow(wf.id)
+            request_id = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, wf.id)
+
+            # Two operations dispatched → two OperationTraces, one per operation ...
+            assert len(sink.traces) == 2, f"expected entry + finalize traces, got {len(sink.traces)}"
+            assert sorted(t.operation for t in sink.traces) == ["finalize", "invoke_entry"]
+            # ... all sharing the one invocation's run id as trace_id (caveat-1 fix).
+            assert {t.trace_id for t in sink.traces} == {request_id}
         finally:
             await cp.delete_workflow(wf.id)
 
