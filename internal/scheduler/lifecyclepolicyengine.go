@@ -29,12 +29,17 @@ type WorkflowGoalState struct {
 	VersionChange bool
 }
 
-func (e *LifecyclePolicyEngine) ResolvePolicy(rollingMetrics *[]domain.WorkflowInvocationSnapshot, policy *domain.WorkflowLifecyclePolicy, versionMetrics *domain.WorkflowVersionMetrics) (bool, WorkflowGoalState, error) {
+// ResolvePolicy evaluates the workflow lifecycle policy. It returns the winning
+// goal state plus the rule that produced it and the metric value that crossed its
+// threshold (the "reason" for the audit). winningRule is nil when no rule fired.
+func (e *LifecyclePolicyEngine) ResolvePolicy(rollingMetrics *[]domain.WorkflowInvocationSnapshot, policy *domain.WorkflowLifecyclePolicy, versionMetrics *domain.WorkflowVersionMetrics) (WorkflowGoalState, *domain.WorkflowLifecyclePolicyRule, float64, error) {
 
 	// order of precedence of actiontype:
 	// pause, cooldown, setversion
 
 	var workflowGoalState WorkflowGoalState
+	var winningRule *domain.WorkflowLifecyclePolicyRule
+	var winningValue float64
 	winningActionPriority := -1 // lowest precedence
 
 	e.log.Debug("evaluating lifecycle policy", "num_rules", len(policy.Rules))
@@ -42,6 +47,7 @@ func (e *LifecyclePolicyEngine) ResolvePolicy(rollingMetrics *[]domain.WorkflowI
 	for _, rule := range policy.Rules {
 
 		var targetGoalState WorkflowGoalState
+		var ruleValue float64
 		ruleEnforced := false
 
 		if len(*rollingMetrics) == 0 {
@@ -82,6 +88,7 @@ func (e *LifecyclePolicyEngine) ResolvePolicy(rollingMetrics *[]domain.WorkflowI
 
 			if val >= rule.Threshold {
 				ruleEnforced = true
+				ruleValue = val
 				targetGoalState.Version = rule.Action.TargetVersion
 				targetGoalState.VersionChange = true
 			}
@@ -127,6 +134,7 @@ func (e *LifecyclePolicyEngine) ResolvePolicy(rollingMetrics *[]domain.WorkflowI
 
 			if total >= rule.Threshold {
 				ruleEnforced = true
+				ruleValue = total
 				targetGoalState.VersionChange = false
 				switch rule.Action.Type {
 				case domain.WorkflowPolicyActionCooldown:
@@ -147,6 +155,9 @@ func (e *LifecyclePolicyEngine) ResolvePolicy(rollingMetrics *[]domain.WorkflowI
 		if actionPriority > winningActionPriority {
 			winningActionPriority = actionPriority
 			workflowGoalState = targetGoalState
+			rc := rule
+			winningRule = &rc
+			winningValue = ruleValue
 		}
 	}
 
@@ -156,7 +167,7 @@ func (e *LifecyclePolicyEngine) ResolvePolicy(rollingMetrics *[]domain.WorkflowI
 		e.log.Info("lifecycle policy fired", "action", workflowGoalState.State, "version_change", workflowGoalState.VersionChange, "target_version", workflowGoalState.Version, "cooldown_seconds", workflowGoalState.Cooldown)
 	}
 
-	return (winningActionPriority != -1), workflowGoalState, nil
+	return workflowGoalState, winningRule, winningValue, nil
 }
 
 func (e *LifecyclePolicyEngine) getActionPriority(actionType domain.WorkflowPolicyActionType) int {

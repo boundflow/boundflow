@@ -373,6 +373,37 @@ func (h *WorkflowServiceHandler) GetApprovalAudit(ctx context.Context, req *boun
 	return &boundflowv1.GetApprovalAuditResponse{Records: out}, nil
 }
 
+func (h *WorkflowServiceHandler) GetPolicyAudit(ctx context.Context, req *boundflowv1.GetPolicyAuditRequest) (*boundflowv1.GetPolicyAuditResponse, error) {
+	group, err := callerTenantGroup(ctx)
+	if err != nil {
+		return nil, err
+	}
+	events, err := h.svc.GetPolicyAudit(ctx, group, req.WorkflowId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "get policy audit: %v", err)
+	}
+
+	out := make([]*boundflowv1.PolicyAuditRecord, 0, len(events))
+	for _, e := range events {
+		d, err := e.PolicyDetails()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "resolve policy audit: %v", err)
+		}
+		out = append(out, &boundflowv1.PolicyAuditRecord{
+			WorkflowId:      e.WorkflowID,
+			RequestId:       e.RequestID,
+			Scope:           d.Scope,
+			Rule:            convert.WorkflowRuleToProto(d.Rule),
+			TriggerValue:    d.TriggerValue,
+			PreviousVersion: int32(d.PreviousVersion),
+			PreviousState:   string(d.PreviousState),
+			Actor:           e.Actor,
+			OccurredAt:      timestamppb.New(e.OccurredAt),
+		})
+	}
+	return &boundflowv1.GetPolicyAuditResponse{Records: out}, nil
+}
+
 func approvalDecisionToProto(d domain.ApprovalDecision) boundflowv1.ApprovalDecision {
 	switch d {
 	case domain.ApprovalApproved:

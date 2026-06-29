@@ -10,8 +10,8 @@ import (
 type AuditEventType string
 
 const (
-	AuditEventApproval AuditEventType = "approval"
-	// AuditEventPolicyAction AuditEventType = "policy_action" // planned: lifecycle policy firings
+	AuditEventApproval     AuditEventType = "approval"
+	AuditEventPolicyAction AuditEventType = "policy_action"
 )
 
 // AuditEvent is one row of the governance audit log. The common query dimensions
@@ -55,6 +55,33 @@ func (e AuditEvent) ApprovalDetails() (*ApprovalAuditDetails, error) {
 	var d ApprovalAuditDetails
 	if err := json.Unmarshal(e.Details, &d); err != nil {
 		return nil, fmt.Errorf("unmarshal approval audit details: %w", err)
+	}
+	return &d, nil
+}
+
+// PolicyActionDetails is the typed payload of an AuditEventPolicyAction event — a
+// lifecycle policy rule that fired and changed workflow state. The rule itself is
+// embedded (it carries metric/threshold/window/tool + the action with its target
+// version / cooldown), so the record is self-describing. Only the value that
+// crossed and the prior state aren't in the rule; the resulting state is the rule's
+// action applied to that prior state.
+type PolicyActionDetails struct {
+	Scope           string                      `json:"scope"` // "workflow" (agent scope planned)
+	Rule            WorkflowLifecyclePolicyRule `json:"rule"`
+	TriggerValue    float64                     `json:"trigger_value"`
+	PreviousVersion int                         `json:"previous_version"`
+	PreviousState   WorkflowState               `json:"previous_state"`
+}
+
+// PolicyDetails resolves the event's Details as a policy-action record. It errors if
+// the event is not a policy_action event.
+func (e AuditEvent) PolicyDetails() (*PolicyActionDetails, error) {
+	if e.EventType != AuditEventPolicyAction {
+		return nil, fmt.Errorf("audit event %s is %s, not a policy_action event", e.ID, e.EventType)
+	}
+	var d PolicyActionDetails
+	if err := json.Unmarshal(e.Details, &d); err != nil {
+		return nil, fmt.Errorf("unmarshal policy action details: %w", err)
 	}
 	return &d, nil
 }

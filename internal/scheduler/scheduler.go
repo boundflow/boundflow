@@ -19,7 +19,7 @@ type MetricsHandler interface {
 }
 
 type PolicyResolver interface {
-	ResolveLifecyclePolicy(ctx context.Context, workflow *domain.Workflow, versionMetrics *domain.WorkflowVersionMetrics) error
+	ResolveLifecyclePolicy(ctx context.Context, workflow *domain.Workflow, versionMetrics *domain.WorkflowVersionMetrics) (*domain.PolicyActionDetails, error)
 }
 
 // PartitionWorker is a partition-scoped loop the scheduler owns. The scheduler starts each worker
@@ -40,6 +40,7 @@ type Scheduler struct {
 	metricsHandler   MetricsHandler
 	jobs             storage.JobRepository
 	policyResolver   PolicyResolver
+	audit            storage.AuditRepository
 	partitionWorkers []PartitionWorker
 }
 
@@ -48,7 +49,7 @@ type Scheduler struct {
 // 2. Schedules unscheduled requests onto the job queue (picking priority by version number)
 // 3. Checks for completed jobs, and updates current config state of the workflow and lifecycle state, then deletes the job
 
-func NewScheduler(id string, interval int, parts storage.SchedulerPartitionRepository, scheduler storage.SchedulerRepository, requests storage.CustomerRequestRepository, workflow storage.WorkflowRepository, agentStates storage.AgentStateRepository, jobs storage.JobRepository, metricsHandler MetricsHandler, policyResolver PolicyResolver, log *slog.Logger) *Scheduler {
+func NewScheduler(id string, interval int, parts storage.SchedulerPartitionRepository, scheduler storage.SchedulerRepository, requests storage.CustomerRequestRepository, workflow storage.WorkflowRepository, agentStates storage.AgentStateRepository, jobs storage.JobRepository, metricsHandler MetricsHandler, policyResolver PolicyResolver, audit storage.AuditRepository, log *slog.Logger) *Scheduler {
 	return &Scheduler{
 		id:             id,
 		interval:       interval,
@@ -60,6 +61,7 @@ func NewScheduler(id string, interval int, parts storage.SchedulerPartitionRepos
 		jobs:           jobs,
 		metricsHandler: metricsHandler,
 		policyResolver: policyResolver,
+		audit:          audit,
 		log:            log.With("component", "scheduler", "scheduler_id", id),
 	}
 }
@@ -163,6 +165,32 @@ func (s *Scheduler) ApproveJob(ctx context.Context, workflowID string, approvalI
 
 func (s *Scheduler) RejectJob(ctx context.Context, workflowID string, approvalID string) (bool, domain.ResolvedApproval, error) {
 	return s.jobs.ResolveApproval(ctx, workflowID, approvalID, domain.JobStatusRejected)
+}
+
+// recordPolicyAction appends the audit row for a lifecycle-policy firing. Best-effort:
+// the policy already applied, so a failed audit write is logged, not surfaced.
+func (s *Scheduler) recordPolicyAction(ctx context.Context, workflow *domain.Workflow, requestID string, action *domain.PolicyActionDetails) {
+	groupID, err := s.workflow.TenantGroupIDForWorkflow(ctx, workflow.ID)
+	if err != nil {
+		s.log.Error("failed to resolve tenant group for policy audit", "workflow_id", workflow.ID, "error", err)
+		return
+	}
+	details, err := json.Marshal(action)
+	if err != nil {
+		s.log.Error("failed to marshal policy action details", "workflow_id", workflow.ID, "error", err)
+		return
+	}
+	if err := s.audit.Append(ctx, domain.AuditEvent{
+		TenantGroupID: groupID,
+		WorkflowID:    workflow.ID,
+		RequestID:     requestID,
+		EventType:     domain.AuditEventPolicyAction,
+		Actor:         "system",
+		OccurredAt:    time.Now(),
+		Details:       details,
+	}); err != nil {
+		s.log.Error("failed to append policy action audit", "workflow_id", workflow.ID, "error", err)
+	}
 }
 
 func (s *Scheduler) MarkAwaitingApproval(ctx context.Context, workflowID string) error {
@@ -311,10 +339,13 @@ func (s *Scheduler) CompleteRequest(ctx context.Context, req string) (bool, erro
 	}
 
 	// resolve policy
-	err = s.policyResolver.ResolveLifecyclePolicy(ctx, workflow, versionMetrics)
+	policyAction, err := s.policyResolver.ResolveLifecyclePolicy(ctx, workflow, versionMetrics)
 	if err != nil {
 		s.log.Error("failed to resolve lifecycle policy", "request_id", req, "workflow_id", request.WorkflowID, "error", err)
 		return false, err
+	}
+	if policyAction != nil {
+		s.recordPolicyAction(ctx, workflow, req, policyAction)
 	}
 
 	if _, err := s.scheduler.DeleteTerminalJob(ctx, request.WorkflowID, req); err != nil {

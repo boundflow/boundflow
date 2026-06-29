@@ -46,11 +46,11 @@ func resolve(rolling []domain.WorkflowInvocationSnapshot, rules []domain.Workflo
 		vm = &domain.WorkflowVersionMetrics{}
 	}
 	policy := domain.WorkflowLifecyclePolicy{Rules: rules}
-	updated, gs, err := e.ResolvePolicy(&rolling, &policy, vm)
+	gs, firedRule, _, err := e.ResolvePolicy(&rolling, &policy, vm)
 	if err != nil {
 		panic(err)
 	}
-	return updated, gs
+	return firedRule != nil, gs
 }
 
 func TestResolvePolicy_NoRollingMetrics_NoFire(t *testing.T) {
