@@ -30,42 +30,51 @@ func (r *AuditRepo) Append(ctx context.Context, e domain.AuditEvent) error {
 	return nil
 }
 
-// ListApprovals returns a tenant's approval audit events, most recent first.
-// workflowID and approvalID are optional filters (empty string = no filter).
-// Callers resolve each event with AuditEvent.ApprovalDetails().
-func (r *AuditRepo) ListApprovals(ctx context.Context, tenantGroupID, workflowID, approvalID string) ([]domain.AuditEvent, error) {
+// ListAuditEvents returns a tenant's audit events newest first. workflowID is an
+// optional filter (empty = tenant-wide); agentName filters agent events to one agent
+// (empty = no filter); eventTypes filters to those types (empty = all). Callers
+// resolve each event by its EventType (ApprovalDetails / PolicyDetails / AgentPolicyDetails).
+func (r *AuditRepo) ListAuditEvents(ctx context.Context, tenantGroupID, workflowID, agentName string, eventTypes []domain.AuditEventType) ([]domain.AuditEvent, error) {
+	types := make([]string, len(eventTypes))
+	for i, t := range eventTypes {
+		types[i] = string(t)
+	}
 	rows, err := r.pool.Query(ctx,
 		`SELECT id, tenant_group_id, COALESCE(workflow_id, ''), COALESCE(request_id, ''),
 		        event_type, actor, occurred_at, details, created_at
 		 FROM audit_events
-		 WHERE tenant_group_id = $1 AND event_type = $2
-		   AND ($3 = '' OR workflow_id = $3)
-		   AND ($4 = '' OR details->>'approval_id' = $4)
+		 WHERE tenant_group_id = $1
+		   AND ($2 = '' OR workflow_id = $2)
+		   AND ($3 = '' OR details->>'agent' = $3)
+		   AND (cardinality($4::text[]) = 0 OR event_type = ANY($4))
 		 ORDER BY occurred_at DESC
 		 LIMIT 500`,
-		tenantGroupID, domain.AuditEventApproval, workflowID, approvalID)
+		tenantGroupID, workflowID, agentName, types)
 	if err != nil {
-		return nil, fmt.Errorf("list approval audit: %w", err)
+		return nil, fmt.Errorf("list audit events: %w", err)
 	}
 	return scanAuditEvents(rows)
 }
 
-// ListPolicyActions returns a tenant's lifecycle-policy-action events, newest first;
-// workflowID is an optional filter. Callers resolve each with AuditEvent.PolicyDetails().
-func (r *AuditRepo) ListPolicyActions(ctx context.Context, tenantGroupID, workflowID string) ([]domain.AuditEvent, error) {
+// GetApprovalByID returns the tenant's approval event with the given approval_id,
+// or nil if none. Used for trace correlation (the trace carries approval_id).
+func (r *AuditRepo) GetApprovalByID(ctx context.Context, tenantGroupID, approvalID string) (*domain.AuditEvent, error) {
 	rows, err := r.pool.Query(ctx,
 		`SELECT id, tenant_group_id, COALESCE(workflow_id, ''), COALESCE(request_id, ''),
 		        event_type, actor, occurred_at, details, created_at
 		 FROM audit_events
-		 WHERE tenant_group_id = $1 AND event_type = $2
-		   AND ($3 = '' OR workflow_id = $3)
+		 WHERE tenant_group_id = $1 AND event_type = $2 AND details->>'approval_id' = $3
 		 ORDER BY occurred_at DESC
-		 LIMIT 500`,
-		tenantGroupID, domain.AuditEventPolicyAction, workflowID)
+		 LIMIT 1`,
+		tenantGroupID, domain.AuditEventApproval, approvalID)
 	if err != nil {
-		return nil, fmt.Errorf("list policy audit: %w", err)
+		return nil, fmt.Errorf("get approval by id: %w", err)
 	}
-	return scanAuditEvents(rows)
+	events, err := scanAuditEvents(rows)
+	if err != nil || len(events) == 0 {
+		return nil, err
+	}
+	return &events[0], nil
 }
 
 func scanAuditEvents(rows pgx.Rows) ([]domain.AuditEvent, error) {

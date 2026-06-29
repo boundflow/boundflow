@@ -39,9 +39,9 @@ class CapturingSink:
 async def _wait_for_audit(cp, approval_id: str, timeout: int = 15):
     deadline = asyncio.get_event_loop().time() + timeout
     while True:
-        records = await cp.get_approval_audit(approval_id=approval_id)
-        if records:
-            return records
+        rec = await cp.get_approval_audit_by_id(approval_id)
+        if rec is not None:
+            return rec
         assert asyncio.get_event_loop().time() < deadline, f"audit row for {approval_id} never appeared"
         await asyncio.sleep(0.3)
 
@@ -81,9 +81,7 @@ async def test_approve_audits_and_correlates_with_trace(cp):
             await wait_for_completion(cp, wf.id)
 
             # The decision / actor / timing live server-side, looked up by approval_id.
-            records = await _wait_for_audit(cp, approval_id)
-            assert len(records) == 1
-            r = records[0]
+            r = await _wait_for_audit(cp, approval_id)
             assert r.approval_id == approval_id
             assert r.workflow_id == wf.id
             assert r.decision == "approved"
@@ -118,9 +116,9 @@ async def test_reject_audits_with_actor(cp):
             await cp.reject_workflow(wf.id, approval_id, actor="bob@corp.com")
             await wait_for_completion(cp, wf.id)
 
-            records = await _wait_for_audit(cp, approval_id)
-            assert records[0].decision == "rejected"
-            assert records[0].actor == "bob@corp.com"
+            r = await _wait_for_audit(cp, approval_id)
+            assert r.decision == "rejected"
+            assert r.actor == "bob@corp.com"
         finally:
             await cp.delete_workflow(wf.id)
 
@@ -148,9 +146,9 @@ async def test_timeout_audits_as_timed_out(cp):
 
             # No decision: let the gate expire. The scheduler resolver (≤30s tick)
             # rejects it and writes a timed_out audit row with no actor.
-            records = await _wait_for_audit(cp, approval_id, timeout=60)
-            assert records[0].decision == "timed_out"
-            assert records[0].actor == ""
-            assert records[0].opened_at is not None
+            r = await _wait_for_audit(cp, approval_id, timeout=60)
+            assert r.decision == "timed_out"
+            assert r.actor == ""
+            assert r.opened_at is not None
         finally:
             await cp.delete_workflow(wf.id)

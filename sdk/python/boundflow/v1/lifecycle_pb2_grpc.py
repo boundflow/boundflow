@@ -94,10 +94,25 @@ class WorkflowServiceStub:
                 request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetApprovalAuditRequest.SerializeToString,
                 response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetApprovalAuditResponse.FromString,
                 _registered_method=True)
-        self.GetPolicyAudit = channel.unary_unary(
-                '/boundflow.v1.WorkflowService/GetPolicyAudit',
-                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetPolicyAuditRequest.SerializeToString,
-                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetPolicyAuditResponse.FromString,
+        self.GetApprovalAuditById = channel.unary_unary(
+                '/boundflow.v1.WorkflowService/GetApprovalAuditById',
+                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetApprovalAuditByIdRequest.SerializeToString,
+                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetApprovalAuditByIdResponse.FromString,
+                _registered_method=True)
+        self.GetWorkflowPolicyAudit = channel.unary_unary(
+                '/boundflow.v1.WorkflowService/GetWorkflowPolicyAudit',
+                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowPolicyAuditRequest.SerializeToString,
+                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowPolicyAuditResponse.FromString,
+                _registered_method=True)
+        self.GetAgentPolicyAudit = channel.unary_unary(
+                '/boundflow.v1.WorkflowService/GetAgentPolicyAudit',
+                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetAgentPolicyAuditRequest.SerializeToString,
+                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetAgentPolicyAuditResponse.FromString,
+                _registered_method=True)
+        self.GetAuditLog = channel.unary_unary(
+                '/boundflow.v1.WorkflowService/GetAuditLog',
+                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetAuditLogRequest.SerializeToString,
+                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetAuditLogResponse.FromString,
                 _registered_method=True)
         self.ActivateWorkflow = channel.unary_unary(
                 '/boundflow.v1.WorkflowService/ActivateWorkflow',
@@ -176,12 +191,32 @@ class WorkflowServiceServicer:
         raise NotImplementedError('Method not implemented!')
 
     def GetApprovalAudit(self, request, context):
+        """Per-type audit getters (workflow_id required); GetAuditLog is the unified,
+        time-ordered log (workflow_id optional — omitted = whole tenant group).
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetApprovalAuditById(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def GetPolicyAudit(self, request, context):
+    def GetWorkflowPolicyAudit(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetAgentPolicyAudit(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetAuditLog(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -256,10 +291,25 @@ def add_WorkflowServiceServicer_to_server(servicer, server):
                     request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetApprovalAuditRequest.FromString,
                     response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetApprovalAuditResponse.SerializeToString,
             ),
-            'GetPolicyAudit': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetPolicyAudit,
-                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetPolicyAuditRequest.FromString,
-                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetPolicyAuditResponse.SerializeToString,
+            'GetApprovalAuditById': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetApprovalAuditById,
+                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetApprovalAuditByIdRequest.FromString,
+                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetApprovalAuditByIdResponse.SerializeToString,
+            ),
+            'GetWorkflowPolicyAudit': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetWorkflowPolicyAudit,
+                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowPolicyAuditRequest.FromString,
+                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowPolicyAuditResponse.SerializeToString,
+            ),
+            'GetAgentPolicyAudit': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetAgentPolicyAudit,
+                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetAgentPolicyAuditRequest.FromString,
+                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetAgentPolicyAuditResponse.SerializeToString,
+            ),
+            'GetAuditLog': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetAuditLog,
+                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetAuditLogRequest.FromString,
+                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetAuditLogResponse.SerializeToString,
             ),
             'ActivateWorkflow': grpc.unary_unary_rpc_method_handler(
                     servicer.ActivateWorkflow,
@@ -602,7 +652,7 @@ class WorkflowService:
             _registered_method=True)
 
     @staticmethod
-    def GetPolicyAudit(request,
+    def GetApprovalAuditById(request,
             target,
             options=(),
             channel_credentials=None,
@@ -615,9 +665,90 @@ class WorkflowService:
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/boundflow.v1.WorkflowService/GetPolicyAudit',
-            boundflow_dot_v1_dot_lifecycle__pb2.GetPolicyAuditRequest.SerializeToString,
-            boundflow_dot_v1_dot_lifecycle__pb2.GetPolicyAuditResponse.FromString,
+            '/boundflow.v1.WorkflowService/GetApprovalAuditById',
+            boundflow_dot_v1_dot_lifecycle__pb2.GetApprovalAuditByIdRequest.SerializeToString,
+            boundflow_dot_v1_dot_lifecycle__pb2.GetApprovalAuditByIdResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetWorkflowPolicyAudit(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/boundflow.v1.WorkflowService/GetWorkflowPolicyAudit',
+            boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowPolicyAuditRequest.SerializeToString,
+            boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowPolicyAuditResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetAgentPolicyAudit(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/boundflow.v1.WorkflowService/GetAgentPolicyAudit',
+            boundflow_dot_v1_dot_lifecycle__pb2.GetAgentPolicyAuditRequest.SerializeToString,
+            boundflow_dot_v1_dot_lifecycle__pb2.GetAgentPolicyAuditResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetAuditLog(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/boundflow.v1.WorkflowService/GetAuditLog',
+            boundflow_dot_v1_dot_lifecycle__pb2.GetAuditLogRequest.SerializeToString,
+            boundflow_dot_v1_dot_lifecycle__pb2.GetAuditLogResponse.FromString,
             options,
             channel_credentials,
             insecure,

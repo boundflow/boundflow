@@ -6,6 +6,7 @@ option go_package = "github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1
 
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
+import "boundflow/v1/agent_policy.proto";
 
 message AtomicOperation {
   string id = 1;
@@ -37,6 +38,10 @@ message AtomicOperationResult {
   // Workflow-level metrics the customer emits for this operation (e.g. a failed run).
   // Accumulated across the job's operations and folded into the rolling snapshot.
   WorkflowInvocationMetrics workflow_metrics = 6;
+  // Per-agent lifecycle policy actions applied this operation, keyed by agent name.
+  // The SDK populates an entry only when rules changed the effective policy
+  // (effective != base); the server records each as a scope="agent" audit row.
+  map<string, AgentPolicyAction> agent_policy_actions = 7;
 }
 
 // WorkflowInvocationMetrics holds workflow-level (non-agent) metrics the customer

@@ -6,7 +6,6 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
 	"github.com/boundflow/boundflow/internal/auth"
@@ -344,75 +343,96 @@ func (h *WorkflowServiceHandler) GetApprovalAudit(ctx context.Context, req *boun
 	if err != nil {
 		return nil, err
 	}
-	events, err := h.svc.GetApprovalAudit(ctx, group, req.WorkflowId, req.ApprovalId)
+	events, err := h.svc.GetApprovalAudit(ctx, group, req.WorkflowId)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "get approval audit: %v", err)
 	}
-
 	out := make([]*boundflowv1.ApprovalAuditRecord, 0, len(events))
 	for _, e := range events {
-		d, err := e.ApprovalDetails()
+		rec, err := convert.ApprovalAuditRecord(e)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "resolve approval audit: %v", err)
-		}
-		rec := &boundflowv1.ApprovalAuditRecord{
-			ApprovalId: d.ApprovalID,
-			WorkflowId: e.WorkflowID,
-			RequestId:  e.RequestID,
-			Decision:   approvalDecisionToProto(d.Decision),
-			Actor:      e.Actor,
-		}
-		if d.OpenedAt != nil {
-			rec.OpenedAt = timestamppb.New(*d.OpenedAt)
-		}
-		if d.DecidedAt != nil {
-			rec.DecidedAt = timestamppb.New(*d.DecidedAt)
 		}
 		out = append(out, rec)
 	}
 	return &boundflowv1.GetApprovalAuditResponse{Records: out}, nil
 }
 
-func (h *WorkflowServiceHandler) GetPolicyAudit(ctx context.Context, req *boundflowv1.GetPolicyAuditRequest) (*boundflowv1.GetPolicyAuditResponse, error) {
+func (h *WorkflowServiceHandler) GetApprovalAuditById(ctx context.Context, req *boundflowv1.GetApprovalAuditByIdRequest) (*boundflowv1.GetApprovalAuditByIdResponse, error) {
 	group, err := callerTenantGroup(ctx)
 	if err != nil {
 		return nil, err
 	}
-	events, err := h.svc.GetPolicyAudit(ctx, group, req.WorkflowId)
+	event, err := h.svc.GetApprovalAuditByID(ctx, group, req.ApprovalId)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "get policy audit: %v", err)
+		return nil, status.Errorf(codes.Internal, "get approval audit by id: %v", err)
 	}
-
-	out := make([]*boundflowv1.PolicyAuditRecord, 0, len(events))
-	for _, e := range events {
-		d, err := e.PolicyDetails()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "resolve policy audit: %v", err)
-		}
-		out = append(out, &boundflowv1.PolicyAuditRecord{
-			WorkflowId:      e.WorkflowID,
-			RequestId:       e.RequestID,
-			Scope:           d.Scope,
-			Rule:            convert.WorkflowRuleToProto(d.Rule),
-			TriggerValue:    d.TriggerValue,
-			PreviousVersion: int32(d.PreviousVersion),
-			PreviousState:   string(d.PreviousState),
-			Actor:           e.Actor,
-			OccurredAt:      timestamppb.New(e.OccurredAt),
-		})
+	if event == nil {
+		return &boundflowv1.GetApprovalAuditByIdResponse{}, nil
 	}
-	return &boundflowv1.GetPolicyAuditResponse{Records: out}, nil
+	rec, err := convert.ApprovalAuditRecord(*event)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "resolve approval audit: %v", err)
+	}
+	return &boundflowv1.GetApprovalAuditByIdResponse{Record: rec}, nil
 }
 
-func approvalDecisionToProto(d domain.ApprovalDecision) boundflowv1.ApprovalDecision {
-	switch d {
-	case domain.ApprovalApproved:
-		return boundflowv1.ApprovalDecision_APPROVAL_DECISION_APPROVED
-	case domain.ApprovalRejected:
-		return boundflowv1.ApprovalDecision_APPROVAL_DECISION_REJECTED
-	case domain.ApprovalTimedOut:
-		return boundflowv1.ApprovalDecision_APPROVAL_DECISION_TIMED_OUT
-	default:
-		return boundflowv1.ApprovalDecision_APPROVAL_DECISION_UNSPECIFIED
+func (h *WorkflowServiceHandler) GetWorkflowPolicyAudit(ctx context.Context, req *boundflowv1.GetWorkflowPolicyAuditRequest) (*boundflowv1.GetWorkflowPolicyAuditResponse, error) {
+	group, err := callerTenantGroup(ctx)
+	if err != nil {
+		return nil, err
 	}
+	events, err := h.svc.GetWorkflowPolicyAudit(ctx, group, req.WorkflowId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "get workflow policy audit: %v", err)
+	}
+	out := make([]*boundflowv1.WorkflowPolicyAuditRecord, 0, len(events))
+	for _, e := range events {
+		rec, err := convert.WorkflowPolicyAuditRecord(e)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "resolve workflow policy audit: %v", err)
+		}
+		out = append(out, rec)
+	}
+	return &boundflowv1.GetWorkflowPolicyAuditResponse{Records: out}, nil
+}
+
+func (h *WorkflowServiceHandler) GetAgentPolicyAudit(ctx context.Context, req *boundflowv1.GetAgentPolicyAuditRequest) (*boundflowv1.GetAgentPolicyAuditResponse, error) {
+	group, err := callerTenantGroup(ctx)
+	if err != nil {
+		return nil, err
+	}
+	events, err := h.svc.GetAgentPolicyAudit(ctx, group, req.WorkflowId, req.AgentName)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "get agent policy audit: %v", err)
+	}
+	out := make([]*boundflowv1.AgentPolicyAuditRecord, 0, len(events))
+	for _, e := range events {
+		rec, err := convert.AgentPolicyAuditRecord(e)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "resolve agent policy audit: %v", err)
+		}
+		out = append(out, rec)
+	}
+	return &boundflowv1.GetAgentPolicyAuditResponse{Records: out}, nil
+}
+
+func (h *WorkflowServiceHandler) GetAuditLog(ctx context.Context, req *boundflowv1.GetAuditLogRequest) (*boundflowv1.GetAuditLogResponse, error) {
+	group, err := callerTenantGroup(ctx)
+	if err != nil {
+		return nil, err
+	}
+	events, err := h.svc.GetAuditLog(ctx, group, req.WorkflowId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "get audit log: %v", err)
+	}
+	out := make([]*boundflowv1.AuditEntry, 0, len(events))
+	for _, e := range events {
+		entry, err := convert.AuditEntry(e)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "resolve audit entry: %v", err)
+		}
+		out = append(out, entry)
+	}
+	return &boundflowv1.GetAuditLogResponse{Entries: out}, nil
 }

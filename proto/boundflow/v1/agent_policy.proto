@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package boundflow.v1;
+
+option go_package = "github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1";
+
+// Typed agent-policy objects. Used today by the agent-lifecycle audit path
+// (AgentPolicyAction). The existing SetAgentRuntimePolicy/SetAgentLifecyclePolicy
+// RPCs still carry these as opaque JSON Structs; these messages are the typed
+// equivalents and can replace that representation later.
+
+enum AgentMetric {
+  AGENT_METRIC_UNSPECIFIED   = 0;
+  AGENT_METRIC_TOKENS_USED   = 1;
+  AGENT_METRIC_COST_USD      = 2;
+  AGENT_METRIC_LLM_CALLS     = 3;
+  AGENT_METRIC_CALLS_PER_TOOL = 4;
+}
+
+enum AgentOp {
+  AGENT_OP_UNSPECIFIED = 0;
+  AGENT_OP_LT          = 1;  // less_than
+  AGENT_OP_LTE         = 2;  // less_than_or_equal
+  AGENT_OP_GT          = 3;  // greater_than
+  AGENT_OP_GTE         = 4;  // greater_than_or_equal
+  AGENT_OP_EQ          = 5;  // equal
+}
+
+message ToolCallLimit {
+  string tool      = 1;
+  int32  max_calls = 2;
+}
+
+// AgentRuntimePolicy mirrors the SDK RuntimePolicy (hard caps + model override).
+message AgentRuntimePolicy {
+  string model                      = 1;  // empty = unset
+  int32  max_llm_calls              = 2;
+  double max_cost_usd               = 3;
+  int32  max_tokens_per_call        = 4;
+  repeated ToolCallLimit tool_call_limits = 5;
+}
+
+enum AgentRuleActionField {
+  AGENT_RULE_ACTION_UNSPECIFIED          = 0;
+  AGENT_RULE_ACTION_SET_MODEL            = 1;
+  AGENT_RULE_ACTION_SET_MAX_LLM_CALLS    = 2;
+  AGENT_RULE_ACTION_SET_MAX_COST_USD     = 3;
+  AGENT_RULE_ACTION_SET_MAX_TOKENS_PER_CALL = 4;
+}
+
+// AgentRuleAction is the discriminated SDK action: the field set, with the value
+// in the matching typed field.
+message AgentRuleAction {
+  AgentRuleActionField field     = 1;
+  string model                   = 2;  // SET_MODEL
+  int32  max_llm_calls           = 3;  // SET_MAX_LLM_CALLS
+  double max_cost_usd            = 4;  // SET_MAX_COST_USD
+  int32  max_tokens_per_call     = 5;  // SET_MAX_TOKENS_PER_CALL
+}
+
+message AgentRule {
+  AgentMetric metric     = 1;
+  AgentOp     op         = 2;
+  double      threshold  = 3;
+  int32       window     = 4;
+  string      tool       = 5;  // only for CALLS_PER_TOOL
+  AgentRuleAction action = 6;
+}
+
+// FiredAgentRule is a rule that matched this run plus the metric value that crossed.
+message FiredAgentRule {
+  AgentRule rule         = 1;
+  double    trigger_value = 2;
+}
+
+// AgentPolicyAction is what the SDK reports when agent lifecycle rules changed the
+// effective runtime policy for a run: the base (pre-run) policy, the effective
+// (post-rules) policy, and the rules that fired.
+message AgentPolicyAction {
+  AgentRuntimePolicy base_policy      = 1;
+  AgentRuntimePolicy effective_policy = 2;
+  repeated FiredAgentRule fired_rules = 3;
+}

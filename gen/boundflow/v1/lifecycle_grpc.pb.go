@@ -31,7 +31,10 @@ const (
 	WorkflowService_ApproveWorkflow_FullMethodName            = "/boundflow.v1.WorkflowService/ApproveWorkflow"
 	WorkflowService_RejectWorkflow_FullMethodName             = "/boundflow.v1.WorkflowService/RejectWorkflow"
 	WorkflowService_GetApprovalAudit_FullMethodName           = "/boundflow.v1.WorkflowService/GetApprovalAudit"
-	WorkflowService_GetPolicyAudit_FullMethodName             = "/boundflow.v1.WorkflowService/GetPolicyAudit"
+	WorkflowService_GetApprovalAuditById_FullMethodName       = "/boundflow.v1.WorkflowService/GetApprovalAuditById"
+	WorkflowService_GetWorkflowPolicyAudit_FullMethodName     = "/boundflow.v1.WorkflowService/GetWorkflowPolicyAudit"
+	WorkflowService_GetAgentPolicyAudit_FullMethodName        = "/boundflow.v1.WorkflowService/GetAgentPolicyAudit"
+	WorkflowService_GetAuditLog_FullMethodName                = "/boundflow.v1.WorkflowService/GetAuditLog"
 	WorkflowService_ActivateWorkflow_FullMethodName           = "/boundflow.v1.WorkflowService/ActivateWorkflow"
 )
 
@@ -50,8 +53,13 @@ type WorkflowServiceClient interface {
 	SetWorkflowLifecyclePolicy(ctx context.Context, in *SetWorkflowLifecyclePolicyRequest, opts ...grpc.CallOption) (*SetWorkflowLifecyclePolicyResponse, error)
 	ApproveWorkflow(ctx context.Context, in *ApproveWorkflowRequest, opts ...grpc.CallOption) (*ApproveWorkflowResponse, error)
 	RejectWorkflow(ctx context.Context, in *RejectWorkflowRequest, opts ...grpc.CallOption) (*RejectWorkflowResponse, error)
+	// Per-type audit getters (workflow_id required); GetAuditLog is the unified,
+	// time-ordered log (workflow_id optional — omitted = whole tenant group).
 	GetApprovalAudit(ctx context.Context, in *GetApprovalAuditRequest, opts ...grpc.CallOption) (*GetApprovalAuditResponse, error)
-	GetPolicyAudit(ctx context.Context, in *GetPolicyAuditRequest, opts ...grpc.CallOption) (*GetPolicyAuditResponse, error)
+	GetApprovalAuditById(ctx context.Context, in *GetApprovalAuditByIdRequest, opts ...grpc.CallOption) (*GetApprovalAuditByIdResponse, error)
+	GetWorkflowPolicyAudit(ctx context.Context, in *GetWorkflowPolicyAuditRequest, opts ...grpc.CallOption) (*GetWorkflowPolicyAuditResponse, error)
+	GetAgentPolicyAudit(ctx context.Context, in *GetAgentPolicyAuditRequest, opts ...grpc.CallOption) (*GetAgentPolicyAuditResponse, error)
+	GetAuditLog(ctx context.Context, in *GetAuditLogRequest, opts ...grpc.CallOption) (*GetAuditLogResponse, error)
 	ActivateWorkflow(ctx context.Context, in *ActivateWorkflowRequest, opts ...grpc.CallOption) (*ActivateWorkflowResponse, error)
 }
 
@@ -183,10 +191,40 @@ func (c *workflowServiceClient) GetApprovalAudit(ctx context.Context, in *GetApp
 	return out, nil
 }
 
-func (c *workflowServiceClient) GetPolicyAudit(ctx context.Context, in *GetPolicyAuditRequest, opts ...grpc.CallOption) (*GetPolicyAuditResponse, error) {
+func (c *workflowServiceClient) GetApprovalAuditById(ctx context.Context, in *GetApprovalAuditByIdRequest, opts ...grpc.CallOption) (*GetApprovalAuditByIdResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetPolicyAuditResponse)
-	err := c.cc.Invoke(ctx, WorkflowService_GetPolicyAudit_FullMethodName, in, out, cOpts...)
+	out := new(GetApprovalAuditByIdResponse)
+	err := c.cc.Invoke(ctx, WorkflowService_GetApprovalAuditById_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *workflowServiceClient) GetWorkflowPolicyAudit(ctx context.Context, in *GetWorkflowPolicyAuditRequest, opts ...grpc.CallOption) (*GetWorkflowPolicyAuditResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetWorkflowPolicyAuditResponse)
+	err := c.cc.Invoke(ctx, WorkflowService_GetWorkflowPolicyAudit_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *workflowServiceClient) GetAgentPolicyAudit(ctx context.Context, in *GetAgentPolicyAuditRequest, opts ...grpc.CallOption) (*GetAgentPolicyAuditResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAgentPolicyAuditResponse)
+	err := c.cc.Invoke(ctx, WorkflowService_GetAgentPolicyAudit_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *workflowServiceClient) GetAuditLog(ctx context.Context, in *GetAuditLogRequest, opts ...grpc.CallOption) (*GetAuditLogResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAuditLogResponse)
+	err := c.cc.Invoke(ctx, WorkflowService_GetAuditLog_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -218,8 +256,13 @@ type WorkflowServiceServer interface {
 	SetWorkflowLifecyclePolicy(context.Context, *SetWorkflowLifecyclePolicyRequest) (*SetWorkflowLifecyclePolicyResponse, error)
 	ApproveWorkflow(context.Context, *ApproveWorkflowRequest) (*ApproveWorkflowResponse, error)
 	RejectWorkflow(context.Context, *RejectWorkflowRequest) (*RejectWorkflowResponse, error)
+	// Per-type audit getters (workflow_id required); GetAuditLog is the unified,
+	// time-ordered log (workflow_id optional — omitted = whole tenant group).
 	GetApprovalAudit(context.Context, *GetApprovalAuditRequest) (*GetApprovalAuditResponse, error)
-	GetPolicyAudit(context.Context, *GetPolicyAuditRequest) (*GetPolicyAuditResponse, error)
+	GetApprovalAuditById(context.Context, *GetApprovalAuditByIdRequest) (*GetApprovalAuditByIdResponse, error)
+	GetWorkflowPolicyAudit(context.Context, *GetWorkflowPolicyAuditRequest) (*GetWorkflowPolicyAuditResponse, error)
+	GetAgentPolicyAudit(context.Context, *GetAgentPolicyAuditRequest) (*GetAgentPolicyAuditResponse, error)
+	GetAuditLog(context.Context, *GetAuditLogRequest) (*GetAuditLogResponse, error)
 	ActivateWorkflow(context.Context, *ActivateWorkflowRequest) (*ActivateWorkflowResponse, error)
 	mustEmbedUnimplementedWorkflowServiceServer()
 }
@@ -267,8 +310,17 @@ func (UnimplementedWorkflowServiceServer) RejectWorkflow(context.Context, *Rejec
 func (UnimplementedWorkflowServiceServer) GetApprovalAudit(context.Context, *GetApprovalAuditRequest) (*GetApprovalAuditResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetApprovalAudit not implemented")
 }
-func (UnimplementedWorkflowServiceServer) GetPolicyAudit(context.Context, *GetPolicyAuditRequest) (*GetPolicyAuditResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetPolicyAudit not implemented")
+func (UnimplementedWorkflowServiceServer) GetApprovalAuditById(context.Context, *GetApprovalAuditByIdRequest) (*GetApprovalAuditByIdResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetApprovalAuditById not implemented")
+}
+func (UnimplementedWorkflowServiceServer) GetWorkflowPolicyAudit(context.Context, *GetWorkflowPolicyAuditRequest) (*GetWorkflowPolicyAuditResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetWorkflowPolicyAudit not implemented")
+}
+func (UnimplementedWorkflowServiceServer) GetAgentPolicyAudit(context.Context, *GetAgentPolicyAuditRequest) (*GetAgentPolicyAuditResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAgentPolicyAudit not implemented")
+}
+func (UnimplementedWorkflowServiceServer) GetAuditLog(context.Context, *GetAuditLogRequest) (*GetAuditLogResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAuditLog not implemented")
 }
 func (UnimplementedWorkflowServiceServer) ActivateWorkflow(context.Context, *ActivateWorkflowRequest) (*ActivateWorkflowResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ActivateWorkflow not implemented")
@@ -510,20 +562,74 @@ func _WorkflowService_GetApprovalAudit_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WorkflowService_GetPolicyAudit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetPolicyAuditRequest)
+func _WorkflowService_GetApprovalAuditById_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetApprovalAuditByIdRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(WorkflowServiceServer).GetPolicyAudit(ctx, in)
+		return srv.(WorkflowServiceServer).GetApprovalAuditById(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: WorkflowService_GetPolicyAudit_FullMethodName,
+		FullMethod: WorkflowService_GetApprovalAuditById_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkflowServiceServer).GetPolicyAudit(ctx, req.(*GetPolicyAuditRequest))
+		return srv.(WorkflowServiceServer).GetApprovalAuditById(ctx, req.(*GetApprovalAuditByIdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WorkflowService_GetWorkflowPolicyAudit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetWorkflowPolicyAuditRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorkflowServiceServer).GetWorkflowPolicyAudit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorkflowService_GetWorkflowPolicyAudit_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorkflowServiceServer).GetWorkflowPolicyAudit(ctx, req.(*GetWorkflowPolicyAuditRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WorkflowService_GetAgentPolicyAudit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAgentPolicyAuditRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorkflowServiceServer).GetAgentPolicyAudit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorkflowService_GetAgentPolicyAudit_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorkflowServiceServer).GetAgentPolicyAudit(ctx, req.(*GetAgentPolicyAuditRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WorkflowService_GetAuditLog_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAuditLogRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorkflowServiceServer).GetAuditLog(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorkflowService_GetAuditLog_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorkflowServiceServer).GetAuditLog(ctx, req.(*GetAuditLogRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -602,8 +708,20 @@ var WorkflowService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _WorkflowService_GetApprovalAudit_Handler,
 		},
 		{
-			MethodName: "GetPolicyAudit",
-			Handler:    _WorkflowService_GetPolicyAudit_Handler,
+			MethodName: "GetApprovalAuditById",
+			Handler:    _WorkflowService_GetApprovalAuditById_Handler,
+		},
+		{
+			MethodName: "GetWorkflowPolicyAudit",
+			Handler:    _WorkflowService_GetWorkflowPolicyAudit_Handler,
+		},
+		{
+			MethodName: "GetAgentPolicyAudit",
+			Handler:    _WorkflowService_GetAgentPolicyAudit_Handler,
+		},
+		{
+			MethodName: "GetAuditLog",
+			Handler:    _WorkflowService_GetAuditLog_Handler,
 		},
 		{
 			MethodName: "ActivateWorkflow",

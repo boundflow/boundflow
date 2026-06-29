@@ -10,8 +10,9 @@ import (
 type AuditEventType string
 
 const (
-	AuditEventApproval     AuditEventType = "approval"
-	AuditEventPolicyAction AuditEventType = "policy_action"
+	AuditEventApproval          AuditEventType = "approval"
+	AuditEventPolicyAction      AuditEventType = "policy_action"       // workflow lifecycle policy
+	AuditEventAgentPolicyAction AuditEventType = "agent_policy_action" // agent lifecycle policy
 )
 
 // AuditEvent is one row of the governance audit log. The common query dimensions
@@ -73,8 +74,8 @@ type PolicyActionDetails struct {
 	PreviousState   WorkflowState               `json:"previous_state"`
 }
 
-// PolicyDetails resolves the event's Details as a policy-action record. It errors if
-// the event is not a policy_action event.
+// PolicyDetails resolves the event's Details as a workflow policy-action record. It
+// errors if the event is not a policy_action event.
 func (e AuditEvent) PolicyDetails() (*PolicyActionDetails, error) {
 	if e.EventType != AuditEventPolicyAction {
 		return nil, fmt.Errorf("audit event %s is %s, not a policy_action event", e.ID, e.EventType)
@@ -82,6 +83,18 @@ func (e AuditEvent) PolicyDetails() (*PolicyActionDetails, error) {
 	var d PolicyActionDetails
 	if err := json.Unmarshal(e.Details, &d); err != nil {
 		return nil, fmt.Errorf("unmarshal policy action details: %w", err)
+	}
+	return &d, nil
+}
+
+// AgentPolicyDetails resolves the event's Details as an agent policy-action record.
+func (e AuditEvent) AgentPolicyDetails() (*AgentPolicyActionDetails, error) {
+	if e.EventType != AuditEventAgentPolicyAction {
+		return nil, fmt.Errorf("audit event %s is %s, not an agent_policy_action event", e.ID, e.EventType)
+	}
+	var d AgentPolicyActionDetails
+	if err := json.Unmarshal(e.Details, &d); err != nil {
+		return nil, fmt.Errorf("unmarshal agent policy action details: %w", err)
 	}
 	return &d, nil
 }

@@ -2,12 +2,14 @@ package rpcworker
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"time"
 
 	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
 	"github.com/boundflow/boundflow/internal/auth"
+	"github.com/boundflow/boundflow/internal/convert"
 	"github.com/boundflow/boundflow/internal/domain"
 	"github.com/boundflow/boundflow/internal/storage"
 	"google.golang.org/grpc"
@@ -31,6 +33,7 @@ type RpcWorker struct {
 	boundflowv1.UnimplementedWorkerServiceServer
 	scheduler         RequestScheduler
 	jobs              storage.JobRepository
+	audit             storage.AuditRepository
 	id                string
 	defaultJobTimeout int
 	log               *slog.Logger
@@ -46,9 +49,10 @@ const (
 	CancelRequested
 )
 
-func NewRpcWorker(jobs storage.JobRepository, id string, jobTimeout int, scheduler RequestScheduler, metrics MetricsHandler, log *slog.Logger) *RpcWorker {
+func NewRpcWorker(jobs storage.JobRepository, audit storage.AuditRepository, id string, jobTimeout int, scheduler RequestScheduler, metrics MetricsHandler, log *slog.Logger) *RpcWorker {
 	return &RpcWorker{
 		jobs:              jobs,
+		audit:             audit,
 		id:                id,
 		defaultJobTimeout: jobTimeout,
 		scheduler:         scheduler,
@@ -143,6 +147,27 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 				domain.WorkflowJobMetrics{Failures: int(result.WorkflowMetrics.GetFailures())},
 				&job.WorkflowMetrics,
 			)
+		}
+		// Agent lifecycle policy actions are decided SDK-side and arrive in the
+		// result; record one audit row per agent whose rules changed its effective
+		// policy (the SDK only sends entries when effective != base). Best-effort.
+		for agent, pa := range result.AgentPolicyActions {
+			details, err := json.Marshal(convert.AgentPolicyActionFromProto(agent, pa))
+			if err != nil {
+				log.Error("failed to marshal agent policy action", "agent", agent, "workflow_id", job.WorkflowID, "error", err)
+				continue
+			}
+			if err := s.audit.Append(ctx, domain.AuditEvent{
+				TenantGroupID: tenantGroupID,
+				WorkflowID:    job.WorkflowID,
+				RequestID:     job.RequestID,
+				EventType:     domain.AuditEventAgentPolicyAction,
+				Actor:         "system",
+				OccurredAt:    time.Now(),
+				Details:       details,
+			}); err != nil {
+				log.Error("failed to append agent policy audit", "agent", agent, "workflow_id", job.WorkflowID, "error", err)
+			}
 		}
 
 		if result.NextOperation != nil {

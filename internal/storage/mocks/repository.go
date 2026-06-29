@@ -827,34 +827,34 @@ func (mr *MockAuditRepositoryMockRecorder) Append(ctx, e any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Append", reflect.TypeOf((*MockAuditRepository)(nil).Append), ctx, e)
 }
 
-// ListApprovals mocks base method.
-func (m *MockAuditRepository) ListApprovals(ctx context.Context, tenantGroupID, workflowID, approvalID string) ([]domain.AuditEvent, error) {
+// ListAuditEvents mocks base method.
+func (m *MockAuditRepository) ListAuditEvents(ctx context.Context, tenantGroupID, workflowID, agentName string, eventTypes []domain.AuditEventType) ([]domain.AuditEvent, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListApprovals", ctx, tenantGroupID, workflowID, approvalID)
+	ret := m.ctrl.Call(m, "ListAuditEvents", ctx, tenantGroupID, workflowID, agentName, eventTypes)
 	ret0, _ := ret[0].([]domain.AuditEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListApprovals indicates an expected call of ListApprovals.
-func (mr *MockAuditRepositoryMockRecorder) ListApprovals(ctx, tenantGroupID, workflowID, approvalID any) *gomock.Call {
+// ListAuditEvents indicates an expected call of ListAuditEvents.
+func (mr *MockAuditRepositoryMockRecorder) ListAuditEvents(ctx, tenantGroupID, workflowID, agentName, eventTypes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListApprovals", reflect.TypeOf((*MockAuditRepository)(nil).ListApprovals), ctx, tenantGroupID, workflowID, approvalID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAuditEvents", reflect.TypeOf((*MockAuditRepository)(nil).ListAuditEvents), ctx, tenantGroupID, workflowID, agentName, eventTypes)
 }
 
-// ListPolicyActions mocks base method.
-func (m *MockAuditRepository) ListPolicyActions(ctx context.Context, tenantGroupID, workflowID string) ([]domain.AuditEvent, error) {
+// GetApprovalByID mocks base method.
+func (m *MockAuditRepository) GetApprovalByID(ctx context.Context, tenantGroupID, approvalID string) (*domain.AuditEvent, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListPolicyActions", ctx, tenantGroupID, workflowID)
-	ret0, _ := ret[0].([]domain.AuditEvent)
+	ret := m.ctrl.Call(m, "GetApprovalByID", ctx, tenantGroupID, approvalID)
+	ret0, _ := ret[0].(*domain.AuditEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListPolicyActions indicates an expected call of ListPolicyActions.
-func (mr *MockAuditRepositoryMockRecorder) ListPolicyActions(ctx, tenantGroupID, workflowID any) *gomock.Call {
+// GetApprovalByID indicates an expected call of GetApprovalByID.
+func (mr *MockAuditRepositoryMockRecorder) GetApprovalByID(ctx, tenantGroupID, approvalID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPolicyActions", reflect.TypeOf((*MockAuditRepository)(nil).ListPolicyActions), ctx, tenantGroupID, workflowID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetApprovalByID", reflect.TypeOf((*MockAuditRepository)(nil).GetApprovalByID), ctx, tenantGroupID, approvalID)
 }
 
 // UpdateJob mocks base method.
