@@ -28,8 +28,8 @@ func (noopMetricsHandler) HandleAgentMetrics(_ context.Context, _ map[string]*bo
 
 type noopPolicyResolver struct{}
 
-func (noopPolicyResolver) ResolveLifecyclePolicy(_ context.Context, _ *domain.Workflow, _ *domain.WorkflowVersionMetrics) error {
-	return nil
+func (noopPolicyResolver) ResolveLifecyclePolicy(_ context.Context, _ *domain.Workflow, _ *domain.WorkflowVersionMetrics) (*domain.PolicyActionDetails, error) {
+	return nil, nil
 }
 
 func newTestScheduler(ctrl *gomock.Controller) (
@@ -59,7 +59,7 @@ func newTestScheduler(ctrl *gomock.Controller) (
 		LifecycleState:         domain.LifecycleStateActive,
 		WorkflowState:          domain.WorkflowStateActive,
 	}, nil).AnyTimes()
-	s := scheduler.NewScheduler("test", 30, partitions, schedulerRepo, requests, workflow, agentStates, jobs, noopMetricsHandler{}, noopPolicyResolver{}, discardLogger)
+	s := scheduler.NewScheduler("test", 30, partitions, schedulerRepo, requests, workflow, agentStates, jobs, noopMetricsHandler{}, noopPolicyResolver{}, mocks.NewMockAuditRepository(ctrl), discardLogger)
 	return s, partitions, schedulerRepo, requests, workflow, agentStates
 }
 

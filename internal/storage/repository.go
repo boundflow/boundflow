@@ -156,6 +156,9 @@ type AuditRepository interface {
 	// ListApprovals returns a tenant's approval events, newest first; workflowID and
 	// approvalID are optional filters (empty = no filter).
 	ListApprovals(ctx context.Context, tenantGroupID, workflowID, approvalID string) ([]domain.AuditEvent, error)
+	// ListPolicyActions returns a tenant's lifecycle-policy-action events, newest first;
+	// workflowID is an optional filter (empty = no filter).
+	ListPolicyActions(ctx context.Context, tenantGroupID, workflowID string) ([]domain.AuditEvent, error)
 }
 
 type AgentStateRepository interface {

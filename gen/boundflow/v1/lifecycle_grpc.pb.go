@@ -31,6 +31,7 @@ const (
 	WorkflowService_ApproveWorkflow_FullMethodName            = "/boundflow.v1.WorkflowService/ApproveWorkflow"
 	WorkflowService_RejectWorkflow_FullMethodName             = "/boundflow.v1.WorkflowService/RejectWorkflow"
 	WorkflowService_GetApprovalAudit_FullMethodName           = "/boundflow.v1.WorkflowService/GetApprovalAudit"
+	WorkflowService_GetPolicyAudit_FullMethodName             = "/boundflow.v1.WorkflowService/GetPolicyAudit"
 	WorkflowService_ActivateWorkflow_FullMethodName           = "/boundflow.v1.WorkflowService/ActivateWorkflow"
 )
 
@@ -50,6 +51,7 @@ type WorkflowServiceClient interface {
 	ApproveWorkflow(ctx context.Context, in *ApproveWorkflowRequest, opts ...grpc.CallOption) (*ApproveWorkflowResponse, error)
 	RejectWorkflow(ctx context.Context, in *RejectWorkflowRequest, opts ...grpc.CallOption) (*RejectWorkflowResponse, error)
 	GetApprovalAudit(ctx context.Context, in *GetApprovalAuditRequest, opts ...grpc.CallOption) (*GetApprovalAuditResponse, error)
+	GetPolicyAudit(ctx context.Context, in *GetPolicyAuditRequest, opts ...grpc.CallOption) (*GetPolicyAuditResponse, error)
 	ActivateWorkflow(ctx context.Context, in *ActivateWorkflowRequest, opts ...grpc.CallOption) (*ActivateWorkflowResponse, error)
 }
 
@@ -181,6 +183,16 @@ func (c *workflowServiceClient) GetApprovalAudit(ctx context.Context, in *GetApp
 	return out, nil
 }
 
+func (c *workflowServiceClient) GetPolicyAudit(ctx context.Context, in *GetPolicyAuditRequest, opts ...grpc.CallOption) (*GetPolicyAuditResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetPolicyAuditResponse)
+	err := c.cc.Invoke(ctx, WorkflowService_GetPolicyAudit_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *workflowServiceClient) ActivateWorkflow(ctx context.Context, in *ActivateWorkflowRequest, opts ...grpc.CallOption) (*ActivateWorkflowResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ActivateWorkflowResponse)
@@ -207,6 +219,7 @@ type WorkflowServiceServer interface {
 	ApproveWorkflow(context.Context, *ApproveWorkflowRequest) (*ApproveWorkflowResponse, error)
 	RejectWorkflow(context.Context, *RejectWorkflowRequest) (*RejectWorkflowResponse, error)
 	GetApprovalAudit(context.Context, *GetApprovalAuditRequest) (*GetApprovalAuditResponse, error)
+	GetPolicyAudit(context.Context, *GetPolicyAuditRequest) (*GetPolicyAuditResponse, error)
 	ActivateWorkflow(context.Context, *ActivateWorkflowRequest) (*ActivateWorkflowResponse, error)
 	mustEmbedUnimplementedWorkflowServiceServer()
 }
@@ -253,6 +266,9 @@ func (UnimplementedWorkflowServiceServer) RejectWorkflow(context.Context, *Rejec
 }
 func (UnimplementedWorkflowServiceServer) GetApprovalAudit(context.Context, *GetApprovalAuditRequest) (*GetApprovalAuditResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetApprovalAudit not implemented")
+}
+func (UnimplementedWorkflowServiceServer) GetPolicyAudit(context.Context, *GetPolicyAuditRequest) (*GetPolicyAuditResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetPolicyAudit not implemented")
 }
 func (UnimplementedWorkflowServiceServer) ActivateWorkflow(context.Context, *ActivateWorkflowRequest) (*ActivateWorkflowResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ActivateWorkflow not implemented")
@@ -494,6 +510,24 @@ func _WorkflowService_GetApprovalAudit_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _WorkflowService_GetPolicyAudit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPolicyAuditRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorkflowServiceServer).GetPolicyAudit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorkflowService_GetPolicyAudit_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorkflowServiceServer).GetPolicyAudit(ctx, req.(*GetPolicyAuditRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _WorkflowService_ActivateWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ActivateWorkflowRequest)
 	if err := dec(in); err != nil {
@@ -566,6 +600,10 @@ var WorkflowService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetApprovalAudit",
 			Handler:    _WorkflowService_GetApprovalAudit_Handler,
+		},
+		{
+			MethodName: "GetPolicyAudit",
+			Handler:    _WorkflowService_GetPolicyAudit_Handler,
 		},
 		{
 			MethodName: "ActivateWorkflow",

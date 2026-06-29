@@ -23,6 +23,7 @@ service WorkflowService {
   rpc ApproveWorkflow(ApproveWorkflowRequest) returns (ApproveWorkflowResponse);
   rpc RejectWorkflow(RejectWorkflowRequest) returns (RejectWorkflowResponse);
   rpc GetApprovalAudit(GetApprovalAuditRequest) returns (GetApprovalAuditResponse);
+  rpc GetPolicyAudit(GetPolicyAuditRequest) returns (GetPolicyAuditResponse);
   rpc ActivateWorkflow(ActivateWorkflowRequest) returns (ActivateWorkflowResponse);
 }
 
@@ -194,6 +195,29 @@ message ApprovalAuditRecord {
   google.protobuf.Timestamp opened_at  = 5;
   google.protobuf.Timestamp decided_at = 6;
   string actor                         = 7;  // customer-supplied; empty on timeout
+}
+
+// GetPolicyAudit reads lifecycle-policy firings (tenant-scoped via the API key);
+// optional workflow_id filter. Each record is self-describing — it embeds the rule
+// that fired plus the value that crossed and the prior state.
+message GetPolicyAuditRequest {
+  string workflow_id = 1;
+}
+
+message GetPolicyAuditResponse {
+  repeated PolicyAuditRecord records = 1;
+}
+
+message PolicyAuditRecord {
+  string workflow_id                      = 1;
+  string request_id                       = 2;
+  string scope                            = 3;  // "workflow"
+  WorkflowLifecyclePolicyRule rule        = 4;  // the rule that fired
+  double trigger_value                    = 5;  // metric value that crossed
+  int32 previous_version                  = 6;
+  string previous_state                   = 7;
+  string actor                            = 8;  // "system" for autonomous policy
+  google.protobuf.Timestamp occurred_at   = 9;
 }
 
 message RejectWorkflowResponse {}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/boundflow/boundflow/internal/domain"
@@ -46,8 +47,29 @@ func (r *AuditRepo) ListApprovals(ctx context.Context, tenantGroupID, workflowID
 	if err != nil {
 		return nil, fmt.Errorf("list approval audit: %w", err)
 	}
-	defer rows.Close()
+	return scanAuditEvents(rows)
+}
 
+// ListPolicyActions returns a tenant's lifecycle-policy-action events, newest first;
+// workflowID is an optional filter. Callers resolve each with AuditEvent.PolicyDetails().
+func (r *AuditRepo) ListPolicyActions(ctx context.Context, tenantGroupID, workflowID string) ([]domain.AuditEvent, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT id, tenant_group_id, COALESCE(workflow_id, ''), COALESCE(request_id, ''),
+		        event_type, actor, occurred_at, details, created_at
+		 FROM audit_events
+		 WHERE tenant_group_id = $1 AND event_type = $2
+		   AND ($3 = '' OR workflow_id = $3)
+		 ORDER BY occurred_at DESC
+		 LIMIT 500`,
+		tenantGroupID, domain.AuditEventPolicyAction, workflowID)
+	if err != nil {
+		return nil, fmt.Errorf("list policy audit: %w", err)
+	}
+	return scanAuditEvents(rows)
+}
+
+func scanAuditEvents(rows pgx.Rows) ([]domain.AuditEvent, error) {
+	defer rows.Close()
 	var events []domain.AuditEvent
 	for rows.Next() {
 		var e domain.AuditEvent

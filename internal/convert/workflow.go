@@ -92,6 +92,48 @@ func workflowRuleFromProto(r *boundflowv1.WorkflowLifecyclePolicyRule) domain.Wo
 	}
 }
 
+// WorkflowRuleToProto is the inverse of workflowRuleFromProto (used by the policy
+// audit read path to echo the rule that fired).
+func WorkflowRuleToProto(r domain.WorkflowLifecyclePolicyRule) *boundflowv1.WorkflowLifecyclePolicyRule {
+	var metric boundflowv1.WorkflowMetric
+	switch r.Metric {
+	case domain.WorkflowMetricCost:
+		metric = boundflowv1.WorkflowMetric_WORKFLOW_METRIC_COST
+	case domain.WorkflowMetricNumLLMCalls:
+		metric = boundflowv1.WorkflowMetric_WORKFLOW_METRIC_NUM_LLM_CALLS
+	case domain.WorkflowMetricLatency:
+		metric = boundflowv1.WorkflowMetric_WORKFLOW_METRIC_LATENCY
+	case domain.WorkflowMetricApprovalRejections:
+		metric = boundflowv1.WorkflowMetric_WORKFLOW_METRIC_APPROVAL_REJECTIONS
+	case domain.WorkflowMetricToolFailureRate:
+		metric = boundflowv1.WorkflowMetric_WORKFLOW_METRIC_TOOL_FAILURE_RATE
+	default:
+		metric = boundflowv1.WorkflowMetric_WORKFLOW_METRIC_NUM_FAILURES
+	}
+
+	var action boundflowv1.WorkflowPolicyActionType
+	switch r.Action.Type {
+	case domain.WorkflowPolicyActionCooldown:
+		action = boundflowv1.WorkflowPolicyActionType_WORKFLOW_POLICY_ACTION_COOLDOWN
+	case domain.WorkflowPolicyActionSetVersion:
+		action = boundflowv1.WorkflowPolicyActionType_WORKFLOW_POLICY_ACTION_SET_VERSION
+	default:
+		action = boundflowv1.WorkflowPolicyActionType_WORKFLOW_POLICY_ACTION_PAUSE
+	}
+
+	return &boundflowv1.WorkflowLifecyclePolicyRule{
+		Metric:    metric,
+		Threshold: r.Threshold,
+		Window:    int32(r.Window),
+		ToolName:  r.ToolName,
+		Action: &boundflowv1.WorkflowLifecyclePolicyAction{
+			Type:            action,
+			CooldownSeconds: int32(r.Action.CooldownSeconds),
+			TargetVersion:   int32(r.Action.TargetVersion),
+		},
+	}
+}
+
 func WorkflowConfigFromProto(p *boundflowv1.WorkflowConfig) domain.WorkflowConfig {
 	if p == nil {
 		return domain.WorkflowConfig{Triggerable: true}

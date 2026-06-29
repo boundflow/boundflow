@@ -245,6 +245,13 @@ func (s *LifecycleService) GetApprovalAudit(ctx context.Context, tenantGroupID, 
 	return s.audit.ListApprovals(ctx, tenantGroupID, workflowID, approvalID)
 }
 
+// GetPolicyAudit returns the tenant's lifecycle-policy-action events (newest first),
+// optionally filtered by workflow.
+func (s *LifecycleService) GetPolicyAudit(ctx context.Context, tenantGroupID, workflowID string) ([]domain.AuditEvent, error) {
+	s.log.Debug("getting policy audit", "tenant_group_id", tenantGroupID, "workflow_id", workflowID)
+	return s.audit.ListPolicyActions(ctx, tenantGroupID, workflowID)
+}
+
 func (s *LifecycleService) ListWorkflows(ctx context.Context, tenantGroupID string) ([]*domain.Workflow, error) {
 	s.log.Debug("listing workflows", "tenant_group_id", tenantGroupID)
 	return s.workflows.ListForTenantGroup(ctx, tenantGroupID)

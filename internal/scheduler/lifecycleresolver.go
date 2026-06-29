@@ -59,7 +59,10 @@ func (r *LifecycleResolver) Run(ctx context.Context, partitionID string) error {
 // This means a more correct name for this function is "Resolve Lifecycle Policy for latest run"
 // Example: if version 2 wasn't resolved, version 3's resolution may not necessarily fix it (if metric wasnt emitted in latest run),
 // but again this should be an impossible case due to invariant
-func (r *LifecycleResolver) ResolveLifecyclePolicy(ctx context.Context, workflow *domain.Workflow, versionMetrics *domain.WorkflowVersionMetrics) error {
+// ResolveLifecyclePolicy resolves and applies the workflow's lifecycle policy. When
+// a rule fires and actually changes state, it returns the *PolicyActionDetails for
+// the caller to audit; otherwise it returns nil.
+func (r *LifecycleResolver) ResolveLifecyclePolicy(ctx context.Context, workflow *domain.Workflow, versionMetrics *domain.WorkflowVersionMetrics) (*domain.PolicyActionDetails, error) {
 
 	workflowId := workflow.ID
 
@@ -70,17 +73,19 @@ func (r *LifecycleResolver) ResolveLifecyclePolicy(ctx context.Context, workflow
 	policy := workflow.LifecyclePolicy
 	rollingMetrics := workflow.InvocationMetrics
 
-	updated, goalState, err := r.lifecyclePolicyEngine.ResolvePolicy(&rollingMetrics, &policy, versionMetrics)
-
+	goalState, firedRule, triggerValue, err := r.lifecyclePolicyEngine.ResolvePolicy(&rollingMetrics, &policy, versionMetrics)
 	if err != nil {
-		return fmt.Errorf("Policy resolution failed with error %w", err)
+		return nil, fmt.Errorf("Policy resolution failed with error %w", err)
 	}
 
-	version := workflow.CurrentWorkflowVersion
-	state := workflow.WorkflowState
+	prevVersion := workflow.CurrentWorkflowVersion
+	prevState := workflow.WorkflowState
+
+	version := prevVersion
+	state := prevState
 	cooldown := workflow.CooldownUntil
 
-	if updated {
+	if firedRule != nil {
 		if goalState.VersionChange {
 			version = goalState.Version
 		} else {
@@ -94,18 +99,26 @@ func (r *LifecycleResolver) ResolveLifecyclePolicy(ctx context.Context, workflow
 
 	resolved, err := r.resolver.TryApplyPolicyResolution(ctx, workflowId, workflow.CurrentVersion, version, state, cooldown)
 	if err != nil {
-		return fmt.Errorf("Applying resolved policy failed with error %w", err)
+		return nil, fmt.Errorf("Applying resolved policy failed with error %w", err)
 	}
 
 	if !resolved {
 		r.log.Debug("policy resolution skipped, already resolved at this version", "workflow_id", workflowId, "current_version", workflow.CurrentVersion)
-		return nil
+		return nil, nil
 	}
 
-	if updated {
-		r.log.Info("lifecycle policy applied", "workflow_id", workflowId, "version", version, "state", state, "version_change", goalState.VersionChange)
-	} else {
+	// Audit only when a rule fired AND it actually moved state (version or state).
+	if firedRule == nil || (version == prevVersion && state == prevState) {
 		r.log.Debug("lifecycle policy resolved, no change", "workflow_id", workflowId)
+		return nil, nil
 	}
-	return nil
+
+	r.log.Info("lifecycle policy applied", "workflow_id", workflowId, "version", version, "state", state, "version_change", goalState.VersionChange)
+	return &domain.PolicyActionDetails{
+		Scope:           "workflow",
+		Rule:            *firedRule,
+		TriggerValue:    triggerValue,
+		PreviousVersion: prevVersion,
+		PreviousState:   prevState,
+	}, nil
 }

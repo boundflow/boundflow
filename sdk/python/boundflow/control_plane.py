@@ -109,6 +109,45 @@ _APPROVAL_DECISION = {
 }
 
 
+@dataclass
+class PolicyActionRecord:
+    """One workflow-lifecycle policy firing from the audit log (GetPolicyAudit).
+    Self-describing: it echoes the rule that fired (identified by content, no ids)
+    plus the value that crossed and the state before. The new state is the action
+    applied to previous_state/version."""
+    workflow_id: str
+    request_id: str
+    scope: str                 # "workflow"
+    metric: str
+    threshold: float
+    window: int
+    tool: str
+    action: str                # "set_version" | "cooldown" | "pause"
+    target_version: int        # set_version
+    cooldown_seconds: int      # cooldown
+    trigger_value: float
+    previous_version: int
+    previous_state: str
+    actor: str                 # "system" for autonomous policy
+    occurred_at: datetime | None
+
+
+_WORKFLOW_METRIC = {
+    lc.WORKFLOW_METRIC_NUM_FAILURES: "num_failures",
+    lc.WORKFLOW_METRIC_COST: "cost",
+    lc.WORKFLOW_METRIC_NUM_LLM_CALLS: "num_llm_calls",
+    lc.WORKFLOW_METRIC_LATENCY: "latency",
+    lc.WORKFLOW_METRIC_APPROVAL_REJECTIONS: "approval_rejections",
+    lc.WORKFLOW_METRIC_TOOL_FAILURE_RATE: "tool_failure_rate",
+}
+
+_WORKFLOW_ACTION = {
+    lc.WORKFLOW_POLICY_ACTION_PAUSE: "pause",
+    lc.WORKFLOW_POLICY_ACTION_COOLDOWN: "cooldown",
+    lc.WORKFLOW_POLICY_ACTION_SET_VERSION: "set_version",
+}
+
+
 _LIFECYCLE = {
     "creating": LifecycleState.CREATING,
     "active": LifecycleState.ACTIVE,
@@ -306,6 +345,34 @@ class ControlPlaneClient:
             )
             for r in resp.records
         ]
+
+    async def get_policy_audit(self, workflow_id: str = "") -> list[PolicyActionRecord]:
+        """Lifecycle-policy firings for this tenant (newest first), optionally filtered
+        by workflow. Each record is self-describing: it echoes the rule that fired,
+        the metric value that crossed, and the prior state."""
+        resp = await self._lc.GetPolicyAudit(
+            lc.GetPolicyAuditRequest(workflow_id=workflow_id), metadata=self._metadata)
+        out = []
+        for r in resp.records:
+            act = r.rule.action
+            out.append(PolicyActionRecord(
+                workflow_id=r.workflow_id,
+                request_id=r.request_id,
+                scope=r.scope,
+                metric=_WORKFLOW_METRIC.get(r.rule.metric, "unknown"),
+                threshold=r.rule.threshold,
+                window=r.rule.window,
+                tool=r.rule.tool_name,
+                action=_WORKFLOW_ACTION.get(act.type, "unknown"),
+                target_version=act.target_version,
+                cooldown_seconds=act.cooldown_seconds,
+                trigger_value=r.trigger_value,
+                previous_version=r.previous_version,
+                previous_state=r.previous_state,
+                actor=r.actor,
+                occurred_at=r.occurred_at.ToDatetime() if r.HasField("occurred_at") else None,
+            ))
+        return out
 
     async def delete_workflow(self, workflow_id: str) -> None:
         await self._lc.DeleteWorkflow(
