@@ -148,34 +148,15 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 				&job.WorkflowMetrics,
 			)
 		}
-		// Agent lifecycle policy actions are decided SDK-side and arrive in the
-		// result; record one audit row per agent whose rules changed its effective
-		// policy (the SDK only sends entries when effective != base). Best-effort.
-		for agent, pa := range result.AgentPolicyActions {
-			details, err := json.Marshal(convert.AgentPolicyActionFromProto(agent, pa))
-			if err != nil {
-				log.Error("failed to marshal agent policy action", "agent", agent, "workflow_id", job.WorkflowID, "error", err)
-				continue
-			}
-			if err := s.audit.Append(ctx, domain.AuditEvent{
-				TenantGroupID: tenantGroupID,
-				WorkflowID:    job.WorkflowID,
-				RequestID:     job.RequestID,
-				EventType:     domain.AuditEventAgentPolicyAction,
-				Actor:         "system",
-				OccurredAt:    time.Now(),
-				Details:       details,
-			}); err != nil {
-				log.Error("failed to append agent policy audit", "agent", agent, "workflow_id", job.WorkflowID, "error", err)
-			}
-		}
 
 		if result.NextOperation != nil {
 			log.Info("operation completed with next operation, advancing job", "request_id", job.RequestID, "next_operation", result.NextOperation.Name)
 			_, err := s.jobs.UpdateJobWithMetrics(ctx, job.WorkflowID, s.id, domain.JobStatusAwaitingNext,
 				result.NextOperation.Name, int(result.NextOperation.TimeoutSeconds), result.NextOperation.Context.AsMap(), job.AgentMetrics, job.WorkflowMetrics)
 
-			return err
+			if err != nil {
+				return err
+			}
 		} else if result.ApprovalGate != nil {
 			log.Info("operation requires approval, parking job", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "approval_id", result.ApprovalGate.ApprovalId)
 
@@ -225,8 +206,32 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 				log.Info("job completed, notifying scheduler", "request_id", job.RequestID, "workflow_id", job.WorkflowID)
 				s.scheduler.CompleteRequest(ctx, job.RequestID)
 			}
-			return nil
 		}
+
+		// Agent lifecycle policy actions are decided SDK-side and arrive in the
+		// result; record one audit row per agent whose rules changed its effective
+		// policy (the SDK only sends entries when effective != base). Best-effort.
+		// Written after the job state lands so we never audit a policy action whose
+		// metrics didnt persist (the branches above bail before here on a write error).
+		for agent, pa := range result.AgentPolicyActions {
+			details, err := json.Marshal(convert.AgentPolicyActionFromProto(agent, pa))
+			if err != nil {
+				log.Error("failed to marshal agent policy action", "agent", agent, "workflow_id", job.WorkflowID, "error", err)
+				continue
+			}
+			if err := s.audit.Append(ctx, domain.AuditEvent{
+				TenantGroupID: tenantGroupID,
+				WorkflowID:    job.WorkflowID,
+				RequestID:     job.RequestID,
+				EventType:     domain.AuditEventAgentPolicyAction,
+				Actor:         "system",
+				OccurredAt:    time.Now(),
+				Details:       details,
+			}); err != nil {
+				log.Error("failed to append agent policy audit", "agent", agent, "workflow_id", job.WorkflowID, "error", err)
+			}
+		}
+
 		// consider returning error for ownership failure, for now the return isnt used for anything
 		return nil
 	}
