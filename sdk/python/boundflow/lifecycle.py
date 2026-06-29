@@ -83,18 +83,22 @@ def apply_lifecycle_rules(
     rules: list[AgentRule],
     history: list[InvocationSnapshot],
     current: RuntimePolicy,
-) -> RuntimePolicy:
-    """Evaluate each rule over its window; apply the action when it fires.
+) -> tuple[RuntimePolicy, list[tuple[AgentRule, float]]]:
+    """Evaluate each rule over its window; apply the action when it fires. Returns
+    the resulting policy plus the rules that fired, each with the metric value that
+    crossed (for the agent-lifecycle audit).
 
     Multiple firing rules compose left-to-right, exactly like the .NET version.
     """
+    fired: list[tuple[AgentRule, float]] = []
     for rule in rules:
         window = history[-rule.window:] if rule.window > 0 else history
         total = sum(metric_value(e, rule.metric, rule.tool) for e in window)
         if not _evaluate(total, rule.op, rule.threshold):
             continue
         current = _apply_action(current, rule.action)
-    return current
+        fired.append((rule, total))
+    return current, fired
 
 
 def metric_value(entry: InvocationSnapshot, metric: AgentMetric, tool: str | None) -> float:

@@ -30,7 +30,7 @@ from .conftest import (
 async def _wait_for_policy_audit(cp, workflow_id: str, timeout: int = 15):
     deadline = asyncio.get_event_loop().time() + timeout
     while True:
-        records = await cp.get_policy_audit(workflow_id=workflow_id)
+        records = await cp.get_workflow_policy_audit(workflow_id=workflow_id)
         if records:
             return records
         assert asyncio.get_event_loop().time() < deadline, f"policy audit for {workflow_id} never appeared"
@@ -60,7 +60,6 @@ async def test_cooldown_policy_writes_self_describing_audit(cp):
             records = await _wait_for_policy_audit(cp, wf.id)
             assert len(records) == 1
             r = records[0]
-            assert r.scope == "workflow"
             assert r.action == "cooldown"
             assert r.cooldown_seconds == 30
             # The fired rule, echoed back (identified by content).

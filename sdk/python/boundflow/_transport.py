@@ -19,6 +19,7 @@ log = logging.getLogger("boundflow.worker")
 from google.protobuf import json_format
 from google.protobuf.struct_pb2 import Struct
 
+from boundflow.v1 import agent_policy_pb2 as ap_pb
 from boundflow.v1 import operation_pb2 as op_pb
 from boundflow.v1 import worker_pb2 as wk_pb
 from boundflow.v1 import worker_pb2_grpc as wk_grpc
@@ -61,6 +62,72 @@ def metrics_to_proto(snapshot: dict) -> op_pb.AgentInvocationMetrics:
     for tool, count in (snapshot.get("tool_failure_counts") or {}).items():
         m.tool_failure_counts[tool] = count
     return m
+
+
+_AGENT_METRIC_PB = {
+    "tokens_used": ap_pb.AGENT_METRIC_TOKENS_USED,
+    "cost_usd": ap_pb.AGENT_METRIC_COST_USD,
+    "llm_calls": ap_pb.AGENT_METRIC_LLM_CALLS,
+    "calls_per_tool": ap_pb.AGENT_METRIC_CALLS_PER_TOOL,
+}
+_AGENT_OP_PB = {
+    "less_than": ap_pb.AGENT_OP_LT,
+    "less_than_or_equal": ap_pb.AGENT_OP_LTE,
+    "greater_than": ap_pb.AGENT_OP_GT,
+    "greater_than_or_equal": ap_pb.AGENT_OP_GTE,
+    "equal": ap_pb.AGENT_OP_EQ,
+}
+
+
+def _enum_value(v) -> str:
+    return getattr(v, "value", v)
+
+
+def _runtime_policy_to_proto(p) -> ap_pb.AgentRuntimePolicy:
+    return ap_pb.AgentRuntimePolicy(
+        model=p.model or "",
+        max_llm_calls=p.max_llm_calls,
+        max_cost_usd=p.max_cost_usd,
+        max_tokens_per_call=p.max_tokens_per_call,
+        tool_call_limits=[ap_pb.ToolCallLimit(tool=l.tool, max_calls=l.max_calls) for l in p.tool_call_limits],
+    )
+
+
+def _agent_action_to_proto(action) -> ap_pb.AgentRuleAction:
+    field = action.field
+    if field == "model":
+        return ap_pb.AgentRuleAction(field=ap_pb.AGENT_RULE_ACTION_SET_MODEL, model=action.value)
+    if field == "max_llm_calls":
+        return ap_pb.AgentRuleAction(field=ap_pb.AGENT_RULE_ACTION_SET_MAX_LLM_CALLS, max_llm_calls=action.value)
+    if field == "max_cost_usd":
+        return ap_pb.AgentRuleAction(field=ap_pb.AGENT_RULE_ACTION_SET_MAX_COST_USD, max_cost_usd=action.value)
+    if field == "max_tokens_per_call":
+        return ap_pb.AgentRuleAction(field=ap_pb.AGENT_RULE_ACTION_SET_MAX_TOKENS_PER_CALL, max_tokens_per_call=action.value)
+    return ap_pb.AgentRuleAction()
+
+
+def _agent_rule_to_proto(rule) -> ap_pb.AgentRule:
+    return ap_pb.AgentRule(
+        metric=_AGENT_METRIC_PB.get(_enum_value(rule.metric), ap_pb.AGENT_METRIC_UNSPECIFIED),
+        op=_AGENT_OP_PB.get(_enum_value(rule.op), ap_pb.AGENT_OP_UNSPECIFIED),
+        threshold=rule.threshold,
+        window=rule.window,
+        tool=rule.tool or "",
+        action=_agent_action_to_proto(rule.action),
+    )
+
+
+def agent_policy_action_to_proto(action: dict) -> ap_pb.AgentPolicyAction:
+    """Map the SDK-side agent policy action ({base_policy, effective_policy,
+    fired_rules:[(rule, value)]}) to the typed proto for the operation result."""
+    return ap_pb.AgentPolicyAction(
+        base_policy=_runtime_policy_to_proto(action["base_policy"]),
+        effective_policy=_runtime_policy_to_proto(action["effective_policy"]),
+        fired_rules=[
+            ap_pb.FiredAgentRule(rule=_agent_rule_to_proto(rule), trigger_value=float(value))
+            for (rule, value) in action["fired_rules"]
+        ],
+    )
 
 
 class WorkerSession:

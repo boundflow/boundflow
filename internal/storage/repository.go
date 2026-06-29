@@ -153,12 +153,13 @@ type JobRepository interface {
 type AuditRepository interface {
 	// Append writes one audit event (Details already marshaled).
 	Append(ctx context.Context, e domain.AuditEvent) error
-	// ListApprovals returns a tenant's approval events, newest first; workflowID and
-	// approvalID are optional filters (empty = no filter).
-	ListApprovals(ctx context.Context, tenantGroupID, workflowID, approvalID string) ([]domain.AuditEvent, error)
-	// ListPolicyActions returns a tenant's lifecycle-policy-action events, newest first;
-	// workflowID is an optional filter (empty = no filter).
-	ListPolicyActions(ctx context.Context, tenantGroupID, workflowID string) ([]domain.AuditEvent, error)
+	// ListAuditEvents returns a tenant's audit events newest first; workflowID and
+	// agentName are optional filters (empty = no filter), eventTypes filters to those
+	// types (empty = all). Callers resolve each by its EventType.
+	ListAuditEvents(ctx context.Context, tenantGroupID, workflowID, agentName string, eventTypes []domain.AuditEventType) ([]domain.AuditEvent, error)
+	// GetApprovalByID returns the tenant's approval event with the given approval_id,
+	// or nil if none (trace correlation).
+	GetApprovalByID(ctx context.Context, tenantGroupID, approvalID string) (*domain.AuditEvent, error)
 }
 
 type AgentStateRepository interface {

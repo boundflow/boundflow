@@ -14,6 +14,7 @@ from enum import Enum
 import grpc
 from google.protobuf.struct_pb2 import Struct
 
+from boundflow.v1 import agent_policy_pb2 as ap
 from boundflow.v1 import lifecycle_pb2 as lc
 from boundflow.v1 import lifecycle_pb2_grpc as lc_grpc
 from boundflow.v1 import pricing_pb2 as pricing_pb
@@ -89,35 +90,25 @@ class WorkflowSummary:
 
 @dataclass
 class ApprovalAuditRecord:
-    """One approval decision from the BoundFlow audit log (GetApprovalAudit).
-    Correlate with a run trace via approval_id (the trace's boundflow.approval_id).
-    This is where the decision/actor/timing live — by design they're not in the
-    telemetry trace, only the approval_id is."""
-    approval_id: str
+    """One approval decision from the audit log. Correlate with a run trace via
+    approval_id (the trace's boundflow.approval_id) — the decision/actor/timing live
+    here, not in telemetry."""
     workflow_id: str
     request_id: str
+    approval_id: str
     decision: str                  # "approved" | "rejected" | "timed_out" | "unspecified"
     opened_at: datetime | None
     decided_at: datetime | None
     actor: str                     # customer-supplied; empty for timeouts
-
-
-_APPROVAL_DECISION = {
-    lc.APPROVAL_DECISION_APPROVED: "approved",
-    lc.APPROVAL_DECISION_REJECTED: "rejected",
-    lc.APPROVAL_DECISION_TIMED_OUT: "timed_out",
-}
+    occurred_at: datetime | None   # when the decision was recorded
 
 
 @dataclass
 class PolicyActionRecord:
-    """One workflow-lifecycle policy firing from the audit log (GetPolicyAudit).
-    Self-describing: it echoes the rule that fired (identified by content, no ids)
-    plus the value that crossed and the state before. The new state is the action
-    applied to previous_state/version."""
+    """One workflow-lifecycle policy firing. Self-describing: the rule that fired
+    (identified by content), the value that crossed, and the prior state."""
     workflow_id: str
     request_id: str
-    scope: str                 # "workflow"
     metric: str
     threshold: float
     window: int
@@ -128,10 +119,30 @@ class PolicyActionRecord:
     trigger_value: float
     previous_version: int
     previous_state: str
-    actor: str                 # "system" for autonomous policy
+    actor: str                 # "system"
     occurred_at: datetime | None
 
 
+@dataclass
+class AgentPolicyActionRecord:
+    """One agent-lifecycle policy firing: the agent's effective runtime policy changed
+    this run because rules fired. base_policy → effective_policy is the diff;
+    fired_rules is why."""
+    workflow_id: str
+    request_id: str
+    agent: str
+    base_policy: dict          # {model, max_llm_calls, max_cost_usd, max_tokens_per_call, tool_call_limits}
+    effective_policy: dict
+    fired_rules: list[dict]    # [{metric, op, threshold, window, tool, action, trigger_value}]
+    actor: str                 # "system"
+    occurred_at: datetime | None
+
+
+_APPROVAL_DECISION = {
+    lc.APPROVAL_DECISION_APPROVED: "approved",
+    lc.APPROVAL_DECISION_REJECTED: "rejected",
+    lc.APPROVAL_DECISION_TIMED_OUT: "timed_out",
+}
 _WORKFLOW_METRIC = {
     lc.WORKFLOW_METRIC_NUM_FAILURES: "num_failures",
     lc.WORKFLOW_METRIC_COST: "cost",
@@ -140,12 +151,84 @@ _WORKFLOW_METRIC = {
     lc.WORKFLOW_METRIC_APPROVAL_REJECTIONS: "approval_rejections",
     lc.WORKFLOW_METRIC_TOOL_FAILURE_RATE: "tool_failure_rate",
 }
-
 _WORKFLOW_ACTION = {
     lc.WORKFLOW_POLICY_ACTION_PAUSE: "pause",
     lc.WORKFLOW_POLICY_ACTION_COOLDOWN: "cooldown",
     lc.WORKFLOW_POLICY_ACTION_SET_VERSION: "set_version",
 }
+_AGENT_METRIC = {
+    ap.AGENT_METRIC_TOKENS_USED: "tokens_used",
+    ap.AGENT_METRIC_COST_USD: "cost_usd",
+    ap.AGENT_METRIC_LLM_CALLS: "llm_calls",
+    ap.AGENT_METRIC_CALLS_PER_TOOL: "calls_per_tool",
+}
+_AGENT_OP = {
+    ap.AGENT_OP_LT: "less_than",
+    ap.AGENT_OP_LTE: "less_than_or_equal",
+    ap.AGENT_OP_GT: "greater_than",
+    ap.AGENT_OP_GTE: "greater_than_or_equal",
+    ap.AGENT_OP_EQ: "equal",
+}
+_AGENT_ACTION_FIELD = {
+    ap.AGENT_RULE_ACTION_SET_MODEL: "model",
+    ap.AGENT_RULE_ACTION_SET_MAX_LLM_CALLS: "max_llm_calls",
+    ap.AGENT_RULE_ACTION_SET_MAX_COST_USD: "max_cost_usd",
+    ap.AGENT_RULE_ACTION_SET_MAX_TOKENS_PER_CALL: "max_tokens_per_call",
+}
+
+
+def _ts(msg, field):
+    return getattr(msg, field).ToDatetime() if msg.HasField(field) else None
+
+
+def _approval_record(r) -> ApprovalAuditRecord:
+    return ApprovalAuditRecord(
+        workflow_id=r.workflow_id, request_id=r.request_id, approval_id=r.approval_id,
+        decision=_APPROVAL_DECISION.get(r.decision, "unspecified"),
+        opened_at=_ts(r, "opened_at"), decided_at=_ts(r, "decided_at"),
+        actor=r.actor, occurred_at=_ts(r, "occurred_at"))
+
+
+def _workflow_policy_record(r) -> PolicyActionRecord:
+    act = r.rule.action
+    return PolicyActionRecord(
+        workflow_id=r.workflow_id, request_id=r.request_id,
+        metric=_WORKFLOW_METRIC.get(r.rule.metric, "unknown"), threshold=r.rule.threshold,
+        window=r.rule.window, tool=r.rule.tool_name,
+        action=_WORKFLOW_ACTION.get(act.type, "unknown"),
+        target_version=act.target_version, cooldown_seconds=act.cooldown_seconds,
+        trigger_value=r.trigger_value, previous_version=r.previous_version,
+        previous_state=r.previous_state, actor=r.actor, occurred_at=_ts(r, "occurred_at"))
+
+
+def _runtime_policy_dict(p) -> dict:
+    return {
+        "model": p.model, "max_llm_calls": p.max_llm_calls, "max_cost_usd": p.max_cost_usd,
+        "max_tokens_per_call": p.max_tokens_per_call,
+        "tool_call_limits": [{"tool": l.tool, "max_calls": l.max_calls} for l in p.tool_call_limits],
+    }
+
+
+def _agent_rule_dict(fr) -> dict:
+    r, a = fr.rule, fr.rule.action
+    field = _AGENT_ACTION_FIELD.get(a.field, "unknown")
+    value = {"model": a.model, "max_llm_calls": a.max_llm_calls,
+             "max_cost_usd": a.max_cost_usd, "max_tokens_per_call": a.max_tokens_per_call}.get(field)
+    return {
+        "metric": _AGENT_METRIC.get(r.metric, "unknown"), "op": _AGENT_OP.get(r.op, "unknown"),
+        "threshold": r.threshold, "window": r.window, "tool": r.tool,
+        "action": {"field": field, "value": value}, "trigger_value": fr.trigger_value,
+    }
+
+
+def _agent_policy_record(r) -> AgentPolicyActionRecord:
+    a = r.action
+    return AgentPolicyActionRecord(
+        workflow_id=r.workflow_id, request_id=r.request_id, agent=r.agent_name,
+        base_policy=_runtime_policy_dict(a.base_policy),
+        effective_policy=_runtime_policy_dict(a.effective_policy),
+        fired_rules=[_agent_rule_dict(fr) for fr in a.fired_rules],
+        actor=r.actor, occurred_at=_ts(r, "occurred_at"))
 
 
 _LIFECYCLE = {
@@ -326,52 +409,48 @@ class ControlPlaneClient:
             lc.RejectWorkflowRequest(workflow_id=workflow_id, approval_id=approval_id, actor=actor),
             metadata=self._metadata)
 
-    async def get_approval_audit(self, workflow_id: str = "", approval_id: str = "") -> list[ApprovalAuditRecord]:
-        """Approval decisions for this tenant (newest first), optionally filtered by
-        workflow and/or approval id. Look up by the approval_id seen in a trace to
-        get the decision, actor, and how long the gate was open."""
+    async def get_approval_audit(self, workflow_id: str) -> list[ApprovalAuditRecord]:
+        """A workflow's approval decisions (newest first)."""
         resp = await self._lc.GetApprovalAudit(
-            lc.GetApprovalAuditRequest(workflow_id=workflow_id, approval_id=approval_id),
-            metadata=self._metadata)
-        return [
-            ApprovalAuditRecord(
-                approval_id=r.approval_id,
-                workflow_id=r.workflow_id,
-                request_id=r.request_id,
-                decision=_APPROVAL_DECISION.get(r.decision, "unspecified"),
-                opened_at=r.opened_at.ToDatetime() if r.HasField("opened_at") else None,
-                decided_at=r.decided_at.ToDatetime() if r.HasField("decided_at") else None,
-                actor=r.actor,
-            )
-            for r in resp.records
-        ]
+            lc.GetApprovalAuditRequest(workflow_id=workflow_id), metadata=self._metadata)
+        return [_approval_record(r) for r in resp.records]
 
-    async def get_policy_audit(self, workflow_id: str = "") -> list[PolicyActionRecord]:
-        """Lifecycle-policy firings for this tenant (newest first), optionally filtered
-        by workflow. Each record is self-describing: it echoes the rule that fired,
-        the metric value that crossed, and the prior state."""
-        resp = await self._lc.GetPolicyAudit(
-            lc.GetPolicyAuditRequest(workflow_id=workflow_id), metadata=self._metadata)
+    async def get_approval_audit_by_id(self, approval_id: str) -> ApprovalAuditRecord | None:
+        """The single approval decision for an approval_id (the trace's correlation
+        key), or None if not found."""
+        resp = await self._lc.GetApprovalAuditById(
+            lc.GetApprovalAuditByIdRequest(approval_id=approval_id), metadata=self._metadata)
+        return _approval_record(resp.record) if resp.HasField("record") else None
+
+    async def get_workflow_policy_audit(self, workflow_id: str) -> list[PolicyActionRecord]:
+        """A workflow's workflow-lifecycle policy firings (newest first)."""
+        resp = await self._lc.GetWorkflowPolicyAudit(
+            lc.GetWorkflowPolicyAuditRequest(workflow_id=workflow_id), metadata=self._metadata)
+        return [_workflow_policy_record(r) for r in resp.records]
+
+    async def get_agent_policy_audit(self, workflow_id: str, agent_name: str) -> list[AgentPolicyActionRecord]:
+        """A specific agent's lifecycle policy firings (newest first). Agents are
+        identified by (workflow_id, agent_name)."""
+        resp = await self._lc.GetAgentPolicyAudit(
+            lc.GetAgentPolicyAuditRequest(workflow_id=workflow_id, agent_name=agent_name),
+            metadata=self._metadata)
+        return [_agent_policy_record(r) for r in resp.records]
+
+    async def get_audit_log(self, workflow_id: str = ""):
+        """The unified, time-ordered audit log (newest first). workflow_id is optional
+        — omit for the whole tenant group. Each item is an ApprovalAuditRecord,
+        PolicyActionRecord, or AgentPolicyActionRecord."""
+        resp = await self._lc.GetAuditLog(
+            lc.GetAuditLogRequest(workflow_id=workflow_id), metadata=self._metadata)
         out = []
-        for r in resp.records:
-            act = r.rule.action
-            out.append(PolicyActionRecord(
-                workflow_id=r.workflow_id,
-                request_id=r.request_id,
-                scope=r.scope,
-                metric=_WORKFLOW_METRIC.get(r.rule.metric, "unknown"),
-                threshold=r.rule.threshold,
-                window=r.rule.window,
-                tool=r.rule.tool_name,
-                action=_WORKFLOW_ACTION.get(act.type, "unknown"),
-                target_version=act.target_version,
-                cooldown_seconds=act.cooldown_seconds,
-                trigger_value=r.trigger_value,
-                previous_version=r.previous_version,
-                previous_state=r.previous_state,
-                actor=r.actor,
-                occurred_at=r.occurred_at.ToDatetime() if r.HasField("occurred_at") else None,
-            ))
+        for e in resp.entries:
+            which = e.WhichOneof("entry")
+            if which == "approval":
+                out.append(_approval_record(e.approval))
+            elif which == "workflow_policy":
+                out.append(_workflow_policy_record(e.workflow_policy))
+            elif which == "agent_policy":
+                out.append(_agent_policy_record(e.agent_policy))
         return out
 
     async def delete_workflow(self, workflow_id: str) -> None:

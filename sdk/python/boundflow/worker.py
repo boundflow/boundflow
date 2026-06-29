@@ -125,6 +125,10 @@ class OperationContext:
         # Per-agent metrics from this operation, sent back to the server in the
         # AtomicOperationResult. Keyed by agent name. (Read by the worker stream.)
         self.agent_state_updates: dict[str, dict] = {}
+        # Per-agent lifecycle policy actions applied this operation (only when the
+        # rules changed the effective policy). Keyed by agent name; the server audits
+        # each. Values: {base_policy, effective_policy, fired_rules:[(rule, value)]}.
+        self.agent_policy_actions: dict[str, dict] = {}
 
     @property
     def name(self) -> str:
@@ -154,12 +158,20 @@ class OperationContext:
         runtime_node = (self.context.get("agentRuntimePolicies") or {}).get(agent.name)
         state_node = (self.context.get("agentStates") or {}).get(agent.name)
 
-        runtime_policy = load_runtime_policy(runtime_node)
+        base_policy = load_runtime_policy(runtime_node)
         rules = load_lifecycle_rules(state_node)
         history = load_history(state_node)
 
-        # Evaluate lifecycle rules and mutate the runtime policy accordingly.
-        runtime_policy = apply_lifecycle_rules(rules, history, runtime_policy)
+        # Evaluate lifecycle rules; they may change the effective runtime policy.
+        runtime_policy, fired = apply_lifecycle_rules(rules, history, base_policy)
+
+        # Audit the firing only when it actually changed the policy (effective != base).
+        if fired and runtime_policy != base_policy:
+            self.agent_policy_actions[agent.name] = {
+                "base_policy": base_policy,
+                "effective_policy": runtime_policy,
+                "fired_rules": fired,
+            }
 
         effective_model = runtime_policy.model or agent.model
 
@@ -292,6 +304,8 @@ class BoundFlowWorker:
             proto = await self._to_proto(result, op, approval_id)
             for name, snap in ctx.agent_state_updates.items():
                 proto.agent_state_updates[name].CopyFrom(t.metrics_to_proto(snap))
+            for name, action in ctx.agent_policy_actions.items():
+                proto.agent_policy_actions[name].CopyFrom(t.agent_policy_action_to_proto(action))
             if ctx.failed:
                 proto.workflow_metrics.CopyFrom(op_pb.WorkflowInvocationMetrics(failures=1))
             return proto

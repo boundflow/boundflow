@@ -5,6 +5,7 @@ from .control_plane import (
     ControlPlaneClient,
     ApprovalAuditRecord,
     PolicyActionRecord,
+    AgentPolicyActionRecord,
     LifecycleState,
     Tenant,
     TenantGroup,
@@ -55,7 +56,7 @@ from .worker import (
 __all__ = [
     "AnthropicLlmClient",
     "ControlPlaneClient", "LifecycleState", "Tenant", "TenantGroup", "Workflow",
-    "WorkflowConfig", "WorkflowState", "WorkflowSummary", "ApprovalAuditRecord", "PolicyActionRecord", "MockLlmClient", "MockContext", "Turn",
+    "WorkflowConfig", "WorkflowState", "WorkflowSummary", "ApprovalAuditRecord", "PolicyActionRecord", "AgentPolicyActionRecord", "MockLlmClient", "MockContext", "Turn",
     "turn", "submit", "AgentMetric", "AgentRule", "Cooldown", "Op", "Pause",
     "RuntimePolicy", "SetMaxCostUsd", "SetMaxLlmCalls", "SetMaxTokensPerCall",
     "SetModel", "SetVersion", "ToolCallLimit", "WorkflowMetric", "WorkflowRule",

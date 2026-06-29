@@ -206,7 +206,7 @@ func runWorker(sigCh <-chan os.Signal) {
 	policyResolver := internalscheduler.NewLifecycleResolver(30, logger, lifecycleResolverRepo, workflowRepo, versionMetricsRepo)
 	sched := internalscheduler.NewScheduler(workerID, 30, partitionRepo, schedulerRepo, customerRequestRepo, workflowRepo, agentStateRepo, jobRepo, metricsHandler, policyResolver, auditRepo, logger)
 
-	worker := rpcworker.NewRpcWorker(jobRepo, workerID, cfg.JobTimeoutSecs, sched, metricsHandler, logger)
+	worker := rpcworker.NewRpcWorker(jobRepo, auditRepo, workerID, cfg.JobTimeoutSecs, sched, metricsHandler, logger)
 	authn := auth.NewAuthenticator(postgres.NewApiKeyRepo(pool))
 	srv := server.NewWorkerServer(cfg, worker, authn)
 

@@ -147,9 +147,10 @@ const (
 
 func newTestWorker(ctrl *gomock.Controller) (*rpcworker.RpcWorker, *mocks.MockJobRepository, *mockScheduler) {
 	jobRepo := mocks.NewMockJobRepository(ctrl)
+	auditRepo := mocks.NewMockAuditRepository(ctrl)
 	sched := newMockScheduler()
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return rpcworker.NewRpcWorker(jobRepo, testWorkerID, 60, sched, &mockMetrics{}, log), jobRepo, sched
+	return rpcworker.NewRpcWorker(jobRepo, auditRepo, testWorkerID, 60, sched, &mockMetrics{}, log), jobRepo, sched
 }
 
 func testJob() *domain.Job {

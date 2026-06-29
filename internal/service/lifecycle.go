@@ -238,18 +238,31 @@ func (s *LifecycleService) GetWorkflow(ctx context.Context, workflowID string) (
 }
 
 // ListWorkflows returns all workflows owned by the given tenant group, newest first.
-// GetApprovalAudit returns the tenant's approval audit events (newest first),
-// optionally filtered by workflow and/or approval id.
-func (s *LifecycleService) GetApprovalAudit(ctx context.Context, tenantGroupID, workflowID, approvalID string) ([]domain.AuditEvent, error) {
-	s.log.Debug("getting approval audit", "tenant_group_id", tenantGroupID, "workflow_id", workflowID, "approval_id", approvalID)
-	return s.audit.ListApprovals(ctx, tenantGroupID, workflowID, approvalID)
+// GetApprovalAudit returns a workflow's approval decisions (newest first).
+func (s *LifecycleService) GetApprovalAudit(ctx context.Context, tenantGroupID, workflowID string) ([]domain.AuditEvent, error) {
+	return s.audit.ListAuditEvents(ctx, tenantGroupID, workflowID, "", []domain.AuditEventType{domain.AuditEventApproval})
 }
 
-// GetPolicyAudit returns the tenant's lifecycle-policy-action events (newest first),
-// optionally filtered by workflow.
-func (s *LifecycleService) GetPolicyAudit(ctx context.Context, tenantGroupID, workflowID string) ([]domain.AuditEvent, error) {
-	s.log.Debug("getting policy audit", "tenant_group_id", tenantGroupID, "workflow_id", workflowID)
-	return s.audit.ListPolicyActions(ctx, tenantGroupID, workflowID)
+// GetApprovalAuditByID returns the single approval event for an approval_id, or nil.
+func (s *LifecycleService) GetApprovalAuditByID(ctx context.Context, tenantGroupID, approvalID string) (*domain.AuditEvent, error) {
+	return s.audit.GetApprovalByID(ctx, tenantGroupID, approvalID)
+}
+
+// GetWorkflowPolicyAudit returns a workflow's workflow-lifecycle policy firings.
+func (s *LifecycleService) GetWorkflowPolicyAudit(ctx context.Context, tenantGroupID, workflowID string) ([]domain.AuditEvent, error) {
+	return s.audit.ListAuditEvents(ctx, tenantGroupID, workflowID, "", []domain.AuditEventType{domain.AuditEventPolicyAction})
+}
+
+// GetAgentPolicyAudit returns a specific agent's lifecycle policy firings — agents
+// are identified by (workflowID, agentName).
+func (s *LifecycleService) GetAgentPolicyAudit(ctx context.Context, tenantGroupID, workflowID, agentName string) ([]domain.AuditEvent, error) {
+	return s.audit.ListAuditEvents(ctx, tenantGroupID, workflowID, agentName, []domain.AuditEventType{domain.AuditEventAgentPolicyAction})
+}
+
+// GetAuditLog returns all audit events for the tenant, newest first; workflowID is
+// optional (empty = whole tenant group).
+func (s *LifecycleService) GetAuditLog(ctx context.Context, tenantGroupID, workflowID string) ([]domain.AuditEvent, error) {
+	return s.audit.ListAuditEvents(ctx, tenantGroupID, workflowID, "", nil)
 }
 
 func (s *LifecycleService) ListWorkflows(ctx context.Context, tenantGroupID string) ([]*domain.Workflow, error) {

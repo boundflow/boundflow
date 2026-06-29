@@ -7,6 +7,7 @@ option go_package = "github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 import "boundflow/v1/workflow.proto";
+import "boundflow/v1/agent_policy.proto";
 
 service WorkflowService {
   rpc CreateWorkflow(CreateWorkflowRequest) returns (CreateWorkflowResponse);
@@ -22,8 +23,13 @@ service WorkflowService {
   rpc SetWorkflowLifecyclePolicy(SetWorkflowLifecyclePolicyRequest) returns (SetWorkflowLifecyclePolicyResponse);
   rpc ApproveWorkflow(ApproveWorkflowRequest) returns (ApproveWorkflowResponse);
   rpc RejectWorkflow(RejectWorkflowRequest) returns (RejectWorkflowResponse);
+  // Per-type audit getters (workflow_id required); GetAuditLog is the unified,
+  // time-ordered log (workflow_id optional — omitted = whole tenant group).
   rpc GetApprovalAudit(GetApprovalAuditRequest) returns (GetApprovalAuditResponse);
-  rpc GetPolicyAudit(GetPolicyAuditRequest) returns (GetPolicyAuditResponse);
+  rpc GetApprovalAuditById(GetApprovalAuditByIdRequest) returns (GetApprovalAuditByIdResponse);
+  rpc GetWorkflowPolicyAudit(GetWorkflowPolicyAuditRequest) returns (GetWorkflowPolicyAuditResponse);
+  rpc GetAgentPolicyAudit(GetAgentPolicyAuditRequest) returns (GetAgentPolicyAuditResponse);
+  rpc GetAuditLog(GetAuditLogRequest) returns (GetAuditLogResponse);
   rpc ActivateWorkflow(ActivateWorkflowRequest) returns (ActivateWorkflowResponse);
 }
 
@@ -175,49 +181,66 @@ enum ApprovalDecision {
   APPROVAL_DECISION_TIMED_OUT   = 3;
 }
 
-// GetApprovalAudit reads approval-decision history (tenant-scoped via the API
-// key). Filters are optional and AND together; omit all to list the tenant's
-// recent approvals. Correlate with the trace via approval_id.
-message GetApprovalAuditRequest {
-  string workflow_id = 1;
-  string approval_id = 2;
-}
+// --- Audit read API. All tenant-scoped via the API key. Per-type getters take a
+// required workflow_id; GetAuditLog's workflow_id is optional (empty = tenant-wide)
+// and returns all types time-ordered. occurred_at is the decision timestamp.
 
-message GetApprovalAuditResponse {
-  repeated ApprovalAuditRecord records = 1;
+message GetApprovalAuditRequest  { string workflow_id = 1; }
+message GetApprovalAuditResponse { repeated ApprovalAuditRecord records = 1; }
+
+// Direct lookup by the approval_id seen on a trace span. record is unset if no match.
+message GetApprovalAuditByIdRequest  { string approval_id = 1; }
+message GetApprovalAuditByIdResponse { ApprovalAuditRecord record = 1; }
+
+message GetWorkflowPolicyAuditRequest  { string workflow_id = 1; }
+message GetWorkflowPolicyAuditResponse { repeated WorkflowPolicyAuditRecord records = 1; }
+
+// Scoped to a specific agent — agents are identified by (workflow_id, agent_name).
+message GetAgentPolicyAuditRequest  { string workflow_id = 1; string agent_name = 2; }
+message GetAgentPolicyAuditResponse { repeated AgentPolicyAuditRecord records = 1; }
+
+message GetAuditLogRequest  { string workflow_id = 1; }  // optional; empty = tenant-wide
+message GetAuditLogResponse { repeated AuditEntry entries = 1; }
+
+// AuditEntry is one event in the unified, time-ordered log.
+message AuditEntry {
+  oneof entry {
+    ApprovalAuditRecord       approval        = 1;
+    WorkflowPolicyAuditRecord workflow_policy = 2;
+    AgentPolicyAuditRecord    agent_policy    = 3;
+  }
 }
 
 message ApprovalAuditRecord {
-  string approval_id                   = 1;
-  string workflow_id                   = 2;
-  string request_id                    = 3;
-  ApprovalDecision decision            = 4;
-  google.protobuf.Timestamp opened_at  = 5;
-  google.protobuf.Timestamp decided_at = 6;
-  string actor                         = 7;  // customer-supplied; empty on timeout
+  string approval_id                    = 1;
+  string workflow_id                    = 2;
+  string request_id                     = 3;
+  ApprovalDecision decision             = 4;
+  google.protobuf.Timestamp opened_at   = 5;
+  google.protobuf.Timestamp decided_at  = 6;
+  string actor                          = 7;  // customer-supplied; empty on timeout
+  google.protobuf.Timestamp occurred_at = 8;  // when the decision was recorded
 }
 
-// GetPolicyAudit reads lifecycle-policy firings (tenant-scoped via the API key);
-// optional workflow_id filter. Each record is self-describing — it embeds the rule
-// that fired plus the value that crossed and the prior state.
-message GetPolicyAuditRequest {
-  string workflow_id = 1;
+// Self-describing: embeds the rule that fired + the value that crossed + prior state.
+message WorkflowPolicyAuditRecord {
+  string workflow_id                    = 1;
+  string request_id                     = 2;
+  string actor                          = 3;  // "system"
+  google.protobuf.Timestamp occurred_at = 4;
+  WorkflowLifecyclePolicyRule rule      = 5;
+  double trigger_value                  = 6;
+  int32 previous_version                = 7;
+  string previous_state                 = 8;
 }
 
-message GetPolicyAuditResponse {
-  repeated PolicyAuditRecord records = 1;
-}
-
-message PolicyAuditRecord {
-  string workflow_id                      = 1;
-  string request_id                       = 2;
-  string scope                            = 3;  // "workflow"
-  WorkflowLifecyclePolicyRule rule        = 4;  // the rule that fired
-  double trigger_value                    = 5;  // metric value that crossed
-  int32 previous_version                  = 6;
-  string previous_state                   = 7;
-  string actor                            = 8;  // "system" for autonomous policy
-  google.protobuf.Timestamp occurred_at   = 9;
+message AgentPolicyAuditRecord {
+  string workflow_id                    = 1;
+  string request_id                     = 2;
+  string actor                          = 3;  // "system"
+  google.protobuf.Timestamp occurred_at = 4;
+  string agent_name                     = 5;
+  AgentPolicyAction action              = 6;  // base/effective policy + fired rules
 }
 
 message RejectWorkflowResponse {}
