@@ -31,7 +31,7 @@ def _load_json(file: Optional[Path], inline: Optional[str]) -> list:
         typer.echo("Error: provide --file or --rules, not both.", err=True)
         raise typer.Exit(1)
     if file:
-        return json.loads(file.read_text())
+        return json.loads(file.read_text(encoding="utf-8-sig"))
     if inline:
         return json.loads(inline)
     typer.echo("Error: provide --file or --rules.", err=True)
@@ -51,7 +51,7 @@ def runtime_set(
 ):
     """Set the runtime (hard cap) policy for an agent."""
     if file:
-        policy = RuntimePolicy.model_validate(json.loads(file.read_text()))
+        policy = RuntimePolicy.model_validate(json.loads(file.read_text(encoding="utf-8-sig")))
     else:
         limits = [_parse_tool_limit(t) for t in tool_limit]
         policy = RuntimePolicy(

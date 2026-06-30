@@ -13,7 +13,7 @@ def list_pricing():
     """List all model pricing rates (USD per 1M tokens)."""
     result = cp_call(lambda cp: cp.list_model_pricing())
     rows = [
-        {"model": model, "input_per_1m_usd": rates["input"], "output_per_1m_usd": rates["output"]}
+        {"model": model, "input_per_1m_usd": rates["input_per_1m"], "output_per_1m_usd": rates["output_per_1m"]}
         for model, rates in result.items()
     ]
     output(rows)
