@@ -192,6 +192,21 @@ func (mr *MockWorkflowRepositoryMockRecorder) ApplyCompletedJob(ctx, id, lifecyc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyCompletedJob", reflect.TypeOf((*MockWorkflowRepository)(nil).ApplyCompletedJob), ctx, id, lifecycleState, version)
 }
 
+// ApplyFailedJob mocks base method.
+func (m *MockWorkflowRepository) ApplyFailedJob(ctx context.Context, id string, lifecycleState domain.LifecycleState, workflowState domain.WorkflowState, version int64) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplyFailedJob", ctx, id, lifecycleState, workflowState, version)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ApplyFailedJob indicates an expected call of ApplyFailedJob.
+func (mr *MockWorkflowRepositoryMockRecorder) ApplyFailedJob(ctx, id, lifecycleState, workflowState, version any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyFailedJob", reflect.TypeOf((*MockWorkflowRepository)(nil).ApplyFailedJob), ctx, id, lifecycleState, workflowState, version)
+}
+
 // Create mocks base method.
 func (m *MockWorkflowRepository) Create(ctx context.Context, instance *domain.Workflow) error {
 	m.ctrl.T.Helper()
@@ -773,6 +788,21 @@ func (m *MockJobRepository) ResolveApproval(ctx context.Context, workflowID, app
 func (mr *MockJobRepositoryMockRecorder) ResolveApproval(ctx, workflowID, approvalID, status any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveApproval", reflect.TypeOf((*MockJobRepository)(nil).ResolveApproval), ctx, workflowID, approvalID, status)
+}
+
+// MarkOrphanedJobsFailed mocks base method.
+func (m *MockJobRepository) MarkOrphanedJobsFailed(ctx context.Context, partitionID string, gracePeriodSeconds int) (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkOrphanedJobsFailed", ctx, partitionID, gracePeriodSeconds)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MarkOrphanedJobsFailed indicates an expected call of MarkOrphanedJobsFailed.
+func (mr *MockJobRepositoryMockRecorder) MarkOrphanedJobsFailed(ctx, partitionID, gracePeriodSeconds any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkOrphanedJobsFailed", reflect.TypeOf((*MockJobRepository)(nil).MarkOrphanedJobsFailed), ctx, partitionID, gracePeriodSeconds)
 }
 
 // SetJobDispatched mocks base method.

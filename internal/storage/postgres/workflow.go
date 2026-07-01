@@ -274,6 +274,27 @@ func (r *WorkflowRepo) ApplyCompletedJob(ctx context.Context, id string, lifecyc
 	return true, nil
 }
 
+func (r *WorkflowRepo) ApplyFailedJob(ctx context.Context, id string, lifecycleState domain.LifecycleState, workflowState domain.WorkflowState, version int64) (bool, error) {
+	var updatedID string
+	err := r.pool.QueryRow(ctx,
+		`UPDATE workflows
+		 SET current_version = $4,
+		     last_completed_request_at = now(),
+		     lifecycle_state = $2::lifecycle_state,
+		     workflow_state  = $3::workflow_state
+		 WHERE id = $1 AND current_version < $4
+		 RETURNING id`,
+		id, lifecycleState, workflowState, version,
+	).Scan(&updatedID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("apply failed job: %w", err)
+	}
+	return true, nil
+}
+
 func (r *WorkflowRepo) UpdateSchedulerPartition(ctx context.Context, id string, partitionID string) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE workflows SET scheduler_partition_id = $1 WHERE id = $2`,

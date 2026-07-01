@@ -44,6 +44,10 @@ type WorkflowRepository interface {
 	// the provided version is strictly greater than the stored current_version.
 	// Returns false if the version check failed (a newer completion already applied).
 	ApplyCompletedJob(ctx context.Context, id string, lifecycleState domain.LifecycleState, version int64) (bool, error)
+	// ApplyFailedJob is like ApplyCompletedJob but also sets workflow_state. Both
+	// lifecycle_state and workflow_state are set unconditionally (no target_version guard).
+	// Returns false if the version check failed (a newer completion already applied).
+	ApplyFailedJob(ctx context.Context, id string, lifecycleState domain.LifecycleState, workflowState domain.WorkflowState, version int64) (bool, error)
 	UpdateSchedulerPartition(ctx context.Context, id string, partitionID string) error
 	UpdateLastCompletedRequestAt(ctx context.Context, id string, t time.Time) error
 	// TenantGroupIDForWorkflow returns the tenant_group_id for a workflow via a single JOIN.
@@ -141,6 +145,10 @@ type JobRepository interface {
 	// guarded by approvalID match. Returns false if the ID doesn't match or the job isn't awaiting
 	// approval; on success also returns the job bits needed to write the approval audit row.
 	ResolveApproval(ctx context.Context, workflowID string, approvalID string, status domain.JobStatus) (bool, domain.ResolvedApproval, error)
+	// MarkOrphanedJobsFailed atomically sets dispatched or running jobs whose lease
+	// expired more than gracePeriodSeconds ago to failed, scoped to the given partition.
+	// Returns the number of jobs marked failed.
+	MarkOrphanedJobsFailed(ctx context.Context, partitionID string, gracePeriodSeconds int) (int, error)
 	// SetJobDispatched transitions a job to 'dispatched' before the Launch command
 	// is sent to the SDK worker. Only succeeds if ownerID holds the job.
 	// Returns false if the ownership check failed.

@@ -29,19 +29,20 @@ type PartitionWorker interface {
 }
 
 type Scheduler struct {
-	id             string
-	interval       int
-	partitions     storage.SchedulerPartitionRepository
-	scheduler      storage.SchedulerRepository
-	requests       storage.CustomerRequestRepository
-	workflow       storage.WorkflowRepository
-	agentStates    storage.AgentStateRepository
-	log            *slog.Logger
-	metricsHandler   MetricsHandler
-	jobs             storage.JobRepository
-	policyResolver   PolicyResolver
-	audit            storage.AuditRepository
-	partitionWorkers []PartitionWorker
+	id                         string
+	interval                   int
+	orphanedJobGracePeriodSecs int
+	partitions                 storage.SchedulerPartitionRepository
+	scheduler                  storage.SchedulerRepository
+	requests                   storage.CustomerRequestRepository
+	workflow                   storage.WorkflowRepository
+	agentStates                storage.AgentStateRepository
+	log                        *slog.Logger
+	metricsHandler             MetricsHandler
+	jobs                       storage.JobRepository
+	policyResolver             PolicyResolver
+	audit                      storage.AuditRepository
+	partitionWorkers           []PartitionWorker
 }
 
 // Functions of the scheduler:
@@ -49,10 +50,11 @@ type Scheduler struct {
 // 2. Schedules unscheduled requests onto the job queue (picking priority by version number)
 // 3. Checks for completed jobs, and updates current config state of the workflow and lifecycle state, then deletes the job
 
-func NewScheduler(id string, interval int, parts storage.SchedulerPartitionRepository, scheduler storage.SchedulerRepository, requests storage.CustomerRequestRepository, workflow storage.WorkflowRepository, agentStates storage.AgentStateRepository, jobs storage.JobRepository, metricsHandler MetricsHandler, policyResolver PolicyResolver, audit storage.AuditRepository, log *slog.Logger) *Scheduler {
+func NewScheduler(id string, interval int, orphanedJobGracePeriodSecs int, parts storage.SchedulerPartitionRepository, scheduler storage.SchedulerRepository, requests storage.CustomerRequestRepository, workflow storage.WorkflowRepository, agentStates storage.AgentStateRepository, jobs storage.JobRepository, metricsHandler MetricsHandler, policyResolver PolicyResolver, audit storage.AuditRepository, log *slog.Logger) *Scheduler {
 	return &Scheduler{
-		id:             id,
-		interval:       interval,
+		id:                         id,
+		interval:                   interval,
+		orphanedJobGracePeriodSecs: orphanedJobGracePeriodSecs,
 		partitions:     parts,
 		scheduler:      scheduler,
 		requests:       requests,
@@ -128,7 +130,7 @@ func (s *Scheduler) runPartition(ctx context.Context, partition *domain.Schedule
 			s.log.Debug("tick", "partition_id", partition.ID)
 
 			var wg sync.WaitGroup
-			wg.Add(3)
+			wg.Add(4)
 			go func() {
 				defer wg.Done()
 				s.failJobs(ctx, partition.ID)
@@ -140,6 +142,10 @@ func (s *Scheduler) runPartition(ctx context.Context, partition *domain.Schedule
 			go func() {
 				defer wg.Done()
 				s.syncAwaitingApprovalStates(ctx, partition.ID)
+			}()
+			go func() {
+				defer wg.Done()
+				s.markOrphanedJobsFailed(ctx, partition.ID)
 			}()
 			wg.Wait()
 			s.scheduleJobs(ctx, partition.ID)
@@ -197,6 +203,17 @@ func (s *Scheduler) MarkAwaitingApproval(ctx context.Context, workflowID string)
 	return s.scheduler.MarkWorkflowAwaitingApproval(ctx, workflowID)
 }
 
+func (s *Scheduler) markOrphanedJobsFailed(ctx context.Context, partitionID string) {
+	count, err := s.jobs.MarkOrphanedJobsFailed(ctx, partitionID, s.orphanedJobGracePeriodSecs)
+	if err != nil {
+		s.log.Error("failed to mark orphaned jobs as failed", "partition_id", partitionID, "error", err)
+		return
+	}
+	if count > 0 {
+		s.log.Info("marked orphaned jobs as failed", "count", count, "partition_id", partitionID)
+	}
+}
+
 func (s *Scheduler) syncAwaitingApprovalStates(ctx context.Context, partitionID string) {
 	synced, err := s.scheduler.SyncAwaitingApprovalStates(ctx, partitionID)
 	if err != nil {
@@ -243,7 +260,7 @@ func (s *Scheduler) FailRequest(ctx context.Context, req string) (bool, error) {
 		return false, fmt.Errorf("error failing request %s: %w", req, err)
 	}
 
-	applied, err := s.workflow.ApplyCompletedJob(ctx, request.WorkflowID, domain.LifecycleStateFailed, request.Version)
+	applied, err := s.workflow.ApplyFailedJob(ctx, request.WorkflowID, domain.LifecycleStateFailed, domain.WorkflowStateDisabled, request.Version)
 	if err != nil {
 		s.log.Error("failed to apply failed job to workflow", "request_id", req, "workflow_id", request.WorkflowID, "error", err)
 		return false, err
