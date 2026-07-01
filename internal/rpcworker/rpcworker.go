@@ -439,6 +439,11 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 						})
 						if err != nil {
 							log.Error("failed to send LaunchOperation", "request_id", job.RequestID, "error", err)
+							// Send errored, so the client never got the op: restore the pre-dispatch
+							// status so it's re-picked, instead of failing.
+							if _, uerr := s.jobs.UpdateJobStatus(context.Background(), job.WorkflowID, sessionID, job.Status); uerr != nil {
+								log.Error("failed to reset dispatched job, relying on sweeper", "request_id", job.RequestID, "error", uerr)
+							}
 							return err
 						}
 
@@ -458,6 +463,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 					log.Warn("client did not ack in time, cancelling operation", "request_id", currentJob.RequestID)
 					err := cancelOperation(currentJob.RequestID)
 					if err != nil {
+						failOperation(cancelLease, currentJob)
 						return err
 					}
 					return nil
@@ -465,20 +471,24 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 					update, ok := ack.Payload.(*boundflowv1.WorkerMessage_Update)
 					if !ok {
 						log.Warn("unexpected message type while waiting for ack", "request_id", currentJob.RequestID)
+						failOperation(cancelLease, currentJob)
 						return errors.New("protocol error") // protocol error
 					}
 					if update.Update.OperationId != currentJob.RequestID {
 						log.Warn("wrong operation id in ack", "expected", currentJob.RequestID, "got", update.Update.OperationId)
+						failOperation(cancelLease, currentJob)
 						return errors.New("wrong operation id from client")
 					}
 					if update.Update.Result.Status != boundflowv1.OperationStatus_OPERATION_STATUS_IN_PROGRESS {
 						log.Warn("unexpected status in ack", "request_id", currentJob.RequestID, "status", update.Update.Result.Status)
+						failOperation(cancelLease, currentJob)
 						return errors.New("unexpected status from client")
 					}
 					log.Info("client acked IN_PROGRESS, marking job running", "request_id", currentJob.RequestID)
 					updated, err := s.jobs.UpdateJobStatus(stream.Context(), currentJob.WorkflowID, sessionID, domain.JobStatusRunning)
 					if err != nil {
 						log.Error("failed to mark job running", "request_id", currentJob.RequestID, "error", err)
+						failOperation(cancelLease, currentJob)
 						return err
 					}
 					if !updated {
