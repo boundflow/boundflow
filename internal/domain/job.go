@@ -10,6 +10,7 @@ type JobStatus string
 
 const (
 	JobStatusPending          JobStatus = "pending"
+	JobStatusDispatched       JobStatus = "dispatched"
 	JobStatusRunning          JobStatus = "running"
 	JobStatusAwaitingNext     JobStatus = "awaiting_next"
 	JobStatusAwaitingApproval JobStatus = "awaiting_approval"

@@ -254,6 +254,19 @@ func (r *JobRepo) ParkForApproval(ctx context.Context, workflowID string, ownerI
 	return tag.RowsAffected() == 1, nil
 }
 
+func (r *JobRepo) SetJobDispatched(ctx context.Context, workflowID string, ownerID string) (bool, error) {
+	tag, err := r.pool.Exec(ctx,
+		`UPDATE jobs
+		 SET status = 'dispatched'
+		 WHERE workflow_id = $1 AND owner = $2 AND status != 'dispatched'`,
+		workflowID, ownerID,
+	)
+	if err != nil {
+		return false, fmt.Errorf("set job dispatched: %w", err)
+	}
+	return tag.RowsAffected() == 1, nil
+}
+
 func (r *JobRepo) ReleaseJob(ctx context.Context, workflowID string, ownerID string) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE jobs

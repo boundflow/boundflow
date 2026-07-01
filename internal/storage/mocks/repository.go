@@ -775,6 +775,21 @@ func (mr *MockJobRepositoryMockRecorder) ResolveApproval(ctx, workflowID, approv
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveApproval", reflect.TypeOf((*MockJobRepository)(nil).ResolveApproval), ctx, workflowID, approvalID, status)
 }
 
+// SetJobDispatched mocks base method.
+func (m *MockJobRepository) SetJobDispatched(ctx context.Context, workflowID, ownerID string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetJobDispatched", ctx, workflowID, ownerID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SetJobDispatched indicates an expected call of SetJobDispatched.
+func (mr *MockJobRepositoryMockRecorder) SetJobDispatched(ctx, workflowID, ownerID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetJobDispatched", reflect.TypeOf((*MockJobRepository)(nil).SetJobDispatched), ctx, workflowID, ownerID)
+}
+
 // SweepExpiredApprovals mocks base method.
 func (m *MockJobRepository) SweepExpiredApprovals(ctx context.Context, partitionID string) ([]domain.ExpiredApproval, error) {
 	m.ctrl.T.Helper()

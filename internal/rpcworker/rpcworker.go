@@ -396,6 +396,21 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 							}
 						}
 
+						dispatched, err := s.jobs.SetJobDispatched(stream.Context(), job.WorkflowID, s.id)
+						if err != nil {
+							log.Error("failed to mark job dispatched", "request_id", job.RequestID, "error", err)
+							return err
+						}
+						if !dispatched {
+							log.Warn("lost job ownership before dispatching", "request_id", job.RequestID)
+							cancelLeaseIfExists(cancelLease)
+							select {
+							case <-stream.Context().Done():
+								return nil
+							case <-time.After(jobLookupInterval):
+							}
+							continue
+						}
 						log.Info("sending LaunchOperation to client", "request_id", job.RequestID, "operation", job.CurrentAtomicOperation)
 						err = stream.Send(&boundflowv1.ServerCommand{
 							Payload: &boundflowv1.ServerCommand_Launch{

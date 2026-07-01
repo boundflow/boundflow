@@ -141,6 +141,10 @@ type JobRepository interface {
 	// guarded by approvalID match. Returns false if the ID doesn't match or the job isn't awaiting
 	// approval; on success also returns the job bits needed to write the approval audit row.
 	ResolveApproval(ctx context.Context, workflowID string, approvalID string, status domain.JobStatus) (bool, domain.ResolvedApproval, error)
+	// SetJobDispatched transitions a job to 'dispatched' before the Launch command
+	// is sent to the SDK worker. Only succeeds if ownerID holds the job.
+	// Returns false if the ownership check failed.
+	SetJobDispatched(ctx context.Context, workflowID string, ownerID string) (bool, error)
 	// ReleaseJob clears the owner and lease on a job, only if currently owned by ownerID.
 	ReleaseJob(ctx context.Context, workflowID string, ownerID string) error
 	// SweepExpiredApprovals atomically resolves the partition's approval gates whose
