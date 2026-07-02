@@ -405,7 +405,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 							}
 						}
 
-						dispatched, err := s.jobs.SetJobDispatched(stream.Context(), job.WorkflowID, s.id)
+						dispatched, err := s.jobs.SetJobDispatched(stream.Context(), job.WorkflowID, sessionID)
 						if err != nil {
 							log.Error("failed to mark job dispatched", "request_id", job.RequestID, "error", err)
 							return err

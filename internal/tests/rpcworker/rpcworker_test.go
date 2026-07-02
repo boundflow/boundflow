@@ -177,9 +177,10 @@ func runSession(worker *rpcworker.RpcWorker, stream *mockStream) chan error {
 func expectJobAcquired(jobRepo *mocks.MockJobRepository) {
 	resID := testWorkflowID
 	jobRepo.EXPECT().GetAvailableJob(gomock.Any(), testTenantGroupID, gomock.Any(), gomock.Any()).Return(&resID, nil)
-	jobRepo.EXPECT().AcquireJob(gomock.Any(), testWorkflowID, testWorkerID, gomock.Any(), testTenantGroupID).Return(testJob(), nil)
-	jobRepo.EXPECT().RenewJobLease(gomock.Any(), testWorkflowID, testWorkerID, gomock.Any()).Return(true, nil).AnyTimes()
-	jobRepo.EXPECT().ReleaseJob(gomock.Any(), testWorkflowID, testWorkerID).Return(nil).AnyTimes()
+	jobRepo.EXPECT().AcquireJob(gomock.Any(), testWorkflowID, gomock.Any(), gomock.Any(), testTenantGroupID).Return(testJob(), nil)
+	jobRepo.EXPECT().SetJobDispatched(gomock.Any(), testWorkflowID, gomock.Any()).Return(true, nil).AnyTimes()
+	jobRepo.EXPECT().RenewJobLease(gomock.Any(), testWorkflowID, gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+	jobRepo.EXPECT().ReleaseJob(gomock.Any(), testWorkflowID, gomock.Any()).Return(nil).AnyTimes()
 }
 
 // driveToConnectedBusy sets up the UpdateJobStatus(running) expectation, pushes the
@@ -191,7 +192,7 @@ func driveToConnectedBusy(t *testing.T, jobRepo *mocks.MockJobRepository, stream
 
 	runningSet := make(chan struct{})
 	jobRepo.EXPECT().
-		UpdateJobStatus(gomock.Any(), testWorkflowID, testWorkerID, domain.JobStatusRunning).
+		UpdateJobStatus(gomock.Any(), testWorkflowID, gomock.Any(), domain.JobStatusRunning).
 		DoAndReturn(func(_ context.Context, _, _ string, _ domain.JobStatus) (bool, error) {
 			close(runningSet)
 			return true, nil
@@ -297,7 +298,7 @@ func TestWorkerSession_AcquireJob_Fails_StreamDisconnects(t *testing.T) {
 	jobRepo.EXPECT().GetAvailableJob(gomock.Any(), testTenantGroupID, gomock.Any(), gomock.Any()).Return(&resID, nil)
 
 	acquired := make(chan struct{})
-	jobRepo.EXPECT().AcquireJob(gomock.Any(), testWorkflowID, testWorkerID, gomock.Any(), testTenantGroupID).
+	jobRepo.EXPECT().AcquireJob(gomock.Any(), testWorkflowID, gomock.Any(), gomock.Any(), testTenantGroupID).
 		DoAndReturn(func(_ context.Context, _, _ string, _ time.Duration, _ string) (*domain.Job, error) {
 			close(acquired)
 			return nil, nil // failed to acquire
@@ -323,8 +324,8 @@ func TestWorkerSession_CompleteOperation(t *testing.T) {
 
 	worker, jobRepo, sched := newTestWorker(ctrl)
 	expectJobAcquired(jobRepo)
-	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, testWorkerID, domain.JobStatusRunning).Return(true, nil)
-	jobRepo.EXPECT().UpdateJobStatusWithMetrics(gomock.Any(), testWorkflowID, testWorkerID, domain.JobStatusCompleted, gomock.Any(), gomock.Any()).Return(true, nil)
+	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, gomock.Any(), domain.JobStatusRunning).Return(true, nil)
+	jobRepo.EXPECT().UpdateJobStatusWithMetrics(gomock.Any(), testWorkflowID, gomock.Any(), domain.JobStatusCompleted, gomock.Any(), gomock.Any()).Return(true, nil)
 
 	stream := newMockStream(ctx)
 	errCh := runSession(worker, stream)
@@ -350,6 +351,66 @@ func TestWorkerSession_CompleteOperation(t *testing.T) {
 	}
 }
 
+// Dispatch must fence on the per-session owner: SetJobDispatched has to be called
+// with the same owner AcquireJob received (the session id), never the worker id.
+// Regression guard for the s.id-instead-of-sessionID owner bug, which made every
+// dispatch return "lost ownership" so no operation ever launched.
+func TestWorkerSession_Dispatch_UsesSessionOwner(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	worker, jobRepo, _ := newTestWorker(ctrl)
+
+	resID := testWorkflowID
+	jobRepo.EXPECT().GetAvailableJob(gomock.Any(), testTenantGroupID, gomock.Any(), gomock.Any()).Return(&resID, nil)
+
+	var acquireOwner string
+	jobRepo.EXPECT().AcquireJob(gomock.Any(), testWorkflowID, gomock.Any(), gomock.Any(), testTenantGroupID).
+		DoAndReturn(func(_ context.Context, _, owner string, _ time.Duration, _ string) (*domain.Job, error) {
+			acquireOwner = owner
+			return testJob(), nil
+		})
+
+	dispatched := make(chan string, 1)
+	jobRepo.EXPECT().SetJobDispatched(gomock.Any(), testWorkflowID, gomock.Any()).
+		DoAndReturn(func(_ context.Context, _, owner string) (bool, error) {
+			dispatched <- owner
+			return true, nil
+		})
+
+	jobRepo.EXPECT().RenewJobLease(gomock.Any(), testWorkflowID, gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+	jobRepo.EXPECT().ReleaseJob(gomock.Any(), testWorkflowID, gomock.Any()).Return(nil).AnyTimes()
+
+	stream := newMockStream(ctx)
+	errCh := runSession(worker, stream)
+
+	stream.push(readyMsg())
+
+	// A LaunchOperation only reaches the client if SetJobDispatched succeeded.
+	launch := <-stream.sendCh
+	if launch.GetLaunch() == nil {
+		t.Fatal("expected LaunchOperation after dispatch")
+	}
+
+	select {
+	case dispatchOwner := <-dispatched:
+		if dispatchOwner == testWorkerID {
+			t.Errorf("SetJobDispatched used the worker id %q as owner; must use the per-session owner", testWorkerID)
+		}
+		if dispatchOwner != acquireOwner {
+			t.Errorf("dispatch owner %q != acquire owner %q; owner must be consistent within a session", dispatchOwner, acquireOwner)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("SetJobDispatched not called")
+	}
+
+	cancel()
+	if err := <-errCh; err != nil {
+		t.Fatalf("expected nil, got %v", err)
+	}
+}
+
 // Full path with failure: ReadyForWork → LaunchOperation → IN_PROGRESS → FAILED → FailRequest.
 func TestWorkerSession_FailOperation(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -358,8 +419,8 @@ func TestWorkerSession_FailOperation(t *testing.T) {
 
 	worker, jobRepo, sched := newTestWorker(ctrl)
 	expectJobAcquired(jobRepo)
-	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, testWorkerID, domain.JobStatusRunning).Return(true, nil)
-	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, testWorkerID, domain.JobStatusFailed).Return(true, nil)
+	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, gomock.Any(), domain.JobStatusRunning).Return(true, nil)
+	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, gomock.Any(), domain.JobStatusFailed).Return(true, nil)
 
 	stream := newMockStream(ctx)
 	errCh := runSession(worker, stream)
@@ -384,7 +445,7 @@ func TestWorkerSession_ConnectedBusy_StreamDisconnect(t *testing.T) {
 
 	worker, jobRepo, sched := newTestWorker(ctrl)
 	expectJobAcquired(jobRepo)
-	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, testWorkerID, domain.JobStatusFailed).Return(true, nil)
+	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, gomock.Any(), domain.JobStatusFailed).Return(true, nil)
 
 	stream := newMockStream(ctx)
 	errCh := runSession(worker, stream)
@@ -420,6 +481,8 @@ func TestWorkerSession_ConnectedWaiting_WrongOperationId(t *testing.T) {
 	stream.push(readyMsg())
 	<-stream.sendCh // LaunchOperation
 
+	// Wrong op id in ConnectedWaiting fails the operation.
+	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, gomock.Any(), domain.JobStatusFailed).Return(true, nil)
 	stream.push(updateMsg("wrong-op-id", boundflowv1.OperationStatus_OPERATION_STATUS_IN_PROGRESS))
 
 	select {
@@ -444,7 +507,8 @@ func TestWorkerSession_ConnectedWaiting_UnexpectedStatus(t *testing.T) {
 	stream.push(readyMsg())
 	<-stream.sendCh // LaunchOperation
 
-	// Send COMPLETED before IN_PROGRESS — unexpected
+	// Send COMPLETED before IN_PROGRESS — unexpected; fails the operation.
+	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, gomock.Any(), domain.JobStatusFailed).Return(true, nil)
 	stream.push(updateMsg(testRequestID, boundflowv1.OperationStatus_OPERATION_STATUS_COMPLETED))
 
 	select {
@@ -462,7 +526,7 @@ func TestWorkerSession_ConnectedBusy_WrongOperationId(t *testing.T) {
 
 	worker, jobRepo, sched := newTestWorker(ctrl)
 	expectJobAcquired(jobRepo)
-	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, testWorkerID, domain.JobStatusFailed).Return(true, nil)
+	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, gomock.Any(), domain.JobStatusFailed).Return(true, nil)
 
 	stream := newMockStream(ctx)
 	errCh := runSession(worker, stream)
