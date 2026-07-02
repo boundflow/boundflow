@@ -1,4 +1,4 @@
-"""bfc policy — runtime and lifecycle policy management."""
+"""boundflow policy — runtime and lifecycle policy management."""
 
 import json
 from pathlib import Path

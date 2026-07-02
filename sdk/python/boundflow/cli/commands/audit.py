@@ -1,4 +1,4 @@
-"""bfc audit — approval and policy audit log commands."""
+"""boundflow audit — approval and policy audit log commands."""
 
 from dataclasses import asdict
 from typing import Optional

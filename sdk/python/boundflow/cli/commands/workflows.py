@@ -1,4 +1,4 @@
-"""bfc workflow — workflow lifecycle commands."""
+"""boundflow workflow — workflow lifecycle commands."""
 
 from typing import Optional
 

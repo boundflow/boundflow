@@ -1,4 +1,4 @@
-"""bfc tenant — tenant group and tenant management commands."""
+"""boundflow tenant — tenant group and tenant management commands."""
 
 import typer
 

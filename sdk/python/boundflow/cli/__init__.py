@@ -1,4 +1,4 @@
-"""bfc — BoundFlow control plane CLI."""
+"""boundflow — BoundFlow control plane CLI."""
 
 import typer
 
@@ -7,7 +7,7 @@ from boundflow.cli._output import set_json
 from boundflow.cli.commands import audit, policies, pricing, tenants, workflows
 
 app = typer.Typer(
-    name="bfc",
+    name="boundflow",
     help="BoundFlow control plane CLI — manage workflows, policies, and audit logs.",
     no_args_is_help=True,
 )

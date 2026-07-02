@@ -1,4 +1,4 @@
-"""bfc pricing — model pricing management."""
+"""boundflow pricing — model pricing management."""
 
 import typer
 

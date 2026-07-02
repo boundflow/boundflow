@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# quickstart.sh — full boundflowwalkthrough from a fresh stack
+#
+# Prerequisites:
+#   docker compose up -d --build --wait
+#   export BOUNDFLOW_API_KEY=$(docker compose run --rm server -mode=provision -name=me | grep api_key | awk '{print $3}')
+#   export BOUNDFLOW_SERVER_ADDRESS=http://localhost:50051
+#   pip install "boundflow[cli]"
+#
+# On PowerShell (Windows):
+#   $env:BOUNDFLOW_API_KEY    = "your-key"
+#   $env:BOUNDFLOW_SERVER_ADDRESS = "http://localhost:50051"
+set -euo pipefail
+
+echo "=== boundflowquickstart ==="
+echo
+
+# ── 1. Explore the CLI ───────────────────────────────────────────────────────
+echo "-- help --"
+boundflow--help
+echo
+
+# ── 2. Create a tenant ───────────────────────────────────────────────────────
+echo "-- create tenant --"
+boundflowtenant create acme
+
+TENANT_ID=$(boundflow--json tenant create acme-ops | python -c "import sys,json; print(json.load(sys.stdin)['id'])")
+echo "tenant id: $TENANT_ID"
+echo
+
+# ── 3. Create + activate a workflow ──────────────────────────────────────────
+echo "-- create workflow --"
+boundflowworkflow create ticket-triage "$TENANT_ID" --version 1
+
+WORKFLOW_ID=$(boundflow--json workflow create order-remediation "$TENANT_ID" --version 1 | python -c "import sys,json; print(json.load(sys.stdin)['id'])")
+echo "workflow id: $WORKFLOW_ID"
+
+echo
+echo "-- activate --"
+boundflowworkflow activate "$WORKFLOW_ID"
+
+# ── 4. List and inspect workflows ────────────────────────────────────────────
+echo
+echo "-- list (table) --"
+boundflowworkflow list
+
+echo
+echo "-- get workflow state --"
+boundflowworkflow get "$WORKFLOW_ID"
+
+# ── 5. Invoke (dispatches to a worker if one is connected) ───────────────────
+echo
+echo "-- invoke --"
+boundflowworkflow invoke "$WORKFLOW_ID"
+
+# ── 6. Set model pricing ─────────────────────────────────────────────────────
+echo
+echo "-- pricing --"
+boundflowpricing set claude-sonnet-4-6 --input 3.00 --output 15.00
+boundflowpricing list
+
+# ── 7. View audit log (empty on a fresh stack without worker runs) ────────────
+echo
+echo "-- audit log --"
+boundflowaudit log "$WORKFLOW_ID"
+
+# ── 8. Clean up ──────────────────────────────────────────────────────────────
+echo
+echo "-- delete workflow --"
+boundflowworkflow delete "$WORKFLOW_ID" --yes
+
+echo
+echo "=== done ==="

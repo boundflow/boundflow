@@ -24,7 +24,7 @@ dependencies = [
 ]
 
 [project.scripts]
-bfc = "boundflow.cli:main"
+boundflow = "boundflow.cli:main"
 
 [project.optional-dependencies]
 # Tooling for regenerating the gRPC stubs and running the integration tests.
@@ -39,7 +39,7 @@ otel = [
     "opentelemetry-sdk",
     "opentelemetry-exporter-otlp",
 ]
-# CLI extras: install with `pip install "boundflow[cli]"` to get the `bfc` command.
+# CLI extras: install with `pip install "boundflow[cli]"` to get the `boundflow` command.
 cli = [
     "typer>=0.12",
     "rich>=13",
