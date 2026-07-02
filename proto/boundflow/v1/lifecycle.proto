@@ -31,6 +31,7 @@ service WorkflowService {
   rpc GetAgentPolicyAudit(GetAgentPolicyAuditRequest) returns (GetAgentPolicyAuditResponse);
   rpc GetAuditLog(GetAuditLogRequest) returns (GetAuditLogResponse);
   rpc ActivateWorkflow(ActivateWorkflowRequest) returns (ActivateWorkflowResponse);
+  rpc RecoverWorkflow(RecoverWorkflowRequest) returns (RecoverWorkflowResponse);
 }
 
 message CreateWorkflowRequest {
@@ -250,3 +251,12 @@ message ActivateWorkflowRequest {
 }
 
 message ActivateWorkflowResponse {}
+
+message RecoverWorkflowRequest {
+  string workflow_id = 1;
+  // The workflow's current last_failed_request_id. Recovery only succeeds if this
+  // matches, so a caller can't recover past a failure they haven't seen.
+  string request_id = 2;
+}
+
+message RecoverWorkflowResponse {}

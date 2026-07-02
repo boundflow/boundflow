@@ -119,6 +119,11 @@ class WorkflowServiceStub:
                 request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.ActivateWorkflowRequest.SerializeToString,
                 response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.ActivateWorkflowResponse.FromString,
                 _registered_method=True)
+        self.RecoverWorkflow = channel.unary_unary(
+                '/boundflow.v1.WorkflowService/RecoverWorkflow',
+                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.RecoverWorkflowRequest.SerializeToString,
+                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.RecoverWorkflowResponse.FromString,
+                _registered_method=True)
 
 
 class WorkflowServiceServicer:
@@ -228,6 +233,12 @@ class WorkflowServiceServicer:
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def RecoverWorkflow(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_WorkflowServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -315,6 +326,11 @@ def add_WorkflowServiceServicer_to_server(servicer, server):
                     servicer.ActivateWorkflow,
                     request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.ActivateWorkflowRequest.FromString,
                     response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.ActivateWorkflowResponse.SerializeToString,
+            ),
+            'RecoverWorkflow': grpc.unary_unary_rpc_method_handler(
+                    servicer.RecoverWorkflow,
+                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.RecoverWorkflowRequest.FromString,
+                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.RecoverWorkflowResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -776,6 +792,33 @@ class WorkflowService:
             '/boundflow.v1.WorkflowService/ActivateWorkflow',
             boundflow_dot_v1_dot_lifecycle__pb2.ActivateWorkflowRequest.SerializeToString,
             boundflow_dot_v1_dot_lifecycle__pb2.ActivateWorkflowResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RecoverWorkflow(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/boundflow.v1.WorkflowService/RecoverWorkflow',
+            boundflow_dot_v1_dot_lifecycle__pb2.RecoverWorkflowRequest.SerializeToString,
+            boundflow_dot_v1_dot_lifecycle__pb2.RecoverWorkflowResponse.FromString,
             options,
             channel_credentials,
             insecure,

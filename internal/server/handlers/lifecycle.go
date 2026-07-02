@@ -296,6 +296,27 @@ func (h *WorkflowServiceHandler) ActivateWorkflow(ctx context.Context, req *boun
 	return &boundflowv1.ActivateWorkflowResponse{}, nil
 }
 
+func (h *WorkflowServiceHandler) RecoverWorkflow(ctx context.Context, req *boundflowv1.RecoverWorkflowRequest) (*boundflowv1.RecoverWorkflowResponse, error) {
+	if req.WorkflowId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
+	}
+	if req.RequestId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "request_id is required")
+	}
+
+	if err := h.checkWorkflowOwner(ctx, req.WorkflowId); err != nil {
+		return nil, err
+	}
+
+	if err := h.svc.RecoverWorkflow(ctx, req.WorkflowId, req.RequestId); err != nil {
+		if errors.Is(err, service.ErrCannotRecover) {
+			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
+		}
+		return nil, status.Errorf(codes.Internal, "recover workflow: %v", err)
+	}
+	return &boundflowv1.RecoverWorkflowResponse{}, nil
+}
+
 func (h *WorkflowServiceHandler) ApproveWorkflow(ctx context.Context, req *boundflowv1.ApproveWorkflowRequest) (*boundflowv1.ApproveWorkflowResponse, error) {
 	if req.WorkflowId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")

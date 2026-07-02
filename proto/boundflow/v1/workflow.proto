@@ -31,4 +31,6 @@ message Workflow {
   WorkflowConfig workflow_config = 8;
   string lifecycle_state = 9;
   WorkflowState workflow_state = 10;
+  // request_id of the run that failed the workflow; empty until a run fails.
+  string last_failed_request_id = 11;
 }

@@ -36,6 +36,7 @@ const (
 	WorkflowService_GetAgentPolicyAudit_FullMethodName        = "/boundflow.v1.WorkflowService/GetAgentPolicyAudit"
 	WorkflowService_GetAuditLog_FullMethodName                = "/boundflow.v1.WorkflowService/GetAuditLog"
 	WorkflowService_ActivateWorkflow_FullMethodName           = "/boundflow.v1.WorkflowService/ActivateWorkflow"
+	WorkflowService_RecoverWorkflow_FullMethodName            = "/boundflow.v1.WorkflowService/RecoverWorkflow"
 )
 
 // WorkflowServiceClient is the client API for WorkflowService service.
@@ -61,6 +62,7 @@ type WorkflowServiceClient interface {
 	GetAgentPolicyAudit(ctx context.Context, in *GetAgentPolicyAuditRequest, opts ...grpc.CallOption) (*GetAgentPolicyAuditResponse, error)
 	GetAuditLog(ctx context.Context, in *GetAuditLogRequest, opts ...grpc.CallOption) (*GetAuditLogResponse, error)
 	ActivateWorkflow(ctx context.Context, in *ActivateWorkflowRequest, opts ...grpc.CallOption) (*ActivateWorkflowResponse, error)
+	RecoverWorkflow(ctx context.Context, in *RecoverWorkflowRequest, opts ...grpc.CallOption) (*RecoverWorkflowResponse, error)
 }
 
 type workflowServiceClient struct {
@@ -241,6 +243,16 @@ func (c *workflowServiceClient) ActivateWorkflow(ctx context.Context, in *Activa
 	return out, nil
 }
 
+func (c *workflowServiceClient) RecoverWorkflow(ctx context.Context, in *RecoverWorkflowRequest, opts ...grpc.CallOption) (*RecoverWorkflowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RecoverWorkflowResponse)
+	err := c.cc.Invoke(ctx, WorkflowService_RecoverWorkflow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // WorkflowServiceServer is the server API for WorkflowService service.
 // All implementations must embed UnimplementedWorkflowServiceServer
 // for forward compatibility.
@@ -264,6 +276,7 @@ type WorkflowServiceServer interface {
 	GetAgentPolicyAudit(context.Context, *GetAgentPolicyAuditRequest) (*GetAgentPolicyAuditResponse, error)
 	GetAuditLog(context.Context, *GetAuditLogRequest) (*GetAuditLogResponse, error)
 	ActivateWorkflow(context.Context, *ActivateWorkflowRequest) (*ActivateWorkflowResponse, error)
+	RecoverWorkflow(context.Context, *RecoverWorkflowRequest) (*RecoverWorkflowResponse, error)
 	mustEmbedUnimplementedWorkflowServiceServer()
 }
 
@@ -324,6 +337,9 @@ func (UnimplementedWorkflowServiceServer) GetAuditLog(context.Context, *GetAudit
 }
 func (UnimplementedWorkflowServiceServer) ActivateWorkflow(context.Context, *ActivateWorkflowRequest) (*ActivateWorkflowResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ActivateWorkflow not implemented")
+}
+func (UnimplementedWorkflowServiceServer) RecoverWorkflow(context.Context, *RecoverWorkflowRequest) (*RecoverWorkflowResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RecoverWorkflow not implemented")
 }
 func (UnimplementedWorkflowServiceServer) mustEmbedUnimplementedWorkflowServiceServer() {}
 func (UnimplementedWorkflowServiceServer) testEmbeddedByValue()                         {}
@@ -652,6 +668,24 @@ func _WorkflowService_ActivateWorkflow_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _WorkflowService_RecoverWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecoverWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorkflowServiceServer).RecoverWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorkflowService_RecoverWorkflow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorkflowServiceServer).RecoverWorkflow(ctx, req.(*RecoverWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // WorkflowService_ServiceDesc is the grpc.ServiceDesc for WorkflowService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -726,6 +760,10 @@ var WorkflowService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ActivateWorkflow",
 			Handler:    _WorkflowService_ActivateWorkflow_Handler,
+		},
+		{
+			MethodName: "RecoverWorkflow",
+			Handler:    _WorkflowService_RecoverWorkflow_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

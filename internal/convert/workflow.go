@@ -29,8 +29,9 @@ func WorkflowToProto(r *domain.Workflow) *boundflowv1.Workflow {
 			RepeatEverySeconds:   r.WorkflowConfig.RepeatEverySeconds,
 			Triggerable:          r.WorkflowConfig.Triggerable,
 		},
-		LifecycleState: string(r.LifecycleState),
-		WorkflowState:  workflowStateToProto[r.WorkflowState],
+		LifecycleState:      string(r.LifecycleState),
+		WorkflowState:       workflowStateToProto[r.WorkflowState],
+		LastFailedRequestId: r.LastFailedRequestID,
 	}
 }
 

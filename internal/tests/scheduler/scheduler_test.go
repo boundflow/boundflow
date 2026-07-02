@@ -59,7 +59,7 @@ func newTestScheduler(ctrl *gomock.Controller) (
 		LifecycleState:         domain.LifecycleStateActive,
 		WorkflowState:          domain.WorkflowStateActive,
 	}, nil).AnyTimes()
-	s := scheduler.NewScheduler("test", 30, partitions, schedulerRepo, requests, workflow, agentStates, jobs, noopMetricsHandler{}, noopPolicyResolver{}, mocks.NewMockAuditRepository(ctrl), discardLogger)
+	s := scheduler.NewScheduler("test", 30, 25, partitions, schedulerRepo, requests, workflow, agentStates, jobs, noopMetricsHandler{}, noopPolicyResolver{}, mocks.NewMockAuditRepository(ctrl), discardLogger)
 	return s, partitions, schedulerRepo, requests, workflow, agentStates
 }
 
@@ -370,7 +370,7 @@ func TestFailRequest_AppliesFailedState(t *testing.T) {
 		}, nil)
 
 	workflow.EXPECT().
-		ApplyCompletedJob(gomock.Any(), "workflow-1", domain.LifecycleStateFailed, int64(2)).
+		ApplyFailedJob(gomock.Any(), "workflow-1", "req-1", domain.LifecycleStateFailed, domain.WorkflowStateDisabled, int64(2)).
 		Return(true, nil)
 
 	schedulerRepo.EXPECT().
@@ -399,7 +399,7 @@ func TestFailRequest_VersionSkipped_ReturnsFalse(t *testing.T) {
 		}, nil)
 
 	workflow.EXPECT().
-		ApplyCompletedJob(gomock.Any(), "workflow-1", domain.LifecycleStateFailed, int64(1)).
+		ApplyFailedJob(gomock.Any(), "workflow-1", "req-1", domain.LifecycleStateFailed, domain.WorkflowStateDisabled, int64(1)).
 		Return(false, nil)
 
 	schedulerRepo.EXPECT().

@@ -193,18 +193,33 @@ func (mr *MockWorkflowRepositoryMockRecorder) ApplyCompletedJob(ctx, id, lifecyc
 }
 
 // ApplyFailedJob mocks base method.
-func (m *MockWorkflowRepository) ApplyFailedJob(ctx context.Context, id string, lifecycleState domain.LifecycleState, workflowState domain.WorkflowState, version int64) (bool, error) {
+func (m *MockWorkflowRepository) ApplyFailedJob(ctx context.Context, id, requestID string, lifecycleState domain.LifecycleState, workflowState domain.WorkflowState, version int64) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ApplyFailedJob", ctx, id, lifecycleState, workflowState, version)
+	ret := m.ctrl.Call(m, "ApplyFailedJob", ctx, id, requestID, lifecycleState, workflowState, version)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ApplyFailedJob indicates an expected call of ApplyFailedJob.
-func (mr *MockWorkflowRepositoryMockRecorder) ApplyFailedJob(ctx, id, lifecycleState, workflowState, version any) *gomock.Call {
+func (mr *MockWorkflowRepositoryMockRecorder) ApplyFailedJob(ctx, id, requestID, lifecycleState, workflowState, version any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyFailedJob", reflect.TypeOf((*MockWorkflowRepository)(nil).ApplyFailedJob), ctx, id, lifecycleState, workflowState, version)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyFailedJob", reflect.TypeOf((*MockWorkflowRepository)(nil).ApplyFailedJob), ctx, id, requestID, lifecycleState, workflowState, version)
+}
+
+// RecoverWorkflow mocks base method.
+func (m *MockWorkflowRepository) RecoverWorkflow(ctx context.Context, id, requestID string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecoverWorkflow", ctx, id, requestID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RecoverWorkflow indicates an expected call of RecoverWorkflow.
+func (mr *MockWorkflowRepositoryMockRecorder) RecoverWorkflow(ctx, id, requestID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecoverWorkflow", reflect.TypeOf((*MockWorkflowRepository)(nil).RecoverWorkflow), ctx, id, requestID)
 }
 
 // Create mocks base method.

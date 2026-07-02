@@ -5,9 +5,9 @@ import "time"
 type LifecycleState string
 
 const (
-	LifecycleStateCreating    LifecycleState = "creating"
-	LifecycleStateActive      LifecycleState = "active"
-	LifecycleStateInvoking LifecycleState = "invoking"
+	LifecycleStateCreating         LifecycleState = "creating"
+	LifecycleStateActive           LifecycleState = "active"
+	LifecycleStateInvoking         LifecycleState = "invoking"
 	LifecycleStateAwaitingApproval LifecycleState = "awaiting_approval"
 	LifecycleStateDeleting         LifecycleState = "deleting"
 	LifecycleStateDeleted          LifecycleState = "deleted"
@@ -45,5 +45,6 @@ type Workflow struct {
 	TargetVersion          int64
 	CurrentVersion         int64
 	LastCompletedRequestAt *time.Time
+	LastFailedRequestID    string
 	CreatedAt              time.Time
 }

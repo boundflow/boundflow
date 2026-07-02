@@ -86,6 +86,7 @@ class WorkflowSummary:
     lifecycle_state: LifecycleState
     workflow_state: WorkflowState
     version: int
+    last_failed_request_id: str
 
 
 @dataclass
@@ -356,6 +357,14 @@ class ControlPlaneClient:
             lc.ActivateWorkflowRequest(workflow_id=workflow_id),
             metadata=self._metadata)
 
+    async def recover_workflow(self, workflow_id: str, request_id: str) -> None:
+        """Recover a failed workflow back to active. request_id must match the
+        workflow's last_failed_request_id (the run that failed it) — get it from
+        the workflow's last_failed_request_id field or the failed run's trace."""
+        await self._lc.RecoverWorkflow(
+            lc.RecoverWorkflowRequest(workflow_id=workflow_id, request_id=request_id),
+            metadata=self._metadata)
+
     async def invoke_workflow(self, workflow_id: str, *, operation_timeout_seconds: int = 0) -> str:
         """Trigger a run; returns the request_id — the run/trace id you can use to
         find this invocation's trace later."""
@@ -392,6 +401,7 @@ class ControlPlaneClient:
                 lifecycle_state=_LIFECYCLE.get(w.lifecycle_state, LifecycleState.UNKNOWN),
                 workflow_state=_WF_STATE.get(w.workflow_state, WorkflowState.UNSPECIFIED),
                 version=w.workflow_config.version,
+                last_failed_request_id=w.last_failed_request_id,
             )
             for w in resp.workflows
         ]

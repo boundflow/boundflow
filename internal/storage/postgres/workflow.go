@@ -56,7 +56,8 @@ func (r *WorkflowRepo) Create(ctx context.Context, instance *domain.Workflow) er
 func (r *WorkflowRepo) ListForTenantGroup(ctx context.Context, tenantGroupID string) ([]*domain.Workflow, error) {
 	rows, err := r.pool.Query(ctx,
 		`SELECT w.id, w.tenant_id, w.workflow_type, w.current_workflow_version,
-		        w.lifecycle_state, w.workflow_state, w.last_completed_request_at, w.created_at
+		        w.lifecycle_state, w.workflow_state, w.last_completed_request_at,
+		        w.last_failed_request_id, w.created_at
 		 FROM workflows w
 		 JOIN tenants t ON w.tenant_id = t.id
 		 WHERE t.tenant_group_id = $1
@@ -72,7 +73,8 @@ func (r *WorkflowRepo) ListForTenantGroup(ctx context.Context, tenantGroupID str
 		var w domain.Workflow
 		if err := rows.Scan(
 			&w.ID, &w.TenantID, &w.WorkflowType, &w.CurrentWorkflowVersion,
-			&w.LifecycleState, &w.WorkflowState, &w.LastCompletedRequestAt, &w.CreatedAt,
+			&w.LifecycleState, &w.WorkflowState, &w.LastCompletedRequestAt,
+			&w.LastFailedRequestID, &w.CreatedAt,
 		); err != nil {
 			return nil, handleError(err, "workflow instance")
 		}
@@ -93,7 +95,8 @@ func (r *WorkflowRepo) Get(ctx context.Context, id string) (*domain.Workflow, er
 		        invoke_timeout_seconds, repeat_every_seconds, triggerable,
 		        lifecycle_state, workflow_state, lifecycle_policy, invocation_metrics, cooldown_until,
 		        lifecycle_last_resolved, current_workflow_version, scheduler_partition_id,
-		        target_version, current_version, last_completed_request_at, created_at
+		        target_version, current_version, last_completed_request_at,
+		        last_failed_request_id, created_at
 		 FROM workflows WHERE id = $1`, id,
 	).Scan(
 		&instance.ID, &instance.TenantID, &instance.WorkflowType,
@@ -104,7 +107,7 @@ func (r *WorkflowRepo) Get(ctx context.Context, id string) (*domain.Workflow, er
 		&lifecyclePolicyJSON, &invocationMetricsJSON, &instance.CooldownUntil,
 		&instance.LifecycleLastResolved, &instance.CurrentWorkflowVersion, &instance.SchedulerPartitionID,
 		&instance.TargetVersion, &instance.CurrentVersion,
-		&instance.LastCompletedRequestAt, &instance.CreatedAt,
+		&instance.LastCompletedRequestAt, &instance.LastFailedRequestID, &instance.CreatedAt,
 	)
 	if err != nil {
 		return nil, handleError(err, "workflow instance")
@@ -274,23 +277,42 @@ func (r *WorkflowRepo) ApplyCompletedJob(ctx context.Context, id string, lifecyc
 	return true, nil
 }
 
-func (r *WorkflowRepo) ApplyFailedJob(ctx context.Context, id string, lifecycleState domain.LifecycleState, workflowState domain.WorkflowState, version int64) (bool, error) {
+func (r *WorkflowRepo) ApplyFailedJob(ctx context.Context, id string, requestID string, lifecycleState domain.LifecycleState, workflowState domain.WorkflowState, version int64) (bool, error) {
 	var updatedID string
 	err := r.pool.QueryRow(ctx,
 		`UPDATE workflows
-		 SET current_version = $4,
+		 SET current_version = $5,
 		     last_completed_request_at = now(),
-		     lifecycle_state = $2::lifecycle_state,
-		     workflow_state  = $3::workflow_state
-		 WHERE id = $1 AND current_version < $4
+		     last_failed_request_id = $2,
+		     lifecycle_state = $3::lifecycle_state,
+		     workflow_state  = $4::workflow_state
+		 WHERE id = $1 AND current_version < $5
 		 RETURNING id`,
-		id, lifecycleState, workflowState, version,
+		id, requestID, lifecycleState, workflowState, version,
 	).Scan(&updatedID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil
 		}
 		return false, fmt.Errorf("apply failed job: %w", err)
+	}
+	return true, nil
+}
+
+func (r *WorkflowRepo) RecoverWorkflow(ctx context.Context, id string, requestID string) (bool, error) {
+	var updatedID string
+	err := r.pool.QueryRow(ctx,
+		`UPDATE workflows
+		 SET lifecycle_state = 'active', workflow_state = 'active'
+		 WHERE id = $1 AND lifecycle_state = 'failed' AND last_failed_request_id = $2
+		 RETURNING id`,
+		id, requestID,
+	).Scan(&updatedID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("recover workflow: %w", err)
 	}
 	return true, nil
 }
