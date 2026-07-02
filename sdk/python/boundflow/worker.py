@@ -291,14 +291,16 @@ class BoundFlowWorker:
 
             ctx = OperationContext(_Operation(op), self._orchestrator, self._trace_sink)
             _op_start = now_ms()
+            uncaught_reason: str | None = None
             try:
                 result = await handler(ctx)
-            except Exception:  # noqa: BLE001 — a crash in customer callback code is a
+            except Exception as ex:  # noqa: BLE001 — a crash in customer callback code is a
                 # customer-domain failure (bumps num_failures for lifecycle policy), not a
                 # platform failure. The run still completes so the workflow stays active.
                 log.exception("workflow callback raised; recording as a failed run (op_id=%s op=%s)", op.id, op.name)
                 ctx.mark_failed()
                 result = Complete()
+                uncaught_reason = f"{type(ex).__name__}: {ex}"
             _op_end = now_ms()
 
             # Mint the approval id once when the gate opens, so the trace's correlation
@@ -315,6 +317,13 @@ class BoundFlowWorker:
                 proto.agent_policy_actions[name].CopyFrom(t.agent_policy_action_to_proto(action))
             if ctx.failed:
                 proto.workflow_metrics.CopyFrom(op_pb.WorkflowInvocationMetrics(failures=1))
+                # Tag the soft failure so the server classifies the run outcome without
+                # inferring: an exception carries its text; mark_failed() carries none.
+                if uncaught_reason is not None:
+                    proto.failure_type = op_pb.OPERATION_FAILURE_TYPE_UNCAUGHT_EXCEPTION
+                    proto.failure_reason = uncaught_reason
+                else:
+                    proto.failure_type = op_pb.OPERATION_FAILURE_TYPE_CUSTOMER_MARKED
             return proto
 
         capabilities = list(self._workflows.keys())

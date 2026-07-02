@@ -20,7 +20,7 @@ import (
 )
 
 type RequestScheduler interface {
-	CompleteRequest(ctx context.Context, req string) (bool, error)
+	CompleteRequest(ctx context.Context, req string, outcome domain.RunOutcome, reason string) (bool, error)
 	FailRequest(ctx context.Context, req string) (bool, error)
 	MarkAwaitingApproval(ctx context.Context, workflowID string) error
 }
@@ -201,14 +201,24 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 				log.Warn("failed to mark workflow awaiting approval, scheduler will sync", "workflow_id", job.WorkflowID, "error", err)
 			}
 		} else {
-			updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.WorkflowID, sessionID, domain.JobStatusCompleted, job.AgentMetrics, job.WorkflowMetrics)
+			// The SDK tags soft failures (customer_marked / uncaught_exception); a clean
+			// run is successful. Server-detected outcomes (timeout, interrupted) never
+			// reach here.
+			outcome, reason := domain.RunOutcomeSuccessful, ""
+			switch result.FailureType {
+			case boundflowv1.OperationFailureType_OPERATION_FAILURE_TYPE_CUSTOMER_MARKED:
+				outcome, reason = domain.RunOutcomeCustomerMarked, result.FailureReason
+			case boundflowv1.OperationFailureType_OPERATION_FAILURE_TYPE_UNCAUGHT_EXCEPTION:
+				outcome, reason = domain.RunOutcomeUncaughtException, result.FailureReason
+			}
+			updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.WorkflowID, sessionID, domain.JobStatusCompleted, outcome, reason, job.AgentMetrics, job.WorkflowMetrics)
 			if err != nil {
 				log.Error("failed to mark job completed", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "error", err)
 				return err
 			}
 			if updated {
-				log.Info("job completed, notifying scheduler", "request_id", job.RequestID, "workflow_id", job.WorkflowID)
-				s.scheduler.CompleteRequest(ctx, job.RequestID)
+				log.Info("job completed, notifying scheduler", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "outcome", outcome)
+				s.scheduler.CompleteRequest(ctx, job.RequestID, outcome, reason)
 			}
 		}
 
@@ -240,6 +250,8 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 		return nil
 	}
 
+	// failOperation interrupts the workflow (a platform failure): the scheduler records
+	// the request as run_outcome=interrupted with a static reason.
 	failOperation := func(cancelLease chan bool, job *domain.Job) error {
 		ctx := context.Background()
 		defer cancelLeaseIfExists(cancelLease)
@@ -257,21 +269,21 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 	}
 
 	// softFailOperation records a customer-domain failure (e.g. an operation timeout):
-	// it bumps num_failures for lifecycle policy and completes the request, leaving the
-	// workflow active — unlike failOperation, which interrupts it (a platform failure).
-	softFailOperation := func(cancelLease chan bool, job *domain.Job) {
+	// it bumps num_failures for lifecycle policy and completes the request with the given
+	// outcome, leaving the workflow active — unlike failOperation, which interrupts it.
+	softFailOperation := func(cancelLease chan bool, job *domain.Job, outcome domain.RunOutcome, reason string) {
 		ctx := context.Background()
 		defer cancelLeaseIfExists(cancelLease)
 
 		job.WorkflowMetrics.Failures++
-		updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.WorkflowID, sessionID, domain.JobStatusCompleted, job.AgentMetrics, job.WorkflowMetrics)
+		updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.WorkflowID, sessionID, domain.JobStatusCompleted, outcome, reason, job.AgentMetrics, job.WorkflowMetrics)
 		if err != nil {
 			log.Error("failed to soft-fail job", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "error", err)
 			return
 		}
 		if updated {
-			log.Info("operation soft-failed, completing request", "request_id", job.RequestID, "workflow_id", job.WorkflowID)
-			s.scheduler.CompleteRequest(ctx, job.RequestID)
+			log.Info("operation soft-failed, completing request", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "outcome", outcome)
+			s.scheduler.CompleteRequest(ctx, job.RequestID, outcome, reason)
 		}
 	}
 
@@ -603,7 +615,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 							// The client acked our cancel, so the operation timed out cleanly:
 							// a customer-domain failure (num_failures), not a platform interruption.
 							log.Info("operation timed out (cancel acked), soft-failing", "request_id", currentJob.RequestID, "status", ack.Update.Result.Status)
-							softFailOperation(cancelLease, currentJob)
+							softFailOperation(cancelLease, currentJob, domain.RunOutcomeOperationTimeout, "operation exceeded its timeout")
 						case boundflowv1.OperationStatus_OPERATION_STATUS_IN_PROGRESS:
 							log.Debug("still in progress during cancel, waiting", "request_id", currentJob.RequestID)
 							continue

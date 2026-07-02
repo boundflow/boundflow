@@ -252,10 +252,15 @@ func (s *Scheduler) failJobs(ctx context.Context, partitionID string) error {
 	return nil
 }
 
+// interruptedReason is the static run_outcome reason recorded whenever a request is
+// failed. A failed request is always a platform interruption (the worker was lost, an
+// internal error occurred, etc.); customer-domain failures complete instead.
+const interruptedReason = "the run was interrupted before it could complete (platform failure)"
+
 func (s *Scheduler) FailRequest(ctx context.Context, req string) (bool, error) {
 	s.log.Debug("marking request as failed", "request_id", req)
 
-	request, err := s.requests.FailRequest(ctx, req)
+	request, err := s.requests.FailRequest(ctx, req, interruptedReason)
 	if err != nil {
 		return false, fmt.Errorf("error failing request %s: %w", req, err)
 	}
@@ -278,37 +283,38 @@ func (s *Scheduler) FailRequest(ctx context.Context, req string) (bool, error) {
 }
 
 func (s *Scheduler) completeJobs(ctx context.Context, partitionID string) error {
-	reqs, err := s.scheduler.GetCompletedJobRequestIDs(ctx, partitionID)
+	jobs, err := s.scheduler.GetCompletedJobs(ctx, partitionID)
 	if err != nil {
-		s.log.Error("failed to get completed job request IDs", "partition_id", partitionID, "error", err)
+		s.log.Error("failed to get completed jobs", "partition_id", partitionID, "error", err)
 		return fmt.Errorf("get completed jobs error: %w", err)
 	}
 
-	if len(reqs) == 0 {
+	if len(jobs) == 0 {
 		return nil
 	}
 
-	s.log.Info("processing completed jobs", "partition_id", partitionID, "count", len(reqs))
+	s.log.Info("processing completed jobs", "partition_id", partitionID, "count", len(jobs))
 
 	var wg sync.WaitGroup
-	for _, req := range reqs {
+	for _, job := range jobs {
 		wg.Add(1)
-		go func(req string) {
+		go func(job domain.CompletedJob) {
 			defer wg.Done()
-			if _, err := s.CompleteRequest(ctx, req); err != nil {
-				s.log.Error("failed to process completed request", "request_id", req, "error", err)
+			// Transfer the run result the worker recorded on the job onto the request.
+			if _, err := s.CompleteRequest(ctx, job.RequestID, job.ResultType, job.FailureReason); err != nil {
+				s.log.Error("failed to process completed request", "request_id", job.RequestID, "error", err)
 			}
-		}(req)
+		}(job)
 	}
 	wg.Wait()
 	return nil
 }
 
 // For now this is idempotent, in the future we can have more fine grained lifecycle states to avoid redundant stuff
-func (s *Scheduler) CompleteRequest(ctx context.Context, req string) (bool, error) {
-	s.log.Debug("marking request as completed", "request_id", req)
+func (s *Scheduler) CompleteRequest(ctx context.Context, req string, outcome domain.RunOutcome, reason string) (bool, error) {
+	s.log.Debug("marking request as completed", "request_id", req, "outcome", outcome)
 
-	request, err := s.requests.CompleteRequest(ctx, req)
+	request, err := s.requests.CompleteRequest(ctx, req, outcome, reason)
 	if err != nil {
 		return false, fmt.Errorf("error completing request %s: %w", req, err)
 	}

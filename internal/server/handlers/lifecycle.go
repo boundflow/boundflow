@@ -317,6 +317,27 @@ func (h *WorkflowServiceHandler) ResolveInterruptedWorkflow(ctx context.Context,
 	return &boundflowv1.ResolveInterruptedWorkflowResponse{}, nil
 }
 
+func (h *WorkflowServiceHandler) ListWorkflowRuns(ctx context.Context, req *boundflowv1.ListWorkflowRunsRequest) (*boundflowv1.ListWorkflowRunsResponse, error) {
+	if req.WorkflowId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
+	}
+
+	if err := h.checkWorkflowOwner(ctx, req.WorkflowId); err != nil {
+		return nil, err
+	}
+
+	runs, err := h.svc.ListWorkflowRuns(ctx, req.WorkflowId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "list workflow runs: %v", err)
+	}
+
+	out := make([]*boundflowv1.Run, 0, len(runs))
+	for _, r := range runs {
+		out = append(out, convert.RunToProto(r))
+	}
+	return &boundflowv1.ListWorkflowRunsResponse{Runs: out}, nil
+}
+
 func (h *WorkflowServiceHandler) ApproveWorkflow(ctx context.Context, req *boundflowv1.ApproveWorkflowRequest) (*boundflowv1.ApproveWorkflowResponse, error) {
 	if req.WorkflowId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")

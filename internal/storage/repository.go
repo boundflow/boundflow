@@ -106,9 +106,10 @@ type SchedulerRepository interface {
 	// and the status is a terminal state (completed or failed).
 	// Returns false if no matching job was deleted.
 	DeleteTerminalJob(ctx context.Context, workflowID string, requestID string) (bool, error)
-	// GetCompletedJobRequestIDs returns the request IDs of all completed jobs for workflows
-	// belonging to the given partition.
-	GetCompletedJobRequestIDs(ctx context.Context, partitionID string) ([]string, error)
+	// GetCompletedJobs returns the completed jobs (request id + recorded run result) for
+	// workflows belonging to the given partition, so the sweeper can complete each request
+	// and transfer the result onto its run_outcome.
+	GetCompletedJobs(ctx context.Context, partitionID string) ([]domain.CompletedJob, error)
 	// GetFailedJobRequestIDs returns the request IDs of all failed jobs for workflows
 	// belonging to the given partition.
 	GetFailedJobRequestIDs(ctx context.Context, partitionID string) ([]string, error)
@@ -132,7 +133,7 @@ type JobRepository interface {
 	UpdateJobStatus(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus) (bool, error)
 	// UpdateJobStatusWithMetrics is UpdateJobStatus plus an atomic write of the accumulated
 	// per-agent and workflow-level metrics. Used when finalizing a job.
-	UpdateJobStatusWithMetrics(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error)
+	UpdateJobStatusWithMetrics(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, resultType domain.RunOutcome, failureReason string, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error)
 	// UpdateJob updates status, current_atomic_operation, timeout_seconds, and context only if ownerID is the current owner.
 	// Returns false if the ownership check failed (job taken by another worker or released).
 	UpdateJob(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any) (bool, error)
@@ -250,8 +251,12 @@ type CustomerRequestRepository interface {
 	CreateDuePeriodicRequest(ctx context.Context, req *domain.CustomerRequest, minGap time.Duration, invalidStates []domain.LifecycleState) (int64, bool, error)
 	Get(ctx context.Context, id string) (*domain.CustomerRequest, error)
 	UpdateStatus(ctx context.Context, workflowID, id string, status domain.CustomerRequestStatus) error
-	// CompleteRequest sets the request status to completed and returns the full updated request.
-	CompleteRequest(ctx context.Context, id string) (*domain.CustomerRequest, error)
-	// FailRequest sets the request status to failed and returns the full updated request.
-	FailRequest(ctx context.Context, id string) (*domain.CustomerRequest, error)
+	// CompleteRequest sets the request status to completed, records the run outcome +
+	// reason, and returns the full updated request.
+	CompleteRequest(ctx context.Context, id string, outcome domain.RunOutcome, failureReason string) (*domain.CustomerRequest, error)
+	// FailRequest sets the request status to failed (run_outcome=interrupted), records the
+	// reason, and returns the full updated request.
+	FailRequest(ctx context.Context, id string, failureReason string) (*domain.CustomerRequest, error)
+	// ListForWorkflow returns every run (request) for a workflow, newest first.
+	ListForWorkflow(ctx context.Context, workflowID string) ([]*domain.CustomerRequest, error)
 }

@@ -147,15 +147,15 @@ func (r *CustomerRequestRepo) Get(ctx context.Context, id string) (*domain.Custo
 	return &req, nil
 }
 
-func (r *CustomerRequestRepo) CompleteRequest(ctx context.Context, id string) (*domain.CustomerRequest, error) {
+func (r *CustomerRequestRepo) CompleteRequest(ctx context.Context, id string, outcome domain.RunOutcome, failureReason string) (*domain.CustomerRequest, error) {
 	var req domain.CustomerRequest
 	var requestInfoJSON []byte
 
 	err := r.pool.QueryRow(ctx,
-		`UPDATE customer_requests SET status = $1, completed_at = now() WHERE id = $2
-		 RETURNING id, workflow_id, status, request_type, request_info, version, created_at`,
-		domain.CustomerRequestStatusCompleted, id,
-	).Scan(&req.ID, &req.WorkflowID, &req.Status, &req.RequestType, &requestInfoJSON, &req.Version, &req.CreatedAt)
+		`UPDATE customer_requests SET status = $1, run_outcome = $2, failure_reason = $3, completed_at = now() WHERE id = $4
+		 RETURNING id, workflow_id, status, request_type, request_info, version, created_at, completed_at`,
+		domain.CustomerRequestStatusCompleted, outcome, failureReason, id,
+	).Scan(&req.ID, &req.WorkflowID, &req.Status, &req.RequestType, &requestInfoJSON, &req.Version, &req.CreatedAt, &req.CompletedAt)
 	if err != nil {
 		return nil, handleError(err, "customer request")
 	}
@@ -165,15 +165,16 @@ func (r *CustomerRequestRepo) CompleteRequest(ctx context.Context, id string) (*
 	return &req, nil
 }
 
-func (r *CustomerRequestRepo) FailRequest(ctx context.Context, id string) (*domain.CustomerRequest, error) {
+func (r *CustomerRequestRepo) FailRequest(ctx context.Context, id string, failureReason string) (*domain.CustomerRequest, error) {
 	var req domain.CustomerRequest
 	var requestInfoJSON []byte
 
+	// A failed request is always the platform-failure outcome (interrupted).
 	err := r.pool.QueryRow(ctx,
-		`UPDATE customer_requests SET status = $1, completed_at = now() WHERE id = $2
-		 RETURNING id, workflow_id, status, request_type, request_info, version, created_at`,
-		domain.CustomerRequestStatusFailed, id,
-	).Scan(&req.ID, &req.WorkflowID, &req.Status, &req.RequestType, &requestInfoJSON, &req.Version, &req.CreatedAt)
+		`UPDATE customer_requests SET status = $1, run_outcome = $2, failure_reason = $3, completed_at = now() WHERE id = $4
+		 RETURNING id, workflow_id, status, request_type, request_info, version, created_at, completed_at`,
+		domain.CustomerRequestStatusFailed, domain.RunOutcomeInterrupted, failureReason, id,
+	).Scan(&req.ID, &req.WorkflowID, &req.Status, &req.RequestType, &requestInfoJSON, &req.Version, &req.CreatedAt, &req.CompletedAt)
 	if err != nil {
 		return nil, handleError(err, "customer request")
 	}
@@ -181,6 +182,38 @@ func (r *CustomerRequestRepo) FailRequest(ctx context.Context, id string) (*doma
 		return nil, fmt.Errorf("unmarshal request info: %w", err)
 	}
 	return &req, nil
+}
+
+// ListForWorkflow returns every run (request) for a workflow, newest first. run_outcome
+// is empty while a run is still in flight (NULL in the DB).
+func (r *CustomerRequestRepo) ListForWorkflow(ctx context.Context, workflowID string) ([]*domain.CustomerRequest, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT id, workflow_id, status, request_type, request_info, version,
+		        COALESCE(run_outcome::text, ''), failure_reason, created_at, completed_at
+		 FROM customer_requests WHERE workflow_id = $1 ORDER BY created_at DESC`,
+		workflowID,
+	)
+	if err != nil {
+		return nil, handleError(err, "customer request")
+	}
+	defer rows.Close()
+
+	var out []*domain.CustomerRequest
+	for rows.Next() {
+		var req domain.CustomerRequest
+		var requestInfoJSON []byte
+		if err := rows.Scan(
+			&req.ID, &req.WorkflowID, &req.Status, &req.RequestType, &requestInfoJSON, &req.Version,
+			&req.RunOutcome, &req.FailureReason, &req.CreatedAt, &req.CompletedAt,
+		); err != nil {
+			return nil, handleError(err, "customer request")
+		}
+		if err := json.Unmarshal(requestInfoJSON, &req.RequestInfo); err != nil {
+			return nil, fmt.Errorf("unmarshal request info: %w", err)
+		}
+		out = append(out, &req)
+	}
+	return out, rows.Err()
 }
 
 func (r *CustomerRequestRepo) UpdateStatus(ctx context.Context, workflowID, id string, status domain.CustomerRequestStatus) error {

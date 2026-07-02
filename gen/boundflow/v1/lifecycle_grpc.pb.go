@@ -37,6 +37,7 @@ const (
 	WorkflowService_GetAuditLog_FullMethodName                = "/boundflow.v1.WorkflowService/GetAuditLog"
 	WorkflowService_ActivateWorkflow_FullMethodName           = "/boundflow.v1.WorkflowService/ActivateWorkflow"
 	WorkflowService_ResolveInterruptedWorkflow_FullMethodName = "/boundflow.v1.WorkflowService/ResolveInterruptedWorkflow"
+	WorkflowService_ListWorkflowRuns_FullMethodName           = "/boundflow.v1.WorkflowService/ListWorkflowRuns"
 )
 
 // WorkflowServiceClient is the client API for WorkflowService service.
@@ -63,6 +64,7 @@ type WorkflowServiceClient interface {
 	GetAuditLog(ctx context.Context, in *GetAuditLogRequest, opts ...grpc.CallOption) (*GetAuditLogResponse, error)
 	ActivateWorkflow(ctx context.Context, in *ActivateWorkflowRequest, opts ...grpc.CallOption) (*ActivateWorkflowResponse, error)
 	ResolveInterruptedWorkflow(ctx context.Context, in *ResolveInterruptedWorkflowRequest, opts ...grpc.CallOption) (*ResolveInterruptedWorkflowResponse, error)
+	ListWorkflowRuns(ctx context.Context, in *ListWorkflowRunsRequest, opts ...grpc.CallOption) (*ListWorkflowRunsResponse, error)
 }
 
 type workflowServiceClient struct {
@@ -253,6 +255,16 @@ func (c *workflowServiceClient) ResolveInterruptedWorkflow(ctx context.Context, 
 	return out, nil
 }
 
+func (c *workflowServiceClient) ListWorkflowRuns(ctx context.Context, in *ListWorkflowRunsRequest, opts ...grpc.CallOption) (*ListWorkflowRunsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListWorkflowRunsResponse)
+	err := c.cc.Invoke(ctx, WorkflowService_ListWorkflowRuns_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // WorkflowServiceServer is the server API for WorkflowService service.
 // All implementations must embed UnimplementedWorkflowServiceServer
 // for forward compatibility.
@@ -277,6 +289,7 @@ type WorkflowServiceServer interface {
 	GetAuditLog(context.Context, *GetAuditLogRequest) (*GetAuditLogResponse, error)
 	ActivateWorkflow(context.Context, *ActivateWorkflowRequest) (*ActivateWorkflowResponse, error)
 	ResolveInterruptedWorkflow(context.Context, *ResolveInterruptedWorkflowRequest) (*ResolveInterruptedWorkflowResponse, error)
+	ListWorkflowRuns(context.Context, *ListWorkflowRunsRequest) (*ListWorkflowRunsResponse, error)
 	mustEmbedUnimplementedWorkflowServiceServer()
 }
 
@@ -340,6 +353,9 @@ func (UnimplementedWorkflowServiceServer) ActivateWorkflow(context.Context, *Act
 }
 func (UnimplementedWorkflowServiceServer) ResolveInterruptedWorkflow(context.Context, *ResolveInterruptedWorkflowRequest) (*ResolveInterruptedWorkflowResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ResolveInterruptedWorkflow not implemented")
+}
+func (UnimplementedWorkflowServiceServer) ListWorkflowRuns(context.Context, *ListWorkflowRunsRequest) (*ListWorkflowRunsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListWorkflowRuns not implemented")
 }
 func (UnimplementedWorkflowServiceServer) mustEmbedUnimplementedWorkflowServiceServer() {}
 func (UnimplementedWorkflowServiceServer) testEmbeddedByValue()                         {}
@@ -686,6 +702,24 @@ func _WorkflowService_ResolveInterruptedWorkflow_Handler(srv interface{}, ctx co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _WorkflowService_ListWorkflowRuns_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListWorkflowRunsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorkflowServiceServer).ListWorkflowRuns(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorkflowService_ListWorkflowRuns_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorkflowServiceServer).ListWorkflowRuns(ctx, req.(*ListWorkflowRunsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // WorkflowService_ServiceDesc is the grpc.ServiceDesc for WorkflowService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -764,6 +798,10 @@ var WorkflowService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ResolveInterruptedWorkflow",
 			Handler:    _WorkflowService_ResolveInterruptedWorkflow_Handler,
+		},
+		{
+			MethodName: "ListWorkflowRuns",
+			Handler:    _WorkflowService_ListWorkflowRuns_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

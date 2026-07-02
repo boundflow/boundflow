@@ -314,6 +314,15 @@ func (s *LifecycleService) ActivateWorkflow(ctx context.Context, workflowID stri
 	return nil
 }
 
+// ListWorkflowRuns returns every run (request) for a workflow, newest first.
+func (s *LifecycleService) ListWorkflowRuns(ctx context.Context, workflowID string) ([]*domain.CustomerRequest, error) {
+	runs, err := s.customerRequests.ListForWorkflow(ctx, workflowID)
+	if err != nil {
+		return nil, fmt.Errorf("list workflow runs: %w", err)
+	}
+	return runs, nil
+}
+
 // ResolveInterruptedWorkflow flips an interrupted workflow back to active, but only if
 // requestID matches the last_interrupted_request_id it is currently interrupted on — so a
 // caller can't resolve past an interruption they haven't seen.

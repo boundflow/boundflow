@@ -161,9 +161,9 @@ func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID stri
 	return workflowID, version, true, nil
 }
 
-func (r *SchedulerRepo) GetCompletedJobRequestIDs(ctx context.Context, partitionID string) ([]string, error) {
+func (r *SchedulerRepo) GetCompletedJobs(ctx context.Context, partitionID string) ([]domain.CompletedJob, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT j.request_id
+		`SELECT j.request_id, j.result_type, j.failure_reason
 		 FROM jobs j
 		 JOIN workflows ri ON j.workflow_id = ri.id
 		 WHERE ri.scheduler_partition_id = $1
@@ -171,19 +171,19 @@ func (r *SchedulerRepo) GetCompletedJobRequestIDs(ctx context.Context, partition
 		partitionID,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("get completed job request ids: %w", err)
+		return nil, fmt.Errorf("get completed jobs: %w", err)
 	}
 	defer rows.Close()
 
-	var ids []string
+	var jobs []domain.CompletedJob
 	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			return nil, fmt.Errorf("scan request id: %w", err)
+		var j domain.CompletedJob
+		if err := rows.Scan(&j.RequestID, &j.ResultType, &j.FailureReason); err != nil {
+			return nil, fmt.Errorf("scan completed job: %w", err)
 		}
-		ids = append(ids, id)
+		jobs = append(jobs, j)
 	}
-	return ids, rows.Err()
+	return jobs, rows.Err()
 }
 
 func (r *SchedulerRepo) GetFailedJobRequestIDs(ctx context.Context, partitionID string) ([]string, error) {

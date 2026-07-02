@@ -90,6 +90,20 @@ class WorkflowSummary:
 
 
 @dataclass
+class Run:
+    """One run (invocation) of a workflow. run_outcome is "" while the run is in flight,
+    then one of: successful | customer_marked_failure | uncaught_operation_exception |
+    operation_timeout | interrupted. failure_reason carries detail (e.g. the exception
+    text for an uncaught_operation_exception)."""
+    request_id: str
+    request_type: str
+    run_outcome: str
+    failure_reason: str
+    created_at: datetime | None
+    completed_at: datetime | None
+
+
+@dataclass
 class ApprovalAuditRecord:
     """One approval decision from the audit log. Correlate with a run trace via
     approval_id (the trace's boundflow.approval_id) — the decision/actor/timing live
@@ -404,6 +418,23 @@ class ControlPlaneClient:
                 last_interrupted_request_id=w.last_interrupted_request_id,
             )
             for w in resp.workflows
+        ]
+
+    async def list_workflow_runs(self, workflow_id: str) -> list[Run]:
+        """List a workflow's runs (invocations), newest first, with each run's outcome
+        and failure reason."""
+        resp = await self._lc.ListWorkflowRuns(
+            lc.ListWorkflowRunsRequest(workflow_id=workflow_id), metadata=self._metadata)
+        return [
+            Run(
+                request_id=r.request_id,
+                request_type=r.request_type,
+                run_outcome=r.run_outcome,
+                failure_reason=r.failure_reason,
+                created_at=_ts(r, "created_at"),
+                completed_at=_ts(r, "completed_at"),
+            )
+            for r in resp.runs
         ]
 
     async def approve_workflow(self, workflow_id: str, approval_id: str, actor: str = "") -> None:

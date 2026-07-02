@@ -35,6 +35,25 @@ func WorkflowToProto(r *domain.Workflow) *boundflowv1.Workflow {
 	}
 }
 
+// RunToProto maps a customer request (a run) to the runs-API Run message. run_outcome
+// is empty while the run is still in flight.
+func RunToProto(r *domain.CustomerRequest) *boundflowv1.Run {
+	if r == nil {
+		return nil
+	}
+	run := &boundflowv1.Run{
+		RequestId:     r.ID,
+		RequestType:   string(r.RequestType),
+		RunOutcome:    string(r.RunOutcome),
+		FailureReason: r.FailureReason,
+		CreatedAt:     timestamppb.New(r.CreatedAt),
+	}
+	if r.CompletedAt != nil {
+		run.CompletedAt = timestamppb.New(*r.CompletedAt)
+	}
+	return run
+}
+
 func WorkflowLifecyclePolicyFromProto(p *boundflowv1.WorkflowLifecyclePolicy) domain.WorkflowLifecyclePolicy {
 	if p == nil {
 		return domain.WorkflowLifecyclePolicy{}

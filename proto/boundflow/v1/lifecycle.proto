@@ -32,6 +32,7 @@ service WorkflowService {
   rpc GetAuditLog(GetAuditLogRequest) returns (GetAuditLogResponse);
   rpc ActivateWorkflow(ActivateWorkflowRequest) returns (ActivateWorkflowResponse);
   rpc ResolveInterruptedWorkflow(ResolveInterruptedWorkflowRequest) returns (ResolveInterruptedWorkflowResponse);
+  rpc ListWorkflowRuns(ListWorkflowRunsRequest) returns (ListWorkflowRunsResponse);
 }
 
 message CreateWorkflowRequest {
@@ -260,3 +261,23 @@ message ResolveInterruptedWorkflowRequest {
 }
 
 message ResolveInterruptedWorkflowResponse {}
+
+message ListWorkflowRunsRequest {
+  string workflow_id = 1;
+}
+
+// Run is one invocation of a workflow, newest first. run_outcome is empty while the
+// run is still in flight, then one of: successful | customer_marked_failure |
+// uncaught_operation_exception | operation_timeout | interrupted.
+message Run {
+  string request_id = 1;
+  string request_type = 2;
+  string run_outcome = 3;
+  string failure_reason = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp completed_at = 6;
+}
+
+message ListWorkflowRunsResponse {
+  repeated Run runs = 1;
+}

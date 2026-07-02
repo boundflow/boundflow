@@ -555,19 +555,19 @@ func (mr *MockSchedulerRepositoryMockRecorder) DeleteTerminalJob(ctx, workflowID
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTerminalJob", reflect.TypeOf((*MockSchedulerRepository)(nil).DeleteTerminalJob), ctx, workflowID, requestID)
 }
 
-// GetCompletedJobRequestIDs mocks base method.
-func (m *MockSchedulerRepository) GetCompletedJobRequestIDs(ctx context.Context, partitionID string) ([]string, error) {
+// GetCompletedJobs mocks base method.
+func (m *MockSchedulerRepository) GetCompletedJobs(ctx context.Context, partitionID string) ([]domain.CompletedJob, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCompletedJobRequestIDs", ctx, partitionID)
-	ret0, _ := ret[0].([]string)
+	ret := m.ctrl.Call(m, "GetCompletedJobs", ctx, partitionID)
+	ret0, _ := ret[0].([]domain.CompletedJob)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetCompletedJobRequestIDs indicates an expected call of GetCompletedJobRequestIDs.
-func (mr *MockSchedulerRepositoryMockRecorder) GetCompletedJobRequestIDs(ctx, partitionID any) *gomock.Call {
+// GetCompletedJobs indicates an expected call of GetCompletedJobs.
+func (mr *MockSchedulerRepositoryMockRecorder) GetCompletedJobs(ctx, partitionID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCompletedJobRequestIDs", reflect.TypeOf((*MockSchedulerRepository)(nil).GetCompletedJobRequestIDs), ctx, partitionID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCompletedJobs", reflect.TypeOf((*MockSchedulerRepository)(nil).GetCompletedJobs), ctx, partitionID)
 }
 
 // GetDuePeriodicWorkflows mocks base method.
@@ -948,18 +948,18 @@ func (mr *MockJobRepositoryMockRecorder) UpdateJobStatus(ctx, workflowID, ownerI
 }
 
 // UpdateJobStatusWithMetrics mocks base method.
-func (m *MockJobRepository) UpdateJobStatusWithMetrics(ctx context.Context, workflowID, ownerID string, status domain.JobStatus, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
+func (m *MockJobRepository) UpdateJobStatusWithMetrics(ctx context.Context, workflowID, ownerID string, status domain.JobStatus, resultType domain.RunOutcome, failureReason string, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateJobStatusWithMetrics", ctx, workflowID, ownerID, status, agentMetrics, workflowMetrics)
+	ret := m.ctrl.Call(m, "UpdateJobStatusWithMetrics", ctx, workflowID, ownerID, status, resultType, failureReason, agentMetrics, workflowMetrics)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UpdateJobStatusWithMetrics indicates an expected call of UpdateJobStatusWithMetrics.
-func (mr *MockJobRepositoryMockRecorder) UpdateJobStatusWithMetrics(ctx, workflowID, ownerID, status, agentMetrics, workflowMetrics any) *gomock.Call {
+func (mr *MockJobRepositoryMockRecorder) UpdateJobStatusWithMetrics(ctx, workflowID, ownerID, status, resultType, failureReason, agentMetrics, workflowMetrics any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateJobStatusWithMetrics", reflect.TypeOf((*MockJobRepository)(nil).UpdateJobStatusWithMetrics), ctx, workflowID, ownerID, status, agentMetrics, workflowMetrics)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateJobStatusWithMetrics", reflect.TypeOf((*MockJobRepository)(nil).UpdateJobStatusWithMetrics), ctx, workflowID, ownerID, status, resultType, failureReason, agentMetrics, workflowMetrics)
 }
 
 // UpdateJobWithMetrics mocks base method.
@@ -1379,18 +1379,18 @@ func (m *MockCustomerRequestRepository) EXPECT() *MockCustomerRequestRepositoryM
 }
 
 // CompleteRequest mocks base method.
-func (m *MockCustomerRequestRepository) CompleteRequest(ctx context.Context, id string) (*domain.CustomerRequest, error) {
+func (m *MockCustomerRequestRepository) CompleteRequest(ctx context.Context, id string, outcome domain.RunOutcome, failureReason string) (*domain.CustomerRequest, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CompleteRequest", ctx, id)
+	ret := m.ctrl.Call(m, "CompleteRequest", ctx, id, outcome, failureReason)
 	ret0, _ := ret[0].(*domain.CustomerRequest)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CompleteRequest indicates an expected call of CompleteRequest.
-func (mr *MockCustomerRequestRepositoryMockRecorder) CompleteRequest(ctx, id any) *gomock.Call {
+func (mr *MockCustomerRequestRepositoryMockRecorder) CompleteRequest(ctx, id, outcome, failureReason any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompleteRequest", reflect.TypeOf((*MockCustomerRequestRepository)(nil).CompleteRequest), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompleteRequest", reflect.TypeOf((*MockCustomerRequestRepository)(nil).CompleteRequest), ctx, id, outcome, failureReason)
 }
 
 // Create mocks base method.
@@ -1439,18 +1439,33 @@ func (mr *MockCustomerRequestRepositoryMockRecorder) CreateInvocationRequest(ctx
 }
 
 // FailRequest mocks base method.
-func (m *MockCustomerRequestRepository) FailRequest(ctx context.Context, id string) (*domain.CustomerRequest, error) {
+func (m *MockCustomerRequestRepository) FailRequest(ctx context.Context, id, failureReason string) (*domain.CustomerRequest, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FailRequest", ctx, id)
+	ret := m.ctrl.Call(m, "FailRequest", ctx, id, failureReason)
 	ret0, _ := ret[0].(*domain.CustomerRequest)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // FailRequest indicates an expected call of FailRequest.
-func (mr *MockCustomerRequestRepositoryMockRecorder) FailRequest(ctx, id any) *gomock.Call {
+func (mr *MockCustomerRequestRepositoryMockRecorder) FailRequest(ctx, id, failureReason any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailRequest", reflect.TypeOf((*MockCustomerRequestRepository)(nil).FailRequest), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailRequest", reflect.TypeOf((*MockCustomerRequestRepository)(nil).FailRequest), ctx, id, failureReason)
+}
+
+// ListForWorkflow mocks base method.
+func (m *MockCustomerRequestRepository) ListForWorkflow(ctx context.Context, workflowID string) ([]*domain.CustomerRequest, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListForWorkflow", ctx, workflowID)
+	ret0, _ := ret[0].([]*domain.CustomerRequest)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListForWorkflow indicates an expected call of ListForWorkflow.
+func (mr *MockCustomerRequestRepositoryMockRecorder) ListForWorkflow(ctx, workflowID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForWorkflow", reflect.TypeOf((*MockCustomerRequestRepository)(nil).ListForWorkflow), ctx, workflowID)
 }
 
 // Get mocks base method.

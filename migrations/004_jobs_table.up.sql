@@ -23,6 +23,9 @@ CREATE TABLE jobs (
     workflow_version         INTEGER NOT NULL DEFAULT 0,
     agent_metrics            JSONB NOT NULL DEFAULT '{}',
     workflow_metrics         JSONB NOT NULL DEFAULT '{}',
+    -- Customer-facing result of the run, NULL until the job reaches 'completed'.
+    result_type              run_outcome,
+    failure_reason           TEXT NOT NULL DEFAULT '',
     owner                    TEXT,
     lease_expires_at         TIMESTAMPTZ,
     created_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
