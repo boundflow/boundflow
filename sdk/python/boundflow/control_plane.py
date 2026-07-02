@@ -65,7 +65,7 @@ class LifecycleState(str, Enum):
     AWAITING_APPROVAL = "awaiting_approval"
     DELETING = "deleting"
     DELETED = "deleted"
-    FAILED = "failed"
+    INTERRUPTED = "interrupted"
 
 
 class WorkflowState(str, Enum):
@@ -86,7 +86,7 @@ class WorkflowSummary:
     lifecycle_state: LifecycleState
     workflow_state: WorkflowState
     version: int
-    last_failed_request_id: str
+    last_interrupted_request_id: str
 
 
 @dataclass
@@ -239,7 +239,7 @@ _LIFECYCLE = {
     "awaiting_approval": LifecycleState.AWAITING_APPROVAL,
     "deleting": LifecycleState.DELETING,
     "deleted": LifecycleState.DELETED,
-    "failed": LifecycleState.FAILED,
+    "interrupted": LifecycleState.INTERRUPTED,
 }
 
 _WF_STATE = {
@@ -357,12 +357,12 @@ class ControlPlaneClient:
             lc.ActivateWorkflowRequest(workflow_id=workflow_id),
             metadata=self._metadata)
 
-    async def recover_workflow(self, workflow_id: str, request_id: str) -> None:
-        """Recover a failed workflow back to active. request_id must match the
-        workflow's last_failed_request_id (the run that failed it) — get it from
-        the workflow's last_failed_request_id field or the failed run's trace."""
-        await self._lc.RecoverWorkflow(
-            lc.RecoverWorkflowRequest(workflow_id=workflow_id, request_id=request_id),
+    async def resolve_interrupted_workflow(self, workflow_id: str, request_id: str) -> None:
+        """Resolve an interrupted workflow back to active. request_id must match the
+        workflow's last_interrupted_request_id (the run that interrupted it) — read it
+        from the workflow's last_interrupted_request_id field."""
+        await self._lc.ResolveInterruptedWorkflow(
+            lc.ResolveInterruptedWorkflowRequest(workflow_id=workflow_id, request_id=request_id),
             metadata=self._metadata)
 
     async def invoke_workflow(self, workflow_id: str, *, operation_timeout_seconds: int = 0) -> str:
@@ -401,7 +401,7 @@ class ControlPlaneClient:
                 lifecycle_state=_LIFECYCLE.get(w.lifecycle_state, LifecycleState.UNKNOWN),
                 workflow_state=_WF_STATE.get(w.workflow_state, WorkflowState.UNSPECIFIED),
                 version=w.workflow_config.version,
-                last_failed_request_id=w.last_failed_request_id,
+                last_interrupted_request_id=w.last_interrupted_request_id,
             )
             for w in resp.workflows
         ]

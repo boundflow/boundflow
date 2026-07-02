@@ -45,14 +45,14 @@ type WorkflowRepository interface {
 	// Returns false if the version check failed (a newer completion already applied).
 	ApplyCompletedJob(ctx context.Context, id string, lifecycleState domain.LifecycleState, version int64) (bool, error)
 	// ApplyFailedJob is like ApplyCompletedJob but also sets workflow_state and records
-	// requestID as last_failed_request_id. Both lifecycle_state and workflow_state are set
+	// requestID as last_interrupted_request_id. Both lifecycle_state and workflow_state are set
 	// unconditionally (no target_version guard).
 	// Returns false if the version check failed (a newer completion already applied).
 	ApplyFailedJob(ctx context.Context, id string, requestID string, lifecycleState domain.LifecycleState, workflowState domain.WorkflowState, version int64) (bool, error)
-	// RecoverWorkflow flips a failed workflow back to active (both lifecycle_state and
-	// workflow_state), but only if it is currently failed and requestID matches its
-	// last_failed_request_id. Returns false if the guard didn't match.
-	RecoverWorkflow(ctx context.Context, id string, requestID string) (bool, error)
+	// ResolveInterruptedWorkflow flips an interrupted workflow back to active (both
+	// lifecycle_state and workflow_state), but only if it is currently interrupted and requestID
+	// matches its last_interrupted_request_id. Returns false if the guard didn't match.
+	ResolveInterruptedWorkflow(ctx context.Context, id string, requestID string) (bool, error)
 	UpdateSchedulerPartition(ctx context.Context, id string, partitionID string) error
 	UpdateLastCompletedRequestAt(ctx context.Context, id string, t time.Time) error
 	// TenantGroupIDForWorkflow returns the tenant_group_id for a workflow via a single JOIN.

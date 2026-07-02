@@ -31,7 +31,7 @@ func WorkflowToProto(r *domain.Workflow) *boundflowv1.Workflow {
 		},
 		LifecycleState:      string(r.LifecycleState),
 		WorkflowState:       workflowStateToProto[r.WorkflowState],
-		LastFailedRequestId: r.LastFailedRequestID,
+		LastInterruptedRequestId: r.LastInterruptedRequestID,
 	}
 }
 

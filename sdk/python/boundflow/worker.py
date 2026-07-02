@@ -291,7 +291,14 @@ class BoundFlowWorker:
 
             ctx = OperationContext(_Operation(op), self._orchestrator, self._trace_sink)
             _op_start = now_ms()
-            result = await handler(ctx)
+            try:
+                result = await handler(ctx)
+            except Exception:  # noqa: BLE001 — a crash in customer callback code is a
+                # customer-domain failure (bumps num_failures for lifecycle policy), not a
+                # platform failure. The run still completes so the workflow stays active.
+                log.exception("workflow callback raised; recording as a failed run (op_id=%s op=%s)", op.id, op.name)
+                ctx.mark_failed()
+                result = Complete()
             _op_end = now_ms()
 
             # Mint the approval id once when the gate opens, so the trace's correlation

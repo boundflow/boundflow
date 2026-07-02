@@ -256,6 +256,25 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 		return err
 	}
 
+	// softFailOperation records a customer-domain failure (e.g. an operation timeout):
+	// it bumps num_failures for lifecycle policy and completes the request, leaving the
+	// workflow active — unlike failOperation, which interrupts it (a platform failure).
+	softFailOperation := func(cancelLease chan bool, job *domain.Job) {
+		ctx := context.Background()
+		defer cancelLeaseIfExists(cancelLease)
+
+		job.WorkflowMetrics.Failures++
+		updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.WorkflowID, sessionID, domain.JobStatusCompleted, job.AgentMetrics, job.WorkflowMetrics)
+		if err != nil {
+			log.Error("failed to soft-fail job", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "error", err)
+			return
+		}
+		if updated {
+			log.Info("operation soft-failed, completing request", "request_id", job.RequestID, "workflow_id", job.WorkflowID)
+			s.scheduler.CompleteRequest(ctx, job.RequestID)
+		}
+	}
+
 	go func() error {
 
 		state := ConnectedIdle
@@ -581,8 +600,10 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 							completeOperation(cancelLease, currentJob, ack.Update.Result)
 						case boundflowv1.OperationStatus_OPERATION_STATUS_FAILED,
 							boundflowv1.OperationStatus_OPERATION_STATUS_CANCELLED:
-							log.Info("operation cancelled/failed", "request_id", currentJob.RequestID, "status", ack.Update.Result.Status)
-							failOperation(cancelLease, currentJob)
+							// The client acked our cancel, so the operation timed out cleanly:
+							// a customer-domain failure (num_failures), not a platform interruption.
+							log.Info("operation timed out (cancel acked), soft-failing", "request_id", currentJob.RequestID, "status", ack.Update.Result.Status)
+							softFailOperation(cancelLease, currentJob)
 						case boundflowv1.OperationStatus_OPERATION_STATUS_IN_PROGRESS:
 							log.Debug("still in progress during cancel, waiting", "request_id", currentJob.RequestID)
 							continue

@@ -370,7 +370,7 @@ func TestFailRequest_AppliesFailedState(t *testing.T) {
 		}, nil)
 
 	workflow.EXPECT().
-		ApplyFailedJob(gomock.Any(), "workflow-1", "req-1", domain.LifecycleStateFailed, domain.WorkflowStateDisabled, int64(2)).
+		ApplyFailedJob(gomock.Any(), "workflow-1", "req-1", domain.LifecycleStateInterrupted, domain.WorkflowStateDisabled, int64(2)).
 		Return(true, nil)
 
 	schedulerRepo.EXPECT().
@@ -399,7 +399,7 @@ func TestFailRequest_VersionSkipped_ReturnsFalse(t *testing.T) {
 		}, nil)
 
 	workflow.EXPECT().
-		ApplyFailedJob(gomock.Any(), "workflow-1", "req-1", domain.LifecycleStateFailed, domain.WorkflowStateDisabled, int64(1)).
+		ApplyFailedJob(gomock.Any(), "workflow-1", "req-1", domain.LifecycleStateInterrupted, domain.WorkflowStateDisabled, int64(1)).
 		Return(false, nil)
 
 	schedulerRepo.EXPECT().

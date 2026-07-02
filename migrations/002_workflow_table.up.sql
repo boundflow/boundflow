@@ -5,7 +5,7 @@ CREATE TYPE lifecycle_state AS ENUM (
     'awaiting_approval',
     'deleting',
     'deleted',
-    'failed'
+    'interrupted'
 );
 
 CREATE TYPE workflow_state AS ENUM (
@@ -34,6 +34,6 @@ CREATE TABLE workflows (
     current_version           BIGINT NOT NULL DEFAULT 0,
     metrics_emitted_at        BIGINT NOT NULL DEFAULT 0,
     last_completed_request_at TIMESTAMPTZ,
-    last_failed_request_id    TEXT NOT NULL DEFAULT '',
+    last_interrupted_request_id    TEXT NOT NULL DEFAULT '',
     created_at                TIMESTAMPTZ NOT NULL DEFAULT now()
 );

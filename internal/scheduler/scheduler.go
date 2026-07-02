@@ -260,7 +260,7 @@ func (s *Scheduler) FailRequest(ctx context.Context, req string) (bool, error) {
 		return false, fmt.Errorf("error failing request %s: %w", req, err)
 	}
 
-	applied, err := s.workflow.ApplyFailedJob(ctx, request.WorkflowID, req, domain.LifecycleStateFailed, domain.WorkflowStateDisabled, request.Version)
+	applied, err := s.workflow.ApplyFailedJob(ctx, request.WorkflowID, req, domain.LifecycleStateInterrupted, domain.WorkflowStateDisabled, request.Version)
 	if err != nil {
 		s.log.Error("failed to apply failed job to workflow", "request_id", req, "workflow_id", request.WorkflowID, "error", err)
 		return false, err

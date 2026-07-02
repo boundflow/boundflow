@@ -296,7 +296,7 @@ func (h *WorkflowServiceHandler) ActivateWorkflow(ctx context.Context, req *boun
 	return &boundflowv1.ActivateWorkflowResponse{}, nil
 }
 
-func (h *WorkflowServiceHandler) RecoverWorkflow(ctx context.Context, req *boundflowv1.RecoverWorkflowRequest) (*boundflowv1.RecoverWorkflowResponse, error) {
+func (h *WorkflowServiceHandler) ResolveInterruptedWorkflow(ctx context.Context, req *boundflowv1.ResolveInterruptedWorkflowRequest) (*boundflowv1.ResolveInterruptedWorkflowResponse, error) {
 	if req.WorkflowId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
 	}
@@ -308,13 +308,13 @@ func (h *WorkflowServiceHandler) RecoverWorkflow(ctx context.Context, req *bound
 		return nil, err
 	}
 
-	if err := h.svc.RecoverWorkflow(ctx, req.WorkflowId, req.RequestId); err != nil {
-		if errors.Is(err, service.ErrCannotRecover) {
+	if err := h.svc.ResolveInterruptedWorkflow(ctx, req.WorkflowId, req.RequestId); err != nil {
+		if errors.Is(err, service.ErrNotInterrupted) {
 			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
 		}
-		return nil, status.Errorf(codes.Internal, "recover workflow: %v", err)
+		return nil, status.Errorf(codes.Internal, "resolve interrupted workflow: %v", err)
 	}
-	return &boundflowv1.RecoverWorkflowResponse{}, nil
+	return &boundflowv1.ResolveInterruptedWorkflowResponse{}, nil
 }
 
 func (h *WorkflowServiceHandler) ApproveWorkflow(ctx context.Context, req *boundflowv1.ApproveWorkflowRequest) (*boundflowv1.ApproveWorkflowResponse, error) {

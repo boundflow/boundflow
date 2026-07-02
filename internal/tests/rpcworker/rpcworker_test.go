@@ -2,6 +2,7 @@ package rpcworker_test
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"testing"
@@ -24,9 +25,10 @@ type recvResult struct {
 }
 
 type mockStream struct {
-	ctx    context.Context
-	recvCh chan recvResult
-	sendCh chan *boundflowv1.ServerCommand
+	ctx     context.Context
+	recvCh  chan recvResult
+	sendCh  chan *boundflowv1.ServerCommand
+	sendErr error // when set (before the session starts), Send returns this instead of queuing
 }
 
 func newMockStream(ctx context.Context) *mockStream {
@@ -47,6 +49,9 @@ func (m *mockStream) Recv() (*boundflowv1.WorkerMessage, error) {
 }
 
 func (m *mockStream) Send(cmd *boundflowv1.ServerCommand) error {
+	if m.sendErr != nil {
+		return m.sendErr
+	}
 	m.sendCh <- cmd
 	return nil
 }
@@ -403,6 +408,64 @@ func TestWorkerSession_Dispatch_UsesSessionOwner(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("SetJobDispatched not called")
+	}
+
+	cancel()
+	if err := <-errCh; err != nil {
+		t.Fatalf("expected nil, got %v", err)
+	}
+}
+
+// When the LaunchOperation send fails the client never received it, so the worker
+// must un-dispatch: reset the job to its pre-dispatch status (Pending) using the
+// session owner and NOT fail the request (a transient send error is retryable).
+func TestWorkerSession_LaunchSendFails_ResetsToPending(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	worker, jobRepo, sched := newTestWorker(ctrl)
+
+	resID := testWorkflowID
+	jobRepo.EXPECT().GetAvailableJob(gomock.Any(), testTenantGroupID, gomock.Any(), gomock.Any()).Return(&resID, nil).AnyTimes()
+
+	var acquireOwner string
+	jobRepo.EXPECT().AcquireJob(gomock.Any(), testWorkflowID, gomock.Any(), gomock.Any(), testTenantGroupID).
+		DoAndReturn(func(_ context.Context, _, owner string, _ time.Duration, _ string) (*domain.Job, error) {
+			acquireOwner = owner
+			return testJob(), nil
+		})
+	jobRepo.EXPECT().SetJobDispatched(gomock.Any(), testWorkflowID, gomock.Any()).Return(true, nil)
+	jobRepo.EXPECT().RenewJobLease(gomock.Any(), testWorkflowID, gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+	jobRepo.EXPECT().ReleaseJob(gomock.Any(), testWorkflowID, gomock.Any()).Return(nil).AnyTimes()
+
+	reset := make(chan string, 1)
+	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, gomock.Any(), domain.JobStatusPending).
+		DoAndReturn(func(_ context.Context, _, owner string, _ domain.JobStatus) (bool, error) {
+			reset <- owner
+			return true, nil
+		})
+
+	stream := newMockStream(ctx)
+	stream.sendErr = errors.New("stream broken") // force the LaunchOperation send to fail
+	errCh := runSession(worker, stream)
+
+	stream.push(readyMsg())
+
+	select {
+	case owner := <-reset:
+		if owner != acquireOwner {
+			t.Errorf("reset owner %q != acquire owner %q", owner, acquireOwner)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("expected reset to Pending after Launch send failed")
+	}
+
+	// A transient send failure must not fail the request.
+	select {
+	case req := <-sched.failCh:
+		t.Errorf("FailRequest called for %q; a failed Launch send should reset, not fail", req)
+	case <-time.After(200 * time.Millisecond):
 	}
 
 	cancel()

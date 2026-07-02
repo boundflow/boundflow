@@ -207,19 +207,19 @@ func (mr *MockWorkflowRepositoryMockRecorder) ApplyFailedJob(ctx, id, requestID,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyFailedJob", reflect.TypeOf((*MockWorkflowRepository)(nil).ApplyFailedJob), ctx, id, requestID, lifecycleState, workflowState, version)
 }
 
-// RecoverWorkflow mocks base method.
-func (m *MockWorkflowRepository) RecoverWorkflow(ctx context.Context, id, requestID string) (bool, error) {
+// ResolveInterruptedWorkflow mocks base method.
+func (m *MockWorkflowRepository) ResolveInterruptedWorkflow(ctx context.Context, id, requestID string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RecoverWorkflow", ctx, id, requestID)
+	ret := m.ctrl.Call(m, "ResolveInterruptedWorkflow", ctx, id, requestID)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// RecoverWorkflow indicates an expected call of RecoverWorkflow.
-func (mr *MockWorkflowRepositoryMockRecorder) RecoverWorkflow(ctx, id, requestID any) *gomock.Call {
+// ResolveInterruptedWorkflow indicates an expected call of ResolveInterruptedWorkflow.
+func (mr *MockWorkflowRepositoryMockRecorder) ResolveInterruptedWorkflow(ctx, id, requestID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecoverWorkflow", reflect.TypeOf((*MockWorkflowRepository)(nil).RecoverWorkflow), ctx, id, requestID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveInterruptedWorkflow", reflect.TypeOf((*MockWorkflowRepository)(nil).ResolveInterruptedWorkflow), ctx, id, requestID)
 }
 
 // Create mocks base method.

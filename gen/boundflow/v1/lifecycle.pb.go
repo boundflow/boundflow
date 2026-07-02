@@ -2387,30 +2387,30 @@ func (*ActivateWorkflowResponse) Descriptor() ([]byte, []int) {
 	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{41}
 }
 
-type RecoverWorkflowRequest struct {
+type ResolveInterruptedWorkflowRequest struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	WorkflowId string                 `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
-	// The workflow's current last_failed_request_id. Recovery only succeeds if this
-	// matches, so a caller can't recover past a failure they haven't seen.
+	// The workflow's current last_interrupted_request_id. Resolution only succeeds if this
+	// matches, so a caller can't resolve past an interruption they haven't seen.
 	RequestId     string `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RecoverWorkflowRequest) Reset() {
-	*x = RecoverWorkflowRequest{}
+func (x *ResolveInterruptedWorkflowRequest) Reset() {
+	*x = ResolveInterruptedWorkflowRequest{}
 	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RecoverWorkflowRequest) String() string {
+func (x *ResolveInterruptedWorkflowRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RecoverWorkflowRequest) ProtoMessage() {}
+func (*ResolveInterruptedWorkflowRequest) ProtoMessage() {}
 
-func (x *RecoverWorkflowRequest) ProtoReflect() protoreflect.Message {
+func (x *ResolveInterruptedWorkflowRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -2422,45 +2422,45 @@ func (x *RecoverWorkflowRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RecoverWorkflowRequest.ProtoReflect.Descriptor instead.
-func (*RecoverWorkflowRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ResolveInterruptedWorkflowRequest.ProtoReflect.Descriptor instead.
+func (*ResolveInterruptedWorkflowRequest) Descriptor() ([]byte, []int) {
 	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{42}
 }
 
-func (x *RecoverWorkflowRequest) GetWorkflowId() string {
+func (x *ResolveInterruptedWorkflowRequest) GetWorkflowId() string {
 	if x != nil {
 		return x.WorkflowId
 	}
 	return ""
 }
 
-func (x *RecoverWorkflowRequest) GetRequestId() string {
+func (x *ResolveInterruptedWorkflowRequest) GetRequestId() string {
 	if x != nil {
 		return x.RequestId
 	}
 	return ""
 }
 
-type RecoverWorkflowResponse struct {
+type ResolveInterruptedWorkflowResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RecoverWorkflowResponse) Reset() {
-	*x = RecoverWorkflowResponse{}
+func (x *ResolveInterruptedWorkflowResponse) Reset() {
+	*x = ResolveInterruptedWorkflowResponse{}
 	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RecoverWorkflowResponse) String() string {
+func (x *ResolveInterruptedWorkflowResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RecoverWorkflowResponse) ProtoMessage() {}
+func (*ResolveInterruptedWorkflowResponse) ProtoMessage() {}
 
-func (x *RecoverWorkflowResponse) ProtoReflect() protoreflect.Message {
+func (x *ResolveInterruptedWorkflowResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -2472,8 +2472,8 @@ func (x *RecoverWorkflowResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RecoverWorkflowResponse.ProtoReflect.Descriptor instead.
-func (*RecoverWorkflowResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use ResolveInterruptedWorkflowResponse.ProtoReflect.Descriptor instead.
+func (*ResolveInterruptedWorkflowResponse) Descriptor() ([]byte, []int) {
 	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{43}
 }
 
@@ -2640,13 +2640,13 @@ const file_boundflow_v1_lifecycle_proto_rawDesc = "" +
 	"\x17ActivateWorkflowRequest\x12\x1f\n" +
 	"\vworkflow_id\x18\x01 \x01(\tR\n" +
 	"workflowId\"\x1a\n" +
-	"\x18ActivateWorkflowResponse\"X\n" +
-	"\x16RecoverWorkflowRequest\x12\x1f\n" +
+	"\x18ActivateWorkflowResponse\"c\n" +
+	"!ResolveInterruptedWorkflowRequest\x12\x1f\n" +
 	"\vworkflow_id\x18\x01 \x01(\tR\n" +
 	"workflowId\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x02 \x01(\tR\trequestId\"\x19\n" +
-	"\x17RecoverWorkflowResponse*\xdc\x01\n" +
+	"request_id\x18\x02 \x01(\tR\trequestId\"$\n" +
+	"\"ResolveInterruptedWorkflowResponse*\xdc\x01\n" +
 	"\x0eWorkflowMetric\x12 \n" +
 	"\x1cWORKFLOW_METRIC_NUM_FAILURES\x10\x00\x12\x18\n" +
 	"\x14WORKFLOW_METRIC_COST\x10\x01\x12!\n" +
@@ -2662,7 +2662,7 @@ const file_boundflow_v1_lifecycle_proto_rawDesc = "" +
 	"\x1dAPPROVAL_DECISION_UNSPECIFIED\x10\x00\x12\x1e\n" +
 	"\x1aAPPROVAL_DECISION_APPROVED\x10\x01\x12\x1e\n" +
 	"\x1aAPPROVAL_DECISION_REJECTED\x10\x02\x12\x1f\n" +
-	"\x1bAPPROVAL_DECISION_TIMED_OUT\x10\x032\x9c\x0e\n" +
+	"\x1bAPPROVAL_DECISION_TIMED_OUT\x10\x032\xbd\x0e\n" +
 	"\x0fWorkflowService\x12[\n" +
 	"\x0eCreateWorkflow\x12#.boundflow.v1.CreateWorkflowRequest\x1a$.boundflow.v1.CreateWorkflowResponse\x12[\n" +
 	"\x0eInvokeWorkflow\x12#.boundflow.v1.InvokeWorkflowRequest\x1a$.boundflow.v1.InvokeWorkflowResponse\x12[\n" +
@@ -2680,8 +2680,8 @@ const file_boundflow_v1_lifecycle_proto_rawDesc = "" +
 	"\x16GetWorkflowPolicyAudit\x12+.boundflow.v1.GetWorkflowPolicyAuditRequest\x1a,.boundflow.v1.GetWorkflowPolicyAuditResponse\x12j\n" +
 	"\x13GetAgentPolicyAudit\x12(.boundflow.v1.GetAgentPolicyAuditRequest\x1a).boundflow.v1.GetAgentPolicyAuditResponse\x12R\n" +
 	"\vGetAuditLog\x12 .boundflow.v1.GetAuditLogRequest\x1a!.boundflow.v1.GetAuditLogResponse\x12a\n" +
-	"\x10ActivateWorkflow\x12%.boundflow.v1.ActivateWorkflowRequest\x1a&.boundflow.v1.ActivateWorkflowResponse\x12^\n" +
-	"\x0fRecoverWorkflow\x12$.boundflow.v1.RecoverWorkflowRequest\x1a%.boundflow.v1.RecoverWorkflowResponseB=Z;github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1b\x06proto3"
+	"\x10ActivateWorkflow\x12%.boundflow.v1.ActivateWorkflowRequest\x1a&.boundflow.v1.ActivateWorkflowResponse\x12\x7f\n" +
+	"\x1aResolveInterruptedWorkflow\x12/.boundflow.v1.ResolveInterruptedWorkflowRequest\x1a0.boundflow.v1.ResolveInterruptedWorkflowResponseB=Z;github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1b\x06proto3"
 
 var (
 	file_boundflow_v1_lifecycle_proto_rawDescOnce sync.Once
@@ -2743,8 +2743,8 @@ var file_boundflow_v1_lifecycle_proto_goTypes = []any{
 	(*RejectWorkflowResponse)(nil),             // 42: boundflow.v1.RejectWorkflowResponse
 	(*ActivateWorkflowRequest)(nil),            // 43: boundflow.v1.ActivateWorkflowRequest
 	(*ActivateWorkflowResponse)(nil),           // 44: boundflow.v1.ActivateWorkflowResponse
-	(*RecoverWorkflowRequest)(nil),             // 45: boundflow.v1.RecoverWorkflowRequest
-	(*RecoverWorkflowResponse)(nil),            // 46: boundflow.v1.RecoverWorkflowResponse
+	(*ResolveInterruptedWorkflowRequest)(nil),  // 45: boundflow.v1.ResolveInterruptedWorkflowRequest
+	(*ResolveInterruptedWorkflowResponse)(nil), // 46: boundflow.v1.ResolveInterruptedWorkflowResponse
 	(*WorkflowConfig)(nil),                     // 47: boundflow.v1.WorkflowConfig
 	(*Workflow)(nil),                           // 48: boundflow.v1.Workflow
 	(*structpb.Struct)(nil),                    // 49: google.protobuf.Struct
@@ -2797,7 +2797,7 @@ var file_boundflow_v1_lifecycle_proto_depIdxs = []int32{
 	34, // 42: boundflow.v1.WorkflowService.GetAgentPolicyAudit:input_type -> boundflow.v1.GetAgentPolicyAuditRequest
 	36, // 43: boundflow.v1.WorkflowService.GetAuditLog:input_type -> boundflow.v1.GetAuditLogRequest
 	43, // 44: boundflow.v1.WorkflowService.ActivateWorkflow:input_type -> boundflow.v1.ActivateWorkflowRequest
-	45, // 45: boundflow.v1.WorkflowService.RecoverWorkflow:input_type -> boundflow.v1.RecoverWorkflowRequest
+	45, // 45: boundflow.v1.WorkflowService.ResolveInterruptedWorkflow:input_type -> boundflow.v1.ResolveInterruptedWorkflowRequest
 	4,  // 46: boundflow.v1.WorkflowService.CreateWorkflow:output_type -> boundflow.v1.CreateWorkflowResponse
 	9,  // 47: boundflow.v1.WorkflowService.InvokeWorkflow:output_type -> boundflow.v1.InvokeWorkflowResponse
 	11, // 48: boundflow.v1.WorkflowService.DeleteWorkflow:output_type -> boundflow.v1.DeleteWorkflowResponse
@@ -2815,7 +2815,7 @@ var file_boundflow_v1_lifecycle_proto_depIdxs = []int32{
 	35, // 60: boundflow.v1.WorkflowService.GetAgentPolicyAudit:output_type -> boundflow.v1.GetAgentPolicyAuditResponse
 	37, // 61: boundflow.v1.WorkflowService.GetAuditLog:output_type -> boundflow.v1.GetAuditLogResponse
 	44, // 62: boundflow.v1.WorkflowService.ActivateWorkflow:output_type -> boundflow.v1.ActivateWorkflowResponse
-	46, // 63: boundflow.v1.WorkflowService.RecoverWorkflow:output_type -> boundflow.v1.RecoverWorkflowResponse
+	46, // 63: boundflow.v1.WorkflowService.ResolveInterruptedWorkflow:output_type -> boundflow.v1.ResolveInterruptedWorkflowResponse
 	46, // [46:64] is the sub-list for method output_type
 	28, // [28:46] is the sub-list for method input_type
 	28, // [28:28] is the sub-list for extension type_name
