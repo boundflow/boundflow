@@ -33,6 +33,7 @@ service WorkflowService {
   rpc ActivateWorkflow(ActivateWorkflowRequest) returns (ActivateWorkflowResponse);
   rpc ResolveInterruptedWorkflow(ResolveInterruptedWorkflowRequest) returns (ResolveInterruptedWorkflowResponse);
   rpc ListWorkflowRuns(ListWorkflowRunsRequest) returns (ListWorkflowRunsResponse);
+  rpc GetRequestInfo(GetRequestInfoRequest) returns (GetRequestInfoResponse);
 }
 
 message CreateWorkflowRequest {
@@ -272,6 +273,8 @@ message ListWorkflowRunsRequest {
 message Run {
   string request_id = 1;
   string request_type = 2;
+  // Run lifecycle: unscheduled | scheduled | in_progress | completed | failed | superceded.
+  string status = 7;
   string run_outcome = 3;
   string failure_reason = 4;
   google.protobuf.Timestamp created_at = 5;
@@ -280,4 +283,28 @@ message Run {
 
 message ListWorkflowRunsResponse {
   repeated Run runs = 1;
+}
+
+message GetRequestInfoRequest {
+  string request_id = 1;
+}
+
+// RequestInfo is the full state of one run. status is the request's lifecycle
+// (unscheduled | scheduled | in_progress | completed | failed | superceded); run_outcome is
+// the customer-facing terminal outcome, empty until the run is terminal.
+message RequestInfo {
+  string request_id = 1;
+  string workflow_id = 2;
+  string request_type = 3;
+  string status = 4;
+  string run_outcome = 5;
+  string failure_reason = 6;
+  // Monotonic per-workflow sequence number (bumped on each request); orders a workflow's runs.
+  int64 version = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp completed_at = 9;
+}
+
+message GetRequestInfoResponse {
+  RequestInfo request = 1;
 }

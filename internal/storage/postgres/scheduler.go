@@ -225,6 +225,41 @@ func (r *SchedulerRepo) DeleteTerminalJob(ctx context.Context, workflowID string
 	return tag.RowsAffected() == 1, nil
 }
 
+// MarkWorkflowScheduled sets lifecycle_state = scheduled, only while a job exists and the
+// workflow isn't in a protected (terminal/delete) state.
+func (r *SchedulerRepo) MarkWorkflowScheduled(ctx context.Context, workflowID string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE workflows ri
+		 SET lifecycle_state = 'scheduled'
+		 FROM jobs j
+		 WHERE j.workflow_id = ri.id
+		   AND ri.id = $1
+		   AND ri.lifecycle_state NOT IN ('creating', 'deleting', 'deleted', 'interrupted')`,
+		workflowID,
+	)
+	if err != nil {
+		return fmt.Errorf("mark workflow scheduled: %w", err)
+	}
+	return nil
+}
+
+// MarkWorkflowInvoking sets lifecycle_state = invoking, guarded like MarkWorkflowScheduled.
+func (r *SchedulerRepo) MarkWorkflowInvoking(ctx context.Context, workflowID string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE workflows ri
+		 SET lifecycle_state = 'invoking'
+		 FROM jobs j
+		 WHERE j.workflow_id = ri.id
+		   AND ri.id = $1
+		   AND ri.lifecycle_state NOT IN ('creating', 'deleting', 'deleted', 'interrupted')`,
+		workflowID,
+	)
+	if err != nil {
+		return fmt.Errorf("mark workflow invoking: %w", err)
+	}
+	return nil
+}
+
 func (r *SchedulerRepo) MarkWorkflowAwaitingApproval(ctx context.Context, workflowID string) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE workflows ri
@@ -241,20 +276,38 @@ func (r *SchedulerRepo) MarkWorkflowAwaitingApproval(ctx context.Context, workfl
 	return nil
 }
 
-func (r *SchedulerRepo) SyncAwaitingApprovalStates(ctx context.Context, partitionID string) ([]string, error) {
+// ReconcileWorkflowLifecycles atomically projects each in-flight job's status onto its
+// workflow's lifecycle (dispatched/running -> invoking, awaiting_approval -> itself, the
+// scheduled phase -> scheduled, or blocked once unowned longer than blockedAfterSecs) — the
+// safety net for lost direct writes. Protected states are left alone; only mismatches are
+// written. Returns the reconciled workflow ids.
+func (r *SchedulerRepo) ReconcileWorkflowLifecycles(ctx context.Context, partitionID string, blockedAfterSecs int) ([]string, error) {
 	rows, err := r.pool.Query(ctx,
-		`UPDATE workflows ri
-		 SET lifecycle_state = 'awaiting_approval'
-		 FROM jobs j
-		 WHERE j.workflow_id = ri.id
-		   AND j.status = 'awaiting_approval'
-		   AND ri.scheduler_partition_id = $1
-		   AND ri.lifecycle_state != 'awaiting_approval'
+		`WITH target AS (
+		     SELECT ri.id,
+		            ri.lifecycle_state AS current_state,
+		            (CASE
+		                 WHEN j.status IN ('dispatched', 'running') THEN 'invoking'
+		                 WHEN j.status = 'awaiting_approval'         THEN 'awaiting_approval'
+		                 WHEN j.owner IS NULL
+		                      AND now() - j.created_at > make_interval(secs => $2) THEN 'blocked'
+		                 ELSE 'scheduled'
+		             END)::lifecycle_state AS new_state
+		     FROM jobs j
+		     JOIN workflows ri ON j.workflow_id = ri.id
+		     WHERE ri.scheduler_partition_id = $1
+		       AND ri.lifecycle_state NOT IN ('creating', 'deleting', 'deleted', 'interrupted')
+		 )
+		 UPDATE workflows ri
+		 SET lifecycle_state = t.new_state
+		 FROM target t
+		 WHERE ri.id = t.id
+		   AND t.new_state <> t.current_state
 		 RETURNING ri.id`,
-		partitionID,
+		partitionID, blockedAfterSecs,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("sync awaiting approval states: %w", err)
+		return nil, fmt.Errorf("reconcile workflow lifecycles: %w", err)
 	}
 	defer rows.Close()
 
@@ -262,7 +315,7 @@ func (r *SchedulerRepo) SyncAwaitingApprovalStates(ctx context.Context, partitio
 	for rows.Next() {
 		var id string
 		if err := rows.Scan(&id); err != nil {
-			return nil, fmt.Errorf("scan synced id: %w", err)
+			return nil, fmt.Errorf("scan reconciled id: %w", err)
 		}
 		ids = append(ids, id)
 	}

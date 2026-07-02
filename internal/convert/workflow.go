@@ -44,6 +44,7 @@ func RunToProto(r *domain.CustomerRequest) *boundflowv1.Run {
 	run := &boundflowv1.Run{
 		RequestId:     r.ID,
 		RequestType:   string(r.RequestType),
+		Status:        string(r.Status),
 		RunOutcome:    string(r.RunOutcome),
 		FailureReason: r.FailureReason,
 		CreatedAt:     timestamppb.New(r.CreatedAt),
@@ -52,6 +53,27 @@ func RunToProto(r *domain.CustomerRequest) *boundflowv1.Run {
 		run.CompletedAt = timestamppb.New(*r.CompletedAt)
 	}
 	return run
+}
+
+// RequestInfoToProto maps a customer request to the GetRequestInfo message.
+func RequestInfoToProto(r *domain.CustomerRequest) *boundflowv1.RequestInfo {
+	if r == nil {
+		return nil
+	}
+	info := &boundflowv1.RequestInfo{
+		RequestId:     r.ID,
+		WorkflowId:    r.WorkflowID,
+		RequestType:   string(r.RequestType),
+		Status:        string(r.Status),
+		RunOutcome:    string(r.RunOutcome),
+		FailureReason: r.FailureReason,
+		Version:       r.Version,
+		CreatedAt:     timestamppb.New(r.CreatedAt),
+	}
+	if r.CompletedAt != nil {
+		info.CompletedAt = timestamppb.New(*r.CompletedAt)
+	}
+	return info
 }
 
 func WorkflowLifecyclePolicyFromProto(p *boundflowv1.WorkflowLifecyclePolicy) domain.WorkflowLifecyclePolicy {

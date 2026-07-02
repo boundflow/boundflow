@@ -7,6 +7,8 @@ type LifecycleState string
 const (
 	LifecycleStateCreating         LifecycleState = "creating"
 	LifecycleStateActive           LifecycleState = "active"
+	LifecycleStateScheduled        LifecycleState = "scheduled"
+	LifecycleStateBlocked          LifecycleState = "blocked"
 	LifecycleStateInvoking         LifecycleState = "invoking"
 	LifecycleStateAwaitingApproval LifecycleState = "awaiting_approval"
 	LifecycleStateDeleting         LifecycleState = "deleting"

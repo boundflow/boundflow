@@ -61,6 +61,8 @@ class LifecycleState(str, Enum):
     UNKNOWN = "unknown"
     CREATING = "creating"
     ACTIVE = "active"
+    SCHEDULED = "scheduled"
+    BLOCKED = "blocked"
     INVOKING = "invoking"
     AWAITING_APPROVAL = "awaiting_approval"
     DELETING = "deleting"
@@ -94,11 +96,30 @@ class Run:
     """One run (invocation) of a workflow. run_outcome is "" while the run is in flight,
     then one of: successful | customer_marked_failure | uncaught_operation_exception |
     operation_timeout | interrupted. failure_reason carries detail (e.g. the exception
-    text for an uncaught_operation_exception)."""
+    text for an uncaught_operation_exception). status is the run lifecycle (scheduled |
+    in_progress | completed | ...) — useful while run_outcome is still empty."""
     request_id: str
     request_type: str
+    status: str
     run_outcome: str
     failure_reason: str
+    created_at: datetime | None
+    completed_at: datetime | None
+
+
+@dataclass
+class RequestInfo:
+    """Full state of one run, from get_request_info(request_id). status is the run's
+    lifecycle (unscheduled | scheduled | in_progress | completed | failed | superceded);
+    run_outcome is the terminal outcome ("" until terminal). sequence_number orders a
+    workflow's runs (monotonic per workflow)."""
+    request_id: str
+    workflow_id: str
+    request_type: str
+    status: str
+    run_outcome: str
+    failure_reason: str
+    sequence_number: int
     created_at: datetime | None
     completed_at: datetime | None
 
@@ -249,6 +270,8 @@ def _agent_policy_record(r) -> AgentPolicyActionRecord:
 _LIFECYCLE = {
     "creating": LifecycleState.CREATING,
     "active": LifecycleState.ACTIVE,
+    "scheduled": LifecycleState.SCHEDULED,
+    "blocked": LifecycleState.BLOCKED,
     "invoking": LifecycleState.INVOKING,
     "awaiting_approval": LifecycleState.AWAITING_APPROVAL,
     "deleting": LifecycleState.DELETING,
@@ -429,6 +452,7 @@ class ControlPlaneClient:
             Run(
                 request_id=r.request_id,
                 request_type=r.request_type,
+                status=r.status,
                 run_outcome=r.run_outcome,
                 failure_reason=r.failure_reason,
                 created_at=_ts(r, "created_at"),
@@ -436,6 +460,23 @@ class ControlPlaneClient:
             )
             for r in resp.runs
         ]
+
+    async def get_request_info(self, request_id: str) -> RequestInfo:
+        """Get the full state of a single run by its request id (returned by invoke)."""
+        resp = await self._lc.GetRequestInfo(
+            lc.GetRequestInfoRequest(request_id=request_id), metadata=self._metadata)
+        r = resp.request
+        return RequestInfo(
+            request_id=r.request_id,
+            workflow_id=r.workflow_id,
+            request_type=r.request_type,
+            status=r.status,
+            run_outcome=r.run_outcome,
+            failure_reason=r.failure_reason,
+            sequence_number=r.version,
+            created_at=_ts(r, "created_at"),
+            completed_at=_ts(r, "completed_at"),
+        )
 
     async def approve_workflow(self, workflow_id: str, approval_id: str, actor: str = "") -> None:
         """Approve a parked gate. `actor` identifies the approver (e.g. an email or

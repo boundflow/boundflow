@@ -62,11 +62,11 @@ async def test_agent_setmodel_writes_typed_audit(cp):
             await cp.activate_workflow(wf.id)
 
             # Run 1: no history -> rule doesn't fire -> no audit.
-            await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
-            await wait_for_completion(cp, wf.id)
+            request_id = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, request_id)
             # Run 2: run-1 metrics (llm_calls>=1) fire the rule -> SetModel -> audit.
-            await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
-            await wait_for_completion(cp, wf.id)
+            request_id = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, request_id)
 
             records = await _wait_for_agent_audit(cp, wf.id, AGENT)
             assert len(records) == 1, f"expected one agent policy action, got {len(records)}"
@@ -105,8 +105,8 @@ async def test_no_agent_rule_change_writes_no_audit(cp):
         wf = await cp.create_workflow("agent_noaudit_wf", tenant.id, config=WorkflowConfig(version=1))
         try:
             await cp.activate_workflow(wf.id)
-            await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
-            await wait_for_completion(cp, wf.id)
+            request_id = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, request_id)
             await asyncio.sleep(1)  # give any (unexpected) audit write a chance
             assert await cp.get_agent_policy_audit(wf.id, AGENT) == []
         finally:

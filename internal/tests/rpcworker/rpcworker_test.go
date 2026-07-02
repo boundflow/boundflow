@@ -118,6 +118,10 @@ func (m *mockScheduler) FailRequest(_ context.Context, req string) (bool, error)
 	return true, nil
 }
 
+func (m *mockScheduler) MarkInvoking(_ context.Context, _ string) error {
+	return nil
+}
+
 func (m *mockScheduler) MarkAwaitingApproval(_ context.Context, _ string) error {
 	return nil
 }

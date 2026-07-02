@@ -110,8 +110,8 @@ async def _run_capped(cp, worker, agent, prefix, max_cost_usd, max_llm_calls):
                 wf.id, "capper",
                 RuntimePolicy(max_llm_calls=max_llm_calls, max_cost_usd=max_cost_usd))
             await cp.activate_workflow(wf.id)
-            await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
-            await wait_for_completion(cp, wf.id)
+            request_id = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, request_id)
         finally:
             await cp.delete_workflow(wf.id)
 
@@ -190,11 +190,11 @@ async def test_agent_lifecycle_cost_policy_switches_model(cp):
             ])
             await cp.activate_workflow(wf.id)
 
-            await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
-            await wait_for_completion(cp, wf.id)
+            request_id = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, request_id)
 
-            await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
-            await wait_for_completion(cp, wf.id)
+            request_id = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, request_id)
         finally:
             await cp.delete_workflow(wf.id)
 

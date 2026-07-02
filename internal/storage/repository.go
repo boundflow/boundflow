@@ -92,13 +92,18 @@ type SchedulerRepository interface {
 	// expectedCurrentVersion guards the write: it only proceeds if the workflow's current_version
 	// still equals it (the run the caller validated against), else written=false.
 	UpsertJobAndSchedule(ctx context.Context, requestID string, contextJSON string, currentAtomicOperation string, timeoutSeconds int, workflowVersion int, expectedCurrentVersion int64) (workflowID string, version int64, written bool, err error)
+	// MarkWorkflowScheduled sets lifecycle_state = scheduled, only while a job exists and the
+	// workflow isn't in a protected (terminal/delete) state.
+	MarkWorkflowScheduled(ctx context.Context, workflowID string) error
+	// MarkWorkflowInvoking sets lifecycle_state = invoking, guarded like MarkWorkflowScheduled.
+	MarkWorkflowInvoking(ctx context.Context, workflowID string) error
 	// MarkWorkflowAwaitingApproval sets lifecycle_state = awaiting_approval for the given workflow,
 	// guarded so it only fires if the job still shows awaiting_approval status at update time.
 	MarkWorkflowAwaitingApproval(ctx context.Context, workflowID string) error
-	// SyncAwaitingApprovalStates sets lifecycle_state = awaiting_approval for all workflow instances
-	// in the partition that have a job in awaiting_approval status, guarded so it only fires if the
-	// job still shows awaiting_approval at update time. Returns the synced workflow instance IDs.
-	SyncAwaitingApprovalStates(ctx context.Context, partitionID string) ([]string, error)
+	// ReconcileWorkflowLifecycles atomically projects each in-flight job's status onto its
+	// workflow's lifecycle (scheduled/blocked/invoking/awaiting_approval), the safety net for
+	// lost direct writes. Returns the reconciled workflow ids.
+	ReconcileWorkflowLifecycles(ctx context.Context, partitionID string, blockedAfterSecs int) ([]string, error)
 	// SupercedeOlderRequests marks all unscheduled or scheduled requests for the given workflow
 	// whose version is strictly less than version as superceded.
 	SupercedeOlderRequests(ctx context.Context, workflowID string, version int64) error

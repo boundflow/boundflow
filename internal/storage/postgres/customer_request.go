@@ -41,9 +41,10 @@ func (r *CustomerRequestRepo) Create(ctx context.Context, req *domain.CustomerRe
 }
 
 // CreateInvocationRequest atomically allocates the next version (bumping the workflow's
-// target_version), flips lifecycle_state to invoking, and inserts the request with that
-// version — all in one statement. Fails with ErrInvalidLifecycleState if the workflow is in
-// one of invalidStates. Sets req.Version and returns the allocated version.
+// target_version) and inserts the request with that version — all in one statement. Fails
+// with ErrInvalidLifecycleState if the workflow is in one of invalidStates. Sets req.Version
+// and returns the allocated version. (The lifecycle_state -> invoking transition happens
+// best-effort in ScheduleRequest, once the job actually lands on the jobs table.)
 func (r *CustomerRequestRepo) CreateInvocationRequest(ctx context.Context, req *domain.CustomerRequest, invalidStates []domain.LifecycleState) (int64, error) {
 	requestInfo, err := json.Marshal(req.RequestInfo)
 	if err != nil {
@@ -55,7 +56,7 @@ func (r *CustomerRequestRepo) CreateInvocationRequest(ctx context.Context, req *
 	err = r.pool.QueryRow(ctx,
 		`WITH bumped AS (
 		     UPDATE workflows
-		     SET target_version = target_version + 1, lifecycle_state = 'invoking'
+		     SET target_version = target_version + 1
 		     WHERE id = $2 AND NOT (lifecycle_state = ANY($6::lifecycle_state[]))
 		     RETURNING target_version
 		 )
@@ -79,7 +80,7 @@ func (r *CustomerRequestRepo) CreateInvocationRequest(ctx context.Context, req *
 // allocates+inserts if the workflow is not in invalidStates, has no non-terminal request in
 // flight, and its most recent terminal request completed at least minGap ago. Returns
 // created=false (no error) when any guard rejects. The whole thing is one atomic statement, so
-// the version bump / state flip only happen when the request is actually created.
+// the version bump only happens when the request is actually created.
 func (r *CustomerRequestRepo) CreateDuePeriodicRequest(ctx context.Context, req *domain.CustomerRequest, minGap time.Duration, invalidStates []domain.LifecycleState) (int64, bool, error) {
 	requestInfo, err := json.Marshal(req.RequestInfo)
 	if err != nil {
@@ -91,7 +92,7 @@ func (r *CustomerRequestRepo) CreateDuePeriodicRequest(ctx context.Context, req 
 	err = r.pool.QueryRow(ctx,
 		`WITH bumped AS (
 		     UPDATE workflows ri
-		     SET target_version = target_version + 1, lifecycle_state = 'invoking'
+		     SET target_version = target_version + 1
 		     WHERE ri.id = $2
 		       AND NOT (ri.lifecycle_state = ANY($6::lifecycle_state[]))
 		       AND NOT EXISTS (
@@ -134,10 +135,12 @@ func (r *CustomerRequestRepo) Get(ctx context.Context, id string) (*domain.Custo
 	var requestInfoJSON []byte
 
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, workflow_id, status, request_type, request_info, version, created_at
+		`SELECT id, workflow_id, status, request_type, request_info, version,
+		        COALESCE(run_outcome::text, ''), failure_reason, created_at, completed_at
 		 FROM customer_requests WHERE id = $1`,
 		id,
-	).Scan(&req.ID, &req.WorkflowID, &req.Status, &req.RequestType, &requestInfoJSON, &req.Version, &req.CreatedAt)
+	).Scan(&req.ID, &req.WorkflowID, &req.Status, &req.RequestType, &requestInfoJSON, &req.Version,
+		&req.RunOutcome, &req.FailureReason, &req.CreatedAt, &req.CompletedAt)
 	if err != nil {
 		return nil, handleError(err, "customer request")
 	}

@@ -615,6 +615,34 @@ func (mr *MockSchedulerRepositoryMockRecorder) GetTopUnscheduledRequests(ctx, pa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTopUnscheduledRequests", reflect.TypeOf((*MockSchedulerRepository)(nil).GetTopUnscheduledRequests), ctx, partitionID)
 }
 
+// MarkWorkflowScheduled mocks base method.
+func (m *MockSchedulerRepository) MarkWorkflowScheduled(ctx context.Context, workflowID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkWorkflowScheduled", ctx, workflowID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MarkWorkflowScheduled indicates an expected call of MarkWorkflowScheduled.
+func (mr *MockSchedulerRepositoryMockRecorder) MarkWorkflowScheduled(ctx, workflowID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkWorkflowScheduled", reflect.TypeOf((*MockSchedulerRepository)(nil).MarkWorkflowScheduled), ctx, workflowID)
+}
+
+// MarkWorkflowInvoking mocks base method.
+func (m *MockSchedulerRepository) MarkWorkflowInvoking(ctx context.Context, workflowID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkWorkflowInvoking", ctx, workflowID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MarkWorkflowInvoking indicates an expected call of MarkWorkflowInvoking.
+func (mr *MockSchedulerRepositoryMockRecorder) MarkWorkflowInvoking(ctx, workflowID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkWorkflowInvoking", reflect.TypeOf((*MockSchedulerRepository)(nil).MarkWorkflowInvoking), ctx, workflowID)
+}
+
 // MarkWorkflowAwaitingApproval mocks base method.
 func (m *MockSchedulerRepository) MarkWorkflowAwaitingApproval(ctx context.Context, workflowID string) error {
 	m.ctrl.T.Helper()
@@ -643,19 +671,19 @@ func (mr *MockSchedulerRepositoryMockRecorder) SupercedeOlderRequests(ctx, workf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SupercedeOlderRequests", reflect.TypeOf((*MockSchedulerRepository)(nil).SupercedeOlderRequests), ctx, workflowID, version)
 }
 
-// SyncAwaitingApprovalStates mocks base method.
-func (m *MockSchedulerRepository) SyncAwaitingApprovalStates(ctx context.Context, partitionID string) ([]string, error) {
+// ReconcileWorkflowLifecycles mocks base method.
+func (m *MockSchedulerRepository) ReconcileWorkflowLifecycles(ctx context.Context, partitionID string, blockedAfterSecs int) ([]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SyncAwaitingApprovalStates", ctx, partitionID)
+	ret := m.ctrl.Call(m, "ReconcileWorkflowLifecycles", ctx, partitionID, blockedAfterSecs)
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// SyncAwaitingApprovalStates indicates an expected call of SyncAwaitingApprovalStates.
-func (mr *MockSchedulerRepositoryMockRecorder) SyncAwaitingApprovalStates(ctx, partitionID any) *gomock.Call {
+// ReconcileWorkflowLifecycles indicates an expected call of ReconcileWorkflowLifecycles.
+func (mr *MockSchedulerRepositoryMockRecorder) ReconcileWorkflowLifecycles(ctx, partitionID, blockedAfterSecs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncAwaitingApprovalStates", reflect.TypeOf((*MockSchedulerRepository)(nil).SyncAwaitingApprovalStates), ctx, partitionID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileWorkflowLifecycles", reflect.TypeOf((*MockSchedulerRepository)(nil).ReconcileWorkflowLifecycles), ctx, partitionID, blockedAfterSecs)
 }
 
 // UpsertJobAndSchedule mocks base method.

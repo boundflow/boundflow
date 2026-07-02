@@ -43,7 +43,7 @@ async def test_list_workflow_runs_reports_each_outcome(cp):
         async def invoke(kind: str, outcome: str, timeout: int = 30):
             mode["v"] = kind
             request_id = await cp.invoke_workflow(wf.id, operation_timeout_seconds=timeout)
-            await wait_for_completion(cp, wf.id)  # runs are sequential
+            await wait_for_completion(cp, request_id)  # runs are sequential
             expected[request_id] = outcome
 
         await invoke("success", "successful")

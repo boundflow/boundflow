@@ -141,7 +141,7 @@ func (s *Scheduler) runPartition(ctx context.Context, partition *domain.Schedule
 			}()
 			go func() {
 				defer wg.Done()
-				s.syncAwaitingApprovalStates(ctx, partition.ID)
+				s.reconcileWorkflowLifecycles(ctx, partition.ID)
 			}()
 			go func() {
 				defer wg.Done()
@@ -199,6 +199,10 @@ func (s *Scheduler) recordPolicyAction(ctx context.Context, workflow *domain.Wor
 	}
 }
 
+func (s *Scheduler) MarkInvoking(ctx context.Context, workflowID string) error {
+	return s.scheduler.MarkWorkflowInvoking(ctx, workflowID)
+}
+
 func (s *Scheduler) MarkAwaitingApproval(ctx context.Context, workflowID string) error {
 	return s.scheduler.MarkWorkflowAwaitingApproval(ctx, workflowID)
 }
@@ -214,14 +218,17 @@ func (s *Scheduler) markOrphanedJobsFailed(ctx context.Context, partitionID stri
 	}
 }
 
-func (s *Scheduler) syncAwaitingApprovalStates(ctx context.Context, partitionID string) {
-	synced, err := s.scheduler.SyncAwaitingApprovalStates(ctx, partitionID)
+// blockedAfterSecs: how long a run may sit unowned before it's reported blocked. TODO: config.
+const blockedAfterSecs = 60
+
+func (s *Scheduler) reconcileWorkflowLifecycles(ctx context.Context, partitionID string) {
+	reconciled, err := s.scheduler.ReconcileWorkflowLifecycles(ctx, partitionID, blockedAfterSecs)
 	if err != nil {
-		s.log.Error("failed to sync awaiting approval states", "partition_id", partitionID, "error", err)
+		s.log.Error("failed to reconcile workflow lifecycles", "partition_id", partitionID, "error", err)
 		return
 	}
-	if len(synced) > 0 {
-		s.log.Info("synced awaiting approval lifecycle states", "partition_id", partitionID, "count", len(synced), "workflow_ids", synced)
+	if len(reconciled) > 0 {
+		s.log.Info("reconciled workflow lifecycle states", "partition_id", partitionID, "count", len(reconciled), "workflow_ids", reconciled)
 	}
 }
 
@@ -485,6 +492,12 @@ func (s *Scheduler) ScheduleRequest(ctx context.Context, req string) error {
 		return fmt.Errorf("error with supercede requests with request %s: %w", req, err)
 	}
 	s.log.Debug("older requests superceded", "workflow_id", workflowID, "version", ver)
+
+	// Best-effort: a run is now scheduled (the worker flips it to invoking on dispatch; the
+	// sweep reconciles either if lost).
+	if err := s.scheduler.MarkWorkflowScheduled(ctx, workflowID); err != nil {
+		s.log.Warn("failed to mark workflow scheduled, sweep will reconcile", "workflow_id", workflowID, "error", err)
+	}
 
 	return nil
 }

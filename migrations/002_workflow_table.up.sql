@@ -1,6 +1,8 @@
 CREATE TYPE lifecycle_state AS ENUM (
     'creating',
     'active',
+    'scheduled',
+    'blocked',
     'invoking',
     'awaiting_approval',
     'deleting',

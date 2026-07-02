@@ -88,6 +88,10 @@ func TestScheduleRequest_WrittenSupercedes(t *testing.T) {
 		SupercedeOlderRequests(gomock.Any(), "workflow-1", int64(3)).
 		Return(nil)
 
+	schedulerRepo.EXPECT().
+		MarkWorkflowScheduled(gomock.Any(), "workflow-1").
+		Return(nil)
+
 	if err := s.ScheduleRequest(context.Background(), "req-1"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -201,6 +205,10 @@ func TestScheduleRequest_AgentStateInContext(t *testing.T) {
 
 	schedulerRepo.EXPECT().
 		SupercedeOlderRequests(gomock.Any(), "workflow-1", int64(1)).
+		Return(nil)
+
+	schedulerRepo.EXPECT().
+		MarkWorkflowScheduled(gomock.Any(), "workflow-1").
 		Return(nil)
 
 	if err := s.ScheduleRequest(context.Background(), "req-1"); err != nil {

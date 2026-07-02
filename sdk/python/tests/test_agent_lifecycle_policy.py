@@ -71,14 +71,14 @@ async def test_model_switches_to_haiku_after_first_invocation(cp, api_key):
             await cp.activate_workflow(workflow.id)
 
             # Invoke 1 — no prior metrics, rule does not fire → Sonnet
-            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
-            await wait_for_completion(cp, workflow.id)
+            request_id = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, request_id)
             assert len(model_results) == 1, "Invoke 1 did not produce a result"
             assert model_results[0] == SONNET
 
             # Invoke 2 — invoke-1 metrics trigger the rule → Haiku
-            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
-            await wait_for_completion(cp, workflow.id)
+            request_id = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, request_id)
             assert len(model_results) == 2, "Invoke 2 did not produce a result"
             assert model_results[1] == HAIKU
         finally:

@@ -22,6 +22,7 @@ import (
 type RequestScheduler interface {
 	CompleteRequest(ctx context.Context, req string, outcome domain.RunOutcome, reason string) (bool, error)
 	FailRequest(ctx context.Context, req string) (bool, error)
+	MarkInvoking(ctx context.Context, workflowID string) error
 	MarkAwaitingApproval(ctx context.Context, workflowID string) error
 }
 
@@ -450,6 +451,11 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 							case <-time.After(jobLookupInterval):
 							}
 							continue
+						}
+						// Best-effort: a worker is now handling this run. Background context so a
+						// stream drop doesn't cancel it; the sweep reconciles if lost.
+						if err := s.scheduler.MarkInvoking(context.Background(), job.WorkflowID); err != nil {
+							log.Warn("failed to mark workflow invoking, sweep will reconcile", "workflow_id", job.WorkflowID, "error", err)
 						}
 						log.Info("sending LaunchOperation to client", "request_id", job.RequestID, "operation", job.CurrentAtomicOperation)
 						err = stream.Send(&boundflowv1.ServerCommand{

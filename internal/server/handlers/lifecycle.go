@@ -338,6 +338,27 @@ func (h *WorkflowServiceHandler) ListWorkflowRuns(ctx context.Context, req *boun
 	return &boundflowv1.ListWorkflowRunsResponse{Runs: out}, nil
 }
 
+func (h *WorkflowServiceHandler) GetRequestInfo(ctx context.Context, req *boundflowv1.GetRequestInfoRequest) (*boundflowv1.GetRequestInfoResponse, error) {
+	if req.RequestId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "request_id is required")
+	}
+
+	request, err := h.svc.GetRequestInfo(ctx, req.RequestId)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Errorf(codes.NotFound, "request not found")
+		}
+		return nil, status.Errorf(codes.Internal, "get request info: %v", err)
+	}
+
+	// Scope by the request's workflow — a caller can only read their own runs.
+	if err := h.checkWorkflowOwner(ctx, request.WorkflowID); err != nil {
+		return nil, err
+	}
+
+	return &boundflowv1.GetRequestInfoResponse{Request: convert.RequestInfoToProto(request)}, nil
+}
+
 func (h *WorkflowServiceHandler) ApproveWorkflow(ctx context.Context, req *boundflowv1.ApproveWorkflowRequest) (*boundflowv1.ApproveWorkflowResponse, error) {
 	if req.WorkflowId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")

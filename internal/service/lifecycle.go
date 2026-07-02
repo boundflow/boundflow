@@ -314,6 +314,15 @@ func (s *LifecycleService) ActivateWorkflow(ctx context.Context, workflowID stri
 	return nil
 }
 
+// GetRequestInfo returns the full state of a single run (request) by id.
+func (s *LifecycleService) GetRequestInfo(ctx context.Context, requestID string) (*domain.CustomerRequest, error) {
+	req, err := s.customerRequests.Get(ctx, requestID)
+	if err != nil {
+		return nil, fmt.Errorf("get request info: %w", err)
+	}
+	return req, nil
+}
+
 // ListWorkflowRuns returns every run (request) for a workflow, newest first.
 func (s *LifecycleService) ListWorkflowRuns(ctx context.Context, workflowID string) ([]*domain.CustomerRequest, error) {
 	runs, err := s.customerRequests.ListForWorkflow(ctx, workflowID)

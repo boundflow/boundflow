@@ -60,7 +60,7 @@ async def test_trace_captures_operation_with_llm_and_tool_spans(cp):
             await cp.set_agent_runtime_policy(wf.id, AGENT, RuntimePolicy(max_llm_calls=8))
             await cp.activate_workflow(wf.id)
             request_id = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
-            await wait_for_completion(cp, wf.id)
+            await wait_for_completion(cp, request_id)
 
             assert len(sink.traces) == 1, f"expected one operation trace, got {len(sink.traces)}"
             t = sink.traces[0]
@@ -128,8 +128,8 @@ async def test_trace_captures_tool_error(cp):
         try:
             await cp.set_agent_runtime_policy(wf.id, AGENT, RuntimePolicy(max_llm_calls=8))
             await cp.activate_workflow(wf.id)
-            await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
-            await wait_for_completion(cp, wf.id)
+            request_id = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, request_id)
 
             assert len(sink.traces) == 1
             run = sink.traces[0].agent_runs[0]
@@ -158,8 +158,8 @@ async def test_trace_captures_operation_failure_with_no_agent(cp):
         wf = await cp.create_workflow("trace_fail_wf", tenant.id, config=WorkflowConfig(version=1))
         try:
             await cp.activate_workflow(wf.id)
-            await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
-            await wait_for_completion(cp, wf.id)
+            request_id = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, request_id)
 
             assert len(sink.traces) == 1
             t = sink.traces[0]
@@ -198,7 +198,7 @@ async def test_multi_operation_run_shares_one_trace_id(cp):
             await cp.set_agent_runtime_policy(wf.id, AGENT, RuntimePolicy(max_llm_calls=8))
             await cp.activate_workflow(wf.id)
             request_id = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
-            await wait_for_completion(cp, wf.id)
+            await wait_for_completion(cp, request_id)
 
             # Two operations dispatched → two OperationTraces, one per operation ...
             assert len(sink.traces) == 2, f"expected entry + finalize traces, got {len(sink.traces)}"
@@ -239,7 +239,7 @@ async def test_trace_captures_a_real_llm_run(cp, api_key):
             await cp.set_agent_runtime_policy(wf.id, AGENT, RuntimePolicy(max_llm_calls=8))
             await cp.activate_workflow(wf.id)
             request_id = await cp.invoke_workflow(wf.id, operation_timeout_seconds=60)
-            await wait_for_completion(cp, wf.id)
+            await wait_for_completion(cp, request_id)
 
             assert len(sink.traces) == 1
             t = sink.traces[0]
