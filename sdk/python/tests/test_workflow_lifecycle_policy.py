@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import asyncio
 
-import grpc
 import pytest
 
 from boundflow import (
@@ -13,6 +12,7 @@ from boundflow import (
     BoundFlowWorker,
     Complete,
     Cooldown,
+    FailedPreconditionError,
     LifecycleState,
     MockLlmClient,
     Pause,
@@ -166,9 +166,8 @@ async def test_workflow_pauses_and_does_not_schedule_until_activated(cp, api_key
             await wait_for_workflow_state(cp, workflow.id, WorkflowState.PAUSED)
 
             # Invoke 2 — should be rejected immediately with FailedPrecondition.
-            with pytest.raises(grpc.aio.AioRpcError) as exc_info:
+            with pytest.raises(FailedPreconditionError):
                 await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
-            assert exc_info.value.code() == grpc.StatusCode.FAILED_PRECONDITION
 
             # Activate — invoke should now succeed and complete.
             await cp.activate_workflow(workflow.id)

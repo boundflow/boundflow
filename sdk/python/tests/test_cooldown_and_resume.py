@@ -4,7 +4,6 @@ from __future__ import annotations
 import asyncio
 import time
 
-import grpc
 import pytest
 
 from boundflow import (
@@ -12,6 +11,7 @@ from boundflow import (
     BoundFlowWorker,
     Cooldown,
     Complete,
+    FailedPreconditionError,
     WorkflowConfig,
     WorkflowMetric,
     WorkflowRule,
@@ -112,9 +112,8 @@ async def test_invoke_while_in_cooldown_is_rejected_then_succeeds_after_resume(c
             await wait_for_workflow_state(cp, workflow.id, WorkflowState.COOLDOWN)
 
             # Invoke while in Cooldown — must be rejected immediately.
-            with pytest.raises(grpc.aio.AioRpcError) as exc_info:
+            with pytest.raises(FailedPreconditionError):
                 await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
-            assert exc_info.value.code() == grpc.StatusCode.FAILED_PRECONDITION
 
             # Wait for cooldown to expire and workflow to return to Active.
             await wait_for_workflow_state(cp, workflow.id, WorkflowState.ACTIVE, timeout=60)
