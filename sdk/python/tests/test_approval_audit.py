@@ -65,7 +65,7 @@ async def test_approve_audits_and_correlates_with_trace(cp):
         wf = await cp.create_workflow("audit_approve", tenant.id, config=WorkflowConfig(version=1))
         try:
             await cp.activate_workflow(wf.id)
-            await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
+            request_id = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
             await wait_for_lifecycle_state(cp, wf.id, LifecycleState.AWAITING_APPROVAL)
 
             assert len(captured) == 1
@@ -78,7 +78,7 @@ async def test_approve_audits_and_correlates_with_trace(cp):
             assert t.workflow_id == wf.id
 
             await cp.approve_workflow(wf.id, approval_id, actor="alice@corp.com")
-            await wait_for_completion(cp, wf.id)
+            await wait_for_completion(cp, request_id)
 
             # The decision / actor / timing live server-side, looked up by approval_id.
             r = await _wait_for_audit(cp, approval_id)
@@ -109,12 +109,12 @@ async def test_reject_audits_with_actor(cp):
         wf = await cp.create_workflow("audit_reject", tenant.id, config=WorkflowConfig(version=1))
         try:
             await cp.activate_workflow(wf.id)
-            await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
+            request_id = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
             await wait_for_lifecycle_state(cp, wf.id, LifecycleState.AWAITING_APPROVAL)
             approval_id = captured[0].approval_id
 
             await cp.reject_workflow(wf.id, approval_id, actor="bob@corp.com")
-            await wait_for_completion(cp, wf.id)
+            await wait_for_completion(cp, request_id)
 
             r = await _wait_for_audit(cp, approval_id)
             assert r.decision == "rejected"

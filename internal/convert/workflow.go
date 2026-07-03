@@ -29,9 +29,51 @@ func WorkflowToProto(r *domain.Workflow) *boundflowv1.Workflow {
 			RepeatEverySeconds:   r.WorkflowConfig.RepeatEverySeconds,
 			Triggerable:          r.WorkflowConfig.Triggerable,
 		},
-		LifecycleState: string(r.LifecycleState),
-		WorkflowState:  workflowStateToProto[r.WorkflowState],
+		LifecycleState:      string(r.LifecycleState),
+		WorkflowState:       workflowStateToProto[r.WorkflowState],
+		LastInterruptedRequestId: r.LastInterruptedRequestID,
 	}
+}
+
+// RunToProto maps a customer request (a run) to the runs-API Run message. run_outcome
+// is empty while the run is still in flight.
+func RunToProto(r *domain.CustomerRequest) *boundflowv1.Run {
+	if r == nil {
+		return nil
+	}
+	run := &boundflowv1.Run{
+		RequestId:     r.ID,
+		RequestType:   string(r.RequestType),
+		Status:        string(r.Status),
+		RunOutcome:    string(r.RunOutcome),
+		FailureReason: r.FailureReason,
+		CreatedAt:     timestamppb.New(r.CreatedAt),
+	}
+	if r.CompletedAt != nil {
+		run.CompletedAt = timestamppb.New(*r.CompletedAt)
+	}
+	return run
+}
+
+// RequestInfoToProto maps a customer request to the GetRequestInfo message.
+func RequestInfoToProto(r *domain.CustomerRequest) *boundflowv1.RequestInfo {
+	if r == nil {
+		return nil
+	}
+	info := &boundflowv1.RequestInfo{
+		RequestId:     r.ID,
+		WorkflowId:    r.WorkflowID,
+		RequestType:   string(r.RequestType),
+		Status:        string(r.Status),
+		RunOutcome:    string(r.RunOutcome),
+		FailureReason: r.FailureReason,
+		Version:       r.Version,
+		CreatedAt:     timestamppb.New(r.CreatedAt),
+	}
+	if r.CompletedAt != nil {
+		info.CompletedAt = timestamppb.New(*r.CompletedAt)
+	}
+	return info
 }
 
 func WorkflowLifecyclePolicyFromProto(p *boundflowv1.WorkflowLifecyclePolicy) domain.WorkflowLifecyclePolicy {

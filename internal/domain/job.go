@@ -10,6 +10,7 @@ type JobStatus string
 
 const (
 	JobStatusPending          JobStatus = "pending"
+	JobStatusDispatched       JobStatus = "dispatched"
 	JobStatusRunning          JobStatus = "running"
 	JobStatusAwaitingNext     JobStatus = "awaiting_next"
 	JobStatusAwaitingApproval JobStatus = "awaiting_approval"
@@ -20,7 +21,7 @@ const (
 )
 
 type Job struct {
-	WorkflowID     string
+	WorkflowID             string
 	RequestID              string
 	Version                int64
 	CurrentAtomicOperation string
@@ -34,14 +35,28 @@ type Job struct {
 	AgentMetrics map[string]*boundflowv1.AgentInvocationMetrics
 	// WorkflowMetrics is workflow-level (non-agent) metrics accumulated across this job's operations.
 	WorkflowMetrics WorkflowJobMetrics
-	Owner           *string
-	LeaseExpiresAt  *time.Time
-	CreatedAt       time.Time
+	// ResultType is the customer-facing run result, set when the job completes; the
+	// completeJobs sweeper transfers it to the request's run_outcome. FailureReason is
+	// its human-readable detail.
+	ResultType     RunOutcome
+	FailureReason  string
+	Owner          *string
+	LeaseExpiresAt *time.Time
+	CreatedAt      time.Time
 	// Server-internal metadata for this job.
 	JobMetadata JobMetadata
 	// Approval gate — only populated when Status == JobStatusAwaitingApproval/Approved/Rejected.
 	ApprovalID        *string
 	ApprovalTimeoutAt *time.Time
+}
+
+// CompletedJob is the lightweight view the completeJobs sweeper needs: the request to
+// complete plus the run result the rpcworker recorded on the job, which it transfers
+// onto the request's run_outcome.
+type CompletedJob struct {
+	RequestID     string
+	ResultType    RunOutcome
+	FailureReason string
 }
 
 // WorkflowJobMetrics holds workflow-level metrics accumulated across a job's operations.

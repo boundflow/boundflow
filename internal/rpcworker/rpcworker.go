@@ -12,6 +12,7 @@ import (
 	"github.com/boundflow/boundflow/internal/convert"
 	"github.com/boundflow/boundflow/internal/domain"
 	"github.com/boundflow/boundflow/internal/storage"
+	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -19,8 +20,9 @@ import (
 )
 
 type RequestScheduler interface {
-	CompleteRequest(ctx context.Context, req string) (bool, error)
+	CompleteRequest(ctx context.Context, req string, outcome domain.RunOutcome, reason string) (bool, error)
 	FailRequest(ctx context.Context, req string) (bool, error)
+	MarkInvoking(ctx context.Context, workflowID string) error
 	MarkAwaitingApproval(ctx context.Context, workflowID string) error
 }
 
@@ -102,6 +104,9 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 
 	log := s.log
 
+	// per-session ownership id so concurrent sessions on this worker fence apart
+	sessionID := uuid.NewString()
+
 	leaseExpired := make(chan bool)
 	recvStream := make(chan *boundflowv1.WorkerMessage)
 	controlCodeCancelled := make(chan bool)
@@ -148,34 +153,15 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 				&job.WorkflowMetrics,
 			)
 		}
-		// Agent lifecycle policy actions are decided SDK-side and arrive in the
-		// result; record one audit row per agent whose rules changed its effective
-		// policy (the SDK only sends entries when effective != base). Best-effort.
-		for agent, pa := range result.AgentPolicyActions {
-			details, err := json.Marshal(convert.AgentPolicyActionFromProto(agent, pa))
-			if err != nil {
-				log.Error("failed to marshal agent policy action", "agent", agent, "workflow_id", job.WorkflowID, "error", err)
-				continue
-			}
-			if err := s.audit.Append(ctx, domain.AuditEvent{
-				TenantGroupID: tenantGroupID,
-				WorkflowID:    job.WorkflowID,
-				RequestID:     job.RequestID,
-				EventType:     domain.AuditEventAgentPolicyAction,
-				Actor:         "system",
-				OccurredAt:    time.Now(),
-				Details:       details,
-			}); err != nil {
-				log.Error("failed to append agent policy audit", "agent", agent, "workflow_id", job.WorkflowID, "error", err)
-			}
-		}
 
 		if result.NextOperation != nil {
 			log.Info("operation completed with next operation, advancing job", "request_id", job.RequestID, "next_operation", result.NextOperation.Name)
-			_, err := s.jobs.UpdateJobWithMetrics(ctx, job.WorkflowID, s.id, domain.JobStatusAwaitingNext,
+			_, err := s.jobs.UpdateJobWithMetrics(ctx, job.WorkflowID, sessionID, domain.JobStatusAwaitingNext,
 				result.NextOperation.Name, int(result.NextOperation.TimeoutSeconds), result.NextOperation.Context.AsMap(), job.AgentMetrics, job.WorkflowMetrics)
 
-			return err
+			if err != nil {
+				return err
+			}
 		} else if result.ApprovalGate != nil {
 			log.Info("operation requires approval, parking job", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "approval_id", result.ApprovalGate.ApprovalId)
 
@@ -204,7 +190,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 			}
 
 			// opened_at + timeout_at are stamped server-side (DB now()) inside ParkForApproval.
-			parked, err := s.jobs.ParkForApproval(ctx, job.WorkflowID, s.id, result.ApprovalGate.ApprovalId, int(result.ApprovalGate.TimeoutSeconds), jobMetadata, job.AgentMetrics, job.WorkflowMetrics)
+			parked, err := s.jobs.ParkForApproval(ctx, job.WorkflowID, sessionID, result.ApprovalGate.ApprovalId, int(result.ApprovalGate.TimeoutSeconds), jobMetadata, job.AgentMetrics, job.WorkflowMetrics)
 			if err != nil {
 				log.Error("failed to park job for approval", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "error", err)
 				return err
@@ -216,26 +202,62 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 				log.Warn("failed to mark workflow awaiting approval, scheduler will sync", "workflow_id", job.WorkflowID, "error", err)
 			}
 		} else {
-			updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.WorkflowID, s.id, domain.JobStatusCompleted, job.AgentMetrics, job.WorkflowMetrics)
+			// The SDK tags soft failures (customer_marked / uncaught_exception); a clean
+			// run is successful. Server-detected outcomes (timeout, interrupted) never
+			// reach here.
+			outcome, reason := domain.RunOutcomeSuccessful, ""
+			switch result.FailureType {
+			case boundflowv1.OperationFailureType_OPERATION_FAILURE_TYPE_CUSTOMER_MARKED:
+				outcome, reason = domain.RunOutcomeCustomerMarked, result.FailureReason
+			case boundflowv1.OperationFailureType_OPERATION_FAILURE_TYPE_UNCAUGHT_EXCEPTION:
+				outcome, reason = domain.RunOutcomeUncaughtException, result.FailureReason
+			}
+			updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.WorkflowID, sessionID, domain.JobStatusCompleted, outcome, reason, job.AgentMetrics, job.WorkflowMetrics)
 			if err != nil {
 				log.Error("failed to mark job completed", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "error", err)
 				return err
 			}
 			if updated {
-				log.Info("job completed, notifying scheduler", "request_id", job.RequestID, "workflow_id", job.WorkflowID)
-				s.scheduler.CompleteRequest(ctx, job.RequestID)
+				log.Info("job completed, notifying scheduler", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "outcome", outcome)
+				s.scheduler.CompleteRequest(ctx, job.RequestID, outcome, reason)
 			}
-			return nil
 		}
+
+		// Agent lifecycle policy actions are decided SDK-side and arrive in the
+		// result; record one audit row per agent whose rules changed its effective
+		// policy (the SDK only sends entries when effective != base). Best-effort.
+		// Written after the job state lands so we never audit a policy action whose
+		// metrics didnt persist (the branches above bail before here on a write error).
+		for agent, pa := range result.AgentPolicyActions {
+			details, err := json.Marshal(convert.AgentPolicyActionFromProto(agent, pa))
+			if err != nil {
+				log.Error("failed to marshal agent policy action", "agent", agent, "workflow_id", job.WorkflowID, "error", err)
+				continue
+			}
+			if err := s.audit.Append(ctx, domain.AuditEvent{
+				TenantGroupID: tenantGroupID,
+				WorkflowID:    job.WorkflowID,
+				RequestID:     job.RequestID,
+				EventType:     domain.AuditEventAgentPolicyAction,
+				Actor:         "system",
+				OccurredAt:    time.Now(),
+				Details:       details,
+			}); err != nil {
+				log.Error("failed to append agent policy audit", "agent", agent, "workflow_id", job.WorkflowID, "error", err)
+			}
+		}
+
 		// consider returning error for ownership failure, for now the return isnt used for anything
 		return nil
 	}
 
+	// failOperation interrupts the workflow (a platform failure): the scheduler records
+	// the request as run_outcome=interrupted with a static reason.
 	failOperation := func(cancelLease chan bool, job *domain.Job) error {
 		ctx := context.Background()
 		defer cancelLeaseIfExists(cancelLease)
 
-		updated, err := s.jobs.UpdateJobStatus(ctx, job.WorkflowID, s.id, domain.JobStatusFailed)
+		updated, err := s.jobs.UpdateJobStatus(ctx, job.WorkflowID, sessionID, domain.JobStatusFailed)
 		if err != nil {
 			log.Error("failed to mark job failed", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "error", err)
 		} else if updated {
@@ -245,6 +267,25 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 
 		// consider returning error for ownership failure, for now the return isnt used for anything
 		return err
+	}
+
+	// softFailOperation records a customer-domain failure (e.g. an operation timeout):
+	// it bumps num_failures for lifecycle policy and completes the request with the given
+	// outcome, leaving the workflow active — unlike failOperation, which interrupts it.
+	softFailOperation := func(cancelLease chan bool, job *domain.Job, outcome domain.RunOutcome, reason string) {
+		ctx := context.Background()
+		defer cancelLeaseIfExists(cancelLease)
+
+		job.WorkflowMetrics.Failures++
+		updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.WorkflowID, sessionID, domain.JobStatusCompleted, outcome, reason, job.AgentMetrics, job.WorkflowMetrics)
+		if err != nil {
+			log.Error("failed to soft-fail job", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "error", err)
+			return
+		}
+		if updated {
+			log.Info("operation soft-failed, completing request", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "outcome", outcome)
+			s.scheduler.CompleteRequest(ctx, job.RequestID, outcome, reason)
+		}
 	}
 
 	go func() error {
@@ -299,7 +340,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 							}
 						}
 
-						job, err := s.jobs.AcquireJob(stream.Context(), *workflowID, s.id, leaseTime, tenantGroupID)
+						job, err := s.jobs.AcquireJob(stream.Context(), *workflowID, sessionID, leaseTime, tenantGroupID)
 						if job == nil || err != nil {
 							if err != nil {
 								log.Error("error acquiring job", "workflow_id", *workflowID, "error", err)
@@ -324,10 +365,10 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 								select {
 								case <-cancelLease:
 									log.Debug("releasing job lease", "workflow_id", *workflowID)
-									s.jobs.ReleaseJob(context.Background(), *workflowID, s.id)
+									s.jobs.ReleaseJob(context.Background(), *workflowID, sessionID)
 									return
 								case <-ticker.C:
-									renewed, err := s.jobs.RenewJobLease(stream.Context(), *workflowID, s.id, leaseTime)
+									renewed, err := s.jobs.RenewJobLease(stream.Context(), *workflowID, sessionID, leaseTime)
 									if !renewed || err != nil {
 										log.Warn("failed to renew job lease, expiring session", "workflow_id", *workflowID, "error", err)
 										select {
@@ -396,6 +437,26 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 							}
 						}
 
+						dispatched, err := s.jobs.SetJobDispatched(stream.Context(), job.WorkflowID, sessionID)
+						if err != nil {
+							log.Error("failed to mark job dispatched", "request_id", job.RequestID, "error", err)
+							return err
+						}
+						if !dispatched {
+							log.Warn("lost job ownership before dispatching", "request_id", job.RequestID)
+							cancelLeaseIfExists(cancelLease)
+							select {
+							case <-stream.Context().Done():
+								return nil
+							case <-time.After(jobLookupInterval):
+							}
+							continue
+						}
+						// Best-effort: a worker is now handling this run. Background context so a
+						// stream drop doesn't cancel it; the sweep reconciles if lost.
+						if err := s.scheduler.MarkInvoking(context.Background(), job.WorkflowID); err != nil {
+							log.Warn("failed to mark workflow invoking, sweep will reconcile", "workflow_id", job.WorkflowID, "error", err)
+						}
 						log.Info("sending LaunchOperation to client", "request_id", job.RequestID, "operation", job.CurrentAtomicOperation)
 						err = stream.Send(&boundflowv1.ServerCommand{
 							Payload: &boundflowv1.ServerCommand_Launch{
@@ -415,6 +476,11 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 						})
 						if err != nil {
 							log.Error("failed to send LaunchOperation", "request_id", job.RequestID, "error", err)
+							// Send errored, so the client never got the op: restore the pre-dispatch
+							// status so it's re-picked, instead of failing.
+							if _, uerr := s.jobs.UpdateJobStatus(context.Background(), job.WorkflowID, sessionID, job.Status); uerr != nil {
+								log.Error("failed to reset dispatched job, relying on sweeper", "request_id", job.RequestID, "error", uerr)
+							}
 							return err
 						}
 
@@ -434,6 +500,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 					log.Warn("client did not ack in time, cancelling operation", "request_id", currentJob.RequestID)
 					err := cancelOperation(currentJob.RequestID)
 					if err != nil {
+						failOperation(cancelLease, currentJob)
 						return err
 					}
 					return nil
@@ -441,20 +508,24 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 					update, ok := ack.Payload.(*boundflowv1.WorkerMessage_Update)
 					if !ok {
 						log.Warn("unexpected message type while waiting for ack", "request_id", currentJob.RequestID)
+						failOperation(cancelLease, currentJob)
 						return errors.New("protocol error") // protocol error
 					}
 					if update.Update.OperationId != currentJob.RequestID {
 						log.Warn("wrong operation id in ack", "expected", currentJob.RequestID, "got", update.Update.OperationId)
+						failOperation(cancelLease, currentJob)
 						return errors.New("wrong operation id from client")
 					}
 					if update.Update.Result.Status != boundflowv1.OperationStatus_OPERATION_STATUS_IN_PROGRESS {
 						log.Warn("unexpected status in ack", "request_id", currentJob.RequestID, "status", update.Update.Result.Status)
+						failOperation(cancelLease, currentJob)
 						return errors.New("unexpected status from client")
 					}
 					log.Info("client acked IN_PROGRESS, marking job running", "request_id", currentJob.RequestID)
-					updated, err := s.jobs.UpdateJobStatus(stream.Context(), currentJob.WorkflowID, s.id, domain.JobStatusRunning)
+					updated, err := s.jobs.UpdateJobStatus(stream.Context(), currentJob.WorkflowID, sessionID, domain.JobStatusRunning)
 					if err != nil {
 						log.Error("failed to mark job running", "request_id", currentJob.RequestID, "error", err)
+						failOperation(cancelLease, currentJob)
 						return err
 					}
 					if !updated {
@@ -547,8 +618,10 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 							completeOperation(cancelLease, currentJob, ack.Update.Result)
 						case boundflowv1.OperationStatus_OPERATION_STATUS_FAILED,
 							boundflowv1.OperationStatus_OPERATION_STATUS_CANCELLED:
-							log.Info("operation cancelled/failed", "request_id", currentJob.RequestID, "status", ack.Update.Result.Status)
-							failOperation(cancelLease, currentJob)
+							// The client acked our cancel, so the operation timed out cleanly:
+							// a customer-domain failure (num_failures), not a platform interruption.
+							log.Info("operation timed out (cancel acked), soft-failing", "request_id", currentJob.RequestID, "status", ack.Update.Result.Status)
+							softFailOperation(cancelLease, currentJob, domain.RunOutcomeOperationTimeout, "operation exceeded its timeout")
 						case boundflowv1.OperationStatus_OPERATION_STATUS_IN_PROGRESS:
 							log.Debug("still in progress during cancel, waiting", "request_id", currentJob.RequestID)
 							continue

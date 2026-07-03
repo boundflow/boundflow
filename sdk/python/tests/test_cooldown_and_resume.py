@@ -66,8 +66,8 @@ async def test_workflow_resumes_after_cooldown_expires(cp, api_key):
             await cp.set_workflow_lifecycle_policy(workflow.id, _cooldown_policy())
             await cp.activate_workflow(workflow.id)
 
-            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
-            await wait_for_completion(cp, workflow.id)
+            request_id = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, request_id)
             await wait_for_workflow_state(cp, workflow.id, WorkflowState.COOLDOWN)
 
             cooldown_entered_at = time.monotonic()
@@ -107,8 +107,8 @@ async def test_invoke_while_in_cooldown_is_rejected_then_succeeds_after_resume(c
             await cp.activate_workflow(workflow.id)
 
             # Invoke 1 — triggers cooldown rule.
-            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
-            await wait_for_completion(cp, workflow.id)
+            request_id = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, request_id)
             await wait_for_workflow_state(cp, workflow.id, WorkflowState.COOLDOWN)
 
             # Invoke while in Cooldown — must be rejected immediately.
@@ -120,8 +120,8 @@ async def test_invoke_while_in_cooldown_is_rejected_then_succeeds_after_resume(c
             await wait_for_workflow_state(cp, workflow.id, WorkflowState.ACTIVE, timeout=60)
 
             # Invoke 2 — should now succeed.
-            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
-            await wait_for_completion(cp, workflow.id)
+            request_id = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, request_id)
 
             assert len(completed) == 2, f"Expected 2 completions, got {len(completed)}"
         finally:

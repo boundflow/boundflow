@@ -36,6 +36,9 @@ const (
 	WorkflowService_GetAgentPolicyAudit_FullMethodName        = "/boundflow.v1.WorkflowService/GetAgentPolicyAudit"
 	WorkflowService_GetAuditLog_FullMethodName                = "/boundflow.v1.WorkflowService/GetAuditLog"
 	WorkflowService_ActivateWorkflow_FullMethodName           = "/boundflow.v1.WorkflowService/ActivateWorkflow"
+	WorkflowService_ResolveInterruptedWorkflow_FullMethodName = "/boundflow.v1.WorkflowService/ResolveInterruptedWorkflow"
+	WorkflowService_ListWorkflowRuns_FullMethodName           = "/boundflow.v1.WorkflowService/ListWorkflowRuns"
+	WorkflowService_GetRequestInfo_FullMethodName             = "/boundflow.v1.WorkflowService/GetRequestInfo"
 )
 
 // WorkflowServiceClient is the client API for WorkflowService service.
@@ -61,6 +64,9 @@ type WorkflowServiceClient interface {
 	GetAgentPolicyAudit(ctx context.Context, in *GetAgentPolicyAuditRequest, opts ...grpc.CallOption) (*GetAgentPolicyAuditResponse, error)
 	GetAuditLog(ctx context.Context, in *GetAuditLogRequest, opts ...grpc.CallOption) (*GetAuditLogResponse, error)
 	ActivateWorkflow(ctx context.Context, in *ActivateWorkflowRequest, opts ...grpc.CallOption) (*ActivateWorkflowResponse, error)
+	ResolveInterruptedWorkflow(ctx context.Context, in *ResolveInterruptedWorkflowRequest, opts ...grpc.CallOption) (*ResolveInterruptedWorkflowResponse, error)
+	ListWorkflowRuns(ctx context.Context, in *ListWorkflowRunsRequest, opts ...grpc.CallOption) (*ListWorkflowRunsResponse, error)
+	GetRequestInfo(ctx context.Context, in *GetRequestInfoRequest, opts ...grpc.CallOption) (*GetRequestInfoResponse, error)
 }
 
 type workflowServiceClient struct {
@@ -241,6 +247,36 @@ func (c *workflowServiceClient) ActivateWorkflow(ctx context.Context, in *Activa
 	return out, nil
 }
 
+func (c *workflowServiceClient) ResolveInterruptedWorkflow(ctx context.Context, in *ResolveInterruptedWorkflowRequest, opts ...grpc.CallOption) (*ResolveInterruptedWorkflowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResolveInterruptedWorkflowResponse)
+	err := c.cc.Invoke(ctx, WorkflowService_ResolveInterruptedWorkflow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *workflowServiceClient) ListWorkflowRuns(ctx context.Context, in *ListWorkflowRunsRequest, opts ...grpc.CallOption) (*ListWorkflowRunsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListWorkflowRunsResponse)
+	err := c.cc.Invoke(ctx, WorkflowService_ListWorkflowRuns_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *workflowServiceClient) GetRequestInfo(ctx context.Context, in *GetRequestInfoRequest, opts ...grpc.CallOption) (*GetRequestInfoResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetRequestInfoResponse)
+	err := c.cc.Invoke(ctx, WorkflowService_GetRequestInfo_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // WorkflowServiceServer is the server API for WorkflowService service.
 // All implementations must embed UnimplementedWorkflowServiceServer
 // for forward compatibility.
@@ -264,6 +300,9 @@ type WorkflowServiceServer interface {
 	GetAgentPolicyAudit(context.Context, *GetAgentPolicyAuditRequest) (*GetAgentPolicyAuditResponse, error)
 	GetAuditLog(context.Context, *GetAuditLogRequest) (*GetAuditLogResponse, error)
 	ActivateWorkflow(context.Context, *ActivateWorkflowRequest) (*ActivateWorkflowResponse, error)
+	ResolveInterruptedWorkflow(context.Context, *ResolveInterruptedWorkflowRequest) (*ResolveInterruptedWorkflowResponse, error)
+	ListWorkflowRuns(context.Context, *ListWorkflowRunsRequest) (*ListWorkflowRunsResponse, error)
+	GetRequestInfo(context.Context, *GetRequestInfoRequest) (*GetRequestInfoResponse, error)
 	mustEmbedUnimplementedWorkflowServiceServer()
 }
 
@@ -324,6 +363,15 @@ func (UnimplementedWorkflowServiceServer) GetAuditLog(context.Context, *GetAudit
 }
 func (UnimplementedWorkflowServiceServer) ActivateWorkflow(context.Context, *ActivateWorkflowRequest) (*ActivateWorkflowResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ActivateWorkflow not implemented")
+}
+func (UnimplementedWorkflowServiceServer) ResolveInterruptedWorkflow(context.Context, *ResolveInterruptedWorkflowRequest) (*ResolveInterruptedWorkflowResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResolveInterruptedWorkflow not implemented")
+}
+func (UnimplementedWorkflowServiceServer) ListWorkflowRuns(context.Context, *ListWorkflowRunsRequest) (*ListWorkflowRunsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListWorkflowRuns not implemented")
+}
+func (UnimplementedWorkflowServiceServer) GetRequestInfo(context.Context, *GetRequestInfoRequest) (*GetRequestInfoResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetRequestInfo not implemented")
 }
 func (UnimplementedWorkflowServiceServer) mustEmbedUnimplementedWorkflowServiceServer() {}
 func (UnimplementedWorkflowServiceServer) testEmbeddedByValue()                         {}
@@ -652,6 +700,60 @@ func _WorkflowService_ActivateWorkflow_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _WorkflowService_ResolveInterruptedWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveInterruptedWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorkflowServiceServer).ResolveInterruptedWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorkflowService_ResolveInterruptedWorkflow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorkflowServiceServer).ResolveInterruptedWorkflow(ctx, req.(*ResolveInterruptedWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WorkflowService_ListWorkflowRuns_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListWorkflowRunsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorkflowServiceServer).ListWorkflowRuns(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorkflowService_ListWorkflowRuns_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorkflowServiceServer).ListWorkflowRuns(ctx, req.(*ListWorkflowRunsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WorkflowService_GetRequestInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRequestInfoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorkflowServiceServer).GetRequestInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorkflowService_GetRequestInfo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorkflowServiceServer).GetRequestInfo(ctx, req.(*GetRequestInfoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // WorkflowService_ServiceDesc is the grpc.ServiceDesc for WorkflowService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -726,6 +828,18 @@ var WorkflowService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ActivateWorkflow",
 			Handler:    _WorkflowService_ActivateWorkflow_Handler,
+		},
+		{
+			MethodName: "ResolveInterruptedWorkflow",
+			Handler:    _WorkflowService_ResolveInterruptedWorkflow_Handler,
+		},
+		{
+			MethodName: "ListWorkflowRuns",
+			Handler:    _WorkflowService_ListWorkflowRuns_Handler,
+		},
+		{
+			MethodName: "GetRequestInfo",
+			Handler:    _WorkflowService_GetRequestInfo_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -64,8 +64,8 @@ async def _run(cp, spy, policy):
             if policy is not None:
                 await cp.set_agent_runtime_policy(wf.id, "capped", policy)
             await cp.activate_workflow(wf.id)
-            await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
-            await wait_for_completion(cp, wf.id)
+            request_id = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, request_id)
         finally:
             await cp.delete_workflow(wf.id)
 

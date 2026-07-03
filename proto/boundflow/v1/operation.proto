@@ -42,6 +42,17 @@ message AtomicOperationResult {
   // The SDK populates an entry only when rules changed the effective policy
   // (effective != base); the server records each as a scope="agent" audit row.
   map<string, AgentPolicyAction> agent_policy_actions = 7;
+  // Set by the SDK when a run soft-fails, so the server can classify the run outcome
+  // without inferring. Server-detected failures (timeout, interrupted) are not sent here.
+  OperationFailureType failure_type = 8;
+  // Human-readable detail for a soft failure (e.g. the exception text).
+  string failure_reason = 9;
+}
+
+enum OperationFailureType {
+  OPERATION_FAILURE_TYPE_UNSPECIFIED = 0;        // no failure (clean success)
+  OPERATION_FAILURE_TYPE_CUSTOMER_MARKED = 1;    // ctx.mark_failed()
+  OPERATION_FAILURE_TYPE_UNCAUGHT_EXCEPTION = 2; // handler raised
 }
 
 // WorkflowInvocationMetrics holds workflow-level (non-agent) metrics the customer

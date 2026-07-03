@@ -156,8 +156,10 @@ type Workflow struct {
 	WorkflowConfig *WorkflowConfig        `protobuf:"bytes,8,opt,name=workflow_config,json=workflowConfig,proto3" json:"workflow_config,omitempty"`
 	LifecycleState string                 `protobuf:"bytes,9,opt,name=lifecycle_state,json=lifecycleState,proto3" json:"lifecycle_state,omitempty"`
 	WorkflowState  WorkflowState          `protobuf:"varint,10,opt,name=workflow_state,json=workflowState,proto3,enum=boundflow.v1.WorkflowState" json:"workflow_state,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// request_id of the run that interrupted the workflow; empty until one is interrupted.
+	LastInterruptedRequestId string `protobuf:"bytes,11,opt,name=last_interrupted_request_id,json=lastInterruptedRequestId,proto3" json:"last_interrupted_request_id,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *Workflow) Reset() {
@@ -239,6 +241,13 @@ func (x *Workflow) GetWorkflowState() WorkflowState {
 	return WorkflowState_WORKFLOW_STATE_UNSPECIFIED
 }
 
+func (x *Workflow) GetLastInterruptedRequestId() string {
+	if x != nil {
+		return x.LastInterruptedRequestId
+	}
+	return ""
+}
+
 var File_boundflow_v1_workflow_proto protoreflect.FileDescriptor
 
 const file_boundflow_v1_workflow_proto_rawDesc = "" +
@@ -248,7 +257,7 @@ const file_boundflow_v1_workflow_proto_rawDesc = "" +
 	"\aversion\x18\x01 \x01(\x05R\aversion\x124\n" +
 	"\x16invoke_timeout_seconds\x18\x02 \x01(\x05R\x14invokeTimeoutSeconds\x120\n" +
 	"\x14repeat_every_seconds\x18\x03 \x01(\x05R\x12repeatEverySeconds\x12 \n" +
-	"\vtriggerable\x18\x04 \x01(\bR\vtriggerable\"\xcb\x02\n" +
+	"\vtriggerable\x18\x04 \x01(\bR\vtriggerable\"\x8a\x03\n" +
 	"\bWorkflow\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
 	"\rworkflow_type\x18\x02 \x01(\tR\fworkflowType\x12\x1b\n" +
@@ -258,7 +267,8 @@ const file_boundflow_v1_workflow_proto_rawDesc = "" +
 	"\x0fworkflow_config\x18\b \x01(\v2\x1c.boundflow.v1.WorkflowConfigR\x0eworkflowConfig\x12'\n" +
 	"\x0flifecycle_state\x18\t \x01(\tR\x0elifecycleState\x12B\n" +
 	"\x0eworkflow_state\x18\n" +
-	" \x01(\x0e2\x1b.boundflow.v1.WorkflowStateR\rworkflowState*\x9f\x01\n" +
+	" \x01(\x0e2\x1b.boundflow.v1.WorkflowStateR\rworkflowState\x12=\n" +
+	"\x1blast_interrupted_request_id\x18\v \x01(\tR\x18lastInterruptedRequestId*\x9f\x01\n" +
 	"\rWorkflowState\x12\x1e\n" +
 	"\x1aWORKFLOW_STATE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15WORKFLOW_STATE_ACTIVE\x10\x01\x12\x19\n" +

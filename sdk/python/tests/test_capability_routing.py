@@ -39,8 +39,8 @@ async def test_workers_only_receive_jobs_for_registered_version(cp, boundflow_ap
     try:
         await cp.activate_workflow(wf1.id)
         await cp.activate_workflow(wf2.id)
-        await cp.invoke_workflow(wf1.id, operation_timeout_seconds=30)
-        await cp.invoke_workflow(wf2.id, operation_timeout_seconds=30)
+        req1 = await cp.invoke_workflow(wf1.id, operation_timeout_seconds=30)
+        req2 = await cp.invoke_workflow(wf2.id, operation_timeout_seconds=30)
 
         # Run Worker v2 alone first — without capability filtering it would pick up
         # the v1 job immediately (no handler → FAILED). With filtering it ignores it.
@@ -50,11 +50,11 @@ async def test_workers_only_receive_jobs_for_registered_version(cp, boundflow_ap
         # Now start Worker v1 — with new code the v1 job is still pending and gets
         # picked up here. With old code it was already FAILED by Worker v2.
         async with run_worker(worker_v1):
-            state1 = await wait_for_completion(cp, wf1.id)
-            state2 = await wait_for_completion(cp, wf2.id)
+            info1 = await wait_for_completion(cp, req1)
+            info2 = await wait_for_completion(cp, req2)
 
-        assert state1 == LifecycleState.ACTIVE, f"v1 workflow ended in {state1} — wrong worker may have picked it up"
-        assert state2 == LifecycleState.ACTIVE, f"v2 workflow ended in {state2}"
+        assert info1.run_outcome == "successful", f"v1 run ended in {info1.run_outcome} — wrong worker may have picked it up"
+        assert info2.run_outcome == "successful", f"v2 run ended in {info2.run_outcome}"
         assert len(v1_handled) == 1, f"v1 handler ran {len(v1_handled)} times, expected 1"
         assert len(v2_handled) == 1, f"v2 handler ran {len(v2_handled)} times, expected 1"
     finally:
