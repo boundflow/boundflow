@@ -10,7 +10,7 @@
 > **Public preview (pre-1.0).** The engine is complete and covered by Go, mock-LLM,
 > and live-LLM test suites, but it hasn't yet been run in production with external
 > users. APIs — including the gRPC protobufs — may change before 1.0. We're looking
-> for early adopters and design partners: [reach out](mailto:arjunvlama1@gmail.com).
+> for early adopters and design partners: [reach out](mailto:hello@boundflow.dev).
 
 BoundFlow runs long-running, stateful agent workflows and enforces the guardrails
 you'll want before running agents unattended: per-run **cost caps**, automatic **model switching** on
@@ -272,7 +272,7 @@ Inference stays bring-your-own, so your Anthropic key and token spend remain you
 we just run the control plane.
 
 It's early and design-partner–oriented while we onboard the first users —
-**[reach out](mailto:arjunvlama1@gmail.com)** if you'd like in.
+**[reach out](mailto:hello@boundflow.dev)** if you'd like in.
 
 ---
 
