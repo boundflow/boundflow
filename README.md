@@ -69,6 +69,13 @@ Then explore the bundled examples:
 python -m boundflow.examples.approval_gate   # human-in-the-loop sign-off
 ```
 
+Manage and observe it from the **`boundflow` CLI** (installed with the SDK):
+
+```bash
+boundflow workflow list            # your workflows and their state
+boundflow workflow runs <id>       # runs and their outcomes  ·  --json for scripting
+```
+
 ---
 
 ## Why BoundFlow

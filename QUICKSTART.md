@@ -109,6 +109,25 @@ Expected output (the summary is the model's, so wording will vary):
 That's the full loop: your worker registered a workflow, the control plane
 scheduled and dispatched it, and a real agent ran under the platform's governance.
 
+## 5. Operate it from the CLI
+
+Installing the SDK also installs the **`boundflow` CLI** — the ergonomic way to
+manage and observe the control plane from a shell (everything the SDK does
+programmatically, you can do ad-hoc). It reads `BOUNDFLOW_API_KEY` from the env.
+
+The run above left a workflow and a completed run behind — inspect them:
+
+```bash
+boundflow workflow list                   # your workflows and their state
+boundflow workflow runs <workflow-id>     # every run, with its outcome
+boundflow workflow request <request-id>   # status + outcome of one run
+boundflow tenant list                     # tenants in your group
+```
+
+Add `--json` to any command for machine-readable output. See `boundflow --help`
+for the full surface — workflow create/activate/invoke, approve/reject, policies,
+pricing, and audit logs.
+
 ## More examples
 
 Runnable examples ship with the package — same prerequisites (backend up,
