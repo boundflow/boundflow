@@ -37,6 +37,13 @@ def tenant_create(name: str = typer.Argument(..., help="Tenant name")):
     output(result)
 
 
+@app.command("list")
+def tenant_list():
+    """List the tenants in the API key's tenant group."""
+    results = cp_call(lambda cp: cp.list_tenants())
+    output(results)
+
+
 @app.command("get")
 def tenant_get(tenant_id: str = typer.Argument(..., help="Tenant ID")):
     """Get a tenant by ID."""

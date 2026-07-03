@@ -39,10 +39,22 @@ def boundflow_api_key():
     return key
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--cp-via-cli", action="store_true", default=False,
+        help="Route control-plane calls through the boundflow CLI instead of the SDK "
+             "(the worker still runs in-process). Exercises the CLI across the whole suite.",
+    )
+
+
 @pytest_asyncio.fixture
-async def cp(boundflow_api_key):
+async def cp(boundflow_api_key, request):
     async with ControlPlaneClient(SERVER_ADDRESS, api_key=boundflow_api_key) as client:
-        yield client
+        if request.config.getoption("--cp-via-cli"):
+            from .cli_control_plane import CliControlPlane
+            yield CliControlPlane(SERVER_ADDRESS, boundflow_api_key, sdk_fallback=client)
+        else:
+            yield client
 
 
 def dummy_mock():

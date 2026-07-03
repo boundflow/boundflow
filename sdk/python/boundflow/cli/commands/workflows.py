@@ -71,6 +71,34 @@ def list_workflows():
     output(results)
 
 
+@app.command("runs")
+def runs(
+    workflow_id: str = typer.Argument(..., help="Workflow ID"),
+):
+    """List a workflow's runs, most recent first, with each run's status and outcome."""
+    results = cp_call(lambda cp: cp.list_workflow_runs(workflow_id))
+    output(results)
+
+
+@app.command("request")
+def request(
+    request_id: str = typer.Argument(..., help="Request ID (returned by 'workflow invoke')"),
+):
+    """Show the status and outcome of a single run, by its request ID."""
+    result = cp_call(lambda cp: cp.get_request_info(request_id))
+    output(result)
+
+
+@app.command("resolve")
+def resolve(
+    workflow_id: str = typer.Argument(..., help="Workflow ID"),
+    request_id: str = typer.Argument(..., help="The interrupted run's request ID (last_interrupted_request_id)"),
+):
+    """Clear a platform interruption and re-activate an interrupted workflow."""
+    cp_call(lambda cp: cp.resolve_interrupted_workflow(workflow_id, request_id))
+    success(f"Workflow {workflow_id} resolved and re-activated.")
+
+
 @app.command("approve")
 def approve(
     workflow_id: str = typer.Argument(..., help="Workflow ID"),
