@@ -35,6 +35,7 @@ it's the operational layer *around* the agents you build.
 
 - **Backend** — open source (Apache-2.0), self-hostable as a container.
 - **Python SDK** — open source (MIT), `pip install boundflow`.
+- **Docs** — concepts, governance, deployment, and API reference in [`docs/`](docs/).
 - **BoundFlow Cloud** — prefer not to self-host? Managed hosting (early access) — see [below](#hosted-boundflow-cloud).
 
 ---
@@ -102,51 +103,27 @@ collected on every run.
 
 ## Architecture
 
-The control plane runs as three process modes off one binary, sharing a Postgres
-database. Your SDK worker connects over gRPC and runs the actual agents.
+The **BoundFlow backend** is the control plane — self-host it, or run it on
+BoundFlow Cloud. Either way, your **worker** connects to it over gRPC and runs the
+actual agents, with your Anthropic key, in your environment; the backend schedules,
+dispatches, governs, and audits, and never sees your key or your inference traffic.
 
 ```
-┌────────────────────┐        gRPC        ┌──────────────────────┐
-│  Your client       │ ─────────────────▶ │   server  :50051     │
-│  (ControlPlane-    │                    │   workflow lifecycle, │
-│   Client)          │                    │   approvals, pricing  │
-└────────────────────┘                    └──────────┬───────────┘
-                                                     │  Postgres
-                                          ┌──────────▼───────────┐
-                                          │   scheduler           │
-                                          │   polls due requests, │
-                                          │   writes jobs,        │
-                                          │   evaluates lifecycle │
-                                          └──────────┬───────────┘
-                                                     │  Postgres
-┌────────────────────┐     gRPC stream    ┌──────────▼───────────┐
-│  Your worker       │ ◀───────────────── │   worker  :50052      │
-│  (BoundFlowWorker) │   launch / result  │   dispatches jobs to  │
-│  runs agents+tools │                    │   connected SDK workers│
-└────────────────────┘                    └──────────────────────┘
+   ┌─────────────────────┐      gRPC        ┌────────────────────────┐
+   │  Your client / SDK  │ ───────────────▶ │                        │
+   └─────────────────────┘  invoke·approve  │   BoundFlow backend    │
+                             ·query          │   (control plane)      │
+   ┌─────────────────────┐   gRPC stream    │                        │
+   │  Your worker        │ ◀──────────────▶ │  schedules·dispatches  │
+   │  runs agents+tools  │  launch/result   │  ·governs·audits       │
+   │  with your API key  │                  └────────────────────────┘
+   └─────────────────────┘
 ```
 
-| Mode | Responsibility |
-|------|----------------|
-| `server` | gRPC API: workflow/tenant lifecycle, approval flow, policy + pricing configuration. |
-| `scheduler` | Partition-based scheduler. Polls due requests, writes jobs, runs lifecycle policy evaluation (cooldown, version rollback). |
-| `worker` | Polls for pending jobs and dispatches them to connected SDK workers over a bidirectional gRPC stream. |
-| `migrate` / `provision` | One-shot modes: apply schema migrations / mint a tenant group + API key. |
-
----
-
-## Core concepts
-
-- **Workflow** — the managed entity. Belongs to a tenant, has a type + version,
-  and moves through lifecycle states (`active → invoking → awaiting_approval → …`).
-- **Agent** — a named LLM executor inside an operation handler: a model, system
-  prompt, tool callbacks, and an output schema. Metrics are collected per run.
-- **Approval gate** — a workflow can pause mid-execution for a human to approve or
-  reject a proposed action before continuing.
-- **Runtime policy** — hard limits enforced *during* a run (max LLM calls, max
-  tokens/call, per-tool limits, max cost).
-- **Lifecycle policy** — rules evaluated *after* runs, on aggregated metrics:
-  switch model, cool down, roll back a version, pause.
+Under the hood the backend runs as three process modes (`server`, `scheduler`,
+`worker`) off one binary sharing Postgres — see
+**[docs/concepts.md](docs/concepts.md)** for the full breakdown and the lifecycle
+states.
 
 ---
 
@@ -262,38 +239,28 @@ lifecycle / workflow state for dashboards.
 
 ## Configuration
 
-Backend (env vars, all `BOUNDFLOW_*`): `DATABASE_URL`, `GRPC_PORT` (server),
-`WORKER_GRPC_PORT` (worker), `NUM_PARTITIONS` (scheduler), `JOB_TIMEOUT_SECS`,
-`LOG_LEVEL`, `DEBUG`.
-
-SDK: `BOUNDFLOW_API_KEY`, `BOUNDFLOW_SERVER_ADDRESS` / `BOUNDFLOW_WORKER_ADDRESS`
-(default to localhost), and `ANTHROPIC_API_KEY` for real agents.
+Backend and SDK are configured through `BOUNDFLOW_*` environment variables (plus
+`ANTHROPIC_API_KEY` for real agents). See
+**[docs/deployment.md](docs/deployment.md)** for the full reference and the
+TLS-termination setup.
 
 > The default Postgres credentials in the compose files (`boundflow/boundflow`)
-> are for **local development only** — set real credentials before any
-> non-local deployment, and don't publish the Postgres port.
+> are for **local development only** — set real credentials before any non-local
+> deployment, and don't publish the Postgres port.
 
 ---
 
 ## Development
 
 ```bash
-make build         # build the binary -> bin/boundflow
-make test          # go test ./...
-make proto         # regenerate gRPC stubs (Go + Python)
+make build   # build the binary -> bin/boundflow
+make test    # go test ./...
+make proto   # regenerate gRPC stubs (Go + Python)
 ```
 
-Python SDK tests run against a live backend:
-
-```bash
-docker compose up -d --build
-cd sdk/python && pip install -e ".[dev]"
-BOUNDFLOW_API_KEY=<provisioned key> pytest        # mock-LLM suite, no Anthropic key needed
-```
-
-See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full setup, proto workflow, and
-PR guidelines. CI runs the Go + mock-LLM suites on every PR. A separate live-LLM
-suite (real Anthropic calls) runs on demand.
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for full setup, the proto workflow, and
+running the Python SDK test suites. CI runs the Go + mock-LLM suites on every PR; a
+separate live-LLM suite (real Anthropic calls) runs on demand.
 
 ---
 
