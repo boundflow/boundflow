@@ -59,16 +59,10 @@ with the package. Run it:
 python -m boundflow.examples.hello
 ```
 
-Expected output (the summary is the model's, so wording will vary):
-
-```
-  agent summary: BoundFlow is a platform for running fleets of agents under governance.
-  done: completed
-```
-
-That's the full loop: your worker registered a workflow, the control plane
-scheduled and dispatched it, and a real agent ran under the platform's governance.
-The full source is in [`boundflow/examples/hello.py`](sdk/python/boundflow/examples/hello.py).
+You'll see the agent's summary print, then `done: completed` — that's the full loop:
+your worker registered a workflow, the control plane scheduled and dispatched it, and
+a real agent ran under the platform's governance. Full source:
+[`boundflow/examples/hello.py`](sdk/python/boundflow/examples/hello.py).
 
 ## More examples
 
