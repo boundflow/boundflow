@@ -2,8 +2,18 @@
 
 **A control plane for fleets of LLM agents — with governance built in.**
 
+![status: preview](https://img.shields.io/badge/status-preview-orange)
+![backend: Apache-2.0](https://img.shields.io/badge/backend-Apache--2.0-blue)
+![SDK: MIT](https://img.shields.io/badge/SDK-MIT-blue)
+
+> [!IMPORTANT]
+> **Public preview (pre-1.0).** The engine is complete and covered by Go, mock-LLM,
+> and live-LLM test suites, but it hasn't yet been run in production with external
+> users. APIs — including the gRPC protobufs — may change before 1.0. We're looking
+> for early adopters and design partners: [reach out](mailto:arjunvlama1@gmail.com).
+
 BoundFlow runs long-running, stateful agent workflows and enforces the guardrails
-production agents need: per-run **cost caps**, automatic **model switching** on
+you'll want before running agents unattended: per-run **cost caps**, automatic **model switching** on
 cost/loop policies, **human approval gates** before sensitive actions, tool-call
 limits, retries, cooldowns, and versioned rollbacks. You write agents and
 workflows against a clean async SDK; the control plane schedules, dispatches, and
@@ -14,7 +24,7 @@ key, running in your worker. The backend never sees it and never pays for tokens
 
 - **Backend** — open source (Apache-2.0), self-hostable as a container.
 - **Python SDK** — open source (MIT), `pip install boundflow`.
-- **BoundFlow Cloud** — prefer not to self-host? Managed hosting, invite-based — see [below](#hosted-boundflow-cloud).
+- **BoundFlow Cloud** — prefer not to self-host? Managed hosting (early access) — see [below](#hosted-boundflow-cloud).
 
 ---
 
@@ -236,20 +246,20 @@ BOUNDFLOW_API_KEY=<provisioned key> pytest        # mock-LLM suite, no Anthropic
 ```
 
 See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full setup, proto workflow, and
-PR guidelines. CI runs the Go + mock-LLM suites on every PR; real-LLM tests run
-nightly.
+PR guidelines. CI runs the Go + mock-LLM suites on every PR. A separate live-LLM
+suite (real Anthropic calls) runs on demand.
 
 ---
 
-## Hosted: BoundFlow Cloud
+## Hosted: BoundFlow Cloud (early access)
 
-Don't want to run or manage the control plane yourself? **BoundFlow Cloud** is a
-fully managed deployment — same gRPC API, same `pip install boundflow` SDK, hosted
-and kept current. Inference stays bring-your-own, so your Anthropic key and token
-spend remain yours; we just run the control plane.
+Don't want to run or manage the control plane yourself? **BoundFlow Cloud** is an
+early-access managed deployment — same gRPC API, same `pip install boundflow` SDK.
+Inference stays bring-your-own, so your Anthropic key and token spend remain yours;
+we just run the control plane.
 
-It's invite-based while we onboard early users — **[reach out](mailto:arjunvlama1@gmail.com)**
-for an API key.
+It's early and design-partner–oriented while we onboard the first users —
+**[reach out](mailto:arjunvlama1@gmail.com)** if you'd like in.
 
 ---
 
