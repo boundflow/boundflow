@@ -17,6 +17,9 @@ service RegistrationService {
 
   rpc CreateTenant(CreateTenantRequest) returns (CreateTenantResponse);
   rpc GetTenant(GetTenantRequest) returns (GetTenantResponse);
+  // ListTenants returns the caller's tenants (scoped to their tenant group,
+  // resolved from the API key).
+  rpc ListTenants(ListTenantsRequest) returns (ListTenantsResponse);
   rpc DeleteTenant(DeleteTenantRequest) returns (DeleteTenantResponse);
 
   // Pricing is scoped to the caller's tenant group (resolved from the API key).
@@ -70,6 +73,12 @@ message GetTenantRequest {
 
 message GetTenantResponse {
   Tenant tenant = 1;
+}
+
+message ListTenantsRequest {}
+
+message ListTenantsResponse {
+  repeated Tenant tenants = 1;
 }
 
 message DeleteTenantGroupRequest {

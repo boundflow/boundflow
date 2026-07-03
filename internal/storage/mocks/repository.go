@@ -153,6 +153,21 @@ func (mr *MockTenantRepositoryMockRecorder) Get(ctx, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockTenantRepository)(nil).Get), ctx, id)
 }
 
+// ListForTenantGroup mocks base method.
+func (m *MockTenantRepository) ListForTenantGroup(ctx context.Context, tenantGroupID string) ([]*domain.Tenant, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListForTenantGroup", ctx, tenantGroupID)
+	ret0, _ := ret[0].([]*domain.Tenant)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListForTenantGroup indicates an expected call of ListForTenantGroup.
+func (mr *MockTenantRepositoryMockRecorder) ListForTenantGroup(ctx, tenantGroupID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForTenantGroup", reflect.TypeOf((*MockTenantRepository)(nil).ListForTenantGroup), ctx, tenantGroupID)
+}
+
 // MockWorkflowRepository is a mock of WorkflowRepository interface.
 type MockWorkflowRepository struct {
 	ctrl     *gomock.Controller

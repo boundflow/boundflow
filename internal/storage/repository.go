@@ -17,6 +17,7 @@ type TenantGroupRepository interface {
 type TenantRepository interface {
 	Create(ctx context.Context, tenant *domain.Tenant) error
 	Get(ctx context.Context, id string) (*domain.Tenant, error)
+	ListForTenantGroup(ctx context.Context, tenantGroupID string) ([]*domain.Tenant, error)
 	Delete(ctx context.Context, id string) error
 }
 

@@ -168,6 +168,24 @@ func (h *RegistrationHandler) GetTenant(ctx context.Context, req *boundflowv1.Ge
 	}, nil
 }
 
+func (h *RegistrationHandler) ListTenants(ctx context.Context, req *boundflowv1.ListTenantsRequest) (*boundflowv1.ListTenantsResponse, error) {
+	group, err := callerTenantGroup(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	tenants, err := h.svc.ListTenants(ctx, group)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "list tenants: %v", err)
+	}
+
+	out := make([]*boundflowv1.Tenant, 0, len(tenants))
+	for _, t := range tenants {
+		out = append(out, convert.TenantToProto(t))
+	}
+	return &boundflowv1.ListTenantsResponse{Tenants: out}, nil
+}
+
 func (h *RegistrationHandler) DeleteTenant(ctx context.Context, req *boundflowv1.DeleteTenantRequest) (*boundflowv1.DeleteTenantResponse, error) {
 	if req.Id == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "id is required")

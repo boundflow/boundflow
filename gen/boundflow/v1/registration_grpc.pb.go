@@ -24,6 +24,7 @@ const (
 	RegistrationService_DeleteTenantGroup_FullMethodName = "/boundflow.v1.RegistrationService/DeleteTenantGroup"
 	RegistrationService_CreateTenant_FullMethodName      = "/boundflow.v1.RegistrationService/CreateTenant"
 	RegistrationService_GetTenant_FullMethodName         = "/boundflow.v1.RegistrationService/GetTenant"
+	RegistrationService_ListTenants_FullMethodName       = "/boundflow.v1.RegistrationService/ListTenants"
 	RegistrationService_DeleteTenant_FullMethodName      = "/boundflow.v1.RegistrationService/DeleteTenant"
 	RegistrationService_SetModelPricing_FullMethodName   = "/boundflow.v1.RegistrationService/SetModelPricing"
 	RegistrationService_ListModelPricing_FullMethodName  = "/boundflow.v1.RegistrationService/ListModelPricing"
@@ -41,6 +42,9 @@ type RegistrationServiceClient interface {
 	DeleteTenantGroup(ctx context.Context, in *DeleteTenantGroupRequest, opts ...grpc.CallOption) (*DeleteTenantGroupResponse, error)
 	CreateTenant(ctx context.Context, in *CreateTenantRequest, opts ...grpc.CallOption) (*CreateTenantResponse, error)
 	GetTenant(ctx context.Context, in *GetTenantRequest, opts ...grpc.CallOption) (*GetTenantResponse, error)
+	// ListTenants returns the caller's tenants (scoped to their tenant group,
+	// resolved from the API key).
+	ListTenants(ctx context.Context, in *ListTenantsRequest, opts ...grpc.CallOption) (*ListTenantsResponse, error)
 	DeleteTenant(ctx context.Context, in *DeleteTenantRequest, opts ...grpc.CallOption) (*DeleteTenantResponse, error)
 	// Pricing is scoped to the caller's tenant group (resolved from the API key).
 	// SetModelPricing overrides a model's rate; ListModelPricing returns the
@@ -107,6 +111,16 @@ func (c *registrationServiceClient) GetTenant(ctx context.Context, in *GetTenant
 	return out, nil
 }
 
+func (c *registrationServiceClient) ListTenants(ctx context.Context, in *ListTenantsRequest, opts ...grpc.CallOption) (*ListTenantsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListTenantsResponse)
+	err := c.cc.Invoke(ctx, RegistrationService_ListTenants_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *registrationServiceClient) DeleteTenant(ctx context.Context, in *DeleteTenantRequest, opts ...grpc.CallOption) (*DeleteTenantResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DeleteTenantResponse)
@@ -149,6 +163,9 @@ type RegistrationServiceServer interface {
 	DeleteTenantGroup(context.Context, *DeleteTenantGroupRequest) (*DeleteTenantGroupResponse, error)
 	CreateTenant(context.Context, *CreateTenantRequest) (*CreateTenantResponse, error)
 	GetTenant(context.Context, *GetTenantRequest) (*GetTenantResponse, error)
+	// ListTenants returns the caller's tenants (scoped to their tenant group,
+	// resolved from the API key).
+	ListTenants(context.Context, *ListTenantsRequest) (*ListTenantsResponse, error)
 	DeleteTenant(context.Context, *DeleteTenantRequest) (*DeleteTenantResponse, error)
 	// Pricing is scoped to the caller's tenant group (resolved from the API key).
 	// SetModelPricing overrides a model's rate; ListModelPricing returns the
@@ -179,6 +196,9 @@ func (UnimplementedRegistrationServiceServer) CreateTenant(context.Context, *Cre
 }
 func (UnimplementedRegistrationServiceServer) GetTenant(context.Context, *GetTenantRequest) (*GetTenantResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetTenant not implemented")
+}
+func (UnimplementedRegistrationServiceServer) ListTenants(context.Context, *ListTenantsRequest) (*ListTenantsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListTenants not implemented")
 }
 func (UnimplementedRegistrationServiceServer) DeleteTenant(context.Context, *DeleteTenantRequest) (*DeleteTenantResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteTenant not implemented")
@@ -300,6 +320,24 @@ func _RegistrationService_GetTenant_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _RegistrationService_ListTenants_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListTenantsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RegistrationServiceServer).ListTenants(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RegistrationService_ListTenants_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RegistrationServiceServer).ListTenants(ctx, req.(*ListTenantsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _RegistrationService_DeleteTenant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DeleteTenantRequest)
 	if err := dec(in); err != nil {
@@ -380,6 +418,10 @@ var RegistrationService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetTenant",
 			Handler:    _RegistrationService_GetTenant_Handler,
+		},
+		{
+			MethodName: "ListTenants",
+			Handler:    _RegistrationService_ListTenants_Handler,
 		},
 		{
 			MethodName: "DeleteTenant",

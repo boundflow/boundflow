@@ -351,6 +351,12 @@ class ControlPlaneClient:
             metadata=self._metadata)
         return Tenant(resp.tenant.id, resp.tenant.name, resp.tenant.tenant_group_id)
 
+    async def list_tenants(self) -> list[Tenant]:
+        """The caller's tenants, scoped to their tenant group (resolved from the API key)."""
+        resp = await self._reg.ListTenants(
+            reg.ListTenantsRequest(), metadata=self._metadata)
+        return [Tenant(t.id, t.name, t.tenant_group_id) for t in resp.tenants]
+
     # ── Pricing ──────────────────────────────────────────────────────────────
 
     async def set_model_pricing(self, model_id: str, input_per_1m: float, output_per_1m: float) -> None:
