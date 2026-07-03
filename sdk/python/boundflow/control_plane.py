@@ -371,6 +371,28 @@ class ControlPlaneClient:
             metadata=self._metadata)
         return Tenant(resp.tenant.id, resp.tenant.name, resp.tenant.tenant_group_id)
 
+    async def get_tenant_group(self, tenant_group_id: str) -> TenantGroup:
+        resp = await self._reg.GetTenantGroup(
+            reg.GetTenantGroupRequest(id=tenant_group_id),
+            metadata=self._metadata)
+        return TenantGroup(resp.tenant_group.id, resp.tenant_group.name)
+
+    async def delete_tenant_group(self, tenant_group_id: str) -> None:
+        await self._reg.DeleteTenantGroup(
+            reg.DeleteTenantGroupRequest(id=tenant_group_id),
+            metadata=self._metadata)
+
+    async def get_tenant(self, tenant_id: str) -> Tenant:
+        resp = await self._reg.GetTenant(
+            reg.GetTenantRequest(id=tenant_id),
+            metadata=self._metadata)
+        return Tenant(resp.tenant.id, resp.tenant.name, resp.tenant.tenant_group_id)
+
+    async def delete_tenant(self, tenant_id: str) -> None:
+        await self._reg.DeleteTenant(
+            reg.DeleteTenantRequest(id=tenant_id),
+            metadata=self._metadata)
+
     async def list_tenants(self) -> list[Tenant]:
         """The caller's tenants, scoped to their tenant group (resolved from the API key)."""
         resp = await self._reg.ListTenants(
