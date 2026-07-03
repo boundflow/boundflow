@@ -24,6 +24,7 @@ from boundflow.v1 import workflow_pb2 as ri
 from boundflow.v1 import tenant_group_pb2 as tg_pb
 from boundflow.v1 import tenant_pb2 as tn_pb
 
+from .errors import from_rpc_error
 from .policies import (
     AgentRule, Cooldown, Pause, RuntimePolicy, SetVersion, WorkflowMetric, WorkflowRule,
 )
@@ -317,6 +318,25 @@ def _make_channel(addr: str):
 DEFAULT_SERVER_ADDRESS = "http://localhost:50051"
 
 
+class _TranslatingStub:
+    """Wraps a gRPC stub so every unary call raises a typed BoundflowError instead of
+    a raw grpc.aio.AioRpcError — callers never see the transport layer."""
+
+    def __init__(self, stub):
+        self._stub = stub
+
+    def __getattr__(self, name):
+        method = getattr(self._stub, name)
+
+        async def call(*args, **kwargs):
+            try:
+                return await method(*args, **kwargs)
+            except grpc.aio.AioRpcError as exc:
+                raise from_rpc_error(exc) from exc
+
+        return call
+
+
 class ControlPlaneClient:
     def __init__(self, server_address: str | None = None, api_key: str | None = None) -> None:
         address = server_address or os.environ.get("BOUNDFLOW_SERVER_ADDRESS") or DEFAULT_SERVER_ADDRESS
@@ -325,8 +345,8 @@ class ControlPlaneClient:
             raise ValueError("api_key must be provided or BOUNDFLOW_API_KEY must be set")
         self._metadata = (("x-api-key", key),)
         self._channel = _make_channel(address)
-        self._reg = reg_grpc.RegistrationServiceStub(self._channel)
-        self._lc = lc_grpc.WorkflowServiceStub(self._channel)
+        self._reg = _TranslatingStub(reg_grpc.RegistrationServiceStub(self._channel))
+        self._lc = _TranslatingStub(lc_grpc.WorkflowServiceStub(self._channel))
 
     async def __aenter__(self) -> "ControlPlaneClient":
         return self

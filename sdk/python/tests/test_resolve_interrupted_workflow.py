@@ -3,10 +3,16 @@ from __future__ import annotations
 
 import asyncio
 
-import grpc
 import pytest
 
-from boundflow import BoundFlowWorker, Complete, LifecycleState, WorkflowConfig, WorkflowState
+from boundflow import (
+    BoundFlowWorker,
+    Complete,
+    FailedPreconditionError,
+    LifecycleState,
+    WorkflowConfig,
+    WorkflowState,
+)
 
 from .conftest import (
     WORKER_ADDRESS,
@@ -63,9 +69,8 @@ async def test_resolve_interrupted_workflow_requires_matching_request_id(cp):
     assert await _last_interrupted_request_id(cp, workflow.id) == request_id
 
     # Resolving with a wrong id is rejected, and the workflow stays interrupted.
-    with pytest.raises(grpc.aio.AioRpcError) as exc:
+    with pytest.raises(FailedPreconditionError):
         await cp.resolve_interrupted_workflow(workflow.id, "not-the-right-id")
-    assert exc.value.code() == grpc.StatusCode.FAILED_PRECONDITION
     assert await cp.get_workflow_lifecycle_state(workflow.id) == LifecycleState.INTERRUPTED
 
     # Resolving with the matching id re-activates the workflow.
