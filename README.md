@@ -82,6 +82,7 @@ change?* BoundFlow makes those **policies** instead of code:
 | Output blowups | `max_tokens_per_call`, per-tool call limits |
 | Flaky/failing runs | Cooldowns, automatic version rollback |
 | Cost accounting | Per-tenant model pricing, cache-aware cost from real token usage |
+| Flying blind | OpenTelemetry-native traces of every run (GenAI semantics) shipped to *your* stack — Jaeger, Tempo, Langfuse, Phoenix — plus a durable, queryable audit log of every approval and policy decision |
 
 Policies are evaluated server-side (lifecycle) and enforced SDK-side (runtime),
 with per-invocation metrics — cost, tokens, LLM calls, per-tool counts/failures —
@@ -157,6 +158,28 @@ async def triage(ctx):
     return Complete()
 ```
 
+Workflows are **multi-step and stateful**: an operation can park for a human
+decision or chain into a follow-on operation, and the workflow resumes where it
+left off — nothing irreversible runs until the branch it's gated behind does.
+
+```python
+from boundflow import AwaitApproval, Next, Complete
+
+@worker.workflow("refund", version=1)
+async def refund(ctx):
+    await ctx.run_agent(analyst)                    # step 1: reason about the request
+    return AwaitApproval(                            # park — nothing irreversible yet
+        on_approve=Next("issue_refund", ctx.context),
+        on_reject=Complete(),
+        justification="Approve the $5,000 refund?",
+    )
+
+@worker.operation("refund", "issue_refund")         # step 2: runs only after a human approves
+async def issue_refund(ctx):
+    ...                                              # the sensitive action, now sanctioned
+    return Complete()
+```
+
 Governance is applied from the control plane — three layers, from a per-run cap
 to self-healing version rollback:
 
@@ -190,8 +213,10 @@ rolling back. See [`sdk/python/boundflow/examples/`](sdk/python/boundflow/exampl
 
 ## Observability
 
-Two layers: **run traces** (execution telemetry you export to your own backend)
-and a **governance audit log** (decisions, kept server-side and queryable).
+Observability is first-class and **OpenTelemetry-native** — no proprietary format,
+no lock-in, so it plugs straight into the telemetry stack you already run. Two
+layers: **run traces** (execution telemetry you export to your own backend) and a
+**governance audit log** (decisions, kept server-side and queryable).
 
 **Run traces.** Every operation emits an `OperationTrace` — the `operation → agent
 → llm/tool` tree with token usage and full prompt/response content — to a pluggable
