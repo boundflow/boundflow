@@ -14,6 +14,17 @@ from .control_plane import (
     WorkflowState,
     WorkflowSummary,
 )
+from .errors import (
+    AlreadyExistsError,
+    BoundflowError,
+    DeadlineExceededError,
+    FailedPreconditionError,
+    InvalidArgumentError,
+    NotFoundError,
+    PermissionDeniedError,
+    UnauthenticatedError,
+    UnavailableError,
+)
 from .llm import MockLlmClient, MockContext, Turn, turn, submit
 from .trace import (
     AgentRunTrace,
@@ -64,4 +75,7 @@ __all__ = [
     "Complete", "Next", "OperationContext", "OperationResult", "Tool", "tool",
     "AgentRunTrace", "OperationTrace", "Span", "TraceSink", "LoggingTraceSink",
     "JsonlFileTraceSink", "OTelTraceSink",
+    "BoundflowError", "NotFoundError", "AlreadyExistsError", "InvalidArgumentError",
+    "FailedPreconditionError", "PermissionDeniedError", "UnauthenticatedError",
+    "UnavailableError", "DeadlineExceededError",
 ]
