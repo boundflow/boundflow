@@ -3,7 +3,7 @@ site_description: The operational layer for the LLM agents and workflows you run
 site_url: https://docs.boundflow.dev
 repo_url: https://github.com/boundflow/boundflow
 repo_name: boundflow/boundflow
-edit_uri: edit/boundflow/docs/
+edit_uri: edit/main/docs/
 
 theme:
   name: material
