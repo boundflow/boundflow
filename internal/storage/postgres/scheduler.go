@@ -288,10 +288,10 @@ func (r *SchedulerRepo) ReconcileWorkflowLifecycles(ctx context.Context, partiti
 		            ri.lifecycle_state AS current_state,
 		            (CASE
 		                 WHEN j.status IN ('dispatched', 'running') THEN 'invoking'
-		                 WHEN j.status = 'awaiting_approval'         THEN 'awaiting_approval'
-		                 WHEN j.owner IS NULL
+		                 WHEN j.status = 'awaiting_approval' THEN 'awaiting_approval'
+		                 WHEN j.status IN ('pending', 'awaiting_next', 'approved', 'rejected') AND j.owner IS NULL
 		                      AND now() - j.created_at > make_interval(secs => $2) THEN 'blocked'
-		                 ELSE 'scheduled'
+		                 WHEN j.status = 'pending' THEN 'scheduled'
 		             END)::lifecycle_state AS new_state
 		     FROM jobs j
 		     JOIN workflows ri ON j.workflow_id = ri.id
