@@ -1,8 +1,9 @@
 """boundflow workflow — workflow lifecycle CLI tests.
 
 Invoke tests do not require a worker: the server accepts the request and returns
-a request_id immediately; the workflow transitions to INVOKING. Tests that need
-a completed run are in the SDK integration suite (test_approval_gate.py, etc.).
+a request_id immediately; with no worker to pick it up the run sits in SCHEDULED.
+Tests that need a completed run are in the SDK integration suite
+(test_approval_gate.py, etc.).
 """
 from __future__ import annotations
 
@@ -140,14 +141,16 @@ def test_invoke_returns_request_id(runner, boundflow_api_key):
     assert "request_id" in data and data["request_id"]
 
 
-def test_invoke_transitions_to_invoking_state(runner, boundflow_api_key):
+def test_invoke_transitions_to_scheduled_state(runner, boundflow_api_key):
     tenant_id = make_tenant(runner, boundflow_api_key, "wf-inv-state")
     wf_id = make_workflow(runner, boundflow_api_key, tenant_id)
     run(runner, boundflow_api_key, ["workflow", "activate", wf_id])
     run(runner, boundflow_api_key, ["workflow", "invoke", wf_id])
 
+    # With no worker connected, the run waits for pickup: 'scheduled'. It only
+    # becomes 'invoking' once a worker actually dispatches the operation.
     state = run(runner, boundflow_api_key, ["workflow", "get", wf_id])
-    assert state["lifecycle_state"] == "invoking"
+    assert state["lifecycle_state"] == "scheduled"
 
 
 # ── Delete ───────────────────────────────────────────────────────────────────
@@ -161,6 +164,40 @@ def test_delete_workflow_removes_it(runner, boundflow_api_key):
     assert result["status"] == "ok"
 
     run_expect_fail(runner, boundflow_api_key, ["workflow", "get", wf_id])
+
+
+# ── Runs ─────────────────────────────────────────────────────────────────────
+
+
+def test_runs_lists_the_invocation(runner, boundflow_api_key):
+    tenant_id = make_tenant(runner, boundflow_api_key, "wf-runs")
+    wf_id = make_workflow(runner, boundflow_api_key, tenant_id)
+    run(runner, boundflow_api_key, ["workflow", "activate", wf_id])
+    request_id = run(runner, boundflow_api_key, ["workflow", "invoke", wf_id])["request_id"]
+
+    runs = run(runner, boundflow_api_key, ["workflow", "runs", wf_id])
+    assert any(r["request_id"] == request_id for r in runs)
+
+
+def test_request_returns_run_info(runner, boundflow_api_key):
+    tenant_id = make_tenant(runner, boundflow_api_key, "wf-req")
+    wf_id = make_workflow(runner, boundflow_api_key, tenant_id)
+    run(runner, boundflow_api_key, ["workflow", "activate", wf_id])
+    request_id = run(runner, boundflow_api_key, ["workflow", "invoke", wf_id])["request_id"]
+
+    info = run(runner, boundflow_api_key, ["workflow", "request", request_id])
+    assert info["request_id"] == request_id
+    assert info["workflow_id"] == wf_id
+    assert info["status"], "expected a run status"
+
+
+def test_resolve_uninterrupted_workflow_fails(runner, boundflow_api_key):
+    # A workflow that isn't interrupted can't be resolved → non-zero exit.
+    tenant_id = make_tenant(runner, boundflow_api_key, "wf-resolve")
+    wf_id = make_workflow(runner, boundflow_api_key, tenant_id)
+    run(runner, boundflow_api_key, ["workflow", "activate", wf_id])
+
+    run_expect_fail(runner, boundflow_api_key, ["workflow", "resolve", wf_id, "some-request-id"])
 
 
 # ── JSON output ───────────────────────────────────────────────────────────────

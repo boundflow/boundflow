@@ -62,3 +62,12 @@ def test_get_nonexistent_tenant_group_fails(runner, boundflow_api_key):
         runner, boundflow_api_key,
         ["tenant", "group", "get", "00000000-0000-0000-0000-000000000000"],
     )
+
+
+def test_list_includes_created_tenants(runner, boundflow_api_key):
+    a = make_tenant(runner, boundflow_api_key, "cli-list-a")
+    b = make_tenant(runner, boundflow_api_key, "cli-list-b")
+
+    tenants = run(runner, boundflow_api_key, ["tenant", "list"])
+    ids = {t["id"] for t in tenants}
+    assert a in ids and b in ids
