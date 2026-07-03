@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# quickstart.sh — full boundflowwalkthrough from a fresh stack
+# quickstart.sh — full boundflow walkthrough from a fresh stack
 #
 # Prerequisites:
 #   docker compose up -d --build --wait
@@ -24,7 +24,7 @@ echo
 echo "-- create tenant --"
 boundflowtenant create acme
 
-TENANT_ID=$(boundflow--json tenant create acme-ops | python -c "import sys,json; print(json.load(sys.stdin)['id'])")
+TENANT_ID=$(boundflow --json tenant create acme-ops | python -c "import sys,json; print(json.load(sys.stdin)['id'])")
 echo "tenant id: $TENANT_ID"
 echo
 
@@ -32,7 +32,7 @@ echo
 echo "-- create workflow --"
 boundflowworkflow create ticket-triage "$TENANT_ID" --version 1
 
-WORKFLOW_ID=$(boundflow--json workflow create order-remediation "$TENANT_ID" --version 1 | python -c "import sys,json; print(json.load(sys.stdin)['id'])")
+WORKFLOW_ID=$(boundflow --json workflow create order-remediation "$TENANT_ID" --version 1 | python -c "import sys,json; print(json.load(sys.stdin)['id'])")
 echo "workflow id: $WORKFLOW_ID"
 
 echo

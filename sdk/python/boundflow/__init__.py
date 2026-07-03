@@ -4,9 +4,15 @@ from .anthropic_client import AnthropicLlmClient
 from .control_plane import (
     ControlPlaneClient,
     ApprovalAuditRecord,
+    ApprovalDecision,
     PolicyActionRecord,
+    WorkflowPolicyAction,
     AgentPolicyActionRecord,
     LifecycleState,
+    RequestInfo,
+    Run,
+    RunOutcome,
+    RunStatus,
     Tenant,
     TenantGroup,
     Workflow,
@@ -66,8 +72,9 @@ from .worker import (
 
 __all__ = [
     "AnthropicLlmClient",
-    "ControlPlaneClient", "LifecycleState", "Tenant", "TenantGroup", "Workflow",
-    "WorkflowConfig", "WorkflowState", "WorkflowSummary", "ApprovalAuditRecord", "PolicyActionRecord", "AgentPolicyActionRecord", "MockLlmClient", "MockContext", "Turn",
+    "ControlPlaneClient", "LifecycleState", "RunStatus", "RunOutcome", "Run", "RequestInfo",
+    "Tenant", "TenantGroup", "Workflow",
+    "WorkflowConfig", "WorkflowState", "WorkflowSummary", "ApprovalAuditRecord", "ApprovalDecision", "PolicyActionRecord", "WorkflowPolicyAction", "AgentPolicyActionRecord", "MockLlmClient", "MockContext", "Turn",
     "turn", "submit", "AgentMetric", "AgentRule", "Cooldown", "Op", "Pause",
     "RuntimePolicy", "SetMaxCostUsd", "SetMaxLlmCalls", "SetMaxTokensPerCall",
     "SetModel", "SetVersion", "ToolCallLimit", "WorkflowMetric", "WorkflowRule",

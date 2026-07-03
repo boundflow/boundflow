@@ -11,8 +11,8 @@ echo "=== boundflowgovernance demo ==="
 echo
 
 # ── Setup ────────────────────────────────────────────────────────────────────
-TENANT_ID=$(boundflow--json tenant create gov-demo | python -c "import sys,json; print(json.load(sys.stdin)['id'])")
-WF_ID=$(boundflow--json workflow create order-remediation "$TENANT_ID" --version 1 | python -c "import sys,json; print(json.load(sys.stdin)['id'])")
+TENANT_ID=$(boundflow --json tenant create gov-demo | python -c "import sys,json; print(json.load(sys.stdin)['id'])")
+WF_ID=$(boundflow --json workflow create order-remediation "$TENANT_ID" --version 1 | python -c "import sys,json; print(json.load(sys.stdin)['id'])")
 boundflowworkflow activate "$WF_ID"
 echo "tenant:   $TENANT_ID"
 echo "workflow: $WF_ID"

@@ -79,6 +79,44 @@ class WorkflowState(str, Enum):
     DISABLED = "disabled"
 
 
+class RunStatus(str, Enum):
+    """Lifecycle of a single run (Run.status / RequestInfo.status)."""
+    UNSCHEDULED = "unscheduled"
+    SCHEDULED = "scheduled"
+    IN_PROGRESS = "in_progress"
+    FAILED = "failed"
+    COMPLETED = "completed"
+    SUPERCEDED = "superceded"
+
+    def is_terminal(self) -> bool:
+        return self in (RunStatus.COMPLETED, RunStatus.FAILED, RunStatus.SUPERCEDED)
+
+
+class RunOutcome(str, Enum):
+    """The terminal, customer-facing result of a run (None until the run is terminal)."""
+    SUCCESSFUL = "successful"
+    CUSTOMER_MARKED_FAILURE = "customer_marked_failure"
+    UNCAUGHT_OPERATION_EXCEPTION = "uncaught_operation_exception"
+    OPERATION_TIMEOUT = "operation_timeout"
+    INTERRUPTED = "interrupted"
+
+
+class ApprovalDecision(str, Enum):
+    """How an approval gate was resolved (ApprovalAuditRecord.decision)."""
+    UNSPECIFIED = "unspecified"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    TIMED_OUT = "timed_out"
+
+
+class WorkflowPolicyAction(str, Enum):
+    """The action a workflow-lifecycle rule took (PolicyActionRecord.action)."""
+    UNSPECIFIED = "unspecified"
+    SET_VERSION = "set_version"
+    COOLDOWN = "cooldown"
+    PAUSE = "pause"
+
+
 @dataclass
 class WorkflowSummary:
     """A lightweight, read-only view of a workflow — what `list_workflows` returns
@@ -94,15 +132,14 @@ class WorkflowSummary:
 
 @dataclass
 class Run:
-    """One run (invocation) of a workflow. run_outcome is "" while the run is in flight,
-    then one of: successful | customer_marked_failure | uncaught_operation_exception |
-    operation_timeout | interrupted. failure_reason carries detail (e.g. the exception
-    text for an uncaught_operation_exception). status is the run lifecycle (scheduled |
-    in_progress | completed | ...) — useful while run_outcome is still empty."""
+    """One run (invocation) of a workflow. `status` is the run lifecycle
+    (`RunStatus`); `run_outcome` is the terminal `RunOutcome`, or None while the run
+    is still in flight. failure_reason carries detail (e.g. the exception text for an
+    uncaught_operation_exception)."""
     request_id: str
     request_type: str
-    status: str
-    run_outcome: str
+    status: RunStatus
+    run_outcome: RunOutcome | None
     failure_reason: str
     created_at: datetime | None
     completed_at: datetime | None
@@ -110,15 +147,15 @@ class Run:
 
 @dataclass
 class RequestInfo:
-    """Full state of one run, from get_request_info(request_id). status is the run's
-    lifecycle (unscheduled | scheduled | in_progress | completed | failed | superceded);
-    run_outcome is the terminal outcome ("" until terminal). sequence_number orders a
-    workflow's runs (monotonic per workflow)."""
+    """Full state of one run, from get_request_info(request_id). `status` is the run's
+    lifecycle (`RunStatus`); `run_outcome` is the terminal `RunOutcome`, or None until
+    the run is terminal. sequence_number orders a workflow's runs (monotonic per
+    workflow)."""
     request_id: str
     workflow_id: str
     request_type: str
-    status: str
-    run_outcome: str
+    status: RunStatus
+    run_outcome: RunOutcome | None
     failure_reason: str
     sequence_number: int
     created_at: datetime | None
@@ -133,7 +170,7 @@ class ApprovalAuditRecord:
     workflow_id: str
     request_id: str
     approval_id: str
-    decision: str                  # "approved" | "rejected" | "timed_out" | "unspecified"
+    decision: ApprovalDecision
     opened_at: datetime | None
     decided_at: datetime | None
     actor: str                     # customer-supplied; empty for timeouts
@@ -150,7 +187,7 @@ class PolicyActionRecord:
     threshold: float
     window: int
     tool: str
-    action: str                # "set_version" | "cooldown" | "pause"
+    action: WorkflowPolicyAction
     target_version: int        # set_version
     cooldown_seconds: int      # cooldown
     trigger_value: float
@@ -176,9 +213,9 @@ class AgentPolicyActionRecord:
 
 
 _APPROVAL_DECISION = {
-    lc.APPROVAL_DECISION_APPROVED: "approved",
-    lc.APPROVAL_DECISION_REJECTED: "rejected",
-    lc.APPROVAL_DECISION_TIMED_OUT: "timed_out",
+    lc.APPROVAL_DECISION_APPROVED: ApprovalDecision.APPROVED,
+    lc.APPROVAL_DECISION_REJECTED: ApprovalDecision.REJECTED,
+    lc.APPROVAL_DECISION_TIMED_OUT: ApprovalDecision.TIMED_OUT,
 }
 _WORKFLOW_METRIC = {
     lc.WORKFLOW_METRIC_NUM_FAILURES: "num_failures",
@@ -189,9 +226,9 @@ _WORKFLOW_METRIC = {
     lc.WORKFLOW_METRIC_TOOL_FAILURE_RATE: "tool_failure_rate",
 }
 _WORKFLOW_ACTION = {
-    lc.WORKFLOW_POLICY_ACTION_PAUSE: "pause",
-    lc.WORKFLOW_POLICY_ACTION_COOLDOWN: "cooldown",
-    lc.WORKFLOW_POLICY_ACTION_SET_VERSION: "set_version",
+    lc.WORKFLOW_POLICY_ACTION_PAUSE: WorkflowPolicyAction.PAUSE,
+    lc.WORKFLOW_POLICY_ACTION_COOLDOWN: WorkflowPolicyAction.COOLDOWN,
+    lc.WORKFLOW_POLICY_ACTION_SET_VERSION: WorkflowPolicyAction.SET_VERSION,
 }
 _AGENT_METRIC = {
     ap.AGENT_METRIC_TOKENS_USED: "tokens_used",
@@ -221,7 +258,7 @@ def _ts(msg, field):
 def _approval_record(r) -> ApprovalAuditRecord:
     return ApprovalAuditRecord(
         workflow_id=r.workflow_id, request_id=r.request_id, approval_id=r.approval_id,
-        decision=_APPROVAL_DECISION.get(r.decision, "unspecified"),
+        decision=_APPROVAL_DECISION.get(r.decision, ApprovalDecision.UNSPECIFIED),
         opened_at=_ts(r, "opened_at"), decided_at=_ts(r, "decided_at"),
         actor=r.actor, occurred_at=_ts(r, "occurred_at"))
 
@@ -232,7 +269,7 @@ def _workflow_policy_record(r) -> PolicyActionRecord:
         workflow_id=r.workflow_id, request_id=r.request_id,
         metric=_WORKFLOW_METRIC.get(r.rule.metric, "unknown"), threshold=r.rule.threshold,
         window=r.rule.window, tool=r.rule.tool_name,
-        action=_WORKFLOW_ACTION.get(act.type, "unknown"),
+        action=_WORKFLOW_ACTION.get(act.type, WorkflowPolicyAction.UNSPECIFIED),
         target_version=act.target_version, cooldown_seconds=act.cooldown_seconds,
         trigger_value=r.trigger_value, previous_version=r.previous_version,
         previous_state=r.previous_state, actor=r.actor, occurred_at=_ts(r, "occurred_at"))
@@ -500,8 +537,8 @@ class ControlPlaneClient:
             Run(
                 request_id=r.request_id,
                 request_type=r.request_type,
-                status=r.status,
-                run_outcome=r.run_outcome,
+                status=RunStatus(r.status),
+                run_outcome=RunOutcome(r.run_outcome) if r.run_outcome else None,
                 failure_reason=r.failure_reason,
                 created_at=_ts(r, "created_at"),
                 completed_at=_ts(r, "completed_at"),
@@ -518,8 +555,8 @@ class ControlPlaneClient:
             request_id=r.request_id,
             workflow_id=r.workflow_id,
             request_type=r.request_type,
-            status=r.status,
-            run_outcome=r.run_outcome,
+            status=RunStatus(r.status),
+            run_outcome=RunOutcome(r.run_outcome) if r.run_outcome else None,
             failure_reason=r.failure_reason,
             sequence_number=r.version,
             created_at=_ts(r, "created_at"),
