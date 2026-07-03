@@ -87,13 +87,13 @@ code:
 
 | Concern | BoundFlow gives you |
 |---|---|
-| Runaway spend | `max_cost_usd` runtime cap — halts the agent when a run's cost crosses a budget |
-| Wrong model for the job | Lifecycle policies that switch the model on cost/loop signals (e.g. downgrade to Haiku after a cost spike) |
-| Irreversible actions | Approval gates — the workflow parks for a human decision before continuing |
-| Output blowups | `max_tokens_per_call`, per-tool call limits |
-| Flaky/failing runs | Cooldowns, automatic version rollback |
-| Cost accounting | Per-tenant model pricing, cache-aware cost from real token usage |
-| Flying blind | OpenTelemetry-native traces of every run (GenAI semantics) shipped to *your* stack — Jaeger, Tempo, Langfuse, Phoenix — plus a durable, queryable audit log of every approval and policy decision |
+| Runaway cost | A hard `max_cost_usd` cap that halts a run the moment its cost crosses budget |
+| Irreversible actions | Approval gates — the workflow parks for a human decision before it acts |
+| Loops & output blowups | Runtime limits: `max_llm_calls`, `max_tokens_per_call`, per-tool call caps |
+| Wrong model for the job | Agent lifecycle policy — react to signals over the agent's entire life (e.g. downgrade a costly model to a cheaper one past a certain budget) |
+| Degrading or failing workflows | Self-healing lifecycle policy — cool down, pause, or auto-roll-back to a known-good version |
+| Flying blind | OpenTelemetry-native run traces shipped to *your* stack (Jaeger, Tempo, Langfuse, …), plus a durable, queryable audit log of every approval and policy decision |
+| Your keys & token spend | Bring-your-own inference — agents call Claude with your key; the backend never sees it or pays for tokens (cache-aware, per-tenant cost) |
 
 Policies are evaluated server-side (lifecycle) and enforced SDK-side (runtime),
 with per-invocation metrics — cost, tokens, LLM calls, per-tool counts/failures —
