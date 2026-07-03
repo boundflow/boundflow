@@ -1,6 +1,6 @@
 # BoundFlow
 
-**The operational layer for LLM agents you run unattended — cost caps, approval gates, and self-healing policy, enforced by a control plane.**
+**The operational layer for the LLM agents and workflows you run unattended — cost caps, approval gates, and self-healing policy, enforced by a control plane.**
 
 ![status: preview](https://img.shields.io/badge/status-preview-orange)
 ![backend: Apache-2.0](https://img.shields.io/badge/backend-Apache--2.0-blue)
@@ -69,10 +69,20 @@ python -m boundflow.examples.approval_gate   # human-in-the-loop sign-off
 
 ## Why BoundFlow
 
-Agents are easy to demo and hard to operate. The moment they run unattended,
-you need answers to: *What if it loops? What if it spends $50? What if it's about
-to do something irreversible? Which model should it use, and when should that
-change?* BoundFlow makes those **policies** instead of code:
+**Agents that take real actions need a control plane that takes real action when
+they go wrong.** Most tools *watch* your agents; BoundFlow *intervenes* — at both
+levels. On the **agent**: cap its spend, swap its model mid-run. On the
+**workflow**: gate a risky step for human sign-off, cool it down, roll it back to a
+known-good version, or pause it outright. It's **workflow-aware, not just
+agent-aware** — because it runs the whole workflow, not just the model call:
+scheduling each run, carrying state across steps, recovering from failures, and
+driving it through its lifecycle, with the agent as just one operation inside a
+durable, multi-step process it owns end to end.
+
+The moment agents run unattended you need answers to: *What if it loops? What if
+it spends $50? What if it's about to do something irreversible? Which model should
+it use, and when should that change?* BoundFlow makes those **policies** instead of
+code:
 
 | Concern | BoundFlow gives you |
 |---|---|
