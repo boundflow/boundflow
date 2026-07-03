@@ -1,0 +1,310 @@
+syntax = "proto3";
+
+package boundflow.v1;
+
+option go_package = "github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1";
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "boundflow/v1/workflow.proto";
+import "boundflow/v1/agent_policy.proto";
+
+service WorkflowService {
+  rpc CreateWorkflow(CreateWorkflowRequest) returns (CreateWorkflowResponse);
+  rpc InvokeWorkflow(InvokeWorkflowRequest) returns (InvokeWorkflowResponse);
+  rpc DeleteWorkflow(DeleteWorkflowRequest) returns (DeleteWorkflowResponse);
+  rpc GetWorkflow(GetWorkflowRequest) returns (GetWorkflowResponse);
+  rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse);
+
+  rpc SetAgentRuntimePolicy(SetAgentRuntimePolicyRequest) returns (SetAgentRuntimePolicyResponse);
+  rpc SetAgentLifecyclePolicy(SetAgentLifecyclePolicyRequest) returns (SetAgentLifecyclePolicyResponse);
+  rpc DeleteAgent(DeleteAgentRequest) returns (DeleteAgentResponse);
+
+  rpc SetWorkflowLifecyclePolicy(SetWorkflowLifecyclePolicyRequest) returns (SetWorkflowLifecyclePolicyResponse);
+  rpc ApproveWorkflow(ApproveWorkflowRequest) returns (ApproveWorkflowResponse);
+  rpc RejectWorkflow(RejectWorkflowRequest) returns (RejectWorkflowResponse);
+  // Per-type audit getters (workflow_id required); GetAuditLog is the unified,
+  // time-ordered log (workflow_id optional — omitted = whole tenant group).
+  rpc GetApprovalAudit(GetApprovalAuditRequest) returns (GetApprovalAuditResponse);
+  rpc GetApprovalAuditById(GetApprovalAuditByIdRequest) returns (GetApprovalAuditByIdResponse);
+  rpc GetWorkflowPolicyAudit(GetWorkflowPolicyAuditRequest) returns (GetWorkflowPolicyAuditResponse);
+  rpc GetAgentPolicyAudit(GetAgentPolicyAuditRequest) returns (GetAgentPolicyAuditResponse);
+  rpc GetAuditLog(GetAuditLogRequest) returns (GetAuditLogResponse);
+  rpc ActivateWorkflow(ActivateWorkflowRequest) returns (ActivateWorkflowResponse);
+  rpc ResolveInterruptedWorkflow(ResolveInterruptedWorkflowRequest) returns (ResolveInterruptedWorkflowResponse);
+  rpc ListWorkflowRuns(ListWorkflowRunsRequest) returns (ListWorkflowRunsResponse);
+  rpc GetRequestInfo(GetRequestInfoRequest) returns (GetRequestInfoResponse);
+}
+
+message CreateWorkflowRequest {
+  string correlation_id = 1;
+  string workflow_type = 2;
+  string tenant_id = 3;
+  reserved 4; // was: initial_state (unused customer-state blob, removed with ConvergePlane cleanup)
+  // Deprecated: use workflow_config.invoke_timeout_seconds instead.
+  int32 operation_timeout_seconds = 5;
+  WorkflowConfig workflow_config = 6;
+}
+
+message CreateWorkflowResponse {
+  Workflow workflow = 1;
+}
+
+// ListWorkflows returns the caller's workflows (scoped to their tenant group by
+// the API-key auth interceptor). A read-only observability primitive.
+message ListWorkflowsRequest {}
+
+message ListWorkflowsResponse {
+  repeated Workflow workflows = 1;
+}
+
+message RuntimeOverrides {
+  int32 operation_timeout_seconds = 2;
+}
+
+message InvokeWorkflowRequest {
+  string correlation_id = 1;
+  string workflow_id = 2;
+  RuntimeOverrides runtime_overrides = 3;
+}
+
+message InvokeWorkflowResponse {
+  string request_id = 1;
+}
+
+message DeleteWorkflowRequest {
+  string correlation_id = 1;
+  string workflow_id = 2;
+  int32 operation_timeout_seconds = 3;
+}
+
+message DeleteWorkflowResponse {
+  string request_id = 1;
+}
+
+message GetWorkflowRequest {
+  string workflow_id = 1;
+}
+
+message GetWorkflowResponse {
+  Workflow workflow = 1;
+}
+
+message SetAgentRuntimePolicyRequest {
+  string workflow_id = 1;
+  string agent_name            = 2;
+  // Serialised AgentRuntimePolicy JSON.
+  google.protobuf.Struct runtime_policy = 3;
+}
+
+message SetAgentRuntimePolicyResponse {}
+
+message SetAgentLifecyclePolicyRequest {
+  string workflow_id = 1;
+  string agent_name            = 2;
+  // Serialised AgentLifecyclePolicy JSON.
+  google.protobuf.Struct lifecycle_policy = 3;
+}
+
+message SetAgentLifecyclePolicyResponse {}
+
+message DeleteAgentRequest {
+  string workflow_id = 1;
+  string agent_name            = 2;
+}
+
+message DeleteAgentResponse {}
+
+// --- Workflow lifecycle policy ---
+
+enum WorkflowMetric {
+  WORKFLOW_METRIC_NUM_FAILURES         = 0;
+  WORKFLOW_METRIC_COST                 = 1;
+  WORKFLOW_METRIC_NUM_LLM_CALLS        = 2;
+  WORKFLOW_METRIC_LATENCY              = 3;
+  WORKFLOW_METRIC_APPROVAL_REJECTIONS  = 4;
+  WORKFLOW_METRIC_TOOL_FAILURE_RATE    = 5;
+}
+
+enum WorkflowPolicyActionType {
+  WORKFLOW_POLICY_ACTION_PAUSE       = 0;
+  WORKFLOW_POLICY_ACTION_COOLDOWN    = 1;
+  WORKFLOW_POLICY_ACTION_SET_VERSION = 2;
+}
+
+message WorkflowLifecyclePolicyAction {
+  WorkflowPolicyActionType type = 1;
+  // Populated when type = COOLDOWN.
+  int32 cooldown_seconds = 2;
+  // Populated when type = SET_VERSION: the version to roll to.
+  int32 target_version = 3;
+}
+
+message WorkflowLifecyclePolicyRule {
+  WorkflowMetric metric = 1;
+  double threshold = 2;
+  // Number of recent runs to evaluate. 0 = version-total (only valid with SET_VERSION).
+  int32 window = 3;
+  // Only for TOOL_FAILURE_RATE: names the specific callback to track.
+  string tool_name = 4;
+  WorkflowLifecyclePolicyAction action = 5;
+}
+
+message WorkflowLifecyclePolicy {
+  repeated WorkflowLifecyclePolicyRule rules = 1;
+}
+
+message SetWorkflowLifecyclePolicyRequest {
+  string workflow_id = 1;
+  WorkflowLifecyclePolicy lifecycle_policy = 2;
+}
+
+message SetWorkflowLifecyclePolicyResponse {}
+
+message ApproveWorkflowRequest {
+  string workflow_id = 1;
+  string approval_id          = 2;
+  // Who made the decision, as the customer's gate identifies them (free-form,
+  // e.g. an email or user id). Recorded for the approval audit trace.
+  string actor                = 3;
+}
+
+message ApproveWorkflowResponse {}
+
+message RejectWorkflowRequest {
+  string workflow_id = 1;
+  string approval_id          = 2;
+  string actor                = 3;
+}
+
+enum ApprovalDecision {
+  APPROVAL_DECISION_UNSPECIFIED = 0;
+  APPROVAL_DECISION_APPROVED    = 1;
+  APPROVAL_DECISION_REJECTED    = 2;
+  APPROVAL_DECISION_TIMED_OUT   = 3;
+}
+
+// --- Audit read API. All tenant-scoped via the API key. Per-type getters take a
+// required workflow_id; GetAuditLog's workflow_id is optional (empty = tenant-wide)
+// and returns all types time-ordered. occurred_at is the decision timestamp.
+
+message GetApprovalAuditRequest  { string workflow_id = 1; }
+message GetApprovalAuditResponse { repeated ApprovalAuditRecord records = 1; }
+
+// Direct lookup by the approval_id seen on a trace span. record is unset if no match.
+message GetApprovalAuditByIdRequest  { string approval_id = 1; }
+message GetApprovalAuditByIdResponse { ApprovalAuditRecord record = 1; }
+
+message GetWorkflowPolicyAuditRequest  { string workflow_id = 1; }
+message GetWorkflowPolicyAuditResponse { repeated WorkflowPolicyAuditRecord records = 1; }
+
+// Scoped to a specific agent — agents are identified by (workflow_id, agent_name).
+message GetAgentPolicyAuditRequest  { string workflow_id = 1; string agent_name = 2; }
+message GetAgentPolicyAuditResponse { repeated AgentPolicyAuditRecord records = 1; }
+
+message GetAuditLogRequest  { string workflow_id = 1; }  // optional; empty = tenant-wide
+message GetAuditLogResponse { repeated AuditEntry entries = 1; }
+
+// AuditEntry is one event in the unified, time-ordered log.
+message AuditEntry {
+  oneof entry {
+    ApprovalAuditRecord       approval        = 1;
+    WorkflowPolicyAuditRecord workflow_policy = 2;
+    AgentPolicyAuditRecord    agent_policy    = 3;
+  }
+}
+
+message ApprovalAuditRecord {
+  string approval_id                    = 1;
+  string workflow_id                    = 2;
+  string request_id                     = 3;
+  ApprovalDecision decision             = 4;
+  google.protobuf.Timestamp opened_at   = 5;
+  google.protobuf.Timestamp decided_at  = 6;
+  string actor                          = 7;  // customer-supplied; empty on timeout
+  google.protobuf.Timestamp occurred_at = 8;  // when the decision was recorded
+}
+
+// Self-describing: embeds the rule that fired + the value that crossed + prior state.
+message WorkflowPolicyAuditRecord {
+  string workflow_id                    = 1;
+  string request_id                     = 2;
+  string actor                          = 3;  // "system"
+  google.protobuf.Timestamp occurred_at = 4;
+  WorkflowLifecyclePolicyRule rule      = 5;
+  double trigger_value                  = 6;
+  int32 previous_version                = 7;
+  string previous_state                 = 8;
+}
+
+message AgentPolicyAuditRecord {
+  string workflow_id                    = 1;
+  string request_id                     = 2;
+  string actor                          = 3;  // "system"
+  google.protobuf.Timestamp occurred_at = 4;
+  string agent_name                     = 5;
+  AgentPolicyAction action              = 6;  // base/effective policy + fired rules
+}
+
+message RejectWorkflowResponse {}
+
+message ActivateWorkflowRequest {
+  string workflow_id = 1;
+}
+
+message ActivateWorkflowResponse {}
+
+message ResolveInterruptedWorkflowRequest {
+  string workflow_id = 1;
+  // The workflow's current last_interrupted_request_id. Resolution only succeeds if this
+  // matches, so a caller can't resolve past an interruption they haven't seen.
+  string request_id = 2;
+}
+
+message ResolveInterruptedWorkflowResponse {}
+
+message ListWorkflowRunsRequest {
+  string workflow_id = 1;
+}
+
+// Run is one invocation of a workflow, newest first. run_outcome is empty while the
+// run is still in flight, then one of: successful | customer_marked_failure |
+// uncaught_operation_exception | operation_timeout | interrupted.
+message Run {
+  string request_id = 1;
+  string request_type = 2;
+  // Run lifecycle: unscheduled | scheduled | in_progress | completed | failed | superceded.
+  string status = 7;
+  string run_outcome = 3;
+  string failure_reason = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp completed_at = 6;
+}
+
+message ListWorkflowRunsResponse {
+  repeated Run runs = 1;
+}
+
+message GetRequestInfoRequest {
+  string request_id = 1;
+}
+
+// RequestInfo is the full state of one run. status is the request's lifecycle
+// (unscheduled | scheduled | in_progress | completed | failed | superceded); run_outcome is
+// the customer-facing terminal outcome, empty until the run is terminal.
+message RequestInfo {
+  string request_id = 1;
+  string workflow_id = 2;
+  string request_type = 3;
+  string status = 4;
+  string run_outcome = 5;
+  string failure_reason = 6;
+  // Monotonic per-workflow sequence number (bumped on each request); orders a workflow's runs.
+  int64 version = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp completed_at = 9;
+}
+
+message GetRequestInfoResponse {
+  RequestInfo request = 1;
+}

@@ -1,0 +1,54 @@
+name: Live tests (real LLM)
+
+# The integration tests that make real Anthropic calls. NOT a PR merge gate —
+# they cost money, are non-deterministic, and forks can't access the secret.
+# Runs nightly and on demand; requires the ANTHROPIC_API_KEY repo secret.
+on:
+  schedule:
+    - cron: "0 7 * * *" # 07:00 UTC daily
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    name: Python SDK (real LLM)
+    runs-on: ubuntu-latest
+    # Skip gracefully if the secret isn't configured (e.g. on a fork).
+    if: ${{ github.repository == 'boundflow/boundflow' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start backend
+        run: docker compose up -d --build --wait
+
+      - name: Wait for gRPC ports
+        run: timeout 60 bash -c 'until nc -z localhost 50051 && nc -z localhost 50052; do sleep 1; done'
+
+      - name: Provision an API key
+        id: provision
+        run: |
+          key=$(docker compose run --rm server -mode=provision -name=ci | awk '/^api_key[[:space:]]+:/{print $NF}')
+          test -n "$key"
+          echo "::add-mask::$key"
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install SDK + test deps
+        working-directory: sdk/python
+        run: pip install -e ".[dev]"
+
+      - name: Run full suite (incl. real-LLM tests)
+        working-directory: sdk/python
+        env:
+          BOUNDFLOW_API_KEY: ${{ steps.provision.outputs.key }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python -m pytest -v
+
+      - name: Backend logs on failure
+        if: failure()
+        run: docker compose logs --tail 100 server scheduler worker

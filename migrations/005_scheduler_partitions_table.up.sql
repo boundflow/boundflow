@@ -1,0 +1,7 @@
+-- Rows are seeded from NUM_PARTITIONS by the migrate job (static SQL can't read env).
+CREATE TABLE scheduler_partitions (
+    id                      TEXT PRIMARY KEY,
+    workflow_count INT NOT NULL DEFAULT 0,
+    owner                   TEXT,
+    lease_until             TIMESTAMPTZ
+);

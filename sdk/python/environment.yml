@@ -1,0 +1,14 @@
+name: boundflow
+channels:
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+    - grpcio
+    - grpcio-tools
+    - pydantic
+    - eval_type_backport
+    - anthropic
+    - pytest
+    - pytest-asyncio

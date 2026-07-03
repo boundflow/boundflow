@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package boundflow.v1;
+
+option go_package = "github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1";
+
+import "google/protobuf/timestamp.proto";
+
+message WorkflowConfig {
+  int32 version = 1;
+  int32 invoke_timeout_seconds = 2;
+  int32 repeat_every_seconds = 3;
+  bool triggerable = 4;
+}
+
+enum WorkflowState {
+  WORKFLOW_STATE_UNSPECIFIED = 0;
+  WORKFLOW_STATE_ACTIVE      = 1;
+  WORKFLOW_STATE_PAUSED   = 2;
+  WORKFLOW_STATE_COOLDOWN = 3;
+  WORKFLOW_STATE_DISABLED = 4;
+}
+
+// Workflow is a managed, stateful unit of agent execution tied to a specific
+// tenant. Managed via the WorkflowService.
+message Workflow {
+  string id = 1;
+  string workflow_type = 2;
+  string tenant_id = 3;
+  google.protobuf.Timestamp created_at = 6;
+  WorkflowConfig workflow_config = 8;
+  string lifecycle_state = 9;
+  WorkflowState workflow_state = 10;
+  // request_id of the run that interrupted the workflow; empty until one is interrupted.
+  string last_interrupted_request_id = 11;
+}

@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+package boundflow.v1;
+
+option go_package = "github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1";
+
+import "boundflow/v1/tenant_group.proto";
+import "boundflow/v1/tenant.proto";
+import "boundflow/v1/pricing.proto";
+
+// RegistrationService handles setup and configuration of tenant groups,
+// tenants, and policies.
+service RegistrationService {
+  rpc CreateTenantGroup(CreateTenantGroupRequest) returns (CreateTenantGroupResponse);
+  rpc GetTenantGroup(GetTenantGroupRequest) returns (GetTenantGroupResponse);
+  rpc DeleteTenantGroup(DeleteTenantGroupRequest) returns (DeleteTenantGroupResponse);
+
+  rpc CreateTenant(CreateTenantRequest) returns (CreateTenantResponse);
+  rpc GetTenant(GetTenantRequest) returns (GetTenantResponse);
+  // ListTenants returns the caller's tenants (scoped to their tenant group,
+  // resolved from the API key).
+  rpc ListTenants(ListTenantsRequest) returns (ListTenantsResponse);
+  rpc DeleteTenant(DeleteTenantRequest) returns (DeleteTenantResponse);
+
+  // Pricing is scoped to the caller's tenant group (resolved from the API key).
+  // SetModelPricing overrides a model's rate; ListModelPricing returns the
+  // effective rates (built-in defaults merged with the caller's overrides).
+  rpc SetModelPricing(SetModelPricingRequest) returns (SetModelPricingResponse);
+  rpc ListModelPricing(ListModelPricingRequest) returns (ListModelPricingResponse);
+}
+
+message SetModelPricingRequest {
+  ModelPricing pricing = 1;
+}
+
+message SetModelPricingResponse {
+  ModelPricing pricing = 1;
+}
+
+message ListModelPricingRequest {}
+
+message ListModelPricingResponse {
+  repeated ModelPricing pricing = 1;
+}
+
+message CreateTenantGroupRequest {
+  TenantGroup tenant_group = 1;
+}
+
+message CreateTenantGroupResponse {
+  TenantGroup tenant_group = 1;
+}
+
+message GetTenantGroupRequest {
+  string id = 1;
+}
+
+message GetTenantGroupResponse {
+  TenantGroup tenant_group = 1;
+}
+
+message CreateTenantRequest {
+  Tenant tenant = 1;
+}
+
+message CreateTenantResponse {
+  Tenant tenant = 1;
+}
+
+message GetTenantRequest {
+  string id = 1;
+}
+
+message GetTenantResponse {
+  Tenant tenant = 1;
+}
+
+message ListTenantsRequest {}
+
+message ListTenantsResponse {
+  repeated Tenant tenants = 1;
+}
+
+message DeleteTenantGroupRequest {
+  string id = 1;
+}
+
+message DeleteTenantGroupResponse {}
+
+message DeleteTenantRequest {
+  string id = 1;
+}
+
+message DeleteTenantResponse {}
