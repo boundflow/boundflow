@@ -14,9 +14,10 @@ services:
     environment:
       POSTGRES_DB: boundflow
       POSTGRES_USER: boundflow
-      # Defaults to `boundflow` for a zero-config local run. Set BOUNDFLOW_DB_PASSWORD
-      # (env or a .env file) to a strong secret before any non-local deployment.
-      POSTGRES_PASSWORD: ${BOUNDFLOW_DB_PASSWORD:-boundflow}
+      # Required: set BOUNDFLOW_DB_PASSWORD in .env to a strong secret (copy
+      # .env.example). No default is shipped — a deploy must not run on a known
+      # password. (The dev compose, docker-compose.yml, keeps a local default.)
+      POSTGRES_PASSWORD: ${BOUNDFLOW_DB_PASSWORD:?set BOUNDFLOW_DB_PASSWORD in .env — see .env.example}
     # Not published to the host; inspect with:
     #   docker compose -f docker-compose.dist.yml exec postgres psql -U boundflow
     volumes:
@@ -31,7 +32,7 @@ services:
     image: ${BOUNDFLOW_IMAGE:-ghcr.io/boundflow/boundflow:latest}
     command: ["-mode=migrate"]
     environment:
-      BOUNDFLOW_DATABASE_URL: postgres://boundflow:${BOUNDFLOW_DB_PASSWORD:-boundflow}@postgres:5432/boundflow?sslmode=disable
+      BOUNDFLOW_DATABASE_URL: ${BOUNDFLOW_DATABASE_URL:-postgres://boundflow:${BOUNDFLOW_DB_PASSWORD:?set BOUNDFLOW_DB_PASSWORD in .env — see .env.example}@postgres:5432/boundflow?sslmode=disable}
       # Shard count — must match the server/scheduler. migrate seeds the partition rows.
       BOUNDFLOW_NUM_PARTITIONS: "1"
     depends_on:
@@ -42,7 +43,7 @@ services:
     image: ${BOUNDFLOW_IMAGE:-ghcr.io/boundflow/boundflow:latest}
     command: ["-mode=server"]
     environment:
-      BOUNDFLOW_DATABASE_URL: postgres://boundflow:${BOUNDFLOW_DB_PASSWORD:-boundflow}@postgres:5432/boundflow?sslmode=disable
+      BOUNDFLOW_DATABASE_URL: ${BOUNDFLOW_DATABASE_URL:-postgres://boundflow:${BOUNDFLOW_DB_PASSWORD:?set BOUNDFLOW_DB_PASSWORD in .env — see .env.example}@postgres:5432/boundflow?sslmode=disable}
       BOUNDFLOW_GRPC_PORT: "50051"
       BOUNDFLOW_NUM_PARTITIONS: "1"
       BOUNDFLOW_DEBUG: "true"
@@ -58,7 +59,7 @@ services:
     image: ${BOUNDFLOW_IMAGE:-ghcr.io/boundflow/boundflow:latest}
     command: ["-mode=scheduler"]
     environment:
-      BOUNDFLOW_DATABASE_URL: postgres://boundflow:${BOUNDFLOW_DB_PASSWORD:-boundflow}@postgres:5432/boundflow?sslmode=disable
+      BOUNDFLOW_DATABASE_URL: ${BOUNDFLOW_DATABASE_URL:-postgres://boundflow:${BOUNDFLOW_DB_PASSWORD:?set BOUNDFLOW_DB_PASSWORD in .env — see .env.example}@postgres:5432/boundflow?sslmode=disable}
       BOUNDFLOW_NUM_PARTITIONS: "1"
       BOUNDFLOW_MAX_PARTITIONS_PER_SCHEDULER: "1"
       BOUNDFLOW_LOG_LEVEL: info
@@ -71,7 +72,7 @@ services:
     image: ${BOUNDFLOW_IMAGE:-ghcr.io/boundflow/boundflow:latest}
     command: ["-mode=worker"]
     environment:
-      BOUNDFLOW_DATABASE_URL: postgres://boundflow:${BOUNDFLOW_DB_PASSWORD:-boundflow}@postgres:5432/boundflow?sslmode=disable
+      BOUNDFLOW_DATABASE_URL: ${BOUNDFLOW_DATABASE_URL:-postgres://boundflow:${BOUNDFLOW_DB_PASSWORD:?set BOUNDFLOW_DB_PASSWORD in .env — see .env.example}@postgres:5432/boundflow?sslmode=disable}
       BOUNDFLOW_WORKER_GRPC_PORT: "50052"
       BOUNDFLOW_JOB_TIMEOUT_SECS: "300"
       BOUNDFLOW_LOG_LEVEL: info

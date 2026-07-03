@@ -45,18 +45,21 @@ it's the operational layer *around* the agents you build.
 Get a governed agent running in a few minutes. Full walkthrough: **[QUICKSTART.md](QUICKSTART.md)**.
 
 ```bash
-# 1. Start the backend (Postgres + server + scheduler + worker)
+# 1. Set a database password (any strong secret)
+echo "BOUNDFLOW_DB_PASSWORD=$(openssl rand -hex 16)" > .env
+
+# 2. Start the backend (Postgres + server + scheduler + worker)
 docker compose -f docker-compose.dist.yml up -d
 
-# 2. Provision an API key
+# 3. Provision an API key
 docker compose -f docker-compose.dist.yml run --rm server -mode=provision -name=me
 export BOUNDFLOW_API_KEY=<printed key>
 
-# 3. Install the SDK and bring your Anthropic key
+# 4. Install the SDK and bring your Anthropic key
 pip install boundflow
 export ANTHROPIC_API_KEY=<your key>
 
-# 4. Run a real agent under governance
+# 5. Run a real agent under governance
 python -m boundflow.examples.hello
 ```
 

@@ -29,10 +29,42 @@ SDK-side: `BOUNDFLOW_API_KEY`, `BOUNDFLOW_SERVER_ADDRESS` /
 `BOUNDFLOW_WORKER_ADDRESS` (default to localhost), and `ANTHROPIC_API_KEY` for
 real agents.
 
-!!! danger "Change the default credentials"
-    The default Postgres credentials in the compose files (`boundflow/boundflow`)
-    are for **local development only**. Set real credentials before any non-local
-    deployment, and don't publish the Postgres port.
+### Secrets — the `.env` file
+
+`docker compose` automatically reads a `.env` file next to the compose file, so
+that's where deployment secrets go. Copy the template and set your values:
+
+```bash
+cp .env.example .env
+# BOUNDFLOW_DB_PASSWORD is required — the stack won't start without it.
+# Generate a strong one:  echo "BOUNDFLOW_DB_PASSWORD=$(openssl rand -hex 16)" >> .env
+```
+
+`.env` is gitignored; never commit real secrets. `BOUNDFLOW_DB_PASSWORD` feeds
+**both** the bundled Postgres container and the backend's connection string.
+`docker-compose.dist.yml` ships **no default** for it — a deployment must set its own,
+so it can't accidentally run on a known password. (The dev compose,
+`docker-compose.yml`, keeps a local default for tests.)
+
+### Production database — bring your own
+
+For anything beyond a local trial, don't rely on the bundled `postgres` container —
+point the backend at a **managed Postgres** (RDS / Cloud SQL / Azure DB) over TLS.
+Set `BOUNDFLOW_DATABASE_URL` in `.env`; it overrides the bundled URL entirely:
+
+```bash
+# .env
+BOUNDFLOW_DATABASE_URL=postgres://user:password@your-db-host:5432/boundflow?sslmode=require
+```
+
+Then remove the bundled `postgres` service (and the `depends_on: postgres` entries)
+from your compose file — or override them in a `docker-compose.override.yml` — and
+run `-mode=migrate` once against your database to create the schema.
+
+!!! warning "Don't publish the Postgres port"
+    The bundled Postgres isn't published to the host. If you expose it, put it behind
+    your network's controls — and set `BOUNDFLOW_DB_PASSWORD` to a strong secret
+    (required; see above).
 
 ## TLS
 

@@ -12,13 +12,18 @@ plane (backend) plus a Python SDK you build against.
 
 ## 1. Start the backend
 
+Set a database password (there's no default — the stack won't start without one),
+then bring it up:
+
 ```bash
+echo "BOUNDFLOW_DB_PASSWORD=$(openssl rand -hex 16)" > .env
 docker compose -f docker-compose.dist.yml up -d
 ```
 
-This pulls the backend image and starts Postgres, the server (`:50051`), the
-scheduler, and a worker (`:50052`). Schema migrations run automatically. To pin a
-version: `BOUNDFLOW_IMAGE=ghcr.io/boundflow/boundflow:v0.1.0 docker compose ... up -d`.
+`docker compose` reads `.env` automatically. This pulls the backend image and starts
+Postgres, the server (`:50051`), the scheduler, and a worker (`:50052`). Schema
+migrations run automatically. To pin a version:
+`BOUNDFLOW_IMAGE=ghcr.io/boundflow/boundflow:v0.1.0 docker compose ... up -d`.
 
 ## 2. Provision an API key
 

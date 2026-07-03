@@ -13,7 +13,11 @@ in the repo.
 
 ## 1. Start the backend
 
+Set a database password (there's no default — the stack won't start without one),
+then bring it up. `docker compose` reads `.env` automatically:
+
 ```bash
+echo "BOUNDFLOW_DB_PASSWORD=$(openssl rand -hex 16)" > .env
 docker compose -f docker-compose.dist.yml up -d
 ```
 

@@ -10,3 +10,7 @@ build/
 
 # MkDocs build output
 site/
+
+# Local env / secrets — compose reads .env automatically; never commit real values
+.env
+.env.local
