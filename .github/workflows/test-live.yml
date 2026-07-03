@@ -40,7 +40,7 @@ jobs:
 
       - name: Install SDK + test deps
         working-directory: sdk/python
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[dev,cli]"
 
       - name: Run full suite (incl. real-LLM tests)
         working-directory: sdk/python
