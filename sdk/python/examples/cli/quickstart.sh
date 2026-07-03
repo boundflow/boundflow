@@ -5,7 +5,7 @@
 #   docker compose up -d --build --wait
 #   export BOUNDFLOW_API_KEY=$(docker compose run --rm server -mode=provision -name=me | grep api_key | awk '{print $3}')
 #   export BOUNDFLOW_SERVER_ADDRESS=http://localhost:50051
-#   pip install "boundflow[cli]"
+#   pip install boundflow
 #
 # On PowerShell (Windows):
 #   $env:BOUNDFLOW_API_KEY    = "your-key"

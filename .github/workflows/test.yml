@@ -50,7 +50,7 @@ jobs:
 
       - name: Install SDK + test deps
         working-directory: sdk/python
-        run: pip install -e ".[dev,cli]"
+        run: pip install -e ".[dev]"
 
       # Mock-LLM suite only — free, deterministic, no API key. The ~10 tests that
       # need a real model skip here (no ANTHROPIC_API_KEY); they run in test-live.yml.
