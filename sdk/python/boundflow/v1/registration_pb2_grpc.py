@@ -61,6 +61,11 @@ class RegistrationServiceStub:
                 request_serializer=boundflow_dot_v1_dot_registration__pb2.GetTenantRequest.SerializeToString,
                 response_deserializer=boundflow_dot_v1_dot_registration__pb2.GetTenantResponse.FromString,
                 _registered_method=True)
+        self.ListTenants = channel.unary_unary(
+                '/boundflow.v1.RegistrationService/ListTenants',
+                request_serializer=boundflow_dot_v1_dot_registration__pb2.ListTenantsRequest.SerializeToString,
+                response_deserializer=boundflow_dot_v1_dot_registration__pb2.ListTenantsResponse.FromString,
+                _registered_method=True)
         self.DeleteTenant = channel.unary_unary(
                 '/boundflow.v1.RegistrationService/DeleteTenant',
                 request_serializer=boundflow_dot_v1_dot_registration__pb2.DeleteTenantRequest.SerializeToString,
@@ -113,6 +118,14 @@ class RegistrationServiceServicer:
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ListTenants(self, request, context):
+        """ListTenants returns the caller's tenants (scoped to their tenant group,
+        resolved from the API key).
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def DeleteTenant(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -161,6 +174,11 @@ def add_RegistrationServiceServicer_to_server(servicer, server):
                     servicer.GetTenant,
                     request_deserializer=boundflow_dot_v1_dot_registration__pb2.GetTenantRequest.FromString,
                     response_serializer=boundflow_dot_v1_dot_registration__pb2.GetTenantResponse.SerializeToString,
+            ),
+            'ListTenants': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListTenants,
+                    request_deserializer=boundflow_dot_v1_dot_registration__pb2.ListTenantsRequest.FromString,
+                    response_serializer=boundflow_dot_v1_dot_registration__pb2.ListTenantsResponse.SerializeToString,
             ),
             'DeleteTenant': grpc.unary_unary_rpc_method_handler(
                     servicer.DeleteTenant,
@@ -315,6 +333,33 @@ class RegistrationService:
             '/boundflow.v1.RegistrationService/GetTenant',
             boundflow_dot_v1_dot_registration__pb2.GetTenantRequest.SerializeToString,
             boundflow_dot_v1_dot_registration__pb2.GetTenantResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListTenants(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/boundflow.v1.RegistrationService/ListTenants',
+            boundflow_dot_v1_dot_registration__pb2.ListTenantsRequest.SerializeToString,
+            boundflow_dot_v1_dot_registration__pb2.ListTenantsResponse.FromString,
             options,
             channel_credentials,
             insecure,

@@ -19,6 +19,7 @@ import (
 
 var ErrMissingRuntimeParams = errors.New("operation_timeout_seconds must be set on the request, tenant policy, or tenant group policy")
 var ErrInvalidWorkflowState = errors.New("workflow cannot be invoked in its current state")
+var ErrNotInterrupted = errors.New("workflow is not interrupted or the request id does not match its last interruption")
 
 // RequestScheduler is the scheduling capability the lifecycle service needs.
 // Satisfied by *scheduler.Scheduler.
@@ -309,6 +310,39 @@ func (s *LifecycleService) ActivateWorkflow(ctx context.Context, workflowID stri
 			return err
 		}
 		return fmt.Errorf("activate workflow: %w", err)
+	}
+	return nil
+}
+
+// GetRequestInfo returns the full state of a single run (request) by id.
+func (s *LifecycleService) GetRequestInfo(ctx context.Context, requestID string) (*domain.CustomerRequest, error) {
+	req, err := s.customerRequests.Get(ctx, requestID)
+	if err != nil {
+		return nil, fmt.Errorf("get request info: %w", err)
+	}
+	return req, nil
+}
+
+// ListWorkflowRuns returns every run (request) for a workflow, newest first.
+func (s *LifecycleService) ListWorkflowRuns(ctx context.Context, workflowID string) ([]*domain.CustomerRequest, error) {
+	runs, err := s.customerRequests.ListForWorkflow(ctx, workflowID)
+	if err != nil {
+		return nil, fmt.Errorf("list workflow runs: %w", err)
+	}
+	return runs, nil
+}
+
+// ResolveInterruptedWorkflow flips an interrupted workflow back to active, but only if
+// requestID matches the last_interrupted_request_id it is currently interrupted on — so a
+// caller can't resolve past an interruption they haven't seen.
+func (s *LifecycleService) ResolveInterruptedWorkflow(ctx context.Context, workflowID string, requestID string) error {
+	s.log.Info("resolving interrupted workflow", "workflow_id", workflowID, "request_id", requestID)
+	resolved, err := s.workflows.ResolveInterruptedWorkflow(ctx, workflowID, requestID)
+	if err != nil {
+		return fmt.Errorf("resolve interrupted workflow: %w", err)
+	}
+	if !resolved {
+		return ErrNotInterrupted
 	}
 	return nil
 }

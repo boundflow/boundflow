@@ -61,11 +61,13 @@ class LifecycleState(str, Enum):
     UNKNOWN = "unknown"
     CREATING = "creating"
     ACTIVE = "active"
+    SCHEDULED = "scheduled"
+    BLOCKED = "blocked"
     INVOKING = "invoking"
     AWAITING_APPROVAL = "awaiting_approval"
     DELETING = "deleting"
     DELETED = "deleted"
-    FAILED = "failed"
+    INTERRUPTED = "interrupted"
 
 
 class WorkflowState(str, Enum):
@@ -86,6 +88,40 @@ class WorkflowSummary:
     lifecycle_state: LifecycleState
     workflow_state: WorkflowState
     version: int
+    last_interrupted_request_id: str
+
+
+@dataclass
+class Run:
+    """One run (invocation) of a workflow. run_outcome is "" while the run is in flight,
+    then one of: successful | customer_marked_failure | uncaught_operation_exception |
+    operation_timeout | interrupted. failure_reason carries detail (e.g. the exception
+    text for an uncaught_operation_exception). status is the run lifecycle (scheduled |
+    in_progress | completed | ...) — useful while run_outcome is still empty."""
+    request_id: str
+    request_type: str
+    status: str
+    run_outcome: str
+    failure_reason: str
+    created_at: datetime | None
+    completed_at: datetime | None
+
+
+@dataclass
+class RequestInfo:
+    """Full state of one run, from get_request_info(request_id). status is the run's
+    lifecycle (unscheduled | scheduled | in_progress | completed | failed | superceded);
+    run_outcome is the terminal outcome ("" until terminal). sequence_number orders a
+    workflow's runs (monotonic per workflow)."""
+    request_id: str
+    workflow_id: str
+    request_type: str
+    status: str
+    run_outcome: str
+    failure_reason: str
+    sequence_number: int
+    created_at: datetime | None
+    completed_at: datetime | None
 
 
 @dataclass
@@ -234,11 +270,13 @@ def _agent_policy_record(r) -> AgentPolicyActionRecord:
 _LIFECYCLE = {
     "creating": LifecycleState.CREATING,
     "active": LifecycleState.ACTIVE,
+    "scheduled": LifecycleState.SCHEDULED,
+    "blocked": LifecycleState.BLOCKED,
     "invoking": LifecycleState.INVOKING,
     "awaiting_approval": LifecycleState.AWAITING_APPROVAL,
     "deleting": LifecycleState.DELETING,
     "deleted": LifecycleState.DELETED,
-    "failed": LifecycleState.FAILED,
+    "interrupted": LifecycleState.INTERRUPTED,
 }
 
 _WF_STATE = {
@@ -313,6 +351,12 @@ class ControlPlaneClient:
             metadata=self._metadata)
         return Tenant(resp.tenant.id, resp.tenant.name, resp.tenant.tenant_group_id)
 
+    async def list_tenants(self) -> list[Tenant]:
+        """The caller's tenants, scoped to their tenant group (resolved from the API key)."""
+        resp = await self._reg.ListTenants(
+            reg.ListTenantsRequest(), metadata=self._metadata)
+        return [Tenant(t.id, t.name, t.tenant_group_id) for t in resp.tenants]
+
     # ── Pricing ──────────────────────────────────────────────────────────────
 
     async def set_model_pricing(self, model_id: str, input_per_1m: float, output_per_1m: float) -> None:
@@ -356,6 +400,14 @@ class ControlPlaneClient:
             lc.ActivateWorkflowRequest(workflow_id=workflow_id),
             metadata=self._metadata)
 
+    async def resolve_interrupted_workflow(self, workflow_id: str, request_id: str) -> None:
+        """Resolve an interrupted workflow back to active. request_id must match the
+        workflow's last_interrupted_request_id (the run that interrupted it) — read it
+        from the workflow's last_interrupted_request_id field."""
+        await self._lc.ResolveInterruptedWorkflow(
+            lc.ResolveInterruptedWorkflowRequest(workflow_id=workflow_id, request_id=request_id),
+            metadata=self._metadata)
+
     async def invoke_workflow(self, workflow_id: str, *, operation_timeout_seconds: int = 0) -> str:
         """Trigger a run; returns the request_id — the run/trace id you can use to
         find this invocation's trace later."""
@@ -392,9 +444,45 @@ class ControlPlaneClient:
                 lifecycle_state=_LIFECYCLE.get(w.lifecycle_state, LifecycleState.UNKNOWN),
                 workflow_state=_WF_STATE.get(w.workflow_state, WorkflowState.UNSPECIFIED),
                 version=w.workflow_config.version,
+                last_interrupted_request_id=w.last_interrupted_request_id,
             )
             for w in resp.workflows
         ]
+
+    async def list_workflow_runs(self, workflow_id: str) -> list[Run]:
+        """List a workflow's runs (invocations), newest first, with each run's outcome
+        and failure reason."""
+        resp = await self._lc.ListWorkflowRuns(
+            lc.ListWorkflowRunsRequest(workflow_id=workflow_id), metadata=self._metadata)
+        return [
+            Run(
+                request_id=r.request_id,
+                request_type=r.request_type,
+                status=r.status,
+                run_outcome=r.run_outcome,
+                failure_reason=r.failure_reason,
+                created_at=_ts(r, "created_at"),
+                completed_at=_ts(r, "completed_at"),
+            )
+            for r in resp.runs
+        ]
+
+    async def get_request_info(self, request_id: str) -> RequestInfo:
+        """Get the full state of a single run by its request id (returned by invoke)."""
+        resp = await self._lc.GetRequestInfo(
+            lc.GetRequestInfoRequest(request_id=request_id), metadata=self._metadata)
+        r = resp.request
+        return RequestInfo(
+            request_id=r.request_id,
+            workflow_id=r.workflow_id,
+            request_type=r.request_type,
+            status=r.status,
+            run_outcome=r.run_outcome,
+            failure_reason=r.failure_reason,
+            sequence_number=r.version,
+            created_at=_ts(r, "created_at"),
+            completed_at=_ts(r, "completed_at"),
+        )
 
     async def approve_workflow(self, workflow_id: str, approval_id: str, actor: str = "") -> None:
         """Approve a parked gate. `actor` identifies the approver (e.g. an email or

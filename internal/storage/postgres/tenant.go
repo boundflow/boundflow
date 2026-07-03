@@ -61,6 +61,40 @@ func (r *TenantRepo) Get(ctx context.Context, id string) (*domain.Tenant, error)
 	return &tenant, nil
 }
 
+func (r *TenantRepo) ListForTenantGroup(ctx context.Context, tenantGroupID string) ([]*domain.Tenant, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT id, tenant_group_id, name, policy_overrides, created_at
+		 FROM tenants WHERE tenant_group_id = $1
+		 ORDER BY created_at DESC`, tenantGroupID,
+	)
+	if err != nil {
+		return nil, handleError(err, "tenant")
+	}
+	defer rows.Close()
+
+	var out []*domain.Tenant
+	for rows.Next() {
+		var tenant domain.Tenant
+		var overridesJSON []byte
+		if err := rows.Scan(
+			&tenant.ID, &tenant.TenantGroupID, &tenant.Name, &overridesJSON, &tenant.CreatedAt,
+		); err != nil {
+			return nil, handleError(err, "tenant")
+		}
+		if overridesJSON != nil {
+			tenant.PolicyOverrides = &domain.PolicySet{}
+			if err := json.Unmarshal(overridesJSON, tenant.PolicyOverrides); err != nil {
+				return nil, fmt.Errorf("unmarshal policy overrides: %w", err)
+			}
+		}
+		out = append(out, &tenant)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, handleError(err, "tenant")
+	}
+	return out, nil
+}
+
 func (r *TenantRepo) Delete(ctx context.Context, id string) error {
 	_, err := r.pool.Exec(ctx, `DELETE FROM tenants WHERE id = $1`, id)
 	if err != nil {

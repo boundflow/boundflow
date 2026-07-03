@@ -27,7 +27,7 @@ from boundflow.v1 import tenant_pb2 as boundflow_dot_v1_dot_tenant__pb2
 from boundflow.v1 import pricing_pb2 as boundflow_dot_v1_dot_pricing__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1f\x62oundflow/v1/registration.proto\x12\x0c\x62oundflow.v1\x1a\x1f\x62oundflow/v1/tenant_group.proto\x1a\x19\x62oundflow/v1/tenant.proto\x1a\x1a\x62oundflow/v1/pricing.proto\"E\n\x16SetModelPricingRequest\x12+\n\x07pricing\x18\x01 \x01(\x0b\x32\x1a.boundflow.v1.ModelPricing\"F\n\x17SetModelPricingResponse\x12+\n\x07pricing\x18\x01 \x01(\x0b\x32\x1a.boundflow.v1.ModelPricing\"\x19\n\x17ListModelPricingRequest\"G\n\x18ListModelPricingResponse\x12+\n\x07pricing\x18\x01 \x03(\x0b\x32\x1a.boundflow.v1.ModelPricing\"K\n\x18\x43reateTenantGroupRequest\x12/\n\x0ctenant_group\x18\x01 \x01(\x0b\x32\x19.boundflow.v1.TenantGroup\"L\n\x19\x43reateTenantGroupResponse\x12/\n\x0ctenant_group\x18\x01 \x01(\x0b\x32\x19.boundflow.v1.TenantGroup\"#\n\x15GetTenantGroupRequest\x12\n\n\x02id\x18\x01 \x01(\t\"I\n\x16GetTenantGroupResponse\x12/\n\x0ctenant_group\x18\x01 \x01(\x0b\x32\x19.boundflow.v1.TenantGroup\";\n\x13\x43reateTenantRequest\x12$\n\x06tenant\x18\x01 \x01(\x0b\x32\x14.boundflow.v1.Tenant\"<\n\x14\x43reateTenantResponse\x12$\n\x06tenant\x18\x01 \x01(\x0b\x32\x14.boundflow.v1.Tenant\"\x1e\n\x10GetTenantRequest\x12\n\n\x02id\x18\x01 \x01(\t\"9\n\x11GetTenantResponse\x12$\n\x06tenant\x18\x01 \x01(\x0b\x32\x14.boundflow.v1.Tenant\"&\n\x18\x44\x65leteTenantGroupRequest\x12\n\n\x02id\x18\x01 \x01(\t\"\x1b\n\x19\x44\x65leteTenantGroupResponse\"!\n\x13\x44\x65leteTenantRequest\x12\n\n\x02id\x18\x01 \x01(\t\"\x16\n\x14\x44\x65leteTenantResponse2\xfd\x05\n\x13RegistrationService\x12\x64\n\x11\x43reateTenantGroup\x12&.boundflow.v1.CreateTenantGroupRequest\x1a\'.boundflow.v1.CreateTenantGroupResponse\x12[\n\x0eGetTenantGroup\x12#.boundflow.v1.GetTenantGroupRequest\x1a$.boundflow.v1.GetTenantGroupResponse\x12\x64\n\x11\x44\x65leteTenantGroup\x12&.boundflow.v1.DeleteTenantGroupRequest\x1a\'.boundflow.v1.DeleteTenantGroupResponse\x12U\n\x0c\x43reateTenant\x12!.boundflow.v1.CreateTenantRequest\x1a\".boundflow.v1.CreateTenantResponse\x12L\n\tGetTenant\x12\x1e.boundflow.v1.GetTenantRequest\x1a\x1f.boundflow.v1.GetTenantResponse\x12U\n\x0c\x44\x65leteTenant\x12!.boundflow.v1.DeleteTenantRequest\x1a\".boundflow.v1.DeleteTenantResponse\x12^\n\x0fSetModelPricing\x12$.boundflow.v1.SetModelPricingRequest\x1a%.boundflow.v1.SetModelPricingResponse\x12\x61\n\x10ListModelPricing\x12%.boundflow.v1.ListModelPricingRequest\x1a&.boundflow.v1.ListModelPricingResponseB=Z;github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1f\x62oundflow/v1/registration.proto\x12\x0c\x62oundflow.v1\x1a\x1f\x62oundflow/v1/tenant_group.proto\x1a\x19\x62oundflow/v1/tenant.proto\x1a\x1a\x62oundflow/v1/pricing.proto\"E\n\x16SetModelPricingRequest\x12+\n\x07pricing\x18\x01 \x01(\x0b\x32\x1a.boundflow.v1.ModelPricing\"F\n\x17SetModelPricingResponse\x12+\n\x07pricing\x18\x01 \x01(\x0b\x32\x1a.boundflow.v1.ModelPricing\"\x19\n\x17ListModelPricingRequest\"G\n\x18ListModelPricingResponse\x12+\n\x07pricing\x18\x01 \x03(\x0b\x32\x1a.boundflow.v1.ModelPricing\"K\n\x18\x43reateTenantGroupRequest\x12/\n\x0ctenant_group\x18\x01 \x01(\x0b\x32\x19.boundflow.v1.TenantGroup\"L\n\x19\x43reateTenantGroupResponse\x12/\n\x0ctenant_group\x18\x01 \x01(\x0b\x32\x19.boundflow.v1.TenantGroup\"#\n\x15GetTenantGroupRequest\x12\n\n\x02id\x18\x01 \x01(\t\"I\n\x16GetTenantGroupResponse\x12/\n\x0ctenant_group\x18\x01 \x01(\x0b\x32\x19.boundflow.v1.TenantGroup\";\n\x13\x43reateTenantRequest\x12$\n\x06tenant\x18\x01 \x01(\x0b\x32\x14.boundflow.v1.Tenant\"<\n\x14\x43reateTenantResponse\x12$\n\x06tenant\x18\x01 \x01(\x0b\x32\x14.boundflow.v1.Tenant\"\x1e\n\x10GetTenantRequest\x12\n\n\x02id\x18\x01 \x01(\t\"9\n\x11GetTenantResponse\x12$\n\x06tenant\x18\x01 \x01(\x0b\x32\x14.boundflow.v1.Tenant\"\x14\n\x12ListTenantsRequest\"<\n\x13ListTenantsResponse\x12%\n\x07tenants\x18\x01 \x03(\x0b\x32\x14.boundflow.v1.Tenant\"&\n\x18\x44\x65leteTenantGroupRequest\x12\n\n\x02id\x18\x01 \x01(\t\"\x1b\n\x19\x44\x65leteTenantGroupResponse\"!\n\x13\x44\x65leteTenantRequest\x12\n\n\x02id\x18\x01 \x01(\t\"\x16\n\x14\x44\x65leteTenantResponse2\xd1\x06\n\x13RegistrationService\x12\x64\n\x11\x43reateTenantGroup\x12&.boundflow.v1.CreateTenantGroupRequest\x1a\'.boundflow.v1.CreateTenantGroupResponse\x12[\n\x0eGetTenantGroup\x12#.boundflow.v1.GetTenantGroupRequest\x1a$.boundflow.v1.GetTenantGroupResponse\x12\x64\n\x11\x44\x65leteTenantGroup\x12&.boundflow.v1.DeleteTenantGroupRequest\x1a\'.boundflow.v1.DeleteTenantGroupResponse\x12U\n\x0c\x43reateTenant\x12!.boundflow.v1.CreateTenantRequest\x1a\".boundflow.v1.CreateTenantResponse\x12L\n\tGetTenant\x12\x1e.boundflow.v1.GetTenantRequest\x1a\x1f.boundflow.v1.GetTenantResponse\x12R\n\x0bListTenants\x12 .boundflow.v1.ListTenantsRequest\x1a!.boundflow.v1.ListTenantsResponse\x12U\n\x0c\x44\x65leteTenant\x12!.boundflow.v1.DeleteTenantRequest\x1a\".boundflow.v1.DeleteTenantResponse\x12^\n\x0fSetModelPricing\x12$.boundflow.v1.SetModelPricingRequest\x1a%.boundflow.v1.SetModelPricingResponse\x12\x61\n\x10ListModelPricing\x12%.boundflow.v1.ListModelPricingRequest\x1a&.boundflow.v1.ListModelPricingResponseB=Z;github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -59,14 +59,18 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_GETTENANTREQUEST']._serialized_end=800
   _globals['_GETTENANTRESPONSE']._serialized_start=802
   _globals['_GETTENANTRESPONSE']._serialized_end=859
-  _globals['_DELETETENANTGROUPREQUEST']._serialized_start=861
-  _globals['_DELETETENANTGROUPREQUEST']._serialized_end=899
-  _globals['_DELETETENANTGROUPRESPONSE']._serialized_start=901
-  _globals['_DELETETENANTGROUPRESPONSE']._serialized_end=928
-  _globals['_DELETETENANTREQUEST']._serialized_start=930
-  _globals['_DELETETENANTREQUEST']._serialized_end=963
-  _globals['_DELETETENANTRESPONSE']._serialized_start=965
-  _globals['_DELETETENANTRESPONSE']._serialized_end=987
-  _globals['_REGISTRATIONSERVICE']._serialized_start=990
-  _globals['_REGISTRATIONSERVICE']._serialized_end=1755
+  _globals['_LISTTENANTSREQUEST']._serialized_start=861
+  _globals['_LISTTENANTSREQUEST']._serialized_end=881
+  _globals['_LISTTENANTSRESPONSE']._serialized_start=883
+  _globals['_LISTTENANTSRESPONSE']._serialized_end=943
+  _globals['_DELETETENANTGROUPREQUEST']._serialized_start=945
+  _globals['_DELETETENANTGROUPREQUEST']._serialized_end=983
+  _globals['_DELETETENANTGROUPRESPONSE']._serialized_start=985
+  _globals['_DELETETENANTGROUPRESPONSE']._serialized_end=1012
+  _globals['_DELETETENANTREQUEST']._serialized_start=1014
+  _globals['_DELETETENANTREQUEST']._serialized_end=1047
+  _globals['_DELETETENANTRESPONSE']._serialized_start=1049
+  _globals['_DELETETENANTRESPONSE']._serialized_end=1071
+  _globals['_REGISTRATIONSERVICE']._serialized_start=1074
+  _globals['_REGISTRATIONSERVICE']._serialized_end=1923
 # @@protoc_insertion_point(module_scope)

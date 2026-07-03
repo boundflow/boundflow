@@ -41,9 +41,10 @@ func (r *CustomerRequestRepo) Create(ctx context.Context, req *domain.CustomerRe
 }
 
 // CreateInvocationRequest atomically allocates the next version (bumping the workflow's
-// target_version), flips lifecycle_state to invoking, and inserts the request with that
-// version — all in one statement. Fails with ErrInvalidLifecycleState if the workflow is in
-// one of invalidStates. Sets req.Version and returns the allocated version.
+// target_version) and inserts the request with that version — all in one statement. Fails
+// with ErrInvalidLifecycleState if the workflow is in one of invalidStates. Sets req.Version
+// and returns the allocated version. (The lifecycle_state -> invoking transition happens
+// best-effort in ScheduleRequest, once the job actually lands on the jobs table.)
 func (r *CustomerRequestRepo) CreateInvocationRequest(ctx context.Context, req *domain.CustomerRequest, invalidStates []domain.LifecycleState) (int64, error) {
 	requestInfo, err := json.Marshal(req.RequestInfo)
 	if err != nil {
@@ -55,7 +56,7 @@ func (r *CustomerRequestRepo) CreateInvocationRequest(ctx context.Context, req *
 	err = r.pool.QueryRow(ctx,
 		`WITH bumped AS (
 		     UPDATE workflows
-		     SET target_version = target_version + 1, lifecycle_state = 'invoking'
+		     SET target_version = target_version + 1
 		     WHERE id = $2 AND NOT (lifecycle_state = ANY($6::lifecycle_state[]))
 		     RETURNING target_version
 		 )
@@ -79,7 +80,7 @@ func (r *CustomerRequestRepo) CreateInvocationRequest(ctx context.Context, req *
 // allocates+inserts if the workflow is not in invalidStates, has no non-terminal request in
 // flight, and its most recent terminal request completed at least minGap ago. Returns
 // created=false (no error) when any guard rejects. The whole thing is one atomic statement, so
-// the version bump / state flip only happen when the request is actually created.
+// the version bump only happens when the request is actually created.
 func (r *CustomerRequestRepo) CreateDuePeriodicRequest(ctx context.Context, req *domain.CustomerRequest, minGap time.Duration, invalidStates []domain.LifecycleState) (int64, bool, error) {
 	requestInfo, err := json.Marshal(req.RequestInfo)
 	if err != nil {
@@ -91,7 +92,7 @@ func (r *CustomerRequestRepo) CreateDuePeriodicRequest(ctx context.Context, req 
 	err = r.pool.QueryRow(ctx,
 		`WITH bumped AS (
 		     UPDATE workflows ri
-		     SET target_version = target_version + 1, lifecycle_state = 'invoking'
+		     SET target_version = target_version + 1
 		     WHERE ri.id = $2
 		       AND NOT (ri.lifecycle_state = ANY($6::lifecycle_state[]))
 		       AND NOT EXISTS (
@@ -134,10 +135,12 @@ func (r *CustomerRequestRepo) Get(ctx context.Context, id string) (*domain.Custo
 	var requestInfoJSON []byte
 
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, workflow_id, status, request_type, request_info, version, created_at
+		`SELECT id, workflow_id, status, request_type, request_info, version,
+		        COALESCE(run_outcome::text, ''), failure_reason, created_at, completed_at
 		 FROM customer_requests WHERE id = $1`,
 		id,
-	).Scan(&req.ID, &req.WorkflowID, &req.Status, &req.RequestType, &requestInfoJSON, &req.Version, &req.CreatedAt)
+	).Scan(&req.ID, &req.WorkflowID, &req.Status, &req.RequestType, &requestInfoJSON, &req.Version,
+		&req.RunOutcome, &req.FailureReason, &req.CreatedAt, &req.CompletedAt)
 	if err != nil {
 		return nil, handleError(err, "customer request")
 	}
@@ -147,15 +150,15 @@ func (r *CustomerRequestRepo) Get(ctx context.Context, id string) (*domain.Custo
 	return &req, nil
 }
 
-func (r *CustomerRequestRepo) CompleteRequest(ctx context.Context, id string) (*domain.CustomerRequest, error) {
+func (r *CustomerRequestRepo) CompleteRequest(ctx context.Context, id string, outcome domain.RunOutcome, failureReason string) (*domain.CustomerRequest, error) {
 	var req domain.CustomerRequest
 	var requestInfoJSON []byte
 
 	err := r.pool.QueryRow(ctx,
-		`UPDATE customer_requests SET status = $1, completed_at = now() WHERE id = $2
-		 RETURNING id, workflow_id, status, request_type, request_info, version, created_at`,
-		domain.CustomerRequestStatusCompleted, id,
-	).Scan(&req.ID, &req.WorkflowID, &req.Status, &req.RequestType, &requestInfoJSON, &req.Version, &req.CreatedAt)
+		`UPDATE customer_requests SET status = $1, run_outcome = $2, failure_reason = $3, completed_at = now() WHERE id = $4
+		 RETURNING id, workflow_id, status, request_type, request_info, version, created_at, completed_at`,
+		domain.CustomerRequestStatusCompleted, outcome, failureReason, id,
+	).Scan(&req.ID, &req.WorkflowID, &req.Status, &req.RequestType, &requestInfoJSON, &req.Version, &req.CreatedAt, &req.CompletedAt)
 	if err != nil {
 		return nil, handleError(err, "customer request")
 	}
@@ -165,15 +168,16 @@ func (r *CustomerRequestRepo) CompleteRequest(ctx context.Context, id string) (*
 	return &req, nil
 }
 
-func (r *CustomerRequestRepo) FailRequest(ctx context.Context, id string) (*domain.CustomerRequest, error) {
+func (r *CustomerRequestRepo) FailRequest(ctx context.Context, id string, failureReason string) (*domain.CustomerRequest, error) {
 	var req domain.CustomerRequest
 	var requestInfoJSON []byte
 
+	// A failed request is always the platform-failure outcome (interrupted).
 	err := r.pool.QueryRow(ctx,
-		`UPDATE customer_requests SET status = $1, completed_at = now() WHERE id = $2
-		 RETURNING id, workflow_id, status, request_type, request_info, version, created_at`,
-		domain.CustomerRequestStatusFailed, id,
-	).Scan(&req.ID, &req.WorkflowID, &req.Status, &req.RequestType, &requestInfoJSON, &req.Version, &req.CreatedAt)
+		`UPDATE customer_requests SET status = $1, run_outcome = $2, failure_reason = $3, completed_at = now() WHERE id = $4
+		 RETURNING id, workflow_id, status, request_type, request_info, version, created_at, completed_at`,
+		domain.CustomerRequestStatusFailed, domain.RunOutcomeInterrupted, failureReason, id,
+	).Scan(&req.ID, &req.WorkflowID, &req.Status, &req.RequestType, &requestInfoJSON, &req.Version, &req.CreatedAt, &req.CompletedAt)
 	if err != nil {
 		return nil, handleError(err, "customer request")
 	}
@@ -181,6 +185,38 @@ func (r *CustomerRequestRepo) FailRequest(ctx context.Context, id string) (*doma
 		return nil, fmt.Errorf("unmarshal request info: %w", err)
 	}
 	return &req, nil
+}
+
+// ListForWorkflow returns every run (request) for a workflow, newest first. run_outcome
+// is empty while a run is still in flight (NULL in the DB).
+func (r *CustomerRequestRepo) ListForWorkflow(ctx context.Context, workflowID string) ([]*domain.CustomerRequest, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT id, workflow_id, status, request_type, request_info, version,
+		        COALESCE(run_outcome::text, ''), failure_reason, created_at, completed_at
+		 FROM customer_requests WHERE workflow_id = $1 ORDER BY created_at DESC`,
+		workflowID,
+	)
+	if err != nil {
+		return nil, handleError(err, "customer request")
+	}
+	defer rows.Close()
+
+	var out []*domain.CustomerRequest
+	for rows.Next() {
+		var req domain.CustomerRequest
+		var requestInfoJSON []byte
+		if err := rows.Scan(
+			&req.ID, &req.WorkflowID, &req.Status, &req.RequestType, &requestInfoJSON, &req.Version,
+			&req.RunOutcome, &req.FailureReason, &req.CreatedAt, &req.CompletedAt,
+		); err != nil {
+			return nil, handleError(err, "customer request")
+		}
+		if err := json.Unmarshal(requestInfoJSON, &req.RequestInfo); err != nil {
+			return nil, fmt.Errorf("unmarshal request info: %w", err)
+		}
+		out = append(out, &req)
+	}
+	return out, rows.Err()
 }
 
 func (r *CustomerRequestRepo) UpdateStatus(ctx context.Context, workflowID, id string, status domain.CustomerRequestStatus) error {

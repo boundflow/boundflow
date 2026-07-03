@@ -59,8 +59,8 @@ async def test_per_tool_limit_caps_handler_invocations(cp, api_key):
             )
 
             await cp.activate_workflow(workflow.id)
-            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=60)
-            await wait_for_completion(cp, workflow.id)
+            request_id = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=60)
+            await wait_for_completion(cp, request_id)
 
             assert ping_calls[0] >= 1, "ping handler should have run at least once"
             assert ping_calls[0] <= 1, f"ping handler should have been capped at 1, but ran {ping_calls[0]} times"

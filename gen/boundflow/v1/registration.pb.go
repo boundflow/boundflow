@@ -541,6 +541,86 @@ func (x *GetTenantResponse) GetTenant() *Tenant {
 	return nil
 }
 
+type ListTenantsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTenantsRequest) Reset() {
+	*x = ListTenantsRequest{}
+	mi := &file_boundflow_v1_registration_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTenantsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTenantsRequest) ProtoMessage() {}
+
+func (x *ListTenantsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_boundflow_v1_registration_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTenantsRequest.ProtoReflect.Descriptor instead.
+func (*ListTenantsRequest) Descriptor() ([]byte, []int) {
+	return file_boundflow_v1_registration_proto_rawDescGZIP(), []int{12}
+}
+
+type ListTenantsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Tenants       []*Tenant              `protobuf:"bytes,1,rep,name=tenants,proto3" json:"tenants,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTenantsResponse) Reset() {
+	*x = ListTenantsResponse{}
+	mi := &file_boundflow_v1_registration_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTenantsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTenantsResponse) ProtoMessage() {}
+
+func (x *ListTenantsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_boundflow_v1_registration_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTenantsResponse.ProtoReflect.Descriptor instead.
+func (*ListTenantsResponse) Descriptor() ([]byte, []int) {
+	return file_boundflow_v1_registration_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *ListTenantsResponse) GetTenants() []*Tenant {
+	if x != nil {
+		return x.Tenants
+	}
+	return nil
+}
+
 type DeleteTenantGroupRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -550,7 +630,7 @@ type DeleteTenantGroupRequest struct {
 
 func (x *DeleteTenantGroupRequest) Reset() {
 	*x = DeleteTenantGroupRequest{}
-	mi := &file_boundflow_v1_registration_proto_msgTypes[12]
+	mi := &file_boundflow_v1_registration_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -562,7 +642,7 @@ func (x *DeleteTenantGroupRequest) String() string {
 func (*DeleteTenantGroupRequest) ProtoMessage() {}
 
 func (x *DeleteTenantGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_registration_proto_msgTypes[12]
+	mi := &file_boundflow_v1_registration_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -575,7 +655,7 @@ func (x *DeleteTenantGroupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteTenantGroupRequest.ProtoReflect.Descriptor instead.
 func (*DeleteTenantGroupRequest) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_registration_proto_rawDescGZIP(), []int{12}
+	return file_boundflow_v1_registration_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *DeleteTenantGroupRequest) GetId() string {
@@ -593,7 +673,7 @@ type DeleteTenantGroupResponse struct {
 
 func (x *DeleteTenantGroupResponse) Reset() {
 	*x = DeleteTenantGroupResponse{}
-	mi := &file_boundflow_v1_registration_proto_msgTypes[13]
+	mi := &file_boundflow_v1_registration_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -605,7 +685,7 @@ func (x *DeleteTenantGroupResponse) String() string {
 func (*DeleteTenantGroupResponse) ProtoMessage() {}
 
 func (x *DeleteTenantGroupResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_registration_proto_msgTypes[13]
+	mi := &file_boundflow_v1_registration_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -618,7 +698,7 @@ func (x *DeleteTenantGroupResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteTenantGroupResponse.ProtoReflect.Descriptor instead.
 func (*DeleteTenantGroupResponse) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_registration_proto_rawDescGZIP(), []int{13}
+	return file_boundflow_v1_registration_proto_rawDescGZIP(), []int{15}
 }
 
 type DeleteTenantRequest struct {
@@ -630,7 +710,7 @@ type DeleteTenantRequest struct {
 
 func (x *DeleteTenantRequest) Reset() {
 	*x = DeleteTenantRequest{}
-	mi := &file_boundflow_v1_registration_proto_msgTypes[14]
+	mi := &file_boundflow_v1_registration_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -642,7 +722,7 @@ func (x *DeleteTenantRequest) String() string {
 func (*DeleteTenantRequest) ProtoMessage() {}
 
 func (x *DeleteTenantRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_registration_proto_msgTypes[14]
+	mi := &file_boundflow_v1_registration_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -655,7 +735,7 @@ func (x *DeleteTenantRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteTenantRequest.ProtoReflect.Descriptor instead.
 func (*DeleteTenantRequest) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_registration_proto_rawDescGZIP(), []int{14}
+	return file_boundflow_v1_registration_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *DeleteTenantRequest) GetId() string {
@@ -673,7 +753,7 @@ type DeleteTenantResponse struct {
 
 func (x *DeleteTenantResponse) Reset() {
 	*x = DeleteTenantResponse{}
-	mi := &file_boundflow_v1_registration_proto_msgTypes[15]
+	mi := &file_boundflow_v1_registration_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -685,7 +765,7 @@ func (x *DeleteTenantResponse) String() string {
 func (*DeleteTenantResponse) ProtoMessage() {}
 
 func (x *DeleteTenantResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_registration_proto_msgTypes[15]
+	mi := &file_boundflow_v1_registration_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -698,7 +778,7 @@ func (x *DeleteTenantResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteTenantResponse.ProtoReflect.Descriptor instead.
 func (*DeleteTenantResponse) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_registration_proto_rawDescGZIP(), []int{15}
+	return file_boundflow_v1_registration_proto_rawDescGZIP(), []int{17}
 }
 
 var File_boundflow_v1_registration_proto protoreflect.FileDescriptor
@@ -728,19 +808,23 @@ const file_boundflow_v1_registration_proto_rawDesc = "" +
 	"\x10GetTenantRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"A\n" +
 	"\x11GetTenantResponse\x12,\n" +
-	"\x06tenant\x18\x01 \x01(\v2\x14.boundflow.v1.TenantR\x06tenant\"*\n" +
+	"\x06tenant\x18\x01 \x01(\v2\x14.boundflow.v1.TenantR\x06tenant\"\x14\n" +
+	"\x12ListTenantsRequest\"E\n" +
+	"\x13ListTenantsResponse\x12.\n" +
+	"\atenants\x18\x01 \x03(\v2\x14.boundflow.v1.TenantR\atenants\"*\n" +
 	"\x18DeleteTenantGroupRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x1b\n" +
 	"\x19DeleteTenantGroupResponse\"%\n" +
 	"\x13DeleteTenantRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x16\n" +
-	"\x14DeleteTenantResponse2\xfd\x05\n" +
+	"\x14DeleteTenantResponse2\xd1\x06\n" +
 	"\x13RegistrationService\x12d\n" +
 	"\x11CreateTenantGroup\x12&.boundflow.v1.CreateTenantGroupRequest\x1a'.boundflow.v1.CreateTenantGroupResponse\x12[\n" +
 	"\x0eGetTenantGroup\x12#.boundflow.v1.GetTenantGroupRequest\x1a$.boundflow.v1.GetTenantGroupResponse\x12d\n" +
 	"\x11DeleteTenantGroup\x12&.boundflow.v1.DeleteTenantGroupRequest\x1a'.boundflow.v1.DeleteTenantGroupResponse\x12U\n" +
 	"\fCreateTenant\x12!.boundflow.v1.CreateTenantRequest\x1a\".boundflow.v1.CreateTenantResponse\x12L\n" +
-	"\tGetTenant\x12\x1e.boundflow.v1.GetTenantRequest\x1a\x1f.boundflow.v1.GetTenantResponse\x12U\n" +
+	"\tGetTenant\x12\x1e.boundflow.v1.GetTenantRequest\x1a\x1f.boundflow.v1.GetTenantResponse\x12R\n" +
+	"\vListTenants\x12 .boundflow.v1.ListTenantsRequest\x1a!.boundflow.v1.ListTenantsResponse\x12U\n" +
 	"\fDeleteTenant\x12!.boundflow.v1.DeleteTenantRequest\x1a\".boundflow.v1.DeleteTenantResponse\x12^\n" +
 	"\x0fSetModelPricing\x12$.boundflow.v1.SetModelPricingRequest\x1a%.boundflow.v1.SetModelPricingResponse\x12a\n" +
 	"\x10ListModelPricing\x12%.boundflow.v1.ListModelPricingRequest\x1a&.boundflow.v1.ListModelPricingResponseB=Z;github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1b\x06proto3"
@@ -757,7 +841,7 @@ func file_boundflow_v1_registration_proto_rawDescGZIP() []byte {
 	return file_boundflow_v1_registration_proto_rawDescData
 }
 
-var file_boundflow_v1_registration_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_boundflow_v1_registration_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_boundflow_v1_registration_proto_goTypes = []any{
 	(*SetModelPricingRequest)(nil),    // 0: boundflow.v1.SetModelPricingRequest
 	(*SetModelPricingResponse)(nil),   // 1: boundflow.v1.SetModelPricingResponse
@@ -771,45 +855,50 @@ var file_boundflow_v1_registration_proto_goTypes = []any{
 	(*CreateTenantResponse)(nil),      // 9: boundflow.v1.CreateTenantResponse
 	(*GetTenantRequest)(nil),          // 10: boundflow.v1.GetTenantRequest
 	(*GetTenantResponse)(nil),         // 11: boundflow.v1.GetTenantResponse
-	(*DeleteTenantGroupRequest)(nil),  // 12: boundflow.v1.DeleteTenantGroupRequest
-	(*DeleteTenantGroupResponse)(nil), // 13: boundflow.v1.DeleteTenantGroupResponse
-	(*DeleteTenantRequest)(nil),       // 14: boundflow.v1.DeleteTenantRequest
-	(*DeleteTenantResponse)(nil),      // 15: boundflow.v1.DeleteTenantResponse
-	(*ModelPricing)(nil),              // 16: boundflow.v1.ModelPricing
-	(*TenantGroup)(nil),               // 17: boundflow.v1.TenantGroup
-	(*Tenant)(nil),                    // 18: boundflow.v1.Tenant
+	(*ListTenantsRequest)(nil),        // 12: boundflow.v1.ListTenantsRequest
+	(*ListTenantsResponse)(nil),       // 13: boundflow.v1.ListTenantsResponse
+	(*DeleteTenantGroupRequest)(nil),  // 14: boundflow.v1.DeleteTenantGroupRequest
+	(*DeleteTenantGroupResponse)(nil), // 15: boundflow.v1.DeleteTenantGroupResponse
+	(*DeleteTenantRequest)(nil),       // 16: boundflow.v1.DeleteTenantRequest
+	(*DeleteTenantResponse)(nil),      // 17: boundflow.v1.DeleteTenantResponse
+	(*ModelPricing)(nil),              // 18: boundflow.v1.ModelPricing
+	(*TenantGroup)(nil),               // 19: boundflow.v1.TenantGroup
+	(*Tenant)(nil),                    // 20: boundflow.v1.Tenant
 }
 var file_boundflow_v1_registration_proto_depIdxs = []int32{
-	16, // 0: boundflow.v1.SetModelPricingRequest.pricing:type_name -> boundflow.v1.ModelPricing
-	16, // 1: boundflow.v1.SetModelPricingResponse.pricing:type_name -> boundflow.v1.ModelPricing
-	16, // 2: boundflow.v1.ListModelPricingResponse.pricing:type_name -> boundflow.v1.ModelPricing
-	17, // 3: boundflow.v1.CreateTenantGroupRequest.tenant_group:type_name -> boundflow.v1.TenantGroup
-	17, // 4: boundflow.v1.CreateTenantGroupResponse.tenant_group:type_name -> boundflow.v1.TenantGroup
-	17, // 5: boundflow.v1.GetTenantGroupResponse.tenant_group:type_name -> boundflow.v1.TenantGroup
-	18, // 6: boundflow.v1.CreateTenantRequest.tenant:type_name -> boundflow.v1.Tenant
-	18, // 7: boundflow.v1.CreateTenantResponse.tenant:type_name -> boundflow.v1.Tenant
-	18, // 8: boundflow.v1.GetTenantResponse.tenant:type_name -> boundflow.v1.Tenant
-	4,  // 9: boundflow.v1.RegistrationService.CreateTenantGroup:input_type -> boundflow.v1.CreateTenantGroupRequest
-	6,  // 10: boundflow.v1.RegistrationService.GetTenantGroup:input_type -> boundflow.v1.GetTenantGroupRequest
-	12, // 11: boundflow.v1.RegistrationService.DeleteTenantGroup:input_type -> boundflow.v1.DeleteTenantGroupRequest
-	8,  // 12: boundflow.v1.RegistrationService.CreateTenant:input_type -> boundflow.v1.CreateTenantRequest
-	10, // 13: boundflow.v1.RegistrationService.GetTenant:input_type -> boundflow.v1.GetTenantRequest
-	14, // 14: boundflow.v1.RegistrationService.DeleteTenant:input_type -> boundflow.v1.DeleteTenantRequest
-	0,  // 15: boundflow.v1.RegistrationService.SetModelPricing:input_type -> boundflow.v1.SetModelPricingRequest
-	2,  // 16: boundflow.v1.RegistrationService.ListModelPricing:input_type -> boundflow.v1.ListModelPricingRequest
-	5,  // 17: boundflow.v1.RegistrationService.CreateTenantGroup:output_type -> boundflow.v1.CreateTenantGroupResponse
-	7,  // 18: boundflow.v1.RegistrationService.GetTenantGroup:output_type -> boundflow.v1.GetTenantGroupResponse
-	13, // 19: boundflow.v1.RegistrationService.DeleteTenantGroup:output_type -> boundflow.v1.DeleteTenantGroupResponse
-	9,  // 20: boundflow.v1.RegistrationService.CreateTenant:output_type -> boundflow.v1.CreateTenantResponse
-	11, // 21: boundflow.v1.RegistrationService.GetTenant:output_type -> boundflow.v1.GetTenantResponse
-	15, // 22: boundflow.v1.RegistrationService.DeleteTenant:output_type -> boundflow.v1.DeleteTenantResponse
-	1,  // 23: boundflow.v1.RegistrationService.SetModelPricing:output_type -> boundflow.v1.SetModelPricingResponse
-	3,  // 24: boundflow.v1.RegistrationService.ListModelPricing:output_type -> boundflow.v1.ListModelPricingResponse
-	17, // [17:25] is the sub-list for method output_type
-	9,  // [9:17] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	18, // 0: boundflow.v1.SetModelPricingRequest.pricing:type_name -> boundflow.v1.ModelPricing
+	18, // 1: boundflow.v1.SetModelPricingResponse.pricing:type_name -> boundflow.v1.ModelPricing
+	18, // 2: boundflow.v1.ListModelPricingResponse.pricing:type_name -> boundflow.v1.ModelPricing
+	19, // 3: boundflow.v1.CreateTenantGroupRequest.tenant_group:type_name -> boundflow.v1.TenantGroup
+	19, // 4: boundflow.v1.CreateTenantGroupResponse.tenant_group:type_name -> boundflow.v1.TenantGroup
+	19, // 5: boundflow.v1.GetTenantGroupResponse.tenant_group:type_name -> boundflow.v1.TenantGroup
+	20, // 6: boundflow.v1.CreateTenantRequest.tenant:type_name -> boundflow.v1.Tenant
+	20, // 7: boundflow.v1.CreateTenantResponse.tenant:type_name -> boundflow.v1.Tenant
+	20, // 8: boundflow.v1.GetTenantResponse.tenant:type_name -> boundflow.v1.Tenant
+	20, // 9: boundflow.v1.ListTenantsResponse.tenants:type_name -> boundflow.v1.Tenant
+	4,  // 10: boundflow.v1.RegistrationService.CreateTenantGroup:input_type -> boundflow.v1.CreateTenantGroupRequest
+	6,  // 11: boundflow.v1.RegistrationService.GetTenantGroup:input_type -> boundflow.v1.GetTenantGroupRequest
+	14, // 12: boundflow.v1.RegistrationService.DeleteTenantGroup:input_type -> boundflow.v1.DeleteTenantGroupRequest
+	8,  // 13: boundflow.v1.RegistrationService.CreateTenant:input_type -> boundflow.v1.CreateTenantRequest
+	10, // 14: boundflow.v1.RegistrationService.GetTenant:input_type -> boundflow.v1.GetTenantRequest
+	12, // 15: boundflow.v1.RegistrationService.ListTenants:input_type -> boundflow.v1.ListTenantsRequest
+	16, // 16: boundflow.v1.RegistrationService.DeleteTenant:input_type -> boundflow.v1.DeleteTenantRequest
+	0,  // 17: boundflow.v1.RegistrationService.SetModelPricing:input_type -> boundflow.v1.SetModelPricingRequest
+	2,  // 18: boundflow.v1.RegistrationService.ListModelPricing:input_type -> boundflow.v1.ListModelPricingRequest
+	5,  // 19: boundflow.v1.RegistrationService.CreateTenantGroup:output_type -> boundflow.v1.CreateTenantGroupResponse
+	7,  // 20: boundflow.v1.RegistrationService.GetTenantGroup:output_type -> boundflow.v1.GetTenantGroupResponse
+	15, // 21: boundflow.v1.RegistrationService.DeleteTenantGroup:output_type -> boundflow.v1.DeleteTenantGroupResponse
+	9,  // 22: boundflow.v1.RegistrationService.CreateTenant:output_type -> boundflow.v1.CreateTenantResponse
+	11, // 23: boundflow.v1.RegistrationService.GetTenant:output_type -> boundflow.v1.GetTenantResponse
+	13, // 24: boundflow.v1.RegistrationService.ListTenants:output_type -> boundflow.v1.ListTenantsResponse
+	17, // 25: boundflow.v1.RegistrationService.DeleteTenant:output_type -> boundflow.v1.DeleteTenantResponse
+	1,  // 26: boundflow.v1.RegistrationService.SetModelPricing:output_type -> boundflow.v1.SetModelPricingResponse
+	3,  // 27: boundflow.v1.RegistrationService.ListModelPricing:output_type -> boundflow.v1.ListModelPricingResponse
+	19, // [19:28] is the sub-list for method output_type
+	10, // [10:19] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_boundflow_v1_registration_proto_init() }
@@ -826,7 +915,7 @@ func file_boundflow_v1_registration_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_boundflow_v1_registration_proto_rawDesc), len(file_boundflow_v1_registration_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   16,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

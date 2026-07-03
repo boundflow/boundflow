@@ -54,7 +54,7 @@ async def test_approve_gate_runs_approve_operation(cp):
                                             config=WorkflowConfig(version=1))
         try:
             await cp.activate_workflow(workflow.id)
-            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            request_id = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
 
             await wait_for_lifecycle_state(cp, workflow.id, LifecycleState.AWAITING_APPROVAL)
 
@@ -65,7 +65,7 @@ async def test_approve_gate_runs_approve_operation(cp):
             assert req.approval_id
 
             await cp.approve_workflow(workflow.id, req.approval_id)
-            await wait_for_completion(cp, workflow.id)
+            await wait_for_completion(cp, request_id)
 
             assert approved_step_ran[0], "approved_step should have run after approval"
         finally:
@@ -145,13 +145,13 @@ async def test_reject_gate_skips_approve_operation(cp):
                                             config=WorkflowConfig(version=1))
         try:
             await cp.activate_workflow(workflow.id)
-            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            request_id = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
 
             await wait_for_lifecycle_state(cp, workflow.id, LifecycleState.AWAITING_APPROVAL)
             assert len(captured) == 1
 
             await cp.reject_workflow(workflow.id, captured[0].approval_id)
-            await wait_for_completion(cp, workflow.id)
+            await wait_for_completion(cp, request_id)
 
             assert not approved_ran[0], "approved_step should NOT have run after rejection"
         finally:

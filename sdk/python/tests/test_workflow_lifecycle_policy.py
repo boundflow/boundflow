@@ -1,6 +1,8 @@
 """Port of WorkflowLifecyclePolicyTests.cs"""
 from __future__ import annotations
 
+import asyncio
+
 import grpc
 import pytest
 
@@ -68,8 +70,8 @@ async def test_workflow_enters_cooldown_after_llm_call_threshold_exceeded(cp, ap
             ])
             await cp.activate_workflow(workflow.id)
 
-            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
-            await wait_for_completion(cp, workflow.id)
+            request_id = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, request_id)
 
             state = await wait_for_workflow_state(cp, workflow.id, WorkflowState.COOLDOWN)
             assert state == WorkflowState.COOLDOWN
@@ -114,13 +116,13 @@ async def test_workflow_switches_to_new_version_after_llm_call_threshold_exceede
             await cp.activate_workflow(workflow.id)
 
             # Invoke 1 — runs version 1, makes an LLM call, rule fires → current_workflow_version=2.
-            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
-            await wait_for_completion(cp, workflow.id)
+            request_id = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, request_id)
             assert len(versions_run) >= 1 and versions_run[0] == 1, "Invoke 1 should have run version 1"
 
             # Invoke 2 — scheduler reads current_workflow_version=2.
-            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
-            await wait_for_completion(cp, workflow.id)
+            request_id = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, request_id)
             assert len(versions_run) >= 2 and versions_run[1] == 2, "Invoke 2 should have run version 2"
         finally:
             await cp.delete_workflow(workflow.id)
@@ -159,8 +161,8 @@ async def test_workflow_pauses_and_does_not_schedule_until_activated(cp, api_key
             await cp.activate_workflow(workflow.id)
 
             # Invoke 1 — pause rule fires on completion.
-            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
-            await wait_for_completion(cp, workflow.id)
+            request_id = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, request_id)
             await wait_for_workflow_state(cp, workflow.id, WorkflowState.PAUSED)
 
             # Invoke 2 — should be rejected immediately with FailedPrecondition.
@@ -170,8 +172,8 @@ async def test_workflow_pauses_and_does_not_schedule_until_activated(cp, api_key
 
             # Activate — invoke should now succeed and complete.
             await cp.activate_workflow(workflow.id)
-            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
-            await wait_for_completion(cp, workflow.id)
+            request_id = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, request_id)
 
             assert 2 in completions, "Invoke 2 should have completed after activation"
         finally:
@@ -201,9 +203,78 @@ async def test_workflow_enters_cooldown_after_customer_failure(cp):
             ])
             await cp.activate_workflow(workflow.id)
 
-            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
-            await wait_for_completion(cp, workflow.id)
+            request_id = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, request_id)
 
+            state = await wait_for_workflow_state(cp, workflow.id, WorkflowState.COOLDOWN)
+            assert state == WorkflowState.COOLDOWN
+        finally:
+            await cp.delete_workflow(workflow.id)
+
+
+async def test_uncaught_callback_exception_is_a_soft_failure(cp):
+    """An uncaught exception in the workflow callback is treated like ctx.mark_failed():
+    it bumps num_failures (so the cooldown rule fires) and the run still completes, so
+    the workflow is NOT platform-failed/disabled."""
+    worker = BoundFlowWorker(WORKER_ADDRESS, dummy_mock())
+
+    @worker.workflow("crash_cooldown", version=1)
+    async def _entry(ctx):
+        raise RuntimeError("boom")  # a crash, not ctx.mark_failed()
+
+    async with run_worker(worker):
+        tenant = await create_isolated_tenant(cp, "crash-cooldown")
+        workflow = await cp.create_workflow("crash_cooldown", tenant.id,
+                                            config=WorkflowConfig(version=1))
+        try:
+            await cp.set_workflow_lifecycle_policy(workflow.id, [
+                WorkflowRule(
+                    metric=WorkflowMetric.NUM_FAILURES,
+                    threshold=1,
+                    action=Cooldown(window=1, seconds=10),
+                )
+            ])
+            await cp.activate_workflow(workflow.id)
+
+            request_id = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_completion(cp, request_id)
+
+            # The run completed (not interrupted), but num_failures fired the cooldown.
+            assert await cp.get_workflow_lifecycle_state(workflow.id) != LifecycleState.INTERRUPTED
+            state = await wait_for_workflow_state(cp, workflow.id, WorkflowState.COOLDOWN)
+            assert state == WorkflowState.COOLDOWN
+        finally:
+            await cp.delete_workflow(workflow.id)
+
+
+async def test_operation_timeout_is_a_soft_failure(cp):
+    """An operation timeout is a customer-domain failure: it bumps num_failures (so the
+    cooldown rule fires) but leaves the workflow active — it does NOT interrupt it."""
+    worker = BoundFlowWorker(WORKER_ADDRESS, dummy_mock())
+
+    @worker.workflow("timeout_cooldown", version=1)
+    async def _entry(ctx):
+        await asyncio.sleep(60)  # block past the op timeout → platform cancels → soft failure
+        return Complete()
+
+    async with run_worker(worker):
+        tenant = await create_isolated_tenant(cp, "timeout-cooldown")
+        workflow = await cp.create_workflow("timeout_cooldown", tenant.id,
+                                            config=WorkflowConfig(version=1))
+        try:
+            await cp.set_workflow_lifecycle_policy(workflow.id, [
+                WorkflowRule(
+                    metric=WorkflowMetric.NUM_FAILURES,
+                    threshold=1,
+                    action=Cooldown(window=1, seconds=10),
+                )
+            ])
+            await cp.activate_workflow(workflow.id)
+
+            request_id = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=3)
+            await wait_for_completion(cp, request_id)
+
+            assert await cp.get_workflow_lifecycle_state(workflow.id) != LifecycleState.INTERRUPTED
             state = await wait_for_workflow_state(cp, workflow.id, WorkflowState.COOLDOWN)
             assert state == WorkflowState.COOLDOWN
         finally:
@@ -296,8 +367,8 @@ async def test_workflow_enters_cooldown_after_tool_failures(cp, api_key):
             ])
 
             await cp.activate_workflow(workflow.id)
-            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=60)
-            await wait_for_completion(cp, workflow.id)
+            request_id = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=60)
+            await wait_for_completion(cp, request_id)
 
             state = await wait_for_workflow_state(cp, workflow.id, WorkflowState.COOLDOWN)
             assert state == WorkflowState.COOLDOWN

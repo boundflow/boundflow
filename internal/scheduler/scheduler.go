@@ -29,19 +29,20 @@ type PartitionWorker interface {
 }
 
 type Scheduler struct {
-	id             string
-	interval       int
-	partitions     storage.SchedulerPartitionRepository
-	scheduler      storage.SchedulerRepository
-	requests       storage.CustomerRequestRepository
-	workflow       storage.WorkflowRepository
-	agentStates    storage.AgentStateRepository
-	log            *slog.Logger
-	metricsHandler   MetricsHandler
-	jobs             storage.JobRepository
-	policyResolver   PolicyResolver
-	audit            storage.AuditRepository
-	partitionWorkers []PartitionWorker
+	id                         string
+	interval                   int
+	orphanedJobGracePeriodSecs int
+	partitions                 storage.SchedulerPartitionRepository
+	scheduler                  storage.SchedulerRepository
+	requests                   storage.CustomerRequestRepository
+	workflow                   storage.WorkflowRepository
+	agentStates                storage.AgentStateRepository
+	log                        *slog.Logger
+	metricsHandler             MetricsHandler
+	jobs                       storage.JobRepository
+	policyResolver             PolicyResolver
+	audit                      storage.AuditRepository
+	partitionWorkers           []PartitionWorker
 }
 
 // Functions of the scheduler:
@@ -49,10 +50,11 @@ type Scheduler struct {
 // 2. Schedules unscheduled requests onto the job queue (picking priority by version number)
 // 3. Checks for completed jobs, and updates current config state of the workflow and lifecycle state, then deletes the job
 
-func NewScheduler(id string, interval int, parts storage.SchedulerPartitionRepository, scheduler storage.SchedulerRepository, requests storage.CustomerRequestRepository, workflow storage.WorkflowRepository, agentStates storage.AgentStateRepository, jobs storage.JobRepository, metricsHandler MetricsHandler, policyResolver PolicyResolver, audit storage.AuditRepository, log *slog.Logger) *Scheduler {
+func NewScheduler(id string, interval int, orphanedJobGracePeriodSecs int, parts storage.SchedulerPartitionRepository, scheduler storage.SchedulerRepository, requests storage.CustomerRequestRepository, workflow storage.WorkflowRepository, agentStates storage.AgentStateRepository, jobs storage.JobRepository, metricsHandler MetricsHandler, policyResolver PolicyResolver, audit storage.AuditRepository, log *slog.Logger) *Scheduler {
 	return &Scheduler{
-		id:             id,
-		interval:       interval,
+		id:                         id,
+		interval:                   interval,
+		orphanedJobGracePeriodSecs: orphanedJobGracePeriodSecs,
 		partitions:     parts,
 		scheduler:      scheduler,
 		requests:       requests,
@@ -128,7 +130,7 @@ func (s *Scheduler) runPartition(ctx context.Context, partition *domain.Schedule
 			s.log.Debug("tick", "partition_id", partition.ID)
 
 			var wg sync.WaitGroup
-			wg.Add(3)
+			wg.Add(4)
 			go func() {
 				defer wg.Done()
 				s.failJobs(ctx, partition.ID)
@@ -139,7 +141,11 @@ func (s *Scheduler) runPartition(ctx context.Context, partition *domain.Schedule
 			}()
 			go func() {
 				defer wg.Done()
-				s.syncAwaitingApprovalStates(ctx, partition.ID)
+				s.reconcileWorkflowLifecycles(ctx, partition.ID)
+			}()
+			go func() {
+				defer wg.Done()
+				s.markOrphanedJobsFailed(ctx, partition.ID)
 			}()
 			wg.Wait()
 			s.scheduleJobs(ctx, partition.ID)
@@ -193,18 +199,36 @@ func (s *Scheduler) recordPolicyAction(ctx context.Context, workflow *domain.Wor
 	}
 }
 
+func (s *Scheduler) MarkInvoking(ctx context.Context, workflowID string) error {
+	return s.scheduler.MarkWorkflowInvoking(ctx, workflowID)
+}
+
 func (s *Scheduler) MarkAwaitingApproval(ctx context.Context, workflowID string) error {
 	return s.scheduler.MarkWorkflowAwaitingApproval(ctx, workflowID)
 }
 
-func (s *Scheduler) syncAwaitingApprovalStates(ctx context.Context, partitionID string) {
-	synced, err := s.scheduler.SyncAwaitingApprovalStates(ctx, partitionID)
+func (s *Scheduler) markOrphanedJobsFailed(ctx context.Context, partitionID string) {
+	count, err := s.jobs.MarkOrphanedJobsFailed(ctx, partitionID, s.orphanedJobGracePeriodSecs)
 	if err != nil {
-		s.log.Error("failed to sync awaiting approval states", "partition_id", partitionID, "error", err)
+		s.log.Error("failed to mark orphaned jobs as failed", "partition_id", partitionID, "error", err)
 		return
 	}
-	if len(synced) > 0 {
-		s.log.Info("synced awaiting approval lifecycle states", "partition_id", partitionID, "count", len(synced), "workflow_ids", synced)
+	if count > 0 {
+		s.log.Info("marked orphaned jobs as failed", "count", count, "partition_id", partitionID)
+	}
+}
+
+// blockedAfterSecs: how long a run may sit unowned before it's reported blocked. TODO: config.
+const blockedAfterSecs = 60
+
+func (s *Scheduler) reconcileWorkflowLifecycles(ctx context.Context, partitionID string) {
+	reconciled, err := s.scheduler.ReconcileWorkflowLifecycles(ctx, partitionID, blockedAfterSecs)
+	if err != nil {
+		s.log.Error("failed to reconcile workflow lifecycles", "partition_id", partitionID, "error", err)
+		return
+	}
+	if len(reconciled) > 0 {
+		s.log.Info("reconciled workflow lifecycle states", "partition_id", partitionID, "count", len(reconciled), "workflow_ids", reconciled)
 	}
 }
 
@@ -235,15 +259,20 @@ func (s *Scheduler) failJobs(ctx context.Context, partitionID string) error {
 	return nil
 }
 
+// interruptedReason is the static run_outcome reason recorded whenever a request is
+// failed. A failed request is always a platform interruption (the worker was lost, an
+// internal error occurred, etc.); customer-domain failures complete instead.
+const interruptedReason = "the run was interrupted before it could complete (platform failure)"
+
 func (s *Scheduler) FailRequest(ctx context.Context, req string) (bool, error) {
 	s.log.Debug("marking request as failed", "request_id", req)
 
-	request, err := s.requests.FailRequest(ctx, req)
+	request, err := s.requests.FailRequest(ctx, req, interruptedReason)
 	if err != nil {
 		return false, fmt.Errorf("error failing request %s: %w", req, err)
 	}
 
-	applied, err := s.workflow.ApplyCompletedJob(ctx, request.WorkflowID, domain.LifecycleStateFailed, request.Version)
+	applied, err := s.workflow.ApplyFailedJob(ctx, request.WorkflowID, req, domain.LifecycleStateInterrupted, domain.WorkflowStateDisabled, request.Version)
 	if err != nil {
 		s.log.Error("failed to apply failed job to workflow", "request_id", req, "workflow_id", request.WorkflowID, "error", err)
 		return false, err
@@ -261,37 +290,38 @@ func (s *Scheduler) FailRequest(ctx context.Context, req string) (bool, error) {
 }
 
 func (s *Scheduler) completeJobs(ctx context.Context, partitionID string) error {
-	reqs, err := s.scheduler.GetCompletedJobRequestIDs(ctx, partitionID)
+	jobs, err := s.scheduler.GetCompletedJobs(ctx, partitionID)
 	if err != nil {
-		s.log.Error("failed to get completed job request IDs", "partition_id", partitionID, "error", err)
+		s.log.Error("failed to get completed jobs", "partition_id", partitionID, "error", err)
 		return fmt.Errorf("get completed jobs error: %w", err)
 	}
 
-	if len(reqs) == 0 {
+	if len(jobs) == 0 {
 		return nil
 	}
 
-	s.log.Info("processing completed jobs", "partition_id", partitionID, "count", len(reqs))
+	s.log.Info("processing completed jobs", "partition_id", partitionID, "count", len(jobs))
 
 	var wg sync.WaitGroup
-	for _, req := range reqs {
+	for _, job := range jobs {
 		wg.Add(1)
-		go func(req string) {
+		go func(job domain.CompletedJob) {
 			defer wg.Done()
-			if _, err := s.CompleteRequest(ctx, req); err != nil {
-				s.log.Error("failed to process completed request", "request_id", req, "error", err)
+			// Transfer the run result the worker recorded on the job onto the request.
+			if _, err := s.CompleteRequest(ctx, job.RequestID, job.ResultType, job.FailureReason); err != nil {
+				s.log.Error("failed to process completed request", "request_id", job.RequestID, "error", err)
 			}
-		}(req)
+		}(job)
 	}
 	wg.Wait()
 	return nil
 }
 
 // For now this is idempotent, in the future we can have more fine grained lifecycle states to avoid redundant stuff
-func (s *Scheduler) CompleteRequest(ctx context.Context, req string) (bool, error) {
-	s.log.Debug("marking request as completed", "request_id", req)
+func (s *Scheduler) CompleteRequest(ctx context.Context, req string, outcome domain.RunOutcome, reason string) (bool, error) {
+	s.log.Debug("marking request as completed", "request_id", req, "outcome", outcome)
 
-	request, err := s.requests.CompleteRequest(ctx, req)
+	request, err := s.requests.CompleteRequest(ctx, req, outcome, reason)
 	if err != nil {
 		return false, fmt.Errorf("error completing request %s: %w", req, err)
 	}
@@ -462,6 +492,12 @@ func (s *Scheduler) ScheduleRequest(ctx context.Context, req string) error {
 		return fmt.Errorf("error with supercede requests with request %s: %w", req, err)
 	}
 	s.log.Debug("older requests superceded", "workflow_id", workflowID, "version", ver)
+
+	// Best-effort: a run is now scheduled (the worker flips it to invoking on dispatch; the
+	// sweep reconciles either if lost).
+	if err := s.scheduler.MarkWorkflowScheduled(ctx, workflowID); err != nil {
+		s.log.Warn("failed to mark workflow scheduled, sweep will reconcile", "workflow_id", workflowID, "error", err)
+	}
 
 	return nil
 }

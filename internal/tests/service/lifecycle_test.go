@@ -170,6 +170,47 @@ func TestDeleteWorkflow(t *testing.T) {
 	}
 }
 
+func TestResolveInterruptedWorkflow(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	svc, workflowRepo, _, _, _, _ := newSvc(ctrl)
+
+	workflowRepo.EXPECT().
+		ResolveInterruptedWorkflow(gomock.Any(), "instance-1", "req-9").
+		Return(true, nil)
+
+	if err := svc.ResolveInterruptedWorkflow(context.Background(), "instance-1", "req-9"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestResolveInterruptedWorkflow_GuardMismatch_ReturnsErrNotInterrupted(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	svc, workflowRepo, _, _, _, _ := newSvc(ctrl)
+
+	// Guard didn't match (wrong request id or not interrupted) → repo reports false.
+	workflowRepo.EXPECT().
+		ResolveInterruptedWorkflow(gomock.Any(), "instance-1", "wrong-req").
+		Return(false, nil)
+
+	err := svc.ResolveInterruptedWorkflow(context.Background(), "instance-1", "wrong-req")
+	if !errors.Is(err, service.ErrNotInterrupted) {
+		t.Fatalf("expected ErrNotInterrupted, got %v", err)
+	}
+}
+
+func TestResolveInterruptedWorkflow_RepoError_Propagates(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	svc, workflowRepo, _, _, _, _ := newSvc(ctrl)
+
+	workflowRepo.EXPECT().
+		ResolveInterruptedWorkflow(gomock.Any(), "instance-1", "req-9").
+		Return(false, errors.New("db down"))
+
+	if err := svc.ResolveInterruptedWorkflow(context.Background(), "instance-1", "req-9"); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
 func TestGetWorkflow(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	svc, workflowRepo, _, _, _, _ := newSvc(ctrl)

@@ -112,7 +112,9 @@ async def test_periodic_workflow_does_not_fire_during_cooldown(cp, api_key):
             while len(firings) < 1:
                 assert asyncio.get_event_loop().time() < deadline, "Timed out waiting for first firing"
                 await asyncio.sleep(0.5)
-            await wait_for_completion(cp, workflow.id)
+            # Periodic runs are auto-created — wait on the newest run.
+            runs = await cp.list_workflow_runs(workflow.id)
+            await wait_for_completion(cp, runs[0].request_id)
             await wait_for_workflow_state(cp, workflow.id, WorkflowState.COOLDOWN)
             cooldown_entered_at = time.monotonic()
 

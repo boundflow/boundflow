@@ -98,7 +98,7 @@ func runServer(sigCh <-chan os.Signal) {
 	metricsHandler := metrics.NewMetricsHandler(workflowRepo, agentStateRepo, versionMetricsRepo, metricsRepo, logger)
 	auditRepo := postgres.NewAuditRepo(pool)
 	policyResolver := internalscheduler.NewLifecycleResolver(30, logger, lifecycleResolverRepo, workflowRepo, versionMetricsRepo)
-	sched := internalscheduler.NewScheduler("server", 30, partitionRepo, schedulerRepo, customerRequestRepo, workflowRepo, agentStateRepo, jobRepo, metricsHandler, policyResolver, auditRepo, logger)
+	sched := internalscheduler.NewScheduler("server", 30, 25, partitionRepo, schedulerRepo, customerRequestRepo, workflowRepo, agentStateRepo, jobRepo, metricsHandler, policyResolver, auditRepo, logger)
 
 	modelPricingRepo := postgres.NewModelPricingRepo(pool)
 	regSvc := service.NewRegistrationService(tenantGroupRepo, tenantRepo, modelPricingRepo)
@@ -153,7 +153,7 @@ func runScheduler(sigCh <-chan os.Signal) {
 	for i := range cfg.MaxPartitionsPerScheduler {
 		schedulerID := uuid.NewString()
 		resolver := internalscheduler.NewLifecycleResolver(30, logger, lifecycleResolverRepo, workflowRepo, versionMetricsRepo)
-		sched := internalscheduler.NewScheduler(schedulerID, 30, partitionRepo, schedulerRepo, customerRequestRepo, workflowRepo, agentStateRepo, jobRepo, metricsHandler, resolver, auditRepo, logger)
+		sched := internalscheduler.NewScheduler(schedulerID, 30, 25, partitionRepo, schedulerRepo, customerRequestRepo, workflowRepo, agentStateRepo, jobRepo, metricsHandler, resolver, auditRepo, logger)
 		// The periodic handler invokes due workflows via the scheduler + lifecycle service.
 		lifecycleSvc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, sched, sched, auditRepo, cfg.NumPartitions, logger)
 		periodic := internalscheduler.NewPeriodicWorkflowHandler(30, logger, sched, lifecycleSvc, schedulerRepo, customerRequestRepo)
@@ -204,7 +204,7 @@ func runWorker(sigCh <-chan os.Signal) {
 	workerID := uuid.NewString()
 	auditRepo := postgres.NewAuditRepo(pool)
 	policyResolver := internalscheduler.NewLifecycleResolver(30, logger, lifecycleResolverRepo, workflowRepo, versionMetricsRepo)
-	sched := internalscheduler.NewScheduler(workerID, 30, partitionRepo, schedulerRepo, customerRequestRepo, workflowRepo, agentStateRepo, jobRepo, metricsHandler, policyResolver, auditRepo, logger)
+	sched := internalscheduler.NewScheduler(workerID, 30, 25, partitionRepo, schedulerRepo, customerRequestRepo, workflowRepo, agentStateRepo, jobRepo, metricsHandler, policyResolver, auditRepo, logger)
 
 	worker := rpcworker.NewRpcWorker(jobRepo, auditRepo, workerID, cfg.JobTimeoutSecs, sched, metricsHandler, logger)
 	authn := auth.NewAuthenticator(postgres.NewApiKeyRepo(pool))

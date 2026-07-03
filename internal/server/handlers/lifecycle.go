@@ -296,6 +296,69 @@ func (h *WorkflowServiceHandler) ActivateWorkflow(ctx context.Context, req *boun
 	return &boundflowv1.ActivateWorkflowResponse{}, nil
 }
 
+func (h *WorkflowServiceHandler) ResolveInterruptedWorkflow(ctx context.Context, req *boundflowv1.ResolveInterruptedWorkflowRequest) (*boundflowv1.ResolveInterruptedWorkflowResponse, error) {
+	if req.WorkflowId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
+	}
+	if req.RequestId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "request_id is required")
+	}
+
+	if err := h.checkWorkflowOwner(ctx, req.WorkflowId); err != nil {
+		return nil, err
+	}
+
+	if err := h.svc.ResolveInterruptedWorkflow(ctx, req.WorkflowId, req.RequestId); err != nil {
+		if errors.Is(err, service.ErrNotInterrupted) {
+			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
+		}
+		return nil, status.Errorf(codes.Internal, "resolve interrupted workflow: %v", err)
+	}
+	return &boundflowv1.ResolveInterruptedWorkflowResponse{}, nil
+}
+
+func (h *WorkflowServiceHandler) ListWorkflowRuns(ctx context.Context, req *boundflowv1.ListWorkflowRunsRequest) (*boundflowv1.ListWorkflowRunsResponse, error) {
+	if req.WorkflowId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
+	}
+
+	if err := h.checkWorkflowOwner(ctx, req.WorkflowId); err != nil {
+		return nil, err
+	}
+
+	runs, err := h.svc.ListWorkflowRuns(ctx, req.WorkflowId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "list workflow runs: %v", err)
+	}
+
+	out := make([]*boundflowv1.Run, 0, len(runs))
+	for _, r := range runs {
+		out = append(out, convert.RunToProto(r))
+	}
+	return &boundflowv1.ListWorkflowRunsResponse{Runs: out}, nil
+}
+
+func (h *WorkflowServiceHandler) GetRequestInfo(ctx context.Context, req *boundflowv1.GetRequestInfoRequest) (*boundflowv1.GetRequestInfoResponse, error) {
+	if req.RequestId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "request_id is required")
+	}
+
+	request, err := h.svc.GetRequestInfo(ctx, req.RequestId)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Errorf(codes.NotFound, "request not found")
+		}
+		return nil, status.Errorf(codes.Internal, "get request info: %v", err)
+	}
+
+	// Scope by the request's workflow — a caller can only read their own runs.
+	if err := h.checkWorkflowOwner(ctx, request.WorkflowID); err != nil {
+		return nil, err
+	}
+
+	return &boundflowv1.GetRequestInfoResponse{Request: convert.RequestInfoToProto(request)}, nil
+}
+
 func (h *WorkflowServiceHandler) ApproveWorkflow(ctx context.Context, req *boundflowv1.ApproveWorkflowRequest) (*boundflowv1.ApproveWorkflowResponse, error) {
 	if req.WorkflowId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")

@@ -55,16 +55,17 @@ async def create_isolated_tenant(cp: ControlPlaneClient, prefix: str = "test"):
     return tenant
 
 
-async def wait_for_completion(cp: ControlPlaneClient, workflow_id: str, timeout: int = 120) -> LifecycleState:
-    """Mirror C# WaitForCompletionAsync: delay THEN poll, so we never return ACTIVE
-    before the server has had time to transition through INVOKING."""
+async def wait_for_completion(cp: ControlPlaneClient, request_id: str, timeout: int = 120):
+    """Poll a specific run (by the request_id invoke returned) until it is terminal, and return
+    its final RequestInfo. Keyed to the run — not the workflow's aggregate lifecycle — so it
+    can't false-positive on the pre-scheduled window."""
     deadline = asyncio.get_event_loop().time() + timeout
     while True:
-        await asyncio.sleep(0.5)  # delay first, exactly like C# do { Task.Delay(500); check } while
-        state = await cp.get_workflow_lifecycle_state(workflow_id)
-        if state != LifecycleState.INVOKING:
-            return state
-        assert asyncio.get_event_loop().time() < deadline, f"Timed out waiting for completion of {workflow_id}"
+        info = await cp.get_request_info(request_id)
+        if info.status in ("completed", "failed"):
+            return info
+        assert asyncio.get_event_loop().time() < deadline, f"Timed out waiting for run {request_id}"
+        await asyncio.sleep(0.5)
 
 
 async def wait_for_lifecycle_state(

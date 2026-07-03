@@ -108,6 +108,14 @@ func (s *RegistrationService) GetTenant(ctx context.Context, id string) (*domain
 	return tenant, nil
 }
 
+func (s *RegistrationService) ListTenants(ctx context.Context, tenantGroupID string) ([]*domain.Tenant, error) {
+	tenants, err := s.tenants.ListForTenantGroup(ctx, tenantGroupID)
+	if err != nil {
+		return nil, fmt.Errorf("list tenants: %w", err)
+	}
+	return tenants, nil
+}
+
 func (s *RegistrationService) DeleteTenant(ctx context.Context, id string) error {
 	if err := s.tenants.Delete(ctx, id); err != nil {
 		return fmt.Errorf("delete tenant: %w", err)

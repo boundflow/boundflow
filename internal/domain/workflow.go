@@ -5,13 +5,15 @@ import "time"
 type LifecycleState string
 
 const (
-	LifecycleStateCreating    LifecycleState = "creating"
-	LifecycleStateActive      LifecycleState = "active"
-	LifecycleStateInvoking LifecycleState = "invoking"
+	LifecycleStateCreating         LifecycleState = "creating"
+	LifecycleStateActive           LifecycleState = "active"
+	LifecycleStateScheduled        LifecycleState = "scheduled"
+	LifecycleStateBlocked          LifecycleState = "blocked"
+	LifecycleStateInvoking         LifecycleState = "invoking"
 	LifecycleStateAwaitingApproval LifecycleState = "awaiting_approval"
 	LifecycleStateDeleting         LifecycleState = "deleting"
 	LifecycleStateDeleted          LifecycleState = "deleted"
-	LifecycleStateFailed           LifecycleState = "failed"
+	LifecycleStateInterrupted      LifecycleState = "interrupted"
 )
 
 type WorkflowConfig struct {
@@ -30,20 +32,21 @@ const (
 )
 
 type Workflow struct {
-	ID                     string
-	TenantID               string
-	WorkflowType           string
-	WorkflowConfig         WorkflowConfig
-	LifecycleState         LifecycleState
-	WorkflowState          WorkflowState
-	LifecyclePolicy        WorkflowLifecyclePolicy
-	InvocationMetrics      []WorkflowInvocationSnapshot
-	CooldownUntil          *time.Time
-	LifecycleLastResolved  int64
-	CurrentWorkflowVersion int
-	SchedulerPartitionID   string
-	TargetVersion          int64
-	CurrentVersion         int64
-	LastCompletedRequestAt *time.Time
-	CreatedAt              time.Time
+	ID                       string
+	TenantID                 string
+	WorkflowType             string
+	WorkflowConfig           WorkflowConfig
+	LifecycleState           LifecycleState
+	WorkflowState            WorkflowState
+	LifecyclePolicy          WorkflowLifecyclePolicy
+	InvocationMetrics        []WorkflowInvocationSnapshot
+	CooldownUntil            *time.Time
+	LifecycleLastResolved    int64
+	CurrentWorkflowVersion   int
+	SchedulerPartitionID     string
+	TargetVersion            int64
+	CurrentVersion           int64
+	LastCompletedRequestAt   *time.Time
+	LastInterruptedRequestID string
+	CreatedAt                time.Time
 }

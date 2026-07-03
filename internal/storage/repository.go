@@ -17,6 +17,7 @@ type TenantGroupRepository interface {
 type TenantRepository interface {
 	Create(ctx context.Context, tenant *domain.Tenant) error
 	Get(ctx context.Context, id string) (*domain.Tenant, error)
+	ListForTenantGroup(ctx context.Context, tenantGroupID string) ([]*domain.Tenant, error)
 	Delete(ctx context.Context, id string) error
 }
 
@@ -44,6 +45,15 @@ type WorkflowRepository interface {
 	// the provided version is strictly greater than the stored current_version.
 	// Returns false if the version check failed (a newer completion already applied).
 	ApplyCompletedJob(ctx context.Context, id string, lifecycleState domain.LifecycleState, version int64) (bool, error)
+	// ApplyFailedJob is like ApplyCompletedJob but also sets workflow_state and records
+	// requestID as last_interrupted_request_id. Both lifecycle_state and workflow_state are set
+	// unconditionally (no target_version guard).
+	// Returns false if the version check failed (a newer completion already applied).
+	ApplyFailedJob(ctx context.Context, id string, requestID string, lifecycleState domain.LifecycleState, workflowState domain.WorkflowState, version int64) (bool, error)
+	// ResolveInterruptedWorkflow flips an interrupted workflow back to active (both
+	// lifecycle_state and workflow_state), but only if it is currently interrupted and requestID
+	// matches its last_interrupted_request_id. Returns false if the guard didn't match.
+	ResolveInterruptedWorkflow(ctx context.Context, id string, requestID string) (bool, error)
 	UpdateSchedulerPartition(ctx context.Context, id string, partitionID string) error
 	UpdateLastCompletedRequestAt(ctx context.Context, id string, t time.Time) error
 	// TenantGroupIDForWorkflow returns the tenant_group_id for a workflow via a single JOIN.
@@ -83,13 +93,18 @@ type SchedulerRepository interface {
 	// expectedCurrentVersion guards the write: it only proceeds if the workflow's current_version
 	// still equals it (the run the caller validated against), else written=false.
 	UpsertJobAndSchedule(ctx context.Context, requestID string, contextJSON string, currentAtomicOperation string, timeoutSeconds int, workflowVersion int, expectedCurrentVersion int64) (workflowID string, version int64, written bool, err error)
+	// MarkWorkflowScheduled sets lifecycle_state = scheduled, only while a job exists and the
+	// workflow isn't in a protected (terminal/delete) state.
+	MarkWorkflowScheduled(ctx context.Context, workflowID string) error
+	// MarkWorkflowInvoking sets lifecycle_state = invoking, guarded like MarkWorkflowScheduled.
+	MarkWorkflowInvoking(ctx context.Context, workflowID string) error
 	// MarkWorkflowAwaitingApproval sets lifecycle_state = awaiting_approval for the given workflow,
 	// guarded so it only fires if the job still shows awaiting_approval status at update time.
 	MarkWorkflowAwaitingApproval(ctx context.Context, workflowID string) error
-	// SyncAwaitingApprovalStates sets lifecycle_state = awaiting_approval for all workflow instances
-	// in the partition that have a job in awaiting_approval status, guarded so it only fires if the
-	// job still shows awaiting_approval at update time. Returns the synced workflow instance IDs.
-	SyncAwaitingApprovalStates(ctx context.Context, partitionID string) ([]string, error)
+	// ReconcileWorkflowLifecycles atomically projects each in-flight job's status onto its
+	// workflow's lifecycle (scheduled/blocked/invoking/awaiting_approval), the safety net for
+	// lost direct writes. Returns the reconciled workflow ids.
+	ReconcileWorkflowLifecycles(ctx context.Context, partitionID string, blockedAfterSecs int) ([]string, error)
 	// SupercedeOlderRequests marks all unscheduled or scheduled requests for the given workflow
 	// whose version is strictly less than version as superceded.
 	SupercedeOlderRequests(ctx context.Context, workflowID string, version int64) error
@@ -97,9 +112,10 @@ type SchedulerRepository interface {
 	// and the status is a terminal state (completed or failed).
 	// Returns false if no matching job was deleted.
 	DeleteTerminalJob(ctx context.Context, workflowID string, requestID string) (bool, error)
-	// GetCompletedJobRequestIDs returns the request IDs of all completed jobs for workflows
-	// belonging to the given partition.
-	GetCompletedJobRequestIDs(ctx context.Context, partitionID string) ([]string, error)
+	// GetCompletedJobs returns the completed jobs (request id + recorded run result) for
+	// workflows belonging to the given partition, so the sweeper can complete each request
+	// and transfer the result onto its run_outcome.
+	GetCompletedJobs(ctx context.Context, partitionID string) ([]domain.CompletedJob, error)
 	// GetFailedJobRequestIDs returns the request IDs of all failed jobs for workflows
 	// belonging to the given partition.
 	GetFailedJobRequestIDs(ctx context.Context, partitionID string) ([]string, error)
@@ -123,7 +139,7 @@ type JobRepository interface {
 	UpdateJobStatus(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus) (bool, error)
 	// UpdateJobStatusWithMetrics is UpdateJobStatus plus an atomic write of the accumulated
 	// per-agent and workflow-level metrics. Used when finalizing a job.
-	UpdateJobStatusWithMetrics(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error)
+	UpdateJobStatusWithMetrics(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, resultType domain.RunOutcome, failureReason string, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error)
 	// UpdateJob updates status, current_atomic_operation, timeout_seconds, and context only if ownerID is the current owner.
 	// Returns false if the ownership check failed (job taken by another worker or released).
 	UpdateJob(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any) (bool, error)
@@ -141,6 +157,14 @@ type JobRepository interface {
 	// guarded by approvalID match. Returns false if the ID doesn't match or the job isn't awaiting
 	// approval; on success also returns the job bits needed to write the approval audit row.
 	ResolveApproval(ctx context.Context, workflowID string, approvalID string, status domain.JobStatus) (bool, domain.ResolvedApproval, error)
+	// MarkOrphanedJobsFailed atomically sets dispatched or running jobs whose lease
+	// expired more than gracePeriodSeconds ago to failed, scoped to the given partition.
+	// Returns the number of jobs marked failed.
+	MarkOrphanedJobsFailed(ctx context.Context, partitionID string, gracePeriodSeconds int) (int, error)
+	// SetJobDispatched transitions a job to 'dispatched' before the Launch command
+	// is sent to the SDK worker. Only succeeds if ownerID holds the job.
+	// Returns false if the ownership check failed.
+	SetJobDispatched(ctx context.Context, workflowID string, ownerID string) (bool, error)
 	// ReleaseJob clears the owner and lease on a job, only if currently owned by ownerID.
 	ReleaseJob(ctx context.Context, workflowID string, ownerID string) error
 	// SweepExpiredApprovals atomically resolves the partition's approval gates whose
@@ -233,8 +257,12 @@ type CustomerRequestRepository interface {
 	CreateDuePeriodicRequest(ctx context.Context, req *domain.CustomerRequest, minGap time.Duration, invalidStates []domain.LifecycleState) (int64, bool, error)
 	Get(ctx context.Context, id string) (*domain.CustomerRequest, error)
 	UpdateStatus(ctx context.Context, workflowID, id string, status domain.CustomerRequestStatus) error
-	// CompleteRequest sets the request status to completed and returns the full updated request.
-	CompleteRequest(ctx context.Context, id string) (*domain.CustomerRequest, error)
-	// FailRequest sets the request status to failed and returns the full updated request.
-	FailRequest(ctx context.Context, id string) (*domain.CustomerRequest, error)
+	// CompleteRequest sets the request status to completed, records the run outcome +
+	// reason, and returns the full updated request.
+	CompleteRequest(ctx context.Context, id string, outcome domain.RunOutcome, failureReason string) (*domain.CustomerRequest, error)
+	// FailRequest sets the request status to failed (run_outcome=interrupted), records the
+	// reason, and returns the full updated request.
+	FailRequest(ctx context.Context, id string, failureReason string) (*domain.CustomerRequest, error)
+	// ListForWorkflow returns every run (request) for a workflow, newest first.
+	ListForWorkflow(ctx context.Context, workflowID string) ([]*domain.CustomerRequest, error)
 }
