@@ -3,11 +3,11 @@
 The Python SDK exposes two entry points: `ControlPlaneClient` for
 managing/observing workflows, and `BoundFlowWorker` for running them. This page is
 a high-level map; see the docstrings in
-[`sdk/python/boundflow`](https://github.com/boundflow/boundflow/tree/boundflow/sdk/python/boundflow)
+[`sdk/python/boundflow`](https://github.com/boundflow/boundflow/tree/main/sdk/python/boundflow)
 for full signatures.
 
-!!! warning "Pre-1.0"
-    The SDK surface and the underlying gRPC protobufs may change before 1.0.
+> [!WARNING]
+> **Pre-1.0.** The SDK surface and the underlying gRPC protobufs may change before 1.0.
 
 ## `ControlPlaneClient`
 

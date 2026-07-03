@@ -61,10 +61,10 @@ Then remove the bundled `postgres` service (and the `depends_on: postgres` entri
 from your compose file — or override them in a `docker-compose.override.yml` — and
 run `-mode=migrate` once against your database to create the schema.
 
-!!! warning "Don't publish the Postgres port"
-    The bundled Postgres isn't published to the host. If you expose it, put it behind
-    your network's controls — and set `BOUNDFLOW_DB_PASSWORD` to a strong secret
-    (required; see above).
+> [!WARNING]
+> **Don't publish the Postgres port.** The bundled Postgres isn't published to the
+> host. If you expose it, put it behind your network's controls — and set
+> `BOUNDFLOW_DB_PASSWORD` to a strong secret (required; see above).
 
 ## TLS
 
@@ -82,11 +82,11 @@ export BOUNDFLOW_SERVER_ADDRESS=https://boundflow.example.com:443
 export BOUNDFLOW_WORKER_ADDRESS=https://boundflow.example.com:8443
 ```
 
-!!! note "Custom CA / self-signed certs"
-    The SDK currently validates against **system root CAs** only. End-to-end TLS to
-    a private-CA or self-signed certificate (e.g. on localhost) is not yet
-    configurable from the SDK — front the server with a publicly-trusted cert for
-    now.
+> [!NOTE]
+> **Custom CA / self-signed certs.** The SDK currently validates against **system
+> root CAs** only. End-to-end TLS to a private-CA or self-signed certificate (e.g.
+> on localhost) is not yet configurable from the SDK — front the server with a
+> publicly-trusted cert for now.
 
 A minimal Caddy terminator, for reference:
 

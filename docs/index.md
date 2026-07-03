@@ -2,12 +2,12 @@
 
 **The operational layer for the LLM agents and workflows you run unattended — cost caps, approval gates, and self-healing policy, enforced by a control plane.**
 
-!!! warning "Preview — pre-1.0"
-    BoundFlow is in **public preview**. The engine is complete and covered by Go,
-    mock-LLM, and live-LLM test suites, but it has **not yet been battle-tested in
-    production with external users**. APIs — including the gRPC protobufs — may
-    change before 1.0. We're looking for early adopters and design partners:
-    [reach out](mailto:hello@boundflow.dev).
+> [!WARNING]
+> **Preview — pre-1.0.** BoundFlow is in **public preview**. The engine is complete
+> and covered by Go, mock-LLM, and live-LLM test suites, but it has **not yet been
+> battle-tested in production with external users**. APIs — including the gRPC
+> protobufs — may change before 1.0. We're looking for early adopters and design
+> partners: [reach out](mailto:hello@boundflow.dev).
 
 BoundFlow runs long-running, stateful agent workflows and enforces the guardrails
 you'll want *before* running agents unattended: per-run **cost caps**, automatic
