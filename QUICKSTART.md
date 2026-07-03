@@ -40,78 +40,49 @@ pip install boundflow
 
 ## 4. Run your first workflow
 
-Save as `hello.py` and run it (`python hello.py`):
+A workflow is a Python function you register on a worker; inside it, you run
+agents. The essence of one:
 
 ```python
-import asyncio
-import os
+@worker.workflow("hello", version=1)
+async def hello(ctx):
+    ctx.add_context("text", "BoundFlow runs fleets of agents under governance.")
+    result = await ctx.run_agent(summarizer)   # a real Claude call, on your key
+    print("summary:", result.output["summary"])
+    return Complete()
+```
 
-from boundflow import (
-    AgentDefinition, BoundFlowWorker, Complete, ControlPlaneClient, WorkflowConfig,
-)
-from boundflow.anthropic_client import AnthropicLlmClient
+The full runnable version — worker setup, invoke, and waiting on the result — ships
+with the package. Run it:
 
-# Endpoints default to localhost:50051 (control plane) and :50052 (worker), and
-# BOUNDFLOW_API_KEY is read from the env. Pointing at a remote backend? Set
-# BOUNDFLOW_SERVER_ADDRESS / BOUNDFLOW_WORKER_ADDRESS (or pass them explicitly).
-
-
-async def main() -> None:
-    # A worker hosts your workflow handlers and runs agents on your Anthropic key.
-    worker = BoundFlowWorker(llm=AnthropicLlmClient(os.environ["ANTHROPIC_API_KEY"]))
-
-    summarizer = AgentDefinition(
-        name="summarizer",
-        system_prompt="You summarize text in one short, plain sentence.",
-        model="claude-haiku-4-5",
-        output_schema={"summary": {"type": "string"}},
-    )
-
-    @worker.workflow("hello", version=1)
-    async def hello(ctx):
-        ctx.add_context("text", "BoundFlow runs fleets of agents under governance.")
-        result = await ctx.run_agent(summarizer)
-        print("  agent summary:", result.output["summary"])
-        return Complete()
-
-    worker_task = asyncio.create_task(worker.run())
-
-    async with ControlPlaneClient() as cp:
-        tenant = await cp.create_tenant("quickstart")
-        wf = await cp.create_workflow("hello", tenant.id, config=WorkflowConfig(version=1))
-        await cp.activate_workflow(wf.id)
-        request_id = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
-
-        # Wait for the run to finish (scheduled → invoking → done).
-        while not (await cp.get_request_info(request_id)).status.is_terminal():
-            await asyncio.sleep(0.5)
-        print("  final state:", (await cp.get_request_info(request_id)).status.value)
-
-    worker_task.cancel()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+```bash
+python -m boundflow.examples.hello
 ```
 
 Expected output (the summary is the model's, so wording will vary):
 
 ```
   agent summary: BoundFlow is a platform for running fleets of agents under governance.
-  final state: completed
+  done: completed
 ```
 
 That's the full loop: your worker registered a workflow, the control plane
 scheduled and dispatched it, and a real agent ran under the platform's governance.
+The full source is in [`boundflow/examples/hello.py`](sdk/python/boundflow/examples/hello.py).
 
 ## More examples
 
-Runnable examples ship with the package — same prerequisites (backend up,
-`BOUNDFLOW_API_KEY` + `ANTHROPIC_API_KEY` set):
+Runnable examples ship with the package (backend up + `BOUNDFLOW_API_KEY` set):
 
 ```bash
-python -m boundflow.examples.hello           # the above, as a script
-python -m boundflow.examples.approval_gate   # human-in-the-loop: pause for sign-off before a sensitive action
+# Real agents — also need ANTHROPIC_API_KEY:
+python -m boundflow.examples.hello            # the above, as a script
+python -m boundflow.examples.approval_gate    # human-in-the-loop: pause for sign-off before a sensitive action
+
+# Governance policies (deterministic mock LLM — no Anthropic key needed):
+python -m boundflow.examples.runtime_caps     # agent runtime: a cost cap halts a runaway agent
+python -m boundflow.examples.model_switching  # agent lifecycle: auto-swap the model based on metrics
+python -m boundflow.examples.self_healing     # workflow lifecycle: pause after repeated failures
 ```
 
 ## Useful commands
