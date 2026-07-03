@@ -47,8 +47,7 @@ import asyncio
 import os
 
 from boundflow import (
-    AgentDefinition, BoundFlowWorker, Complete, ControlPlaneClient,
-    LifecycleState, WorkflowConfig,
+    AgentDefinition, BoundFlowWorker, Complete, ControlPlaneClient, WorkflowConfig,
 )
 from boundflow.anthropic_client import AnthropicLlmClient
 
@@ -81,11 +80,12 @@ async def main() -> None:
         tenant = await cp.create_tenant("quickstart")
         wf = await cp.create_workflow("hello", tenant.id, config=WorkflowConfig(version=1))
         await cp.activate_workflow(wf.id)
-        await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
+        request_id = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
 
-        while await cp.get_workflow_lifecycle_state(wf.id) == LifecycleState.INVOKING:
+        # Wait for the run to finish (scheduled → invoking → done).
+        while not (await cp.get_request_info(request_id)).status.is_terminal():
             await asyncio.sleep(0.5)
-        print("  final state:", await cp.get_workflow_lifecycle_state(wf.id))
+        print("  final state:", (await cp.get_request_info(request_id)).status.value)
 
     worker_task.cancel()
 
@@ -98,7 +98,7 @@ Expected output (the summary is the model's, so wording will vary):
 
 ```
   agent summary: BoundFlow is a platform for running fleets of agents under governance.
-  final state: LifecycleState.ACTIVE
+  final state: completed
 ```
 
 That's the full loop: your worker registered a workflow, the control plane
