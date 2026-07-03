@@ -112,7 +112,7 @@ dispatches, governs, and audits, and never sees your key or your inference traff
    ┌─────────────────────┐      gRPC        ┌────────────────────────┐
    │  Your client / SDK  │ ───────────────▶ │                        │
    └─────────────────────┘  invoke·approve  │   BoundFlow backend    │
-                             ·query          │   (control plane)      │
+                             ·query         │   (control plane)      │
    ┌─────────────────────┐   gRPC stream    │                        │
    │  Your worker        │ ◀──────────────▶ │  schedules·dispatches  │
    │  runs agents+tools  │  launch/result   │  ·governs·audits       │
