@@ -1,6 +1,6 @@
 # BoundFlow
 
-**A control plane for fleets of LLM agents — with governance built in.**
+**The operational layer for LLM agents you run unattended — cost caps, approval gates, and self-healing policy, enforced by a control plane.**
 
 ![status: preview](https://img.shields.io/badge/status-preview-orange)
 ![backend: Apache-2.0](https://img.shields.io/badge/backend-Apache--2.0-blue)
@@ -21,6 +21,17 @@ governs them.
 
 Inference is **bring-your-own** — your agents call Claude with your own Anthropic
 key, running in your worker. The backend never sees it and never pays for tokens.
+Your keys, your data, and your token spend stay on your side of the wire.
+
+**In practice:** a support-triage workflow that may spend up to **$0.25/run**, must
+get a **human's sign-off** before issuing a refund, **downgrades to Haiku** when
+costs spike, and **auto-rolls-back** to the last good version if it starts
+failing — none of that logic living in your agent code. You declare it as policy;
+the control plane enforces it and keeps a durable, queryable **audit log** of every
+approval and policy decision.
+
+BoundFlow is *not* a prompt framework, an inference provider, or an agent-builder —
+it's the operational layer *around* the agents you build.
 
 - **Backend** — open source (Apache-2.0), self-hostable as a container.
 - **Python SDK** — open source (MIT), `pip install boundflow`.

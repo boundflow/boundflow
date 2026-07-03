@@ -1,6 +1,6 @@
 # BoundFlow
 
-**A control plane for fleets of LLM agents — with governance built in.**
+**The operational layer for LLM agents you run unattended — cost caps, approval gates, and self-healing policy, enforced by a control plane.**
 
 !!! warning "Preview — pre-1.0"
     BoundFlow is in **public preview**. The engine is complete and covered by Go,

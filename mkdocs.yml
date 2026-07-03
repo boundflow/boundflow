@@ -1,5 +1,5 @@
 site_name: BoundFlow
-site_description: A control plane for fleets of LLM agents — with governance built in.
+site_description: The operational layer for LLM agents you run unattended — cost caps, approval gates, and self-healing policy, enforced by a control plane.
 site_url: https://docs.boundflow.dev
 repo_url: https://github.com/boundflow/boundflow
 repo_name: boundflow/boundflow
