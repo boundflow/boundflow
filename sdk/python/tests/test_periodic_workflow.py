@@ -12,10 +12,14 @@ from boundflow import (
     Cooldown,
     Complete,
     InvalidArgumentError,
+    MockLlmClient,
+    Tool,
     WorkflowConfig,
     WorkflowMetric,
     WorkflowRule,
     WorkflowState,
+    submit,
+    turn,
 )
 from boundflow.anthropic_client import AnthropicLlmClient
 
@@ -155,3 +159,45 @@ async def test_repeat_every_below_the_minimum_is_rejected(cp):
     no_repeat = await cp.create_workflow(
         "no_repeat", tenant.id, config=WorkflowConfig(version=1, repeat_every_seconds=0))
     assert no_repeat.config.repeat_every_seconds == 0
+
+
+async def test_periodic_run_accrues_cost_so_cost_policies_fire(cp):
+    """Regression: periodic runs must resolve model pricing so their token usage costs
+    money. Without it a periodic run prices to $0, so cost-based lifecycle policies (here
+    a cost -> cooldown) would silently never fire — the workflow would run past its budget
+    forever. No Anthropic key: a mock burns the tokens."""
+    async def _noop(_):
+        return "ok"
+
+    def _burn(ctx):
+        # 60k input tokens on Haiku = $0.06/run, over the $0.05 threshold below.
+        return turn(60_000, 0, "noop") if ctx.turn_index == 0 else submit()
+
+    worker = BoundFlowWorker(WORKER_ADDRESS, MockLlmClient(_burn))
+
+    @worker.workflow("costly_periodic", version=1)
+    async def _entry(ctx):
+        await ctx.run_agent(AgentDefinition(
+            name="spender", system_prompt="burn tokens", model=HAIKU,
+            tools=[Tool("noop", "A no-op step.", _noop)],
+            output_schema={"summary": {"type": "string"}}))
+        return Complete()
+
+    async with run_worker(worker):
+        tenant = await create_isolated_tenant(cp, "periodic-cost")
+        wf = await cp.create_workflow(
+            "costly_periodic", tenant.id,
+            config=WorkflowConfig(version=1, invoke_timeout_seconds=30,
+                                  repeat_every_seconds=REPEAT_EVERY))
+        try:
+            await cp.set_workflow_lifecycle_policy(wf.id, [
+                WorkflowRule(metric=WorkflowMetric.COST, threshold=0.05,
+                             action=Cooldown(window=1, seconds=COOLDOWN_SECONDS)),
+            ])
+            await cp.activate_workflow(wf.id)
+            # One periodic run spends $0.06 > $0.05, so the cost rule must fire and cool
+            # the workflow down. If pricing weren't resolved for periodic runs, its cost
+            # would be $0 and this would time out.
+            await wait_for_workflow_state(cp, wf.id, WorkflowState.COOLDOWN, timeout=120)
+        finally:
+            await cp.delete_workflow(wf.id)
