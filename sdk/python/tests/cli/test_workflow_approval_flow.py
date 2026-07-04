@@ -54,7 +54,7 @@ async def _wait(pred, what: str, timeout: int = 30):
 async def _wait_lifecycle(cp, wf_id: str, expected: LifecycleState, timeout: int = 30):
     deadline = asyncio.get_event_loop().time() + timeout
     while True:
-        state = await cp.get_workflow_lifecycle_state(wf_id)
+        state = (await cp.get_workflow(wf_id)).lifecycle_state
         if state == expected:
             return
         assert asyncio.get_event_loop().time() < deadline, \
@@ -189,6 +189,6 @@ async def test_resolve_via_cli_reactivates_interrupted_workflow(runner, boundflo
                 ["workflow", "resolve", wf.id, request_id])
             assert result["status"] == "ok"
 
-            assert await cp.get_workflow_lifecycle_state(wf.id) == LifecycleState.ACTIVE
+            assert (await cp.get_workflow(wf.id)).lifecycle_state == LifecycleState.ACTIVE
         finally:
             await cp.delete_workflow(wf.id)

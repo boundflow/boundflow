@@ -74,7 +74,7 @@ async def test_workflow_resumes_after_cooldown_expires(cp, api_key):
             await wait_for_workflow_state(cp, workflow.id, WorkflowState.ACTIVE, timeout=60)
             elapsed = time.monotonic() - cooldown_entered_at
 
-            state = await cp.get_workflow_state(workflow.id)
+            state = (await cp.get_workflow(workflow.id)).workflow_state
             assert state == WorkflowState.ACTIVE
             assert elapsed >= COOLDOWN_SECONDS, \
                 f"Cooldown lasted {elapsed:.1f}s but was configured for {COOLDOWN_SECONDS}s"

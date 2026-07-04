@@ -76,7 +76,7 @@ async def main() -> None:
         # A human decides. Approve here; swap for cp.reject_workflow(...) to see
         # the on_reject branch (the refund is never issued).
         await cp.approve_workflow(wf.id, req.approval_id)
-        while await cp.get_workflow_lifecycle_state(wf.id) != LifecycleState.ACTIVE:
+        while (await cp.get_workflow(wf.id)).lifecycle_state != LifecycleState.ACTIVE:
             await asyncio.sleep(0.5)
         print("  done")
 

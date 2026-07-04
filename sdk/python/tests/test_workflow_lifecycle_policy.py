@@ -239,7 +239,7 @@ async def test_uncaught_callback_exception_is_a_soft_failure(cp):
             await wait_for_completion(cp, request_id)
 
             # The run completed (not interrupted), but num_failures fired the cooldown.
-            assert await cp.get_workflow_lifecycle_state(workflow.id) != LifecycleState.INTERRUPTED
+            assert (await cp.get_workflow(workflow.id)).lifecycle_state != LifecycleState.INTERRUPTED
             state = await wait_for_workflow_state(cp, workflow.id, WorkflowState.COOLDOWN)
             assert state == WorkflowState.COOLDOWN
         finally:
@@ -273,7 +273,7 @@ async def test_operation_timeout_is_a_soft_failure(cp):
             request_id = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=3)
             await wait_for_completion(cp, request_id)
 
-            assert await cp.get_workflow_lifecycle_state(workflow.id) != LifecycleState.INTERRUPTED
+            assert (await cp.get_workflow(workflow.id)).lifecycle_state != LifecycleState.INTERRUPTED
             state = await wait_for_workflow_state(cp, workflow.id, WorkflowState.COOLDOWN)
             assert state == WorkflowState.COOLDOWN
         finally:

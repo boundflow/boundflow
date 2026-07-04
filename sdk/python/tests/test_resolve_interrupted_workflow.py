@@ -63,7 +63,7 @@ async def test_resolve_interrupted_workflow_requires_matching_request_id(cp):
 
     # The lost worker interrupts the workflow.
     await wait_for_lifecycle_state(cp, workflow.id, LifecycleState.INTERRUPTED)
-    assert await cp.get_workflow_state(workflow.id) == WorkflowState.DISABLED
+    assert (await cp.get_workflow(workflow.id)).workflow_state == WorkflowState.DISABLED
 
     # last_interrupted_request_id is exactly the request that was interrupted.
     assert await _last_interrupted_request_id(cp, workflow.id) == request_id
@@ -71,9 +71,9 @@ async def test_resolve_interrupted_workflow_requires_matching_request_id(cp):
     # Resolving with a wrong id is rejected, and the workflow stays interrupted.
     with pytest.raises(FailedPreconditionError):
         await cp.resolve_interrupted_workflow(workflow.id, "not-the-right-id")
-    assert await cp.get_workflow_lifecycle_state(workflow.id) == LifecycleState.INTERRUPTED
+    assert (await cp.get_workflow(workflow.id)).lifecycle_state == LifecycleState.INTERRUPTED
 
     # Resolving with the matching id re-activates the workflow.
     await cp.resolve_interrupted_workflow(workflow.id, request_id)
-    assert await cp.get_workflow_lifecycle_state(workflow.id) == LifecycleState.ACTIVE
-    assert await cp.get_workflow_state(workflow.id) == WorkflowState.ACTIVE
+    assert (await cp.get_workflow(workflow.id)).lifecycle_state == LifecycleState.ACTIVE
+    assert (await cp.get_workflow(workflow.id)).workflow_state == WorkflowState.ACTIVE

@@ -54,13 +54,8 @@ def invoke(
 def get(
     workflow_id: str = typer.Argument(..., help="Workflow ID"),
 ):
-    """Get a workflow's current lifecycle and runtime state."""
-    async def _get(cp):
-        lc = await cp.get_workflow_lifecycle_state(workflow_id)
-        wf = await cp.get_workflow_state(workflow_id)
-        return {"workflow_id": workflow_id, "lifecycle_state": lc.value, "workflow_state": wf.value if wf else None}
-
-    result = cp_call(_get)
+    """Get a workflow's current version, lifecycle state, and runtime state."""
+    result = cp_call(lambda cp: cp.get_workflow(workflow_id))
     output(result)
 
 
