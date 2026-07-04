@@ -64,7 +64,7 @@ func newSvcWithApproval(ctrl *gomock.Controller, approval service.ApprovalResolv
 	modelPricingRepo.EXPECT().ListForTenantGroup(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 	// Approval decisions append an audit row on success; tests don't assert on it.
 	auditRepo.EXPECT().Append(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-	svc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, sched, approval, auditRepo, 10, discardLogger)
+	svc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, sched, approval, auditRepo, 10, 30, discardLogger)
 	return svc, workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo
 }
 

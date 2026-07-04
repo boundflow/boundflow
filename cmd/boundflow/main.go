@@ -80,6 +80,7 @@ func runServer(sigCh <-chan os.Signal) {
 	logger.Info("starting server", "grpc_port", cfg.GRPCPort)
 	requirePositive("BOUNDFLOW_GRPC_PORT", cfg.GRPCPort)
 	requirePositive("BOUNDFLOW_NUM_PARTITIONS", cfg.NumPartitions)
+	requirePositive("BOUNDFLOW_PERIODIC_POLL_SECONDS", cfg.PeriodicPollSeconds)
 
 	pool := mustConnectDB(cfg.DatabaseURL, logger)
 	defer pool.Close()
@@ -102,7 +103,7 @@ func runServer(sigCh <-chan os.Signal) {
 
 	modelPricingRepo := postgres.NewModelPricingRepo(pool)
 	regSvc := service.NewRegistrationService(tenantGroupRepo, tenantRepo, modelPricingRepo)
-	lifecycleSvc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, sched, sched, auditRepo, cfg.NumPartitions, logger)
+	lifecycleSvc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, sched, sched, auditRepo, cfg.NumPartitions, cfg.PeriodicPollSeconds, logger)
 
 	authn := auth.NewAuthenticator(postgres.NewApiKeyRepo(pool))
 	srv := server.New(cfg, regSvc, lifecycleSvc, authn, cfg.Debug)
@@ -126,6 +127,7 @@ func runScheduler(sigCh <-chan os.Signal) {
 	logger.Info("starting scheduler", "num_partitions", cfg.NumPartitions, "max_partitions_per_scheduler", cfg.MaxPartitionsPerScheduler)
 	requirePositive("BOUNDFLOW_NUM_PARTITIONS", cfg.NumPartitions)
 	requirePositive("BOUNDFLOW_MAX_PARTITIONS_PER_SCHEDULER", cfg.MaxPartitionsPerScheduler)
+	requirePositive("BOUNDFLOW_PERIODIC_POLL_SECONDS", cfg.PeriodicPollSeconds)
 
 	pool := mustConnectDB(cfg.DatabaseURL, logger)
 	defer pool.Close()
@@ -155,8 +157,8 @@ func runScheduler(sigCh <-chan os.Signal) {
 		resolver := internalscheduler.NewLifecycleResolver(30, logger, lifecycleResolverRepo, workflowRepo, versionMetricsRepo)
 		sched := internalscheduler.NewScheduler(schedulerID, 30, 25, partitionRepo, schedulerRepo, customerRequestRepo, workflowRepo, agentStateRepo, jobRepo, metricsHandler, resolver, auditRepo, logger)
 		// The periodic handler invokes due workflows via the scheduler + lifecycle service.
-		lifecycleSvc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, sched, sched, auditRepo, cfg.NumPartitions, logger)
-		periodic := internalscheduler.NewPeriodicWorkflowHandler(30, logger, sched, lifecycleSvc, schedulerRepo, customerRequestRepo)
+		lifecycleSvc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, sched, sched, auditRepo, cfg.NumPartitions, cfg.PeriodicPollSeconds, logger)
+		periodic := internalscheduler.NewPeriodicWorkflowHandler(cfg.PeriodicPollSeconds, logger, sched, lifecycleSvc, schedulerRepo, customerRequestRepo)
 		// Approval-gate timeouts resolve here (partition-scoped, like cooldown expiry)
 		approvalTimeouts := internalscheduler.NewApprovalTimeoutResolver(30, jobRepo, auditRepo, logger)
 		// Resolver (cooldown expiry) and periodic handler are partition-scoped: the scheduler

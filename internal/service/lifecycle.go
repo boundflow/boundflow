@@ -20,6 +20,7 @@ import (
 var ErrMissingRuntimeParams = errors.New("operation_timeout_seconds must be set on the request, tenant policy, or tenant group policy")
 var ErrInvalidWorkflowState = errors.New("workflow cannot be invoked in its current state")
 var ErrNotInterrupted = errors.New("workflow is not interrupted or the request id does not match its last interruption")
+var ErrInvalidRepeatInterval = errors.New("repeat_every_seconds is below the minimum the scheduler can honor")
 
 // RequestScheduler is the scheduling capability the lifecycle service needs.
 // Satisfied by *scheduler.Scheduler.
@@ -45,7 +46,10 @@ type LifecycleService struct {
 	approvalResolver  ApprovalResolver
 	audit             storage.AuditRepository
 	numPartitions     int
-	log               *slog.Logger
+	// minRepeatSeconds is the scheduler's periodic poll cadence; a smaller
+	// repeat_every_seconds can't be honored, so CreateWorkflow rejects it.
+	minRepeatSeconds int
+	log              *slog.Logger
 }
 
 func NewLifecycleService(
@@ -59,6 +63,7 @@ func NewLifecycleService(
 	approvalResolver ApprovalResolver,
 	audit storage.AuditRepository,
 	numPartitions int,
+	minRepeatSeconds int,
 	log *slog.Logger,
 ) *LifecycleService {
 	return &LifecycleService{
@@ -72,6 +77,7 @@ func NewLifecycleService(
 		approvalResolver:  approvalResolver,
 		audit:             audit,
 		numPartitions:     numPartitions,
+		minRepeatSeconds:  minRepeatSeconds,
 		log:               log.With("component", "lifecycle_service"),
 	}
 }
@@ -140,6 +146,10 @@ func (s *LifecycleService) ResolveAgentRuntimeParams(ctx context.Context, workfl
 
 func (s *LifecycleService) CreateWorkflow(ctx context.Context, correlationID, workflowType, tenantID string, cfg domain.WorkflowConfig, version int) (*domain.Workflow, error) {
 	s.log.Info("creating workflow", "correlation_id", correlationID, "workflow_type", workflowType, "tenant_id", tenantID)
+
+	if cfg.RepeatEverySeconds > 0 && int(cfg.RepeatEverySeconds) < s.minRepeatSeconds {
+		return nil, fmt.Errorf("%w: must be 0 (no repeat) or >= %d", ErrInvalidRepeatInterval, s.minRepeatSeconds)
+	}
 
 	id := uuid.New().String()
 	workflow := domain.Workflow{
