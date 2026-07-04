@@ -91,12 +91,17 @@ func (r *PeriodicWorkflowHandler) createPeriodicRequest(ctx context.Context, wor
 		return err
 	}
 
+	if err := r.lifecycle.ResolveModelPricing(ctx, workflow.ID, requestInfo); err != nil {
+		r.log.Error("failed to resolve model pricing", "correlation_id", correlationID, "workflow_id", workflow.ID, "error", err)
+		return err
+	}
+
 	request := domain.CustomerRequest{
-		ID:                 uuid.New().String(),
-		WorkflowID: workflow.ID,
-		Status:             domain.CustomerRequestStatusUnscheduled,
-		RequestType:        domain.CustomerRequestTypeInvoke,
-		RequestInfo:        requestInfo,
+		ID:          uuid.New().String(),
+		WorkflowID:  workflow.ID,
+		Status:      domain.CustomerRequestStatusUnscheduled,
+		RequestType: domain.CustomerRequestTypeInvoke,
+		RequestInfo: requestInfo,
 	}
 
 	// Atomically guards (gap + no in-flight request + valid state), allocates the version,
