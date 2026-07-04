@@ -118,9 +118,9 @@ class WorkflowPolicyAction(str, Enum):
 
 
 @dataclass
-class WorkflowSummary:
-    """A lightweight, read-only view of a workflow — what `list_workflows` returns
-    for dashboards/observability. Fetch a single workflow for full detail."""
+class WorkflowInfo:
+    """A read-only view of a workflow — its current version, lifecycle state, and
+    workflow state. Returned by `get_workflow` (one) and `list_workflows` (all)."""
     id: str
     workflow_type: str
     tenant_id: str
@@ -128,6 +128,18 @@ class WorkflowSummary:
     workflow_state: WorkflowState
     version: int
     last_interrupted_request_id: str
+
+
+def _workflow_info(w) -> WorkflowInfo:
+    return WorkflowInfo(
+        id=w.id,
+        workflow_type=w.workflow_type,
+        tenant_id=w.tenant_id,
+        lifecycle_state=_LIFECYCLE.get(w.lifecycle_state, LifecycleState.UNKNOWN),
+        workflow_state=_WF_STATE.get(w.workflow_state, WorkflowState.UNSPECIFIED),
+        version=w.workflow_config.version,
+        last_interrupted_request_id=w.last_interrupted_request_id,
+    )
 
 
 @dataclass
@@ -496,37 +508,18 @@ class ControlPlaneClient:
         ), metadata=self._metadata)
         return resp.request_id
 
-    async def get_workflow_state(self, workflow_id: str) -> WorkflowState | None:
+    async def get_workflow(self, workflow_id: str) -> WorkflowInfo:
+        """Fetch one workflow by id — its current version, lifecycle state, and
+        workflow state. The single-resource read; `list_workflows` returns all."""
         resp = await self._lc.GetWorkflow(
-            lc.GetWorkflowRequest(workflow_id=workflow_id),
-            metadata=self._metadata)
-        inst = resp.workflow
-        if inst.lifecycle_state == "deleted":
-            return None
-        return _WF_STATE.get(inst.workflow_state, WorkflowState.UNSPECIFIED)
+            lc.GetWorkflowRequest(workflow_id=workflow_id), metadata=self._metadata)
+        return _workflow_info(resp.workflow)
 
-    async def get_workflow_lifecycle_state(self, workflow_id: str) -> LifecycleState:
-        resp = await self._lc.GetWorkflow(
-            lc.GetWorkflowRequest(workflow_id=workflow_id),
-            metadata=self._metadata)
-        return _LIFECYCLE.get(resp.workflow.lifecycle_state, LifecycleState.UNKNOWN)
-
-    async def list_workflows(self) -> list[WorkflowSummary]:
+    async def list_workflows(self) -> list[WorkflowInfo]:
         """List all workflows owned by this API key's tenant group (newest first)."""
         resp = await self._lc.ListWorkflows(
             lc.ListWorkflowsRequest(), metadata=self._metadata)
-        return [
-            WorkflowSummary(
-                id=w.id,
-                workflow_type=w.workflow_type,
-                tenant_id=w.tenant_id,
-                lifecycle_state=_LIFECYCLE.get(w.lifecycle_state, LifecycleState.UNKNOWN),
-                workflow_state=_WF_STATE.get(w.workflow_state, WorkflowState.UNSPECIFIED),
-                version=w.workflow_config.version,
-                last_interrupted_request_id=w.last_interrupted_request_id,
-            )
-            for w in resp.workflows
-        ]
+        return [_workflow_info(w) for w in resp.workflows]
 
     async def list_workflow_runs(self, workflow_id: str) -> list[Run]:
         """List a workflow's runs (invocations), newest first, with each run's outcome

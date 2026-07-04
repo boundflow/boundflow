@@ -56,7 +56,8 @@ def test_get_workflow_shows_lifecycle_and_workflow_state(runner, boundflow_api_k
     wf_id = make_workflow(runner, boundflow_api_key, tenant_id)
 
     data = run(runner, boundflow_api_key, ["workflow", "get", wf_id])
-    assert data["workflow_id"] == wf_id
+    assert data["id"] == wf_id
+    assert "version" in data
     assert "lifecycle_state" in data
     assert "workflow_state" in data
 
@@ -215,7 +216,7 @@ def test_json_output_is_valid_json(runner, boundflow_api_key):
     # Record → JSON object
     get_data = run(runner, boundflow_api_key, ["workflow", "get", wf_id])
     assert isinstance(get_data, dict)
-    assert get_data["workflow_id"] == wf_id
+    assert get_data["id"] == wf_id
 
 
 def test_json_list_contains_no_enum_class_prefix(runner, boundflow_api_key):

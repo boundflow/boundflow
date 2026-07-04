@@ -67,7 +67,7 @@ async def _wait_done(cp, request_id, timeout=60):
 async def _wait_state(cp, wf_id, expected, timeout=90):
     deadline = asyncio.get_event_loop().time() + timeout
     while True:
-        state = await cp.get_workflow_state(wf_id)
+        state = (await cp.get_workflow(wf_id)).workflow_state
         if state == expected:
             return
         assert asyncio.get_event_loop().time() < deadline, f"timed out; last state={state}"

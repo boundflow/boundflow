@@ -17,8 +17,8 @@ from .control_plane import (
     TenantGroup,
     Workflow,
     WorkflowConfig,
+    WorkflowInfo,
     WorkflowState,
-    WorkflowSummary,
 )
 from .errors import (
     AlreadyExistsError,
@@ -74,7 +74,7 @@ __all__ = [
     "AnthropicLlmClient",
     "ControlPlaneClient", "LifecycleState", "RunStatus", "RunOutcome", "Run", "RequestInfo",
     "Tenant", "TenantGroup", "Workflow",
-    "WorkflowConfig", "WorkflowState", "WorkflowSummary", "ApprovalAuditRecord", "ApprovalDecision", "PolicyActionRecord", "WorkflowPolicyAction", "AgentPolicyActionRecord", "MockLlmClient", "MockContext", "Turn",
+    "WorkflowConfig", "WorkflowState", "WorkflowInfo", "ApprovalAuditRecord", "ApprovalDecision", "PolicyActionRecord", "WorkflowPolicyAction", "AgentPolicyActionRecord", "MockLlmClient", "MockContext", "Turn",
     "turn", "submit", "AgentMetric", "AgentRule", "Cooldown", "Op", "Pause",
     "RuntimePolicy", "SetMaxCostUsd", "SetMaxLlmCalls", "SetMaxTokensPerCall",
     "SetModel", "SetVersion", "ToolCallLimit", "WorkflowMetric", "WorkflowRule",

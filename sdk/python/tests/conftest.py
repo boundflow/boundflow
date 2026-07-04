@@ -73,7 +73,7 @@ async def wait_for_lifecycle_state(
 ) -> LifecycleState:
     deadline = asyncio.get_event_loop().time() + timeout
     while True:
-        state = await cp.get_workflow_lifecycle_state(workflow_id)
+        state = (await cp.get_workflow(workflow_id)).lifecycle_state
         if state == expected:
             return state
         assert asyncio.get_event_loop().time() < deadline, \
@@ -86,7 +86,7 @@ async def wait_for_workflow_state(
 ) -> WorkflowState:
     deadline = asyncio.get_event_loop().time() + timeout
     while True:
-        state = await cp.get_workflow_state(workflow_id)
+        state = (await cp.get_workflow(workflow_id)).workflow_state
         if state == expected:
             return state
         assert asyncio.get_event_loop().time() < deadline, \
