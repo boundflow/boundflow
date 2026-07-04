@@ -11,6 +11,7 @@ type BaseConfig struct {
 	Debug                     bool
 	NumPartitions             int
 	MaxPartitionsPerScheduler int
+	PeriodicPollSeconds       int
 }
 
 type ServerConfig struct {
@@ -39,6 +40,7 @@ func loadBase() BaseConfig {
 		Debug:                     os.Getenv("BOUNDFLOW_DEBUG") == "true",
 		NumPartitions:             envInt("BOUNDFLOW_NUM_PARTITIONS"),
 		MaxPartitionsPerScheduler: envInt("BOUNDFLOW_MAX_PARTITIONS_PER_SCHEDULER"),
+		PeriodicPollSeconds:       envInt("BOUNDFLOW_PERIODIC_POLL_SECONDS"),
 	}
 }
 

@@ -34,6 +34,7 @@ services:
       BOUNDFLOW_DATABASE_URL: postgres://boundflow:boundflow@postgres:5432/boundflow?sslmode=disable
       BOUNDFLOW_GRPC_PORT: "50051"
       BOUNDFLOW_NUM_PARTITIONS: "1"
+      BOUNDFLOW_PERIODIC_POLL_SECONDS: "30"
       BOUNDFLOW_DEBUG: "true"
       BOUNDFLOW_LOG_LEVEL: info
     ports:
@@ -50,6 +51,7 @@ services:
       BOUNDFLOW_DATABASE_URL: postgres://boundflow:boundflow@postgres:5432/boundflow?sslmode=disable
       BOUNDFLOW_NUM_PARTITIONS: "1"
       BOUNDFLOW_MAX_PARTITIONS_PER_SCHEDULER: "1"
+      BOUNDFLOW_PERIODIC_POLL_SECONDS: "30"
       BOUNDFLOW_LOG_LEVEL: info
     restart: unless-stopped
     depends_on:

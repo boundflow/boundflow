@@ -4,11 +4,14 @@ from __future__ import annotations
 import asyncio
 import time
 
+import pytest
+
 from boundflow import (
     AgentDefinition,
     BoundFlowWorker,
     Cooldown,
     Complete,
+    InvalidArgumentError,
     WorkflowConfig,
     WorkflowMetric,
     WorkflowRule,
@@ -25,7 +28,7 @@ from .conftest import (
     wait_for_workflow_state,
 )
 
-REPEAT_EVERY = 5
+REPEAT_EVERY = 30   # the scheduler polls periodic workflows every 30s; that's the floor
 COOLDOWN_SECONDS = 8
 
 
@@ -131,3 +134,24 @@ async def test_periodic_workflow_does_not_fire_during_cooldown(cp, api_key):
                 f"got {cooldown_duration:.1f}s"
         finally:
             await cp.delete_workflow(workflow.id)
+
+
+async def test_repeat_every_below_the_minimum_is_rejected(cp):
+    """A repeat interval below the scheduler's poll cadence can't be honored, so
+    creation rejects it outright instead of silently rounding up (see PeriodicPollSeconds)."""
+    tenant = await create_isolated_tenant(cp, "periodic-min")
+
+    with pytest.raises(InvalidArgumentError):
+        await cp.create_workflow(
+            "too_fast", tenant.id,
+            config=WorkflowConfig(version=1, repeat_every_seconds=REPEAT_EVERY - 1))
+
+    # The floor itself is allowed, and 0 (no repeat) is always allowed.
+    at_floor = await cp.create_workflow(
+        "at_floor", tenant.id,
+        config=WorkflowConfig(version=1, repeat_every_seconds=REPEAT_EVERY))
+    assert at_floor.config.repeat_every_seconds == REPEAT_EVERY
+
+    no_repeat = await cp.create_workflow(
+        "no_repeat", tenant.id, config=WorkflowConfig(version=1, repeat_every_seconds=0))
+    assert no_repeat.config.repeat_every_seconds == 0
