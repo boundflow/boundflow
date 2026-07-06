@@ -115,6 +115,18 @@ func (r *JobRepo) UpdateJobStatus(ctx context.Context, workflowID string, ownerI
 	return tag.RowsAffected() == 1, nil
 }
 
+func (r *JobRepo) UpdateJobStatusWithReason(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, failureReason string) (bool, error) {
+	tag, err := r.pool.Exec(ctx,
+		`UPDATE jobs SET status = $3, failure_reason = $4
+		 WHERE workflow_id = $1 AND owner = $2`,
+		workflowID, ownerID, status, failureReason,
+	)
+	if err != nil {
+		return false, fmt.Errorf("update job status with reason: %w", err)
+	}
+	return tag.RowsAffected() == 1, nil
+}
+
 func (r *JobRepo) UpdateJobStatusWithMetrics(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, resultType domain.RunOutcome, failureReason string, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
 	agentMetricsJSON, err := json.Marshal(agentMetrics)
 	if err != nil {

@@ -55,16 +55,16 @@ func NewScheduler(id string, interval int, orphanedJobGracePeriodSecs int, parts
 		id:                         id,
 		interval:                   interval,
 		orphanedJobGracePeriodSecs: orphanedJobGracePeriodSecs,
-		partitions:     parts,
-		scheduler:      scheduler,
-		requests:       requests,
-		workflow:       workflow,
-		agentStates:    agentStates,
-		jobs:           jobs,
-		metricsHandler: metricsHandler,
-		policyResolver: policyResolver,
-		audit:          audit,
-		log:            log.With("component", "scheduler", "scheduler_id", id),
+		partitions:                 parts,
+		scheduler:                  scheduler,
+		requests:                   requests,
+		workflow:                   workflow,
+		agentStates:                agentStates,
+		jobs:                       jobs,
+		metricsHandler:             metricsHandler,
+		policyResolver:             policyResolver,
+		audit:                      audit,
+		log:                        log.With("component", "scheduler", "scheduler_id", id),
 	}
 }
 
@@ -233,27 +233,27 @@ func (s *Scheduler) reconcileWorkflowLifecycles(ctx context.Context, partitionID
 }
 
 func (s *Scheduler) failJobs(ctx context.Context, partitionID string) error {
-	reqs, err := s.scheduler.GetFailedJobRequestIDs(ctx, partitionID)
+	jobs, err := s.scheduler.GetFailedJobs(ctx, partitionID)
 	if err != nil {
-		s.log.Error("failed to get failed job request IDs", "partition_id", partitionID, "error", err)
+		s.log.Error("failed to get failed jobs", "partition_id", partitionID, "error", err)
 		return fmt.Errorf("get failed jobs error: %w", err)
 	}
 
-	if len(reqs) == 0 {
+	if len(jobs) == 0 {
 		return nil
 	}
 
-	s.log.Info("processing failed jobs", "partition_id", partitionID, "count", len(reqs))
+	s.log.Info("processing failed jobs", "partition_id", partitionID, "count", len(jobs))
 
 	var wg sync.WaitGroup
-	for _, req := range reqs {
+	for _, job := range jobs {
 		wg.Add(1)
-		go func(req string) {
+		go func(job domain.FailedJob) {
 			defer wg.Done()
-			if _, err := s.FailRequest(ctx, req); err != nil {
-				s.log.Error("failed to process failed request", "request_id", req, "error", err)
+			if _, err := s.FailRequest(ctx, job.RequestID, job.FailureReason); err != nil {
+				s.log.Error("failed to process failed request", "request_id", job.RequestID, "error", err)
 			}
-		}(req)
+		}(job)
 	}
 	wg.Wait()
 	return nil
@@ -264,10 +264,13 @@ func (s *Scheduler) failJobs(ctx context.Context, partitionID string) error {
 // internal error occurred, etc.); customer-domain failures complete instead.
 const interruptedReason = "the run was interrupted before it could complete (platform failure)"
 
-func (s *Scheduler) FailRequest(ctx context.Context, req string) (bool, error) {
+func (s *Scheduler) FailRequest(ctx context.Context, req string, reason string) (bool, error) {
 	s.log.Debug("marking request as failed", "request_id", req)
 
-	request, err := s.requests.FailRequest(ctx, req, interruptedReason)
+	if reason == "" {
+		reason = interruptedReason
+	}
+	request, err := s.requests.FailRequest(ctx, req, reason)
 	if err != nil {
 		return false, fmt.Errorf("error failing request %s: %w", req, err)
 	}

@@ -12,6 +12,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Union
 
+from .errors import PlatformError
 from .lifecycle import (
     apply_lifecycle_rules,
     load_history,
@@ -294,6 +295,12 @@ class BoundFlowWorker:
             uncaught_reason: str | None = None
             try:
                 result = await handler(ctx)
+            except PlatformError:
+                # Not a customer-domain failure: let it propagate so the transport reports
+                # the operation as failed, interrupting the workflow instead of completing
+                # the run and keeping it active.
+                log.exception("workflow raised a platform error; interrupting the run (op_id=%s op=%s)", op.id, op.name)
+                raise
             except Exception as ex:  # noqa: BLE001 — a crash in customer callback code is a
                 # customer-domain failure (bumps num_failures for lifecycle policy), not a
                 # platform failure. The run still completes so the workflow stays active.

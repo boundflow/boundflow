@@ -35,6 +35,13 @@ dev = [
     "grpcio-tools>=1.81.0",
     "pytest",
     "pytest-asyncio",
+    "langchain-core>=0.3",
+    "langchain-anthropic>=0.3",
+]
+# Optional: run BoundFlow agents through any LangChain chat model
+# (boundflow.langchain_client.LangChainLlmClient).
+langchain = [
+    "langchain-core>=0.3",
 ]
 # Optional: export run traces as OpenTelemetry spans (OTelTraceSink). The core
 # trace capture has no OTel dependency; install this only if you use that sink.
