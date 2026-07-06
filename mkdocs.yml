@@ -55,5 +55,6 @@ nav:
   - Concepts: concepts.md
   - Governance: governance.md
   - Observability: observability.md
+  - Integrations: integrations.md
   - Deployment: deployment.md
   - API reference: api-reference.md

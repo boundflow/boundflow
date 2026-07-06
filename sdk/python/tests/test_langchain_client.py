@@ -12,6 +12,7 @@ from boundflow import (
     BoundFlowWorker,
     Complete,
     RunOutcome,
+    Tool,
     WorkflowConfig,
 )
 from boundflow.langchain_client import LangChainLlmClient
@@ -86,6 +87,60 @@ async def test_tool_call_and_usage_map_to_llmresponse():
     assert tools[0].id == "c1"
     assert resp.usage.input_tokens == 100
     assert resp.usage.output_tokens == 20
+
+
+async def test_text_and_multiple_tool_calls_map_to_llmresponse():
+    """Response boundary: a reply mixing prose with several tool calls must surface as a
+    TextBlock followed by one ToolUseBlock per call, ids/names/inputs preserved in order."""
+    from langchain_core.messages import AIMessage
+    reply = AIMessage(
+        content="let me look that up",
+        tool_calls=[
+            {"name": "search", "args": {"q": "a"}, "id": "c1"},
+            {"name": "submit_result", "args": {"summary": "s"}, "id": "c2"},
+        ],
+        usage_metadata={"input_tokens": 30, "output_tokens": 12, "total_tokens": 42},
+    )
+    resp = await LangChainLlmClient(_FakeChat(reply)).complete(_req())
+
+    assert resp.stop_reason == "tool_use"
+    assert isinstance(resp.content[0], TextBlock) and resp.content[0].text == "let me look that up"
+    tools = [b for b in resp.content if isinstance(b, ToolUseBlock)]
+    assert [(t.id, t.name, t.input) for t in tools] == [
+        ("c1", "search", {"q": "a"}),
+        ("c2", "submit_result", {"summary": "s"}),
+    ]
+
+
+async def test_multi_turn_request_maps_to_full_message_sequence():
+    """Request boundary: a full multi-turn LlmRequest (system, human, an assistant turn
+    with text + a tool call, the tool result, then another human turn) must render into the
+    exact LangChain message sequence a provider expects — this is the multi-step shape the
+    single-turn tests never exercise."""
+    from langchain_core.messages import (
+        AIMessage,
+        HumanMessage,
+        SystemMessage,
+        ToolMessage,
+    )
+    fake = _FakeChat(AIMessage(content="done", usage_metadata=_usage()))
+    req = _req(system="be helpful", messages=[
+        Message("user", [TextBlock("start")]),
+        Message("assistant", [TextBlock("let me search"), ToolUseBlock("t1", "search", {"q": "x"})]),
+        Message("user", [ToolResultBlock("t1", "result data")]),
+        Message("user", [TextBlock("now finish")]),
+    ])
+    await LangChainLlmClient(fake).complete(req)
+
+    msgs = fake.seen_messages
+    assert isinstance(msgs[0], SystemMessage) and msgs[0].content == "be helpful"
+    assert isinstance(msgs[1], HumanMessage) and msgs[1].content == "start"
+    assert isinstance(msgs[2], AIMessage)
+    assert "let me search" in msgs[2].content
+    assert [(tc["id"], tc["name"], tc["args"]) for tc in msgs[2].tool_calls] == [("t1", "search", {"q": "x"})]
+    assert isinstance(msgs[3], ToolMessage)
+    assert msgs[3].tool_call_id == "t1" and msgs[3].content == "result data"
+    assert isinstance(msgs[4], HumanMessage) and msgs[4].content == "now finish"
 
 
 async def test_missing_usage_raises_platform_error():
@@ -278,5 +333,52 @@ async def test_real_chatanthropic_agent_runs(cp, api_key):
             rid = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
             info = await wait_for_completion(cp, rid)
             assert info.run_outcome == RunOutcome.SUCCESSFUL
+        finally:
+            await cp.delete_workflow(wf.id)
+
+
+async def test_real_multistep_tool_calling_through_the_adapter(cp, api_key):
+    """Live, and the one thing fakes can't prove: a real provider must *accept and
+    correctly interpret* the multi-step message sequence the adapter emits. The agent is
+    forced to call a real tool before it may submit, so the loop runs at least two rounds —
+    round 1 the model calls `lookup`, round 2 it sees the ToolMessage the adapter produced
+    and finishes. If `_to_lc_messages` mis-rendered the assistant tool-call / tool-result
+    turns, Anthropic would reject the second call; a green run proves the mapping is valid."""
+    lca = pytest.importorskip("langchain_anthropic")
+    model = lca.ChatAnthropic(model=HAIKU, api_key=api_key, max_tokens=1024)
+
+    lookups: list[str] = []
+
+    async def lookup(_):
+        lookups.append("called")
+        return "The capital of France is Paris."
+
+    worker = BoundFlowWorker(WORKER_ADDRESS, LangChainLlmClient(model))
+
+    @worker.workflow("lc_multistep", version=1)
+    async def _entry(ctx):
+        result = await ctx.run_agent(AgentDefinition(
+            name="researcher",
+            system_prompt=(
+                "You must call the `lookup` tool exactly once to get the answer before "
+                "you finish. After you receive the tool result, call submit_result with it."
+            ),
+            model=HAIKU,
+            tools=[Tool("lookup", "Look up the answer to the question.", lookup)],
+            output_schema={"answer": {"type": "string"}}))
+        assert isinstance(result.output.get("answer"), str) and result.output["answer"].strip()
+        return Complete()
+
+    async with run_worker(worker):
+        tenant = await create_isolated_tenant(cp, "lc-multistep")
+        wf = await cp.create_workflow("lc_multistep", tenant.id, config=WorkflowConfig(version=1))
+        try:
+            await cp.activate_workflow(wf.id)
+            rid = await cp.invoke_workflow(wf.id, operation_timeout_seconds=45)
+            info = await wait_for_completion(cp, rid)
+            assert info.run_outcome == RunOutcome.SUCCESSFUL
+            # The tool actually ran → the second round-trip (tool result fed back to the
+            # real provider through the adapter) was accepted and the loop continued.
+            assert lookups, "expected the agent to call the lookup tool (multi-step round-trip)"
         finally:
             await cp.delete_workflow(wf.id)
