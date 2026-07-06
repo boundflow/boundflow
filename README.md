@@ -40,44 +40,6 @@ it's the operational layer *around* the agents you build.
 
 ---
 
-## Quick start
-
-Get a governed agent running in a few minutes. Full walkthrough: **[QUICKSTART.md](QUICKSTART.md)**.
-
-```bash
-# 1. Set a database password (any strong secret)
-echo "BOUNDFLOW_DB_PASSWORD=$(openssl rand -hex 16)" > .env
-
-# 2. Start the backend (Postgres + server + scheduler + worker)
-docker compose -f docker-compose.dist.yml up -d
-
-# 3. Provision an API key
-docker compose -f docker-compose.dist.yml run --rm server -mode=provision -name=me
-export BOUNDFLOW_API_KEY=<printed key>
-
-# 4. Install the SDK and bring your Anthropic key
-pip install boundflow
-export ANTHROPIC_API_KEY=<your key>
-
-# 5. Run a real agent under governance
-python -m boundflow.examples.hello
-```
-
-Then explore the bundled examples:
-
-```bash
-python -m boundflow.examples.approval_gate   # human-in-the-loop sign-off
-```
-
-Manage and observe it from the **`boundflow` CLI** (installed with the SDK):
-
-```bash
-boundflow workflow list            # your workflows and their state
-boundflow workflow runs <id>       # runs and their outcomes  ·  --json for scripting
-```
-
----
-
 ## Why BoundFlow
 
 **Agents that take real actions need a control plane that takes real action when
@@ -227,6 +189,44 @@ await cp.set_workflow_lifecycle_policy(wf.id, [
 
 Workflow rules can also `Pause` a workflow or put it on `Cooldown` instead of
 rolling back. See [`sdk/python/boundflow/examples/`](sdk/python/boundflow/examples/) for runnable examples.
+
+---
+
+## Quick start
+
+Get a governed agent running in a few minutes. Full walkthrough: **[QUICKSTART.md](QUICKSTART.md)**.
+
+```bash
+# 1. Set a database password (any strong secret)
+echo "BOUNDFLOW_DB_PASSWORD=$(openssl rand -hex 16)" > .env
+
+# 2. Start the backend (Postgres + server + scheduler + worker)
+docker compose -f docker-compose.dist.yml up -d
+
+# 3. Provision an API key
+docker compose -f docker-compose.dist.yml run --rm server -mode=provision -name=me
+export BOUNDFLOW_API_KEY=<printed key>
+
+# 4. Install the SDK and bring your Anthropic key
+pip install boundflow
+export ANTHROPIC_API_KEY=<your key>
+
+# 5. Run a real agent under governance
+python -m boundflow.examples.hello
+```
+
+Then explore the bundled examples:
+
+```bash
+python -m boundflow.examples.approval_gate   # human-in-the-loop sign-off
+```
+
+Manage and observe it from the **`boundflow` CLI** (installed with the SDK):
+
+```bash
+boundflow workflow list            # your workflows and their state
+boundflow workflow runs <id>       # runs and their outcomes  ·  --json for scripting
+```
 
 ---
 
