@@ -171,6 +171,12 @@ Install with `pip install "boundflow[langchain]"`; see
 [`boundflow.examples.langchain_adapter`](sdk/python/boundflow/examples/langchain_adapter.py)
 for a runnable end-to-end example.
 
+**Orchestrate with LangGraph, governed by BoundFlow.** Build a LangGraph agent
+graph *inside* a workflow with its nodes calling `ctx.run_agent`, so LangGraph
+owns the routing while BoundFlow governs every agent step and the workflow as a
+whole. See [Integrations](docs/integrations.md) and the runnable
+[`boundflow.examples.langgraph_workflow`](sdk/python/boundflow/examples/langgraph_workflow.py).
+
 Workflows are **multi-step and stateful**: an operation can park for a human
 decision or chain into a follow-on operation, and the workflow resumes where it
 left off — nothing irreversible runs until the branch it's gated behind does.
