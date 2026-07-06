@@ -51,7 +51,7 @@ action before continuing. While parked, the workflow reports
 `awaiting_approval`; the decision is recorded in the governance audit log (see
 [Observability](observability.md#approval-audit)).
 
-See [`sdk/python/boundflow/examples/approval_gate.py`](https://github.com/boundflow/boundflow/blob/boundflow/sdk/python/boundflow/examples/approval_gate.py)
+See [`sdk/python/boundflow/examples/approval_gate.py`](https://github.com/boundflow/boundflow/blob/main/sdk/python/boundflow/examples/approval_gate.py)
 for a runnable example.
 
 ## Metrics

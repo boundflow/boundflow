@@ -4,7 +4,7 @@
 
 The backend ships as a single container image run in different modes, backed by
 one Postgres database. The distribution compose file
-[`docker-compose.dist.yml`](https://github.com/boundflow/boundflow/blob/boundflow/docker-compose.dist.yml)
+[`docker-compose.dist.yml`](https://github.com/boundflow/boundflow/blob/main/docker-compose.dist.yml)
 brings up Postgres, `server`, `scheduler`, and `worker` together.
 
 ```bash

@@ -19,7 +19,7 @@ from boundflow.trace import OTelTraceSink
 worker = BoundFlowWorker(llm=..., trace_sink=OTelTraceSink(tracer))
 ```
 
-See [`sdk/python/examples/otel/`](https://github.com/boundflow/boundflow/blob/boundflow/sdk/python/examples/otel/)
+See [`sdk/python/examples/otel/`](https://github.com/boundflow/boundflow/blob/main/sdk/python/examples/otel/)
 for a runnable OTLP → Jaeger setup.
 
 ## Approval audit

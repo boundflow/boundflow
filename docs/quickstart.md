@@ -1,7 +1,7 @@
 # Quickstart
 
 Get a governed agent running in a few minutes. This mirrors
-[`QUICKSTART.md`](https://github.com/boundflow/boundflow/blob/boundflow/QUICKSTART.md)
+[`QUICKSTART.md`](https://github.com/boundflow/boundflow/blob/main/QUICKSTART.md)
 in the repo.
 
 ## Prerequisites
