@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "boundflow"
-version = "0.1.1"
+version = "0.2.0"
 description = "BoundFlow Python SDK — build governed fleets of agents against a self-hostable control plane."
 requires-python = ">=3.10"
 # The SDK ships as public source on PyPI under MIT. The backend (shipped as a
