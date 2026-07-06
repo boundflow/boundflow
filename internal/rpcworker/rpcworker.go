@@ -21,7 +21,7 @@ import (
 
 type RequestScheduler interface {
 	CompleteRequest(ctx context.Context, req string, outcome domain.RunOutcome, reason string) (bool, error)
-	FailRequest(ctx context.Context, req string) (bool, error)
+	FailRequest(ctx context.Context, req string, reason string) (bool, error)
 	MarkInvoking(ctx context.Context, workflowID string) error
 	MarkAwaitingApproval(ctx context.Context, workflowID string) error
 }
@@ -253,16 +253,16 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 
 	// failOperation interrupts the workflow (a platform failure): the scheduler records
 	// the request as run_outcome=interrupted with a static reason.
-	failOperation := func(cancelLease chan bool, job *domain.Job) error {
+	failOperation := func(cancelLease chan bool, job *domain.Job, reason string) error {
 		ctx := context.Background()
 		defer cancelLeaseIfExists(cancelLease)
 
-		updated, err := s.jobs.UpdateJobStatus(ctx, job.WorkflowID, sessionID, domain.JobStatusFailed)
+		updated, err := s.jobs.UpdateJobStatusWithReason(ctx, job.WorkflowID, sessionID, domain.JobStatusFailed, reason)
 		if err != nil {
 			log.Error("failed to mark job failed", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "error", err)
 		} else if updated {
 			log.Info("job failed, notifying scheduler", "request_id", job.RequestID, "workflow_id", job.WorkflowID)
-			s.scheduler.FailRequest(ctx, job.RequestID)
+			s.scheduler.FailRequest(ctx, job.RequestID, reason)
 		}
 
 		// consider returning error for ownership failure, for now the return isnt used for anything
@@ -500,7 +500,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 					log.Warn("client did not ack in time, cancelling operation", "request_id", currentJob.RequestID)
 					err := cancelOperation(currentJob.RequestID)
 					if err != nil {
-						failOperation(cancelLease, currentJob)
+						failOperation(cancelLease, currentJob, "")
 						return err
 					}
 					return nil
@@ -508,24 +508,24 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 					update, ok := ack.Payload.(*boundflowv1.WorkerMessage_Update)
 					if !ok {
 						log.Warn("unexpected message type while waiting for ack", "request_id", currentJob.RequestID)
-						failOperation(cancelLease, currentJob)
+						failOperation(cancelLease, currentJob, "")
 						return errors.New("protocol error") // protocol error
 					}
 					if update.Update.OperationId != currentJob.RequestID {
 						log.Warn("wrong operation id in ack", "expected", currentJob.RequestID, "got", update.Update.OperationId)
-						failOperation(cancelLease, currentJob)
+						failOperation(cancelLease, currentJob, "")
 						return errors.New("wrong operation id from client")
 					}
 					if update.Update.Result.Status != boundflowv1.OperationStatus_OPERATION_STATUS_IN_PROGRESS {
 						log.Warn("unexpected status in ack", "request_id", currentJob.RequestID, "status", update.Update.Result.Status)
-						failOperation(cancelLease, currentJob)
+						failOperation(cancelLease, currentJob, "")
 						return errors.New("unexpected status from client")
 					}
 					log.Info("client acked IN_PROGRESS, marking job running", "request_id", currentJob.RequestID)
 					updated, err := s.jobs.UpdateJobStatus(stream.Context(), currentJob.WorkflowID, sessionID, domain.JobStatusRunning)
 					if err != nil {
 						log.Error("failed to mark job running", "request_id", currentJob.RequestID, "error", err)
-						failOperation(cancelLease, currentJob)
+						failOperation(cancelLease, currentJob, "")
 						return err
 					}
 					if !updated {
@@ -543,18 +543,18 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 					select {
 					case <-stream.Context().Done():
 						log.Info("stream disconnected while busy, failing job", "request_id", currentJob.RequestID)
-						failOperation(cancelLease, currentJob)
+						failOperation(cancelLease, currentJob, "")
 						return nil
 					case msg := <-recvStream:
 						update, ok := msg.Payload.(*boundflowv1.WorkerMessage_Update)
 						if !ok {
 							log.Warn("unexpected message type while busy", "request_id", currentJob.RequestID)
-							failOperation(cancelLease, currentJob)
+							failOperation(cancelLease, currentJob, "")
 							return errors.New("protocol error") // protocol error
 						}
 						if update.Update.OperationId != currentJob.RequestID {
 							log.Warn("wrong operation id while busy", "expected", currentJob.RequestID, "got", update.Update.OperationId)
-							failOperation(cancelLease, currentJob)
+							failOperation(cancelLease, currentJob, "")
 							return errors.New("wrong operation id from client")
 						}
 						switch update.Update.Result.Status {
@@ -562,14 +562,14 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 							log.Info("operation completed", "request_id", currentJob.RequestID, "workflow_id", currentJob.WorkflowID)
 							completeOperation(cancelLease, currentJob, update.Update.Result)
 						case boundflowv1.OperationStatus_OPERATION_STATUS_FAILED:
-							log.Warn("operation failed by client", "request_id", currentJob.RequestID)
-							failOperation(cancelLease, currentJob)
+							log.Warn("operation failed by client", "request_id", currentJob.RequestID, "reason", update.Update.Result.Message)
+							failOperation(cancelLease, currentJob, update.Update.Result.Message)
 						case boundflowv1.OperationStatus_OPERATION_STATUS_IN_PROGRESS:
 							log.Debug("operation still in progress", "request_id", currentJob.RequestID)
 							continue ConnectedBusyLoop
 						case boundflowv1.OperationStatus_OPERATION_STATUS_CANCELLED: // This is unexpected
 							log.Warn("unexpected CANCELLED status while busy", "request_id", currentJob.RequestID)
-							failOperation(cancelLease, currentJob)
+							failOperation(cancelLease, currentJob, "")
 						}
 						state = ConnectedIdle
 						break ConnectedBusyLoop
@@ -577,7 +577,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 						log.Warn("job timed out, sending cancel", "request_id", currentJob.RequestID, "timeout_secs", currentJob.RuntimeParams.OperationTimeoutSeconds)
 						err := cancelOperation(currentJob.RequestID)
 						if err != nil {
-							failOperation(cancelLease, currentJob)
+							failOperation(cancelLease, currentJob, "")
 							return err
 						}
 						state = CancelRequested
@@ -595,21 +595,21 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 					select {
 					case <-stream.Context().Done():
 						log.Info("stream disconnected while awaiting cancel ack", "request_id", currentJob.RequestID)
-						failOperation(cancelLease, currentJob)
+						failOperation(cancelLease, currentJob, "")
 						return nil
 					case <-ticker.C:
 						log.Warn("client did not ack cancel in time, failing job", "request_id", currentJob.RequestID)
-						failOperation(cancelLease, currentJob)
+						failOperation(cancelLease, currentJob, "")
 						return errors.New("cancel ack timed out")
 					case msg := <-recvStream:
 						ack, ok := msg.Payload.(*boundflowv1.WorkerMessage_Update)
 						if !ok {
 							log.Warn("unexpected message type while awaiting cancel ack", "request_id", currentJob.RequestID)
-							failOperation(cancelLease, currentJob)
+							failOperation(cancelLease, currentJob, "")
 							return errors.New("protocol error")
 						} else if ack.Update.OperationId != currentJob.RequestID {
 							log.Warn("wrong operation id in cancel ack", "expected", currentJob.RequestID, "got", ack.Update.OperationId)
-							failOperation(cancelLease, currentJob)
+							failOperation(cancelLease, currentJob, "")
 							return errors.New("wrong operation id")
 						}
 						switch ack.Update.Result.Status {

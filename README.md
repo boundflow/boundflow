@@ -155,6 +155,22 @@ async def triage(ctx):
     return Complete()
 ```
 
+**Bring your own provider via LangChain.** Wrap any tool-calling LangChain chat
+model in `LangChainLlmClient` and the governance is identical — OpenAI, Google,
+Bedrock, and the rest of LangChain's ecosystem run under the same cost caps, model
+policies, and approval gates:
+
+```python
+from langchain_anthropic import ChatAnthropic          # or ChatOpenAI, ChatVertexAI, ...
+from boundflow.langchain_client import LangChainLlmClient
+
+worker = BoundFlowWorker(llm=LangChainLlmClient(ChatAnthropic(model="claude-haiku-4-5")))
+```
+
+Install with `pip install "boundflow[langchain]"`; see
+[`boundflow.examples.langchain_adapter`](sdk/python/boundflow/examples/langchain_adapter.py)
+for a runnable end-to-end example.
+
 Workflows are **multi-step and stateful**: an operation can park for a human
 decision or chain into a follow-on operation, and the workflow resumes where it
 left off — nothing irreversible runs until the branch it's gated behind does.

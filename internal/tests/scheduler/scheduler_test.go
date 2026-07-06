@@ -385,7 +385,7 @@ func TestFailRequest_AppliesFailedState(t *testing.T) {
 		DeleteTerminalJob(gomock.Any(), "workflow-1", "req-1").
 		Return(true, nil)
 
-	applied, err := s.FailRequest(context.Background(), "req-1")
+	applied, err := s.FailRequest(context.Background(), "req-1", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -414,7 +414,7 @@ func TestFailRequest_VersionSkipped_ReturnsFalse(t *testing.T) {
 		DeleteTerminalJob(gomock.Any(), "workflow-1", "req-1").
 		Return(true, nil)
 
-	applied, err := s.FailRequest(context.Background(), "req-1")
+	applied, err := s.FailRequest(context.Background(), "req-1", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -431,7 +431,7 @@ func TestFailRequest_RepoError(t *testing.T) {
 		FailRequest(gomock.Any(), "req-1", gomock.Any()).
 		Return(nil, errors.New("db error"))
 
-	if _, err := s.FailRequest(context.Background(), "req-1"); err == nil {
+	if _, err := s.FailRequest(context.Background(), "req-1", ""); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }

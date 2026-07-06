@@ -186,9 +186,9 @@ func (r *SchedulerRepo) GetCompletedJobs(ctx context.Context, partitionID string
 	return jobs, rows.Err()
 }
 
-func (r *SchedulerRepo) GetFailedJobRequestIDs(ctx context.Context, partitionID string) ([]string, error) {
+func (r *SchedulerRepo) GetFailedJobs(ctx context.Context, partitionID string) ([]domain.FailedJob, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT j.request_id
+		`SELECT j.request_id, j.failure_reason
 		 FROM jobs j
 		 JOIN workflows ri ON j.workflow_id = ri.id
 		 WHERE ri.scheduler_partition_id = $1
@@ -196,19 +196,19 @@ func (r *SchedulerRepo) GetFailedJobRequestIDs(ctx context.Context, partitionID 
 		partitionID,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("get failed job request ids: %w", err)
+		return nil, fmt.Errorf("get failed jobs: %w", err)
 	}
 	defer rows.Close()
 
-	var ids []string
+	var jobs []domain.FailedJob
 	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			return nil, fmt.Errorf("scan request id: %w", err)
+		var j domain.FailedJob
+		if err := rows.Scan(&j.RequestID, &j.FailureReason); err != nil {
+			return nil, fmt.Errorf("scan failed job: %w", err)
 		}
-		ids = append(ids, id)
+		jobs = append(jobs, j)
 	}
-	return ids, rows.Err()
+	return jobs, rows.Err()
 }
 
 func (r *SchedulerRepo) DeleteTerminalJob(ctx context.Context, workflowID string, requestID string) (bool, error) {

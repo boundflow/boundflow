@@ -59,6 +59,14 @@ type CompletedJob struct {
 	FailureReason string
 }
 
+// FailedJob is the view the failJobs sweeper needs: the request to fail plus the
+// failure reason the rpcworker recorded on the job, so the backup path surfaces the
+// real cause even when the rpcworker died before failing the request itself.
+type FailedJob struct {
+	RequestID     string
+	FailureReason string
+}
+
 // WorkflowJobMetrics holds workflow-level metrics accumulated across a job's operations.
 // Serialized as JSONB in the jobs table (workflow_metrics column).
 type WorkflowJobMetrics struct {

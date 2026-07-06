@@ -116,9 +116,10 @@ type SchedulerRepository interface {
 	// workflows belonging to the given partition, so the sweeper can complete each request
 	// and transfer the result onto its run_outcome.
 	GetCompletedJobs(ctx context.Context, partitionID string) ([]domain.CompletedJob, error)
-	// GetFailedJobRequestIDs returns the request IDs of all failed jobs for workflows
-	// belonging to the given partition.
-	GetFailedJobRequestIDs(ctx context.Context, partitionID string) ([]string, error)
+	// GetFailedJobs returns the failed jobs (request id + recorded failure reason) for
+	// workflows belonging to the given partition, so the sweeper can fail each request
+	// and surface the real cause on its run_outcome.
+	GetFailedJobs(ctx context.Context, partitionID string) ([]domain.FailedJob, error)
 }
 
 type JobRepository interface {
@@ -137,6 +138,9 @@ type JobRepository interface {
 	// UpdateJobStatus updates the status of a job only if ownerID is the current owner.
 	// Returns false if the ownership check failed (job taken by another worker or released).
 	UpdateJobStatus(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus) (bool, error)
+	// UpdateJobStatusWithReason is UpdateJobStatus plus a write of the failure reason,
+	// so a platform interruption's cause is durable on the job for the failJobs sweeper.
+	UpdateJobStatusWithReason(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, failureReason string) (bool, error)
 	// UpdateJobStatusWithMetrics is UpdateJobStatus plus an atomic write of the accumulated
 	// per-agent and workflow-level metrics. Used when finalizing a job.
 	UpdateJobStatusWithMetrics(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, resultType domain.RunOutcome, failureReason string, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error)

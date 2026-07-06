@@ -26,6 +26,17 @@ class BoundflowError(Exception):
             self.__cause__ = cause
 
 
+class PlatformError(Exception):
+    """A platform-level failure raised from inside a worker's handler or LLM client.
+
+    Unlike a customer callback that raises (a customer-domain failure that completes
+    the run and keeps the workflow active), this signals the run couldn't be governed
+    at all — e.g. the LLM provider reported no token usage, so cost caps can't be
+    enforced. The worker lets it propagate so the operation is reported as *failed*,
+    interrupting the workflow; its message becomes the request's `failure_reason`.
+    """
+
+
 class NotFoundError(BoundflowError):
     """The referenced resource does not exist (or isn't visible to this API key)."""
 

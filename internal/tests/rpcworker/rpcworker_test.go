@@ -113,7 +113,7 @@ func (m *mockScheduler) CompleteRequest(_ context.Context, req string, _ domain.
 	return true, nil
 }
 
-func (m *mockScheduler) FailRequest(_ context.Context, req string) (bool, error) {
+func (m *mockScheduler) FailRequest(_ context.Context, req string, _ string) (bool, error) {
 	m.failCh <- req
 	return true, nil
 }
@@ -487,7 +487,7 @@ func TestWorkerSession_FailOperation(t *testing.T) {
 	worker, jobRepo, sched := newTestWorker(ctrl)
 	expectJobAcquired(jobRepo)
 	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, gomock.Any(), domain.JobStatusRunning).Return(true, nil)
-	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, gomock.Any(), domain.JobStatusFailed).Return(true, nil)
+	jobRepo.EXPECT().UpdateJobStatusWithReason(gomock.Any(), testWorkflowID, gomock.Any(), domain.JobStatusFailed, gomock.Any()).Return(true, nil)
 
 	stream := newMockStream(ctx)
 	errCh := runSession(worker, stream)
@@ -512,7 +512,7 @@ func TestWorkerSession_ConnectedBusy_StreamDisconnect(t *testing.T) {
 
 	worker, jobRepo, sched := newTestWorker(ctrl)
 	expectJobAcquired(jobRepo)
-	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, gomock.Any(), domain.JobStatusFailed).Return(true, nil)
+	jobRepo.EXPECT().UpdateJobStatusWithReason(gomock.Any(), testWorkflowID, gomock.Any(), domain.JobStatusFailed, gomock.Any()).Return(true, nil)
 
 	stream := newMockStream(ctx)
 	errCh := runSession(worker, stream)
@@ -549,7 +549,7 @@ func TestWorkerSession_ConnectedWaiting_WrongOperationId(t *testing.T) {
 	<-stream.sendCh // LaunchOperation
 
 	// Wrong op id in ConnectedWaiting fails the operation.
-	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, gomock.Any(), domain.JobStatusFailed).Return(true, nil)
+	jobRepo.EXPECT().UpdateJobStatusWithReason(gomock.Any(), testWorkflowID, gomock.Any(), domain.JobStatusFailed, gomock.Any()).Return(true, nil)
 	stream.push(updateMsg("wrong-op-id", boundflowv1.OperationStatus_OPERATION_STATUS_IN_PROGRESS))
 
 	select {
@@ -575,7 +575,7 @@ func TestWorkerSession_ConnectedWaiting_UnexpectedStatus(t *testing.T) {
 	<-stream.sendCh // LaunchOperation
 
 	// Send COMPLETED before IN_PROGRESS — unexpected; fails the operation.
-	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, gomock.Any(), domain.JobStatusFailed).Return(true, nil)
+	jobRepo.EXPECT().UpdateJobStatusWithReason(gomock.Any(), testWorkflowID, gomock.Any(), domain.JobStatusFailed, gomock.Any()).Return(true, nil)
 	stream.push(updateMsg(testRequestID, boundflowv1.OperationStatus_OPERATION_STATUS_COMPLETED))
 
 	select {
@@ -593,7 +593,7 @@ func TestWorkerSession_ConnectedBusy_WrongOperationId(t *testing.T) {
 
 	worker, jobRepo, sched := newTestWorker(ctrl)
 	expectJobAcquired(jobRepo)
-	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, gomock.Any(), domain.JobStatusFailed).Return(true, nil)
+	jobRepo.EXPECT().UpdateJobStatusWithReason(gomock.Any(), testWorkflowID, gomock.Any(), domain.JobStatusFailed, gomock.Any()).Return(true, nil)
 
 	stream := newMockStream(ctx)
 	errCh := runSession(worker, stream)

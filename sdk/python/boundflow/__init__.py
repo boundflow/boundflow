@@ -28,6 +28,7 @@ from .errors import (
     InvalidArgumentError,
     NotFoundError,
     PermissionDeniedError,
+    PlatformError,
     UnauthenticatedError,
     UnavailableError,
 )
@@ -84,5 +85,5 @@ __all__ = [
     "JsonlFileTraceSink", "OTelTraceSink",
     "BoundflowError", "NotFoundError", "AlreadyExistsError", "InvalidArgumentError",
     "FailedPreconditionError", "PermissionDeniedError", "UnauthenticatedError",
-    "UnavailableError", "DeadlineExceededError",
+    "UnavailableError", "DeadlineExceededError", "PlatformError",
 ]
