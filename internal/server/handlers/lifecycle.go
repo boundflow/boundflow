@@ -6,6 +6,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
 	"github.com/boundflow/boundflow/internal/auth"
@@ -279,6 +280,67 @@ func (h *WorkflowServiceHandler) SetWorkflowLifecyclePolicy(ctx context.Context,
 		return nil, status.Errorf(codes.Internal, "set workflow lifecycle policy: %v", err)
 	}
 	return &boundflowv1.SetWorkflowLifecyclePolicyResponse{}, nil
+}
+
+func (h *WorkflowServiceHandler) GetWorkflowLifecyclePolicy(ctx context.Context, req *boundflowv1.GetWorkflowLifecyclePolicyRequest) (*boundflowv1.GetWorkflowLifecyclePolicyResponse, error) {
+	if req.WorkflowId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
+	}
+	if err := h.checkWorkflowOwner(ctx, req.WorkflowId); err != nil {
+		return nil, err
+	}
+	policy, err := h.svc.GetWorkflowLifecyclePolicy(ctx, req.WorkflowId)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Errorf(codes.NotFound, "workflow instance not found")
+		}
+		return nil, status.Errorf(codes.Internal, "get workflow lifecycle policy: %v", err)
+	}
+	return &boundflowv1.GetWorkflowLifecyclePolicyResponse{
+		LifecyclePolicy: convert.WorkflowLifecyclePolicyToProto(policy),
+	}, nil
+}
+
+func (h *WorkflowServiceHandler) GetAgentRuntimePolicy(ctx context.Context, req *boundflowv1.GetAgentRuntimePolicyRequest) (*boundflowv1.GetAgentRuntimePolicyResponse, error) {
+	if req.WorkflowId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
+	}
+	if req.AgentName == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "agent_name is required")
+	}
+	if err := h.checkWorkflowOwner(ctx, req.WorkflowId); err != nil {
+		return nil, err
+	}
+	policy, err := h.svc.GetAgentRuntimePolicy(ctx, req.WorkflowId, req.AgentName)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "get agent runtime policy: %v", err)
+	}
+	s, err := structpb.NewStruct(policy)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "encode runtime policy: %v", err)
+	}
+	return &boundflowv1.GetAgentRuntimePolicyResponse{RuntimePolicy: s}, nil
+}
+
+func (h *WorkflowServiceHandler) GetAgentLifecyclePolicy(ctx context.Context, req *boundflowv1.GetAgentLifecyclePolicyRequest) (*boundflowv1.GetAgentLifecyclePolicyResponse, error) {
+	if req.WorkflowId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
+	}
+	if req.AgentName == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "agent_name is required")
+	}
+	if err := h.checkWorkflowOwner(ctx, req.WorkflowId); err != nil {
+		return nil, err
+	}
+	policy, err := h.svc.GetAgentLifecyclePolicy(ctx, req.WorkflowId, req.AgentName)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "get agent lifecycle policy: %v", err)
+	}
+	s, err := structpb.NewStruct(policy)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "encode lifecycle policy: %v", err)
+	}
+	return &boundflowv1.GetAgentLifecyclePolicyResponse{LifecyclePolicy: s}, nil
 }
 
 func (h *WorkflowServiceHandler) ActivateWorkflow(ctx context.Context, req *boundflowv1.ActivateWorkflowRequest) (*boundflowv1.ActivateWorkflowResponse, error) {

@@ -313,6 +313,42 @@ func (s *LifecycleService) SetWorkflowLifecyclePolicy(ctx context.Context, workf
 	return nil
 }
 
+// GetWorkflowLifecyclePolicy returns the armed workflow-lifecycle policy (empty
+// rules if none is set). Returns storage.ErrNotFound if the workflow doesn't exist.
+func (s *LifecycleService) GetWorkflowLifecyclePolicy(ctx context.Context, workflowID string) (domain.WorkflowLifecyclePolicy, error) {
+	wf, err := s.workflows.Get(ctx, workflowID)
+	if err != nil {
+		return domain.WorkflowLifecyclePolicy{}, err
+	}
+	return wf.LifecyclePolicy, nil
+}
+
+// GetAgentRuntimePolicy returns the armed runtime policy for one agent (nil if the
+// agent has no state/policy set).
+func (s *LifecycleService) GetAgentRuntimePolicy(ctx context.Context, workflowID, agentName string) (map[string]any, error) {
+	states, err := s.agentStates.GetAllForWorkflow(ctx, workflowID)
+	if err != nil {
+		return nil, fmt.Errorf("get agent runtime policy: %w", err)
+	}
+	if st, ok := states[agentName]; ok {
+		return st.RuntimePolicy, nil
+	}
+	return nil, nil
+}
+
+// GetAgentLifecyclePolicy returns the armed lifecycle policy for one agent (nil if
+// the agent has no state/policy set).
+func (s *LifecycleService) GetAgentLifecyclePolicy(ctx context.Context, workflowID, agentName string) (map[string]any, error) {
+	states, err := s.agentStates.GetAllForWorkflow(ctx, workflowID)
+	if err != nil {
+		return nil, fmt.Errorf("get agent lifecycle policy: %w", err)
+	}
+	if st, ok := states[agentName]; ok {
+		return st.LifecyclePolicy, nil
+	}
+	return nil, nil
+}
+
 func (s *LifecycleService) ActivateWorkflow(ctx context.Context, workflowID string) error {
 	s.log.Info("activating workflow", "workflow_id", workflowID)
 	if err := s.workflows.UpdateWorkflowState(ctx, workflowID, domain.WorkflowStateActive); err != nil {

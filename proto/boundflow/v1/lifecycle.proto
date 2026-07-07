@@ -21,6 +21,12 @@ service WorkflowService {
   rpc DeleteAgent(DeleteAgentRequest) returns (DeleteAgentResponse);
 
   rpc SetWorkflowLifecyclePolicy(SetWorkflowLifecyclePolicyRequest) returns (SetWorkflowLifecyclePolicyResponse);
+  // Policy getters — read back the armed (currently-configured) policy for a
+  // workflow / agent. Mirror the setters; complement the *Audit getters, which
+  // return firings rather than the armed config.
+  rpc GetWorkflowLifecyclePolicy(GetWorkflowLifecyclePolicyRequest) returns (GetWorkflowLifecyclePolicyResponse);
+  rpc GetAgentRuntimePolicy(GetAgentRuntimePolicyRequest) returns (GetAgentRuntimePolicyResponse);
+  rpc GetAgentLifecyclePolicy(GetAgentLifecyclePolicyRequest) returns (GetAgentLifecyclePolicyResponse);
   rpc ApproveWorkflow(ApproveWorkflowRequest) returns (ApproveWorkflowResponse);
   rpc RejectWorkflow(RejectWorkflowRequest) returns (RejectWorkflowResponse);
   // Per-type audit getters (workflow_id required); GetAuditLog is the unified,
@@ -160,6 +166,35 @@ message SetWorkflowLifecyclePolicyRequest {
 }
 
 message SetWorkflowLifecyclePolicyResponse {}
+
+message GetWorkflowLifecyclePolicyRequest {
+  string workflow_id = 1;
+}
+
+message GetWorkflowLifecyclePolicyResponse {
+  // The armed workflow-lifecycle policy; empty rules if none is set.
+  WorkflowLifecyclePolicy lifecycle_policy = 1;
+}
+
+message GetAgentRuntimePolicyRequest {
+  string workflow_id = 1;
+  string agent_name = 2;
+}
+
+message GetAgentRuntimePolicyResponse {
+  // Serialised AgentRuntimePolicy JSON; empty if none is set for this agent.
+  google.protobuf.Struct runtime_policy = 1;
+}
+
+message GetAgentLifecyclePolicyRequest {
+  string workflow_id = 1;
+  string agent_name = 2;
+}
+
+message GetAgentLifecyclePolicyResponse {
+  // Serialised AgentLifecyclePolicy JSON; empty if none is set for this agent.
+  google.protobuf.Struct lifecycle_policy = 1;
+}
 
 message ApproveWorkflowRequest {
   string workflow_id = 1;
