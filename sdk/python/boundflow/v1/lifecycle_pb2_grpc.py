@@ -79,6 +79,21 @@ class WorkflowServiceStub:
                 request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.SetWorkflowLifecyclePolicyRequest.SerializeToString,
                 response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.SetWorkflowLifecyclePolicyResponse.FromString,
                 _registered_method=True)
+        self.GetWorkflowLifecyclePolicy = channel.unary_unary(
+                '/boundflow.v1.WorkflowService/GetWorkflowLifecyclePolicy',
+                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowLifecyclePolicyRequest.SerializeToString,
+                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowLifecyclePolicyResponse.FromString,
+                _registered_method=True)
+        self.GetAgentRuntimePolicy = channel.unary_unary(
+                '/boundflow.v1.WorkflowService/GetAgentRuntimePolicy',
+                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetAgentRuntimePolicyRequest.SerializeToString,
+                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetAgentRuntimePolicyResponse.FromString,
+                _registered_method=True)
+        self.GetAgentLifecyclePolicy = channel.unary_unary(
+                '/boundflow.v1.WorkflowService/GetAgentLifecyclePolicy',
+                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetAgentLifecyclePolicyRequest.SerializeToString,
+                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetAgentLifecyclePolicyResponse.FromString,
+                _registered_method=True)
         self.ApproveWorkflow = channel.unary_unary(
                 '/boundflow.v1.WorkflowService/ApproveWorkflow',
                 request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.ApproveWorkflowRequest.SerializeToString,
@@ -188,6 +203,27 @@ class WorkflowServiceServicer:
         raise NotImplementedError('Method not implemented!')
 
     def SetWorkflowLifecyclePolicy(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetWorkflowLifecyclePolicy(self, request, context):
+        """Policy getters — read back the armed (currently-configured) policy for a
+        workflow / agent. Mirror the setters; complement the *Audit getters, which
+        return firings rather than the armed config.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetAgentRuntimePolicy(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetAgentLifecyclePolicy(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -308,6 +344,21 @@ def add_WorkflowServiceServicer_to_server(servicer, server):
                     servicer.SetWorkflowLifecyclePolicy,
                     request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.SetWorkflowLifecyclePolicyRequest.FromString,
                     response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.SetWorkflowLifecyclePolicyResponse.SerializeToString,
+            ),
+            'GetWorkflowLifecyclePolicy': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetWorkflowLifecyclePolicy,
+                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowLifecyclePolicyRequest.FromString,
+                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowLifecyclePolicyResponse.SerializeToString,
+            ),
+            'GetAgentRuntimePolicy': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetAgentRuntimePolicy,
+                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetAgentRuntimePolicyRequest.FromString,
+                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetAgentRuntimePolicyResponse.SerializeToString,
+            ),
+            'GetAgentLifecyclePolicy': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetAgentLifecyclePolicy,
+                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetAgentLifecyclePolicyRequest.FromString,
+                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetAgentLifecyclePolicyResponse.SerializeToString,
             ),
             'ApproveWorkflow': grpc.unary_unary_rpc_method_handler(
                     servicer.ApproveWorkflow,
@@ -608,6 +659,87 @@ class WorkflowService:
             '/boundflow.v1.WorkflowService/SetWorkflowLifecyclePolicy',
             boundflow_dot_v1_dot_lifecycle__pb2.SetWorkflowLifecyclePolicyRequest.SerializeToString,
             boundflow_dot_v1_dot_lifecycle__pb2.SetWorkflowLifecyclePolicyResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetWorkflowLifecyclePolicy(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/boundflow.v1.WorkflowService/GetWorkflowLifecyclePolicy',
+            boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowLifecyclePolicyRequest.SerializeToString,
+            boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowLifecyclePolicyResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetAgentRuntimePolicy(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/boundflow.v1.WorkflowService/GetAgentRuntimePolicy',
+            boundflow_dot_v1_dot_lifecycle__pb2.GetAgentRuntimePolicyRequest.SerializeToString,
+            boundflow_dot_v1_dot_lifecycle__pb2.GetAgentRuntimePolicyResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetAgentLifecyclePolicy(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/boundflow.v1.WorkflowService/GetAgentLifecyclePolicy',
+            boundflow_dot_v1_dot_lifecycle__pb2.GetAgentLifecyclePolicyRequest.SerializeToString,
+            boundflow_dot_v1_dot_lifecycle__pb2.GetAgentLifecyclePolicyResponse.FromString,
             options,
             channel_credentials,
             insecure,

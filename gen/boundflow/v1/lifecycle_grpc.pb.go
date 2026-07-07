@@ -28,6 +28,9 @@ const (
 	WorkflowService_SetAgentLifecyclePolicy_FullMethodName    = "/boundflow.v1.WorkflowService/SetAgentLifecyclePolicy"
 	WorkflowService_DeleteAgent_FullMethodName                = "/boundflow.v1.WorkflowService/DeleteAgent"
 	WorkflowService_SetWorkflowLifecyclePolicy_FullMethodName = "/boundflow.v1.WorkflowService/SetWorkflowLifecyclePolicy"
+	WorkflowService_GetWorkflowLifecyclePolicy_FullMethodName = "/boundflow.v1.WorkflowService/GetWorkflowLifecyclePolicy"
+	WorkflowService_GetAgentRuntimePolicy_FullMethodName      = "/boundflow.v1.WorkflowService/GetAgentRuntimePolicy"
+	WorkflowService_GetAgentLifecyclePolicy_FullMethodName    = "/boundflow.v1.WorkflowService/GetAgentLifecyclePolicy"
 	WorkflowService_ApproveWorkflow_FullMethodName            = "/boundflow.v1.WorkflowService/ApproveWorkflow"
 	WorkflowService_RejectWorkflow_FullMethodName             = "/boundflow.v1.WorkflowService/RejectWorkflow"
 	WorkflowService_GetApprovalAudit_FullMethodName           = "/boundflow.v1.WorkflowService/GetApprovalAudit"
@@ -54,6 +57,12 @@ type WorkflowServiceClient interface {
 	SetAgentLifecyclePolicy(ctx context.Context, in *SetAgentLifecyclePolicyRequest, opts ...grpc.CallOption) (*SetAgentLifecyclePolicyResponse, error)
 	DeleteAgent(ctx context.Context, in *DeleteAgentRequest, opts ...grpc.CallOption) (*DeleteAgentResponse, error)
 	SetWorkflowLifecyclePolicy(ctx context.Context, in *SetWorkflowLifecyclePolicyRequest, opts ...grpc.CallOption) (*SetWorkflowLifecyclePolicyResponse, error)
+	// Policy getters — read back the armed (currently-configured) policy for a
+	// workflow / agent. Mirror the setters; complement the *Audit getters, which
+	// return firings rather than the armed config.
+	GetWorkflowLifecyclePolicy(ctx context.Context, in *GetWorkflowLifecyclePolicyRequest, opts ...grpc.CallOption) (*GetWorkflowLifecyclePolicyResponse, error)
+	GetAgentRuntimePolicy(ctx context.Context, in *GetAgentRuntimePolicyRequest, opts ...grpc.CallOption) (*GetAgentRuntimePolicyResponse, error)
+	GetAgentLifecyclePolicy(ctx context.Context, in *GetAgentLifecyclePolicyRequest, opts ...grpc.CallOption) (*GetAgentLifecyclePolicyResponse, error)
 	ApproveWorkflow(ctx context.Context, in *ApproveWorkflowRequest, opts ...grpc.CallOption) (*ApproveWorkflowResponse, error)
 	RejectWorkflow(ctx context.Context, in *RejectWorkflowRequest, opts ...grpc.CallOption) (*RejectWorkflowResponse, error)
 	// Per-type audit getters (workflow_id required); GetAuditLog is the unified,
@@ -161,6 +170,36 @@ func (c *workflowServiceClient) SetWorkflowLifecyclePolicy(ctx context.Context, 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SetWorkflowLifecyclePolicyResponse)
 	err := c.cc.Invoke(ctx, WorkflowService_SetWorkflowLifecyclePolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *workflowServiceClient) GetWorkflowLifecyclePolicy(ctx context.Context, in *GetWorkflowLifecyclePolicyRequest, opts ...grpc.CallOption) (*GetWorkflowLifecyclePolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetWorkflowLifecyclePolicyResponse)
+	err := c.cc.Invoke(ctx, WorkflowService_GetWorkflowLifecyclePolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *workflowServiceClient) GetAgentRuntimePolicy(ctx context.Context, in *GetAgentRuntimePolicyRequest, opts ...grpc.CallOption) (*GetAgentRuntimePolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAgentRuntimePolicyResponse)
+	err := c.cc.Invoke(ctx, WorkflowService_GetAgentRuntimePolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *workflowServiceClient) GetAgentLifecyclePolicy(ctx context.Context, in *GetAgentLifecyclePolicyRequest, opts ...grpc.CallOption) (*GetAgentLifecyclePolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAgentLifecyclePolicyResponse)
+	err := c.cc.Invoke(ctx, WorkflowService_GetAgentLifecyclePolicy_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -290,6 +329,12 @@ type WorkflowServiceServer interface {
 	SetAgentLifecyclePolicy(context.Context, *SetAgentLifecyclePolicyRequest) (*SetAgentLifecyclePolicyResponse, error)
 	DeleteAgent(context.Context, *DeleteAgentRequest) (*DeleteAgentResponse, error)
 	SetWorkflowLifecyclePolicy(context.Context, *SetWorkflowLifecyclePolicyRequest) (*SetWorkflowLifecyclePolicyResponse, error)
+	// Policy getters — read back the armed (currently-configured) policy for a
+	// workflow / agent. Mirror the setters; complement the *Audit getters, which
+	// return firings rather than the armed config.
+	GetWorkflowLifecyclePolicy(context.Context, *GetWorkflowLifecyclePolicyRequest) (*GetWorkflowLifecyclePolicyResponse, error)
+	GetAgentRuntimePolicy(context.Context, *GetAgentRuntimePolicyRequest) (*GetAgentRuntimePolicyResponse, error)
+	GetAgentLifecyclePolicy(context.Context, *GetAgentLifecyclePolicyRequest) (*GetAgentLifecyclePolicyResponse, error)
 	ApproveWorkflow(context.Context, *ApproveWorkflowRequest) (*ApproveWorkflowResponse, error)
 	RejectWorkflow(context.Context, *RejectWorkflowRequest) (*RejectWorkflowResponse, error)
 	// Per-type audit getters (workflow_id required); GetAuditLog is the unified,
@@ -339,6 +384,15 @@ func (UnimplementedWorkflowServiceServer) DeleteAgent(context.Context, *DeleteAg
 }
 func (UnimplementedWorkflowServiceServer) SetWorkflowLifecyclePolicy(context.Context, *SetWorkflowLifecyclePolicyRequest) (*SetWorkflowLifecyclePolicyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetWorkflowLifecyclePolicy not implemented")
+}
+func (UnimplementedWorkflowServiceServer) GetWorkflowLifecyclePolicy(context.Context, *GetWorkflowLifecyclePolicyRequest) (*GetWorkflowLifecyclePolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetWorkflowLifecyclePolicy not implemented")
+}
+func (UnimplementedWorkflowServiceServer) GetAgentRuntimePolicy(context.Context, *GetAgentRuntimePolicyRequest) (*GetAgentRuntimePolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAgentRuntimePolicy not implemented")
+}
+func (UnimplementedWorkflowServiceServer) GetAgentLifecyclePolicy(context.Context, *GetAgentLifecyclePolicyRequest) (*GetAgentLifecyclePolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAgentLifecyclePolicy not implemented")
 }
 func (UnimplementedWorkflowServiceServer) ApproveWorkflow(context.Context, *ApproveWorkflowRequest) (*ApproveWorkflowResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ApproveWorkflow not implemented")
@@ -552,6 +606,60 @@ func _WorkflowService_SetWorkflowLifecyclePolicy_Handler(srv interface{}, ctx co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WorkflowServiceServer).SetWorkflowLifecyclePolicy(ctx, req.(*SetWorkflowLifecyclePolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WorkflowService_GetWorkflowLifecyclePolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetWorkflowLifecyclePolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorkflowServiceServer).GetWorkflowLifecyclePolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorkflowService_GetWorkflowLifecyclePolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorkflowServiceServer).GetWorkflowLifecyclePolicy(ctx, req.(*GetWorkflowLifecyclePolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WorkflowService_GetAgentRuntimePolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAgentRuntimePolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorkflowServiceServer).GetAgentRuntimePolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorkflowService_GetAgentRuntimePolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorkflowServiceServer).GetAgentRuntimePolicy(ctx, req.(*GetAgentRuntimePolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WorkflowService_GetAgentLifecyclePolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAgentLifecyclePolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorkflowServiceServer).GetAgentLifecyclePolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorkflowService_GetAgentLifecyclePolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorkflowServiceServer).GetAgentLifecyclePolicy(ctx, req.(*GetAgentLifecyclePolicyRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -796,6 +904,18 @@ var WorkflowService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetWorkflowLifecyclePolicy",
 			Handler:    _WorkflowService_SetWorkflowLifecyclePolicy_Handler,
+		},
+		{
+			MethodName: "GetWorkflowLifecyclePolicy",
+			Handler:    _WorkflowService_GetWorkflowLifecyclePolicy_Handler,
+		},
+		{
+			MethodName: "GetAgentRuntimePolicy",
+			Handler:    _WorkflowService_GetAgentRuntimePolicy_Handler,
+		},
+		{
+			MethodName: "GetAgentLifecyclePolicy",
+			Handler:    _WorkflowService_GetAgentLifecyclePolicy_Handler,
 		},
 		{
 			MethodName: "ApproveWorkflow",

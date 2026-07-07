@@ -1279,6 +1279,289 @@ func (*SetWorkflowLifecyclePolicyResponse) Descriptor() ([]byte, []int) {
 	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{21}
 }
 
+type GetWorkflowLifecyclePolicyRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	WorkflowId    string                 `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetWorkflowLifecyclePolicyRequest) Reset() {
+	*x = GetWorkflowLifecyclePolicyRequest{}
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetWorkflowLifecyclePolicyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetWorkflowLifecyclePolicyRequest) ProtoMessage() {}
+
+func (x *GetWorkflowLifecyclePolicyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetWorkflowLifecyclePolicyRequest.ProtoReflect.Descriptor instead.
+func (*GetWorkflowLifecyclePolicyRequest) Descriptor() ([]byte, []int) {
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *GetWorkflowLifecyclePolicyRequest) GetWorkflowId() string {
+	if x != nil {
+		return x.WorkflowId
+	}
+	return ""
+}
+
+type GetWorkflowLifecyclePolicyResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The armed workflow-lifecycle policy; empty rules if none is set.
+	LifecyclePolicy *WorkflowLifecyclePolicy `protobuf:"bytes,1,opt,name=lifecycle_policy,json=lifecyclePolicy,proto3" json:"lifecycle_policy,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *GetWorkflowLifecyclePolicyResponse) Reset() {
+	*x = GetWorkflowLifecyclePolicyResponse{}
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetWorkflowLifecyclePolicyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetWorkflowLifecyclePolicyResponse) ProtoMessage() {}
+
+func (x *GetWorkflowLifecyclePolicyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetWorkflowLifecyclePolicyResponse.ProtoReflect.Descriptor instead.
+func (*GetWorkflowLifecyclePolicyResponse) Descriptor() ([]byte, []int) {
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *GetWorkflowLifecyclePolicyResponse) GetLifecyclePolicy() *WorkflowLifecyclePolicy {
+	if x != nil {
+		return x.LifecyclePolicy
+	}
+	return nil
+}
+
+type GetAgentRuntimePolicyRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	WorkflowId    string                 `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	AgentName     string                 `protobuf:"bytes,2,opt,name=agent_name,json=agentName,proto3" json:"agent_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAgentRuntimePolicyRequest) Reset() {
+	*x = GetAgentRuntimePolicyRequest{}
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAgentRuntimePolicyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAgentRuntimePolicyRequest) ProtoMessage() {}
+
+func (x *GetAgentRuntimePolicyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAgentRuntimePolicyRequest.ProtoReflect.Descriptor instead.
+func (*GetAgentRuntimePolicyRequest) Descriptor() ([]byte, []int) {
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *GetAgentRuntimePolicyRequest) GetWorkflowId() string {
+	if x != nil {
+		return x.WorkflowId
+	}
+	return ""
+}
+
+func (x *GetAgentRuntimePolicyRequest) GetAgentName() string {
+	if x != nil {
+		return x.AgentName
+	}
+	return ""
+}
+
+type GetAgentRuntimePolicyResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Serialised AgentRuntimePolicy JSON; empty if none is set for this agent.
+	RuntimePolicy *structpb.Struct `protobuf:"bytes,1,opt,name=runtime_policy,json=runtimePolicy,proto3" json:"runtime_policy,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAgentRuntimePolicyResponse) Reset() {
+	*x = GetAgentRuntimePolicyResponse{}
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAgentRuntimePolicyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAgentRuntimePolicyResponse) ProtoMessage() {}
+
+func (x *GetAgentRuntimePolicyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAgentRuntimePolicyResponse.ProtoReflect.Descriptor instead.
+func (*GetAgentRuntimePolicyResponse) Descriptor() ([]byte, []int) {
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *GetAgentRuntimePolicyResponse) GetRuntimePolicy() *structpb.Struct {
+	if x != nil {
+		return x.RuntimePolicy
+	}
+	return nil
+}
+
+type GetAgentLifecyclePolicyRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	WorkflowId    string                 `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	AgentName     string                 `protobuf:"bytes,2,opt,name=agent_name,json=agentName,proto3" json:"agent_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAgentLifecyclePolicyRequest) Reset() {
+	*x = GetAgentLifecyclePolicyRequest{}
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAgentLifecyclePolicyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAgentLifecyclePolicyRequest) ProtoMessage() {}
+
+func (x *GetAgentLifecyclePolicyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAgentLifecyclePolicyRequest.ProtoReflect.Descriptor instead.
+func (*GetAgentLifecyclePolicyRequest) Descriptor() ([]byte, []int) {
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *GetAgentLifecyclePolicyRequest) GetWorkflowId() string {
+	if x != nil {
+		return x.WorkflowId
+	}
+	return ""
+}
+
+func (x *GetAgentLifecyclePolicyRequest) GetAgentName() string {
+	if x != nil {
+		return x.AgentName
+	}
+	return ""
+}
+
+type GetAgentLifecyclePolicyResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Serialised AgentLifecyclePolicy JSON; empty if none is set for this agent.
+	LifecyclePolicy *structpb.Struct `protobuf:"bytes,1,opt,name=lifecycle_policy,json=lifecyclePolicy,proto3" json:"lifecycle_policy,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *GetAgentLifecyclePolicyResponse) Reset() {
+	*x = GetAgentLifecyclePolicyResponse{}
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAgentLifecyclePolicyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAgentLifecyclePolicyResponse) ProtoMessage() {}
+
+func (x *GetAgentLifecyclePolicyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAgentLifecyclePolicyResponse.ProtoReflect.Descriptor instead.
+func (*GetAgentLifecyclePolicyResponse) Descriptor() ([]byte, []int) {
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *GetAgentLifecyclePolicyResponse) GetLifecyclePolicy() *structpb.Struct {
+	if x != nil {
+		return x.LifecyclePolicy
+	}
+	return nil
+}
+
 type ApproveWorkflowRequest struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	WorkflowId string                 `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
@@ -1292,7 +1575,7 @@ type ApproveWorkflowRequest struct {
 
 func (x *ApproveWorkflowRequest) Reset() {
 	*x = ApproveWorkflowRequest{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[22]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1304,7 +1587,7 @@ func (x *ApproveWorkflowRequest) String() string {
 func (*ApproveWorkflowRequest) ProtoMessage() {}
 
 func (x *ApproveWorkflowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[22]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1317,7 +1600,7 @@ func (x *ApproveWorkflowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApproveWorkflowRequest.ProtoReflect.Descriptor instead.
 func (*ApproveWorkflowRequest) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{22}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ApproveWorkflowRequest) GetWorkflowId() string {
@@ -1349,7 +1632,7 @@ type ApproveWorkflowResponse struct {
 
 func (x *ApproveWorkflowResponse) Reset() {
 	*x = ApproveWorkflowResponse{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[23]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1361,7 +1644,7 @@ func (x *ApproveWorkflowResponse) String() string {
 func (*ApproveWorkflowResponse) ProtoMessage() {}
 
 func (x *ApproveWorkflowResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[23]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1374,7 +1657,7 @@ func (x *ApproveWorkflowResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApproveWorkflowResponse.ProtoReflect.Descriptor instead.
 func (*ApproveWorkflowResponse) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{23}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{29}
 }
 
 type RejectWorkflowRequest struct {
@@ -1388,7 +1671,7 @@ type RejectWorkflowRequest struct {
 
 func (x *RejectWorkflowRequest) Reset() {
 	*x = RejectWorkflowRequest{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[24]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1400,7 +1683,7 @@ func (x *RejectWorkflowRequest) String() string {
 func (*RejectWorkflowRequest) ProtoMessage() {}
 
 func (x *RejectWorkflowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[24]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1413,7 +1696,7 @@ func (x *RejectWorkflowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RejectWorkflowRequest.ProtoReflect.Descriptor instead.
 func (*RejectWorkflowRequest) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{24}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *RejectWorkflowRequest) GetWorkflowId() string {
@@ -1446,7 +1729,7 @@ type GetApprovalAuditRequest struct {
 
 func (x *GetApprovalAuditRequest) Reset() {
 	*x = GetApprovalAuditRequest{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[25]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1458,7 +1741,7 @@ func (x *GetApprovalAuditRequest) String() string {
 func (*GetApprovalAuditRequest) ProtoMessage() {}
 
 func (x *GetApprovalAuditRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[25]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1471,7 +1754,7 @@ func (x *GetApprovalAuditRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetApprovalAuditRequest.ProtoReflect.Descriptor instead.
 func (*GetApprovalAuditRequest) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{25}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *GetApprovalAuditRequest) GetWorkflowId() string {
@@ -1490,7 +1773,7 @@ type GetApprovalAuditResponse struct {
 
 func (x *GetApprovalAuditResponse) Reset() {
 	*x = GetApprovalAuditResponse{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[26]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1502,7 +1785,7 @@ func (x *GetApprovalAuditResponse) String() string {
 func (*GetApprovalAuditResponse) ProtoMessage() {}
 
 func (x *GetApprovalAuditResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[26]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1515,7 +1798,7 @@ func (x *GetApprovalAuditResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetApprovalAuditResponse.ProtoReflect.Descriptor instead.
 func (*GetApprovalAuditResponse) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{26}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *GetApprovalAuditResponse) GetRecords() []*ApprovalAuditRecord {
@@ -1535,7 +1818,7 @@ type GetApprovalAuditByIdRequest struct {
 
 func (x *GetApprovalAuditByIdRequest) Reset() {
 	*x = GetApprovalAuditByIdRequest{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[27]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1547,7 +1830,7 @@ func (x *GetApprovalAuditByIdRequest) String() string {
 func (*GetApprovalAuditByIdRequest) ProtoMessage() {}
 
 func (x *GetApprovalAuditByIdRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[27]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1560,7 +1843,7 @@ func (x *GetApprovalAuditByIdRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetApprovalAuditByIdRequest.ProtoReflect.Descriptor instead.
 func (*GetApprovalAuditByIdRequest) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{27}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *GetApprovalAuditByIdRequest) GetApprovalId() string {
@@ -1579,7 +1862,7 @@ type GetApprovalAuditByIdResponse struct {
 
 func (x *GetApprovalAuditByIdResponse) Reset() {
 	*x = GetApprovalAuditByIdResponse{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[28]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1591,7 +1874,7 @@ func (x *GetApprovalAuditByIdResponse) String() string {
 func (*GetApprovalAuditByIdResponse) ProtoMessage() {}
 
 func (x *GetApprovalAuditByIdResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[28]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1604,7 +1887,7 @@ func (x *GetApprovalAuditByIdResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetApprovalAuditByIdResponse.ProtoReflect.Descriptor instead.
 func (*GetApprovalAuditByIdResponse) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{28}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *GetApprovalAuditByIdResponse) GetRecord() *ApprovalAuditRecord {
@@ -1623,7 +1906,7 @@ type GetWorkflowPolicyAuditRequest struct {
 
 func (x *GetWorkflowPolicyAuditRequest) Reset() {
 	*x = GetWorkflowPolicyAuditRequest{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[29]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1635,7 +1918,7 @@ func (x *GetWorkflowPolicyAuditRequest) String() string {
 func (*GetWorkflowPolicyAuditRequest) ProtoMessage() {}
 
 func (x *GetWorkflowPolicyAuditRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[29]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1648,7 +1931,7 @@ func (x *GetWorkflowPolicyAuditRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWorkflowPolicyAuditRequest.ProtoReflect.Descriptor instead.
 func (*GetWorkflowPolicyAuditRequest) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{29}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *GetWorkflowPolicyAuditRequest) GetWorkflowId() string {
@@ -1667,7 +1950,7 @@ type GetWorkflowPolicyAuditResponse struct {
 
 func (x *GetWorkflowPolicyAuditResponse) Reset() {
 	*x = GetWorkflowPolicyAuditResponse{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[30]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1679,7 +1962,7 @@ func (x *GetWorkflowPolicyAuditResponse) String() string {
 func (*GetWorkflowPolicyAuditResponse) ProtoMessage() {}
 
 func (x *GetWorkflowPolicyAuditResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[30]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1692,7 +1975,7 @@ func (x *GetWorkflowPolicyAuditResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWorkflowPolicyAuditResponse.ProtoReflect.Descriptor instead.
 func (*GetWorkflowPolicyAuditResponse) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{30}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *GetWorkflowPolicyAuditResponse) GetRecords() []*WorkflowPolicyAuditRecord {
@@ -1713,7 +1996,7 @@ type GetAgentPolicyAuditRequest struct {
 
 func (x *GetAgentPolicyAuditRequest) Reset() {
 	*x = GetAgentPolicyAuditRequest{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[31]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1725,7 +2008,7 @@ func (x *GetAgentPolicyAuditRequest) String() string {
 func (*GetAgentPolicyAuditRequest) ProtoMessage() {}
 
 func (x *GetAgentPolicyAuditRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[31]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1738,7 +2021,7 @@ func (x *GetAgentPolicyAuditRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAgentPolicyAuditRequest.ProtoReflect.Descriptor instead.
 func (*GetAgentPolicyAuditRequest) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{31}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *GetAgentPolicyAuditRequest) GetWorkflowId() string {
@@ -1764,7 +2047,7 @@ type GetAgentPolicyAuditResponse struct {
 
 func (x *GetAgentPolicyAuditResponse) Reset() {
 	*x = GetAgentPolicyAuditResponse{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[32]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1776,7 +2059,7 @@ func (x *GetAgentPolicyAuditResponse) String() string {
 func (*GetAgentPolicyAuditResponse) ProtoMessage() {}
 
 func (x *GetAgentPolicyAuditResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[32]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1789,7 +2072,7 @@ func (x *GetAgentPolicyAuditResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAgentPolicyAuditResponse.ProtoReflect.Descriptor instead.
 func (*GetAgentPolicyAuditResponse) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{32}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *GetAgentPolicyAuditResponse) GetRecords() []*AgentPolicyAuditRecord {
@@ -1808,7 +2091,7 @@ type GetAuditLogRequest struct {
 
 func (x *GetAuditLogRequest) Reset() {
 	*x = GetAuditLogRequest{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[33]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1820,7 +2103,7 @@ func (x *GetAuditLogRequest) String() string {
 func (*GetAuditLogRequest) ProtoMessage() {}
 
 func (x *GetAuditLogRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[33]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1833,7 +2116,7 @@ func (x *GetAuditLogRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAuditLogRequest.ProtoReflect.Descriptor instead.
 func (*GetAuditLogRequest) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{33}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *GetAuditLogRequest) GetWorkflowId() string {
@@ -1852,7 +2135,7 @@ type GetAuditLogResponse struct {
 
 func (x *GetAuditLogResponse) Reset() {
 	*x = GetAuditLogResponse{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[34]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1864,7 +2147,7 @@ func (x *GetAuditLogResponse) String() string {
 func (*GetAuditLogResponse) ProtoMessage() {}
 
 func (x *GetAuditLogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[34]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1877,7 +2160,7 @@ func (x *GetAuditLogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAuditLogResponse.ProtoReflect.Descriptor instead.
 func (*GetAuditLogResponse) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{34}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *GetAuditLogResponse) GetEntries() []*AuditEntry {
@@ -1902,7 +2185,7 @@ type AuditEntry struct {
 
 func (x *AuditEntry) Reset() {
 	*x = AuditEntry{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[35]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1914,7 +2197,7 @@ func (x *AuditEntry) String() string {
 func (*AuditEntry) ProtoMessage() {}
 
 func (x *AuditEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[35]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1927,7 +2210,7 @@ func (x *AuditEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuditEntry.ProtoReflect.Descriptor instead.
 func (*AuditEntry) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{35}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *AuditEntry) GetEntry() isAuditEntry_Entry {
@@ -2002,7 +2285,7 @@ type ApprovalAuditRecord struct {
 
 func (x *ApprovalAuditRecord) Reset() {
 	*x = ApprovalAuditRecord{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[36]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2014,7 +2297,7 @@ func (x *ApprovalAuditRecord) String() string {
 func (*ApprovalAuditRecord) ProtoMessage() {}
 
 func (x *ApprovalAuditRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[36]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2027,7 +2310,7 @@ func (x *ApprovalAuditRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApprovalAuditRecord.ProtoReflect.Descriptor instead.
 func (*ApprovalAuditRecord) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{36}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *ApprovalAuditRecord) GetApprovalId() string {
@@ -2103,7 +2386,7 @@ type WorkflowPolicyAuditRecord struct {
 
 func (x *WorkflowPolicyAuditRecord) Reset() {
 	*x = WorkflowPolicyAuditRecord{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[37]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2115,7 +2398,7 @@ func (x *WorkflowPolicyAuditRecord) String() string {
 func (*WorkflowPolicyAuditRecord) ProtoMessage() {}
 
 func (x *WorkflowPolicyAuditRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[37]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2128,7 +2411,7 @@ func (x *WorkflowPolicyAuditRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkflowPolicyAuditRecord.ProtoReflect.Descriptor instead.
 func (*WorkflowPolicyAuditRecord) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{37}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *WorkflowPolicyAuditRecord) GetWorkflowId() string {
@@ -2201,7 +2484,7 @@ type AgentPolicyAuditRecord struct {
 
 func (x *AgentPolicyAuditRecord) Reset() {
 	*x = AgentPolicyAuditRecord{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[38]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2213,7 +2496,7 @@ func (x *AgentPolicyAuditRecord) String() string {
 func (*AgentPolicyAuditRecord) ProtoMessage() {}
 
 func (x *AgentPolicyAuditRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[38]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2226,7 +2509,7 @@ func (x *AgentPolicyAuditRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentPolicyAuditRecord.ProtoReflect.Descriptor instead.
 func (*AgentPolicyAuditRecord) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{38}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *AgentPolicyAuditRecord) GetWorkflowId() string {
@@ -2279,7 +2562,7 @@ type RejectWorkflowResponse struct {
 
 func (x *RejectWorkflowResponse) Reset() {
 	*x = RejectWorkflowResponse{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[39]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2291,7 +2574,7 @@ func (x *RejectWorkflowResponse) String() string {
 func (*RejectWorkflowResponse) ProtoMessage() {}
 
 func (x *RejectWorkflowResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[39]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2304,7 +2587,7 @@ func (x *RejectWorkflowResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RejectWorkflowResponse.ProtoReflect.Descriptor instead.
 func (*RejectWorkflowResponse) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{39}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{45}
 }
 
 type ActivateWorkflowRequest struct {
@@ -2316,7 +2599,7 @@ type ActivateWorkflowRequest struct {
 
 func (x *ActivateWorkflowRequest) Reset() {
 	*x = ActivateWorkflowRequest{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[40]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2328,7 +2611,7 @@ func (x *ActivateWorkflowRequest) String() string {
 func (*ActivateWorkflowRequest) ProtoMessage() {}
 
 func (x *ActivateWorkflowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[40]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2341,7 +2624,7 @@ func (x *ActivateWorkflowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ActivateWorkflowRequest.ProtoReflect.Descriptor instead.
 func (*ActivateWorkflowRequest) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{40}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *ActivateWorkflowRequest) GetWorkflowId() string {
@@ -2359,7 +2642,7 @@ type ActivateWorkflowResponse struct {
 
 func (x *ActivateWorkflowResponse) Reset() {
 	*x = ActivateWorkflowResponse{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[41]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2371,7 +2654,7 @@ func (x *ActivateWorkflowResponse) String() string {
 func (*ActivateWorkflowResponse) ProtoMessage() {}
 
 func (x *ActivateWorkflowResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[41]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2384,7 +2667,7 @@ func (x *ActivateWorkflowResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ActivateWorkflowResponse.ProtoReflect.Descriptor instead.
 func (*ActivateWorkflowResponse) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{41}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{47}
 }
 
 type ResolveInterruptedWorkflowRequest struct {
@@ -2399,7 +2682,7 @@ type ResolveInterruptedWorkflowRequest struct {
 
 func (x *ResolveInterruptedWorkflowRequest) Reset() {
 	*x = ResolveInterruptedWorkflowRequest{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[42]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2411,7 +2694,7 @@ func (x *ResolveInterruptedWorkflowRequest) String() string {
 func (*ResolveInterruptedWorkflowRequest) ProtoMessage() {}
 
 func (x *ResolveInterruptedWorkflowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[42]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2424,7 +2707,7 @@ func (x *ResolveInterruptedWorkflowRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ResolveInterruptedWorkflowRequest.ProtoReflect.Descriptor instead.
 func (*ResolveInterruptedWorkflowRequest) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{42}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *ResolveInterruptedWorkflowRequest) GetWorkflowId() string {
@@ -2449,7 +2732,7 @@ type ResolveInterruptedWorkflowResponse struct {
 
 func (x *ResolveInterruptedWorkflowResponse) Reset() {
 	*x = ResolveInterruptedWorkflowResponse{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[43]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2461,7 +2744,7 @@ func (x *ResolveInterruptedWorkflowResponse) String() string {
 func (*ResolveInterruptedWorkflowResponse) ProtoMessage() {}
 
 func (x *ResolveInterruptedWorkflowResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[43]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2474,7 +2757,7 @@ func (x *ResolveInterruptedWorkflowResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ResolveInterruptedWorkflowResponse.ProtoReflect.Descriptor instead.
 func (*ResolveInterruptedWorkflowResponse) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{43}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{49}
 }
 
 type ListWorkflowRunsRequest struct {
@@ -2486,7 +2769,7 @@ type ListWorkflowRunsRequest struct {
 
 func (x *ListWorkflowRunsRequest) Reset() {
 	*x = ListWorkflowRunsRequest{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[44]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2498,7 +2781,7 @@ func (x *ListWorkflowRunsRequest) String() string {
 func (*ListWorkflowRunsRequest) ProtoMessage() {}
 
 func (x *ListWorkflowRunsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[44]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2511,7 +2794,7 @@ func (x *ListWorkflowRunsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWorkflowRunsRequest.ProtoReflect.Descriptor instead.
 func (*ListWorkflowRunsRequest) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{44}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *ListWorkflowRunsRequest) GetWorkflowId() string {
@@ -2540,7 +2823,7 @@ type Run struct {
 
 func (x *Run) Reset() {
 	*x = Run{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[45]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2552,7 +2835,7 @@ func (x *Run) String() string {
 func (*Run) ProtoMessage() {}
 
 func (x *Run) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[45]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2565,7 +2848,7 @@ func (x *Run) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Run.ProtoReflect.Descriptor instead.
 func (*Run) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{45}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *Run) GetRequestId() string {
@@ -2626,7 +2909,7 @@ type ListWorkflowRunsResponse struct {
 
 func (x *ListWorkflowRunsResponse) Reset() {
 	*x = ListWorkflowRunsResponse{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[46]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2638,7 +2921,7 @@ func (x *ListWorkflowRunsResponse) String() string {
 func (*ListWorkflowRunsResponse) ProtoMessage() {}
 
 func (x *ListWorkflowRunsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[46]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2651,7 +2934,7 @@ func (x *ListWorkflowRunsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWorkflowRunsResponse.ProtoReflect.Descriptor instead.
 func (*ListWorkflowRunsResponse) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{46}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *ListWorkflowRunsResponse) GetRuns() []*Run {
@@ -2670,7 +2953,7 @@ type GetRequestInfoRequest struct {
 
 func (x *GetRequestInfoRequest) Reset() {
 	*x = GetRequestInfoRequest{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[47]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2682,7 +2965,7 @@ func (x *GetRequestInfoRequest) String() string {
 func (*GetRequestInfoRequest) ProtoMessage() {}
 
 func (x *GetRequestInfoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[47]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2695,7 +2978,7 @@ func (x *GetRequestInfoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRequestInfoRequest.ProtoReflect.Descriptor instead.
 func (*GetRequestInfoRequest) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{47}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *GetRequestInfoRequest) GetRequestId() string {
@@ -2726,7 +3009,7 @@ type RequestInfo struct {
 
 func (x *RequestInfo) Reset() {
 	*x = RequestInfo{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[48]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2738,7 +3021,7 @@ func (x *RequestInfo) String() string {
 func (*RequestInfo) ProtoMessage() {}
 
 func (x *RequestInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[48]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2751,7 +3034,7 @@ func (x *RequestInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestInfo.ProtoReflect.Descriptor instead.
 func (*RequestInfo) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{48}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *RequestInfo) GetRequestId() string {
@@ -2826,7 +3109,7 @@ type GetRequestInfoResponse struct {
 
 func (x *GetRequestInfoResponse) Reset() {
 	*x = GetRequestInfoResponse{}
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[49]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2838,7 +3121,7 @@ func (x *GetRequestInfoResponse) String() string {
 func (*GetRequestInfoResponse) ProtoMessage() {}
 
 func (x *GetRequestInfoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[49]
+	mi := &file_boundflow_v1_lifecycle_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2851,7 +3134,7 @@ func (x *GetRequestInfoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRequestInfoResponse.ProtoReflect.Descriptor instead.
 func (*GetRequestInfoResponse) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{49}
+	return file_boundflow_v1_lifecycle_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *GetRequestInfoResponse) GetRequest() *RequestInfo {
@@ -2936,7 +3219,26 @@ const file_boundflow_v1_lifecycle_proto_rawDesc = "" +
 	"\vworkflow_id\x18\x01 \x01(\tR\n" +
 	"workflowId\x12P\n" +
 	"\x10lifecycle_policy\x18\x02 \x01(\v2%.boundflow.v1.WorkflowLifecyclePolicyR\x0flifecyclePolicy\"$\n" +
-	"\"SetWorkflowLifecyclePolicyResponse\"p\n" +
+	"\"SetWorkflowLifecyclePolicyResponse\"D\n" +
+	"!GetWorkflowLifecyclePolicyRequest\x12\x1f\n" +
+	"\vworkflow_id\x18\x01 \x01(\tR\n" +
+	"workflowId\"v\n" +
+	"\"GetWorkflowLifecyclePolicyResponse\x12P\n" +
+	"\x10lifecycle_policy\x18\x01 \x01(\v2%.boundflow.v1.WorkflowLifecyclePolicyR\x0flifecyclePolicy\"^\n" +
+	"\x1cGetAgentRuntimePolicyRequest\x12\x1f\n" +
+	"\vworkflow_id\x18\x01 \x01(\tR\n" +
+	"workflowId\x12\x1d\n" +
+	"\n" +
+	"agent_name\x18\x02 \x01(\tR\tagentName\"_\n" +
+	"\x1dGetAgentRuntimePolicyResponse\x12>\n" +
+	"\x0eruntime_policy\x18\x01 \x01(\v2\x17.google.protobuf.StructR\rruntimePolicy\"`\n" +
+	"\x1eGetAgentLifecyclePolicyRequest\x12\x1f\n" +
+	"\vworkflow_id\x18\x01 \x01(\tR\n" +
+	"workflowId\x12\x1d\n" +
+	"\n" +
+	"agent_name\x18\x02 \x01(\tR\tagentName\"e\n" +
+	"\x1fGetAgentLifecyclePolicyResponse\x12B\n" +
+	"\x10lifecycle_policy\x18\x01 \x01(\v2\x17.google.protobuf.StructR\x0flifecyclePolicy\"p\n" +
 	"\x16ApproveWorkflowRequest\x12\x1f\n" +
 	"\vworkflow_id\x18\x01 \x01(\tR\n" +
 	"workflowId\x12\x1f\n" +
@@ -3081,7 +3383,7 @@ const file_boundflow_v1_lifecycle_proto_rawDesc = "" +
 	"\x1dAPPROVAL_DECISION_UNSPECIFIED\x10\x00\x12\x1e\n" +
 	"\x1aAPPROVAL_DECISION_APPROVED\x10\x01\x12\x1e\n" +
 	"\x1aAPPROVAL_DECISION_REJECTED\x10\x02\x12\x1f\n" +
-	"\x1bAPPROVAL_DECISION_TIMED_OUT\x10\x032\xfd\x0f\n" +
+	"\x1bAPPROVAL_DECISION_TIMED_OUT\x10\x032\xe8\x12\n" +
 	"\x0fWorkflowService\x12[\n" +
 	"\x0eCreateWorkflow\x12#.boundflow.v1.CreateWorkflowRequest\x1a$.boundflow.v1.CreateWorkflowResponse\x12[\n" +
 	"\x0eInvokeWorkflow\x12#.boundflow.v1.InvokeWorkflowRequest\x1a$.boundflow.v1.InvokeWorkflowResponse\x12[\n" +
@@ -3091,7 +3393,10 @@ const file_boundflow_v1_lifecycle_proto_rawDesc = "" +
 	"\x15SetAgentRuntimePolicy\x12*.boundflow.v1.SetAgentRuntimePolicyRequest\x1a+.boundflow.v1.SetAgentRuntimePolicyResponse\x12v\n" +
 	"\x17SetAgentLifecyclePolicy\x12,.boundflow.v1.SetAgentLifecyclePolicyRequest\x1a-.boundflow.v1.SetAgentLifecyclePolicyResponse\x12R\n" +
 	"\vDeleteAgent\x12 .boundflow.v1.DeleteAgentRequest\x1a!.boundflow.v1.DeleteAgentResponse\x12\x7f\n" +
-	"\x1aSetWorkflowLifecyclePolicy\x12/.boundflow.v1.SetWorkflowLifecyclePolicyRequest\x1a0.boundflow.v1.SetWorkflowLifecyclePolicyResponse\x12^\n" +
+	"\x1aSetWorkflowLifecyclePolicy\x12/.boundflow.v1.SetWorkflowLifecyclePolicyRequest\x1a0.boundflow.v1.SetWorkflowLifecyclePolicyResponse\x12\x7f\n" +
+	"\x1aGetWorkflowLifecyclePolicy\x12/.boundflow.v1.GetWorkflowLifecyclePolicyRequest\x1a0.boundflow.v1.GetWorkflowLifecyclePolicyResponse\x12p\n" +
+	"\x15GetAgentRuntimePolicy\x12*.boundflow.v1.GetAgentRuntimePolicyRequest\x1a+.boundflow.v1.GetAgentRuntimePolicyResponse\x12v\n" +
+	"\x17GetAgentLifecyclePolicy\x12,.boundflow.v1.GetAgentLifecyclePolicyRequest\x1a-.boundflow.v1.GetAgentLifecyclePolicyResponse\x12^\n" +
 	"\x0fApproveWorkflow\x12$.boundflow.v1.ApproveWorkflowRequest\x1a%.boundflow.v1.ApproveWorkflowResponse\x12[\n" +
 	"\x0eRejectWorkflow\x12#.boundflow.v1.RejectWorkflowRequest\x1a$.boundflow.v1.RejectWorkflowResponse\x12a\n" +
 	"\x10GetApprovalAudit\x12%.boundflow.v1.GetApprovalAuditRequest\x1a&.boundflow.v1.GetApprovalAuditResponse\x12m\n" +
@@ -3117,7 +3422,7 @@ func file_boundflow_v1_lifecycle_proto_rawDescGZIP() []byte {
 }
 
 var file_boundflow_v1_lifecycle_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_boundflow_v1_lifecycle_proto_msgTypes = make([]protoimpl.MessageInfo, 50)
+var file_boundflow_v1_lifecycle_proto_msgTypes = make([]protoimpl.MessageInfo, 56)
 var file_boundflow_v1_lifecycle_proto_goTypes = []any{
 	(WorkflowMetric)(0),                        // 0: boundflow.v1.WorkflowMetric
 	(WorkflowPolicyActionType)(0),              // 1: boundflow.v1.WorkflowPolicyActionType
@@ -3144,120 +3449,135 @@ var file_boundflow_v1_lifecycle_proto_goTypes = []any{
 	(*WorkflowLifecyclePolicy)(nil),            // 22: boundflow.v1.WorkflowLifecyclePolicy
 	(*SetWorkflowLifecyclePolicyRequest)(nil),  // 23: boundflow.v1.SetWorkflowLifecyclePolicyRequest
 	(*SetWorkflowLifecyclePolicyResponse)(nil), // 24: boundflow.v1.SetWorkflowLifecyclePolicyResponse
-	(*ApproveWorkflowRequest)(nil),             // 25: boundflow.v1.ApproveWorkflowRequest
-	(*ApproveWorkflowResponse)(nil),            // 26: boundflow.v1.ApproveWorkflowResponse
-	(*RejectWorkflowRequest)(nil),              // 27: boundflow.v1.RejectWorkflowRequest
-	(*GetApprovalAuditRequest)(nil),            // 28: boundflow.v1.GetApprovalAuditRequest
-	(*GetApprovalAuditResponse)(nil),           // 29: boundflow.v1.GetApprovalAuditResponse
-	(*GetApprovalAuditByIdRequest)(nil),        // 30: boundflow.v1.GetApprovalAuditByIdRequest
-	(*GetApprovalAuditByIdResponse)(nil),       // 31: boundflow.v1.GetApprovalAuditByIdResponse
-	(*GetWorkflowPolicyAuditRequest)(nil),      // 32: boundflow.v1.GetWorkflowPolicyAuditRequest
-	(*GetWorkflowPolicyAuditResponse)(nil),     // 33: boundflow.v1.GetWorkflowPolicyAuditResponse
-	(*GetAgentPolicyAuditRequest)(nil),         // 34: boundflow.v1.GetAgentPolicyAuditRequest
-	(*GetAgentPolicyAuditResponse)(nil),        // 35: boundflow.v1.GetAgentPolicyAuditResponse
-	(*GetAuditLogRequest)(nil),                 // 36: boundflow.v1.GetAuditLogRequest
-	(*GetAuditLogResponse)(nil),                // 37: boundflow.v1.GetAuditLogResponse
-	(*AuditEntry)(nil),                         // 38: boundflow.v1.AuditEntry
-	(*ApprovalAuditRecord)(nil),                // 39: boundflow.v1.ApprovalAuditRecord
-	(*WorkflowPolicyAuditRecord)(nil),          // 40: boundflow.v1.WorkflowPolicyAuditRecord
-	(*AgentPolicyAuditRecord)(nil),             // 41: boundflow.v1.AgentPolicyAuditRecord
-	(*RejectWorkflowResponse)(nil),             // 42: boundflow.v1.RejectWorkflowResponse
-	(*ActivateWorkflowRequest)(nil),            // 43: boundflow.v1.ActivateWorkflowRequest
-	(*ActivateWorkflowResponse)(nil),           // 44: boundflow.v1.ActivateWorkflowResponse
-	(*ResolveInterruptedWorkflowRequest)(nil),  // 45: boundflow.v1.ResolveInterruptedWorkflowRequest
-	(*ResolveInterruptedWorkflowResponse)(nil), // 46: boundflow.v1.ResolveInterruptedWorkflowResponse
-	(*ListWorkflowRunsRequest)(nil),            // 47: boundflow.v1.ListWorkflowRunsRequest
-	(*Run)(nil),                                // 48: boundflow.v1.Run
-	(*ListWorkflowRunsResponse)(nil),           // 49: boundflow.v1.ListWorkflowRunsResponse
-	(*GetRequestInfoRequest)(nil),              // 50: boundflow.v1.GetRequestInfoRequest
-	(*RequestInfo)(nil),                        // 51: boundflow.v1.RequestInfo
-	(*GetRequestInfoResponse)(nil),             // 52: boundflow.v1.GetRequestInfoResponse
-	(*WorkflowConfig)(nil),                     // 53: boundflow.v1.WorkflowConfig
-	(*Workflow)(nil),                           // 54: boundflow.v1.Workflow
-	(*structpb.Struct)(nil),                    // 55: google.protobuf.Struct
-	(*timestamppb.Timestamp)(nil),              // 56: google.protobuf.Timestamp
-	(*AgentPolicyAction)(nil),                  // 57: boundflow.v1.AgentPolicyAction
+	(*GetWorkflowLifecyclePolicyRequest)(nil),  // 25: boundflow.v1.GetWorkflowLifecyclePolicyRequest
+	(*GetWorkflowLifecyclePolicyResponse)(nil), // 26: boundflow.v1.GetWorkflowLifecyclePolicyResponse
+	(*GetAgentRuntimePolicyRequest)(nil),       // 27: boundflow.v1.GetAgentRuntimePolicyRequest
+	(*GetAgentRuntimePolicyResponse)(nil),      // 28: boundflow.v1.GetAgentRuntimePolicyResponse
+	(*GetAgentLifecyclePolicyRequest)(nil),     // 29: boundflow.v1.GetAgentLifecyclePolicyRequest
+	(*GetAgentLifecyclePolicyResponse)(nil),    // 30: boundflow.v1.GetAgentLifecyclePolicyResponse
+	(*ApproveWorkflowRequest)(nil),             // 31: boundflow.v1.ApproveWorkflowRequest
+	(*ApproveWorkflowResponse)(nil),            // 32: boundflow.v1.ApproveWorkflowResponse
+	(*RejectWorkflowRequest)(nil),              // 33: boundflow.v1.RejectWorkflowRequest
+	(*GetApprovalAuditRequest)(nil),            // 34: boundflow.v1.GetApprovalAuditRequest
+	(*GetApprovalAuditResponse)(nil),           // 35: boundflow.v1.GetApprovalAuditResponse
+	(*GetApprovalAuditByIdRequest)(nil),        // 36: boundflow.v1.GetApprovalAuditByIdRequest
+	(*GetApprovalAuditByIdResponse)(nil),       // 37: boundflow.v1.GetApprovalAuditByIdResponse
+	(*GetWorkflowPolicyAuditRequest)(nil),      // 38: boundflow.v1.GetWorkflowPolicyAuditRequest
+	(*GetWorkflowPolicyAuditResponse)(nil),     // 39: boundflow.v1.GetWorkflowPolicyAuditResponse
+	(*GetAgentPolicyAuditRequest)(nil),         // 40: boundflow.v1.GetAgentPolicyAuditRequest
+	(*GetAgentPolicyAuditResponse)(nil),        // 41: boundflow.v1.GetAgentPolicyAuditResponse
+	(*GetAuditLogRequest)(nil),                 // 42: boundflow.v1.GetAuditLogRequest
+	(*GetAuditLogResponse)(nil),                // 43: boundflow.v1.GetAuditLogResponse
+	(*AuditEntry)(nil),                         // 44: boundflow.v1.AuditEntry
+	(*ApprovalAuditRecord)(nil),                // 45: boundflow.v1.ApprovalAuditRecord
+	(*WorkflowPolicyAuditRecord)(nil),          // 46: boundflow.v1.WorkflowPolicyAuditRecord
+	(*AgentPolicyAuditRecord)(nil),             // 47: boundflow.v1.AgentPolicyAuditRecord
+	(*RejectWorkflowResponse)(nil),             // 48: boundflow.v1.RejectWorkflowResponse
+	(*ActivateWorkflowRequest)(nil),            // 49: boundflow.v1.ActivateWorkflowRequest
+	(*ActivateWorkflowResponse)(nil),           // 50: boundflow.v1.ActivateWorkflowResponse
+	(*ResolveInterruptedWorkflowRequest)(nil),  // 51: boundflow.v1.ResolveInterruptedWorkflowRequest
+	(*ResolveInterruptedWorkflowResponse)(nil), // 52: boundflow.v1.ResolveInterruptedWorkflowResponse
+	(*ListWorkflowRunsRequest)(nil),            // 53: boundflow.v1.ListWorkflowRunsRequest
+	(*Run)(nil),                                // 54: boundflow.v1.Run
+	(*ListWorkflowRunsResponse)(nil),           // 55: boundflow.v1.ListWorkflowRunsResponse
+	(*GetRequestInfoRequest)(nil),              // 56: boundflow.v1.GetRequestInfoRequest
+	(*RequestInfo)(nil),                        // 57: boundflow.v1.RequestInfo
+	(*GetRequestInfoResponse)(nil),             // 58: boundflow.v1.GetRequestInfoResponse
+	(*WorkflowConfig)(nil),                     // 59: boundflow.v1.WorkflowConfig
+	(*Workflow)(nil),                           // 60: boundflow.v1.Workflow
+	(*structpb.Struct)(nil),                    // 61: google.protobuf.Struct
+	(*timestamppb.Timestamp)(nil),              // 62: google.protobuf.Timestamp
+	(*AgentPolicyAction)(nil),                  // 63: boundflow.v1.AgentPolicyAction
 }
 var file_boundflow_v1_lifecycle_proto_depIdxs = []int32{
-	53, // 0: boundflow.v1.CreateWorkflowRequest.workflow_config:type_name -> boundflow.v1.WorkflowConfig
-	54, // 1: boundflow.v1.CreateWorkflowResponse.workflow:type_name -> boundflow.v1.Workflow
-	54, // 2: boundflow.v1.ListWorkflowsResponse.workflows:type_name -> boundflow.v1.Workflow
+	59, // 0: boundflow.v1.CreateWorkflowRequest.workflow_config:type_name -> boundflow.v1.WorkflowConfig
+	60, // 1: boundflow.v1.CreateWorkflowResponse.workflow:type_name -> boundflow.v1.Workflow
+	60, // 2: boundflow.v1.ListWorkflowsResponse.workflows:type_name -> boundflow.v1.Workflow
 	7,  // 3: boundflow.v1.InvokeWorkflowRequest.runtime_overrides:type_name -> boundflow.v1.RuntimeOverrides
-	54, // 4: boundflow.v1.GetWorkflowResponse.workflow:type_name -> boundflow.v1.Workflow
-	55, // 5: boundflow.v1.SetAgentRuntimePolicyRequest.runtime_policy:type_name -> google.protobuf.Struct
-	55, // 6: boundflow.v1.SetAgentLifecyclePolicyRequest.lifecycle_policy:type_name -> google.protobuf.Struct
+	60, // 4: boundflow.v1.GetWorkflowResponse.workflow:type_name -> boundflow.v1.Workflow
+	61, // 5: boundflow.v1.SetAgentRuntimePolicyRequest.runtime_policy:type_name -> google.protobuf.Struct
+	61, // 6: boundflow.v1.SetAgentLifecyclePolicyRequest.lifecycle_policy:type_name -> google.protobuf.Struct
 	1,  // 7: boundflow.v1.WorkflowLifecyclePolicyAction.type:type_name -> boundflow.v1.WorkflowPolicyActionType
 	0,  // 8: boundflow.v1.WorkflowLifecyclePolicyRule.metric:type_name -> boundflow.v1.WorkflowMetric
 	20, // 9: boundflow.v1.WorkflowLifecyclePolicyRule.action:type_name -> boundflow.v1.WorkflowLifecyclePolicyAction
 	21, // 10: boundflow.v1.WorkflowLifecyclePolicy.rules:type_name -> boundflow.v1.WorkflowLifecyclePolicyRule
 	22, // 11: boundflow.v1.SetWorkflowLifecyclePolicyRequest.lifecycle_policy:type_name -> boundflow.v1.WorkflowLifecyclePolicy
-	39, // 12: boundflow.v1.GetApprovalAuditResponse.records:type_name -> boundflow.v1.ApprovalAuditRecord
-	39, // 13: boundflow.v1.GetApprovalAuditByIdResponse.record:type_name -> boundflow.v1.ApprovalAuditRecord
-	40, // 14: boundflow.v1.GetWorkflowPolicyAuditResponse.records:type_name -> boundflow.v1.WorkflowPolicyAuditRecord
-	41, // 15: boundflow.v1.GetAgentPolicyAuditResponse.records:type_name -> boundflow.v1.AgentPolicyAuditRecord
-	38, // 16: boundflow.v1.GetAuditLogResponse.entries:type_name -> boundflow.v1.AuditEntry
-	39, // 17: boundflow.v1.AuditEntry.approval:type_name -> boundflow.v1.ApprovalAuditRecord
-	40, // 18: boundflow.v1.AuditEntry.workflow_policy:type_name -> boundflow.v1.WorkflowPolicyAuditRecord
-	41, // 19: boundflow.v1.AuditEntry.agent_policy:type_name -> boundflow.v1.AgentPolicyAuditRecord
-	2,  // 20: boundflow.v1.ApprovalAuditRecord.decision:type_name -> boundflow.v1.ApprovalDecision
-	56, // 21: boundflow.v1.ApprovalAuditRecord.opened_at:type_name -> google.protobuf.Timestamp
-	56, // 22: boundflow.v1.ApprovalAuditRecord.decided_at:type_name -> google.protobuf.Timestamp
-	56, // 23: boundflow.v1.ApprovalAuditRecord.occurred_at:type_name -> google.protobuf.Timestamp
-	56, // 24: boundflow.v1.WorkflowPolicyAuditRecord.occurred_at:type_name -> google.protobuf.Timestamp
-	21, // 25: boundflow.v1.WorkflowPolicyAuditRecord.rule:type_name -> boundflow.v1.WorkflowLifecyclePolicyRule
-	56, // 26: boundflow.v1.AgentPolicyAuditRecord.occurred_at:type_name -> google.protobuf.Timestamp
-	57, // 27: boundflow.v1.AgentPolicyAuditRecord.action:type_name -> boundflow.v1.AgentPolicyAction
-	56, // 28: boundflow.v1.Run.created_at:type_name -> google.protobuf.Timestamp
-	56, // 29: boundflow.v1.Run.completed_at:type_name -> google.protobuf.Timestamp
-	48, // 30: boundflow.v1.ListWorkflowRunsResponse.runs:type_name -> boundflow.v1.Run
-	56, // 31: boundflow.v1.RequestInfo.created_at:type_name -> google.protobuf.Timestamp
-	56, // 32: boundflow.v1.RequestInfo.completed_at:type_name -> google.protobuf.Timestamp
-	51, // 33: boundflow.v1.GetRequestInfoResponse.request:type_name -> boundflow.v1.RequestInfo
-	3,  // 34: boundflow.v1.WorkflowService.CreateWorkflow:input_type -> boundflow.v1.CreateWorkflowRequest
-	8,  // 35: boundflow.v1.WorkflowService.InvokeWorkflow:input_type -> boundflow.v1.InvokeWorkflowRequest
-	10, // 36: boundflow.v1.WorkflowService.DeleteWorkflow:input_type -> boundflow.v1.DeleteWorkflowRequest
-	12, // 37: boundflow.v1.WorkflowService.GetWorkflow:input_type -> boundflow.v1.GetWorkflowRequest
-	5,  // 38: boundflow.v1.WorkflowService.ListWorkflows:input_type -> boundflow.v1.ListWorkflowsRequest
-	14, // 39: boundflow.v1.WorkflowService.SetAgentRuntimePolicy:input_type -> boundflow.v1.SetAgentRuntimePolicyRequest
-	16, // 40: boundflow.v1.WorkflowService.SetAgentLifecyclePolicy:input_type -> boundflow.v1.SetAgentLifecyclePolicyRequest
-	18, // 41: boundflow.v1.WorkflowService.DeleteAgent:input_type -> boundflow.v1.DeleteAgentRequest
-	23, // 42: boundflow.v1.WorkflowService.SetWorkflowLifecyclePolicy:input_type -> boundflow.v1.SetWorkflowLifecyclePolicyRequest
-	25, // 43: boundflow.v1.WorkflowService.ApproveWorkflow:input_type -> boundflow.v1.ApproveWorkflowRequest
-	27, // 44: boundflow.v1.WorkflowService.RejectWorkflow:input_type -> boundflow.v1.RejectWorkflowRequest
-	28, // 45: boundflow.v1.WorkflowService.GetApprovalAudit:input_type -> boundflow.v1.GetApprovalAuditRequest
-	30, // 46: boundflow.v1.WorkflowService.GetApprovalAuditById:input_type -> boundflow.v1.GetApprovalAuditByIdRequest
-	32, // 47: boundflow.v1.WorkflowService.GetWorkflowPolicyAudit:input_type -> boundflow.v1.GetWorkflowPolicyAuditRequest
-	34, // 48: boundflow.v1.WorkflowService.GetAgentPolicyAudit:input_type -> boundflow.v1.GetAgentPolicyAuditRequest
-	36, // 49: boundflow.v1.WorkflowService.GetAuditLog:input_type -> boundflow.v1.GetAuditLogRequest
-	43, // 50: boundflow.v1.WorkflowService.ActivateWorkflow:input_type -> boundflow.v1.ActivateWorkflowRequest
-	45, // 51: boundflow.v1.WorkflowService.ResolveInterruptedWorkflow:input_type -> boundflow.v1.ResolveInterruptedWorkflowRequest
-	47, // 52: boundflow.v1.WorkflowService.ListWorkflowRuns:input_type -> boundflow.v1.ListWorkflowRunsRequest
-	50, // 53: boundflow.v1.WorkflowService.GetRequestInfo:input_type -> boundflow.v1.GetRequestInfoRequest
-	4,  // 54: boundflow.v1.WorkflowService.CreateWorkflow:output_type -> boundflow.v1.CreateWorkflowResponse
-	9,  // 55: boundflow.v1.WorkflowService.InvokeWorkflow:output_type -> boundflow.v1.InvokeWorkflowResponse
-	11, // 56: boundflow.v1.WorkflowService.DeleteWorkflow:output_type -> boundflow.v1.DeleteWorkflowResponse
-	13, // 57: boundflow.v1.WorkflowService.GetWorkflow:output_type -> boundflow.v1.GetWorkflowResponse
-	6,  // 58: boundflow.v1.WorkflowService.ListWorkflows:output_type -> boundflow.v1.ListWorkflowsResponse
-	15, // 59: boundflow.v1.WorkflowService.SetAgentRuntimePolicy:output_type -> boundflow.v1.SetAgentRuntimePolicyResponse
-	17, // 60: boundflow.v1.WorkflowService.SetAgentLifecyclePolicy:output_type -> boundflow.v1.SetAgentLifecyclePolicyResponse
-	19, // 61: boundflow.v1.WorkflowService.DeleteAgent:output_type -> boundflow.v1.DeleteAgentResponse
-	24, // 62: boundflow.v1.WorkflowService.SetWorkflowLifecyclePolicy:output_type -> boundflow.v1.SetWorkflowLifecyclePolicyResponse
-	26, // 63: boundflow.v1.WorkflowService.ApproveWorkflow:output_type -> boundflow.v1.ApproveWorkflowResponse
-	42, // 64: boundflow.v1.WorkflowService.RejectWorkflow:output_type -> boundflow.v1.RejectWorkflowResponse
-	29, // 65: boundflow.v1.WorkflowService.GetApprovalAudit:output_type -> boundflow.v1.GetApprovalAuditResponse
-	31, // 66: boundflow.v1.WorkflowService.GetApprovalAuditById:output_type -> boundflow.v1.GetApprovalAuditByIdResponse
-	33, // 67: boundflow.v1.WorkflowService.GetWorkflowPolicyAudit:output_type -> boundflow.v1.GetWorkflowPolicyAuditResponse
-	35, // 68: boundflow.v1.WorkflowService.GetAgentPolicyAudit:output_type -> boundflow.v1.GetAgentPolicyAuditResponse
-	37, // 69: boundflow.v1.WorkflowService.GetAuditLog:output_type -> boundflow.v1.GetAuditLogResponse
-	44, // 70: boundflow.v1.WorkflowService.ActivateWorkflow:output_type -> boundflow.v1.ActivateWorkflowResponse
-	46, // 71: boundflow.v1.WorkflowService.ResolveInterruptedWorkflow:output_type -> boundflow.v1.ResolveInterruptedWorkflowResponse
-	49, // 72: boundflow.v1.WorkflowService.ListWorkflowRuns:output_type -> boundflow.v1.ListWorkflowRunsResponse
-	52, // 73: boundflow.v1.WorkflowService.GetRequestInfo:output_type -> boundflow.v1.GetRequestInfoResponse
-	54, // [54:74] is the sub-list for method output_type
-	34, // [34:54] is the sub-list for method input_type
-	34, // [34:34] is the sub-list for extension type_name
-	34, // [34:34] is the sub-list for extension extendee
-	0,  // [0:34] is the sub-list for field type_name
+	22, // 12: boundflow.v1.GetWorkflowLifecyclePolicyResponse.lifecycle_policy:type_name -> boundflow.v1.WorkflowLifecyclePolicy
+	61, // 13: boundflow.v1.GetAgentRuntimePolicyResponse.runtime_policy:type_name -> google.protobuf.Struct
+	61, // 14: boundflow.v1.GetAgentLifecyclePolicyResponse.lifecycle_policy:type_name -> google.protobuf.Struct
+	45, // 15: boundflow.v1.GetApprovalAuditResponse.records:type_name -> boundflow.v1.ApprovalAuditRecord
+	45, // 16: boundflow.v1.GetApprovalAuditByIdResponse.record:type_name -> boundflow.v1.ApprovalAuditRecord
+	46, // 17: boundflow.v1.GetWorkflowPolicyAuditResponse.records:type_name -> boundflow.v1.WorkflowPolicyAuditRecord
+	47, // 18: boundflow.v1.GetAgentPolicyAuditResponse.records:type_name -> boundflow.v1.AgentPolicyAuditRecord
+	44, // 19: boundflow.v1.GetAuditLogResponse.entries:type_name -> boundflow.v1.AuditEntry
+	45, // 20: boundflow.v1.AuditEntry.approval:type_name -> boundflow.v1.ApprovalAuditRecord
+	46, // 21: boundflow.v1.AuditEntry.workflow_policy:type_name -> boundflow.v1.WorkflowPolicyAuditRecord
+	47, // 22: boundflow.v1.AuditEntry.agent_policy:type_name -> boundflow.v1.AgentPolicyAuditRecord
+	2,  // 23: boundflow.v1.ApprovalAuditRecord.decision:type_name -> boundflow.v1.ApprovalDecision
+	62, // 24: boundflow.v1.ApprovalAuditRecord.opened_at:type_name -> google.protobuf.Timestamp
+	62, // 25: boundflow.v1.ApprovalAuditRecord.decided_at:type_name -> google.protobuf.Timestamp
+	62, // 26: boundflow.v1.ApprovalAuditRecord.occurred_at:type_name -> google.protobuf.Timestamp
+	62, // 27: boundflow.v1.WorkflowPolicyAuditRecord.occurred_at:type_name -> google.protobuf.Timestamp
+	21, // 28: boundflow.v1.WorkflowPolicyAuditRecord.rule:type_name -> boundflow.v1.WorkflowLifecyclePolicyRule
+	62, // 29: boundflow.v1.AgentPolicyAuditRecord.occurred_at:type_name -> google.protobuf.Timestamp
+	63, // 30: boundflow.v1.AgentPolicyAuditRecord.action:type_name -> boundflow.v1.AgentPolicyAction
+	62, // 31: boundflow.v1.Run.created_at:type_name -> google.protobuf.Timestamp
+	62, // 32: boundflow.v1.Run.completed_at:type_name -> google.protobuf.Timestamp
+	54, // 33: boundflow.v1.ListWorkflowRunsResponse.runs:type_name -> boundflow.v1.Run
+	62, // 34: boundflow.v1.RequestInfo.created_at:type_name -> google.protobuf.Timestamp
+	62, // 35: boundflow.v1.RequestInfo.completed_at:type_name -> google.protobuf.Timestamp
+	57, // 36: boundflow.v1.GetRequestInfoResponse.request:type_name -> boundflow.v1.RequestInfo
+	3,  // 37: boundflow.v1.WorkflowService.CreateWorkflow:input_type -> boundflow.v1.CreateWorkflowRequest
+	8,  // 38: boundflow.v1.WorkflowService.InvokeWorkflow:input_type -> boundflow.v1.InvokeWorkflowRequest
+	10, // 39: boundflow.v1.WorkflowService.DeleteWorkflow:input_type -> boundflow.v1.DeleteWorkflowRequest
+	12, // 40: boundflow.v1.WorkflowService.GetWorkflow:input_type -> boundflow.v1.GetWorkflowRequest
+	5,  // 41: boundflow.v1.WorkflowService.ListWorkflows:input_type -> boundflow.v1.ListWorkflowsRequest
+	14, // 42: boundflow.v1.WorkflowService.SetAgentRuntimePolicy:input_type -> boundflow.v1.SetAgentRuntimePolicyRequest
+	16, // 43: boundflow.v1.WorkflowService.SetAgentLifecyclePolicy:input_type -> boundflow.v1.SetAgentLifecyclePolicyRequest
+	18, // 44: boundflow.v1.WorkflowService.DeleteAgent:input_type -> boundflow.v1.DeleteAgentRequest
+	23, // 45: boundflow.v1.WorkflowService.SetWorkflowLifecyclePolicy:input_type -> boundflow.v1.SetWorkflowLifecyclePolicyRequest
+	25, // 46: boundflow.v1.WorkflowService.GetWorkflowLifecyclePolicy:input_type -> boundflow.v1.GetWorkflowLifecyclePolicyRequest
+	27, // 47: boundflow.v1.WorkflowService.GetAgentRuntimePolicy:input_type -> boundflow.v1.GetAgentRuntimePolicyRequest
+	29, // 48: boundflow.v1.WorkflowService.GetAgentLifecyclePolicy:input_type -> boundflow.v1.GetAgentLifecyclePolicyRequest
+	31, // 49: boundflow.v1.WorkflowService.ApproveWorkflow:input_type -> boundflow.v1.ApproveWorkflowRequest
+	33, // 50: boundflow.v1.WorkflowService.RejectWorkflow:input_type -> boundflow.v1.RejectWorkflowRequest
+	34, // 51: boundflow.v1.WorkflowService.GetApprovalAudit:input_type -> boundflow.v1.GetApprovalAuditRequest
+	36, // 52: boundflow.v1.WorkflowService.GetApprovalAuditById:input_type -> boundflow.v1.GetApprovalAuditByIdRequest
+	38, // 53: boundflow.v1.WorkflowService.GetWorkflowPolicyAudit:input_type -> boundflow.v1.GetWorkflowPolicyAuditRequest
+	40, // 54: boundflow.v1.WorkflowService.GetAgentPolicyAudit:input_type -> boundflow.v1.GetAgentPolicyAuditRequest
+	42, // 55: boundflow.v1.WorkflowService.GetAuditLog:input_type -> boundflow.v1.GetAuditLogRequest
+	49, // 56: boundflow.v1.WorkflowService.ActivateWorkflow:input_type -> boundflow.v1.ActivateWorkflowRequest
+	51, // 57: boundflow.v1.WorkflowService.ResolveInterruptedWorkflow:input_type -> boundflow.v1.ResolveInterruptedWorkflowRequest
+	53, // 58: boundflow.v1.WorkflowService.ListWorkflowRuns:input_type -> boundflow.v1.ListWorkflowRunsRequest
+	56, // 59: boundflow.v1.WorkflowService.GetRequestInfo:input_type -> boundflow.v1.GetRequestInfoRequest
+	4,  // 60: boundflow.v1.WorkflowService.CreateWorkflow:output_type -> boundflow.v1.CreateWorkflowResponse
+	9,  // 61: boundflow.v1.WorkflowService.InvokeWorkflow:output_type -> boundflow.v1.InvokeWorkflowResponse
+	11, // 62: boundflow.v1.WorkflowService.DeleteWorkflow:output_type -> boundflow.v1.DeleteWorkflowResponse
+	13, // 63: boundflow.v1.WorkflowService.GetWorkflow:output_type -> boundflow.v1.GetWorkflowResponse
+	6,  // 64: boundflow.v1.WorkflowService.ListWorkflows:output_type -> boundflow.v1.ListWorkflowsResponse
+	15, // 65: boundflow.v1.WorkflowService.SetAgentRuntimePolicy:output_type -> boundflow.v1.SetAgentRuntimePolicyResponse
+	17, // 66: boundflow.v1.WorkflowService.SetAgentLifecyclePolicy:output_type -> boundflow.v1.SetAgentLifecyclePolicyResponse
+	19, // 67: boundflow.v1.WorkflowService.DeleteAgent:output_type -> boundflow.v1.DeleteAgentResponse
+	24, // 68: boundflow.v1.WorkflowService.SetWorkflowLifecyclePolicy:output_type -> boundflow.v1.SetWorkflowLifecyclePolicyResponse
+	26, // 69: boundflow.v1.WorkflowService.GetWorkflowLifecyclePolicy:output_type -> boundflow.v1.GetWorkflowLifecyclePolicyResponse
+	28, // 70: boundflow.v1.WorkflowService.GetAgentRuntimePolicy:output_type -> boundflow.v1.GetAgentRuntimePolicyResponse
+	30, // 71: boundflow.v1.WorkflowService.GetAgentLifecyclePolicy:output_type -> boundflow.v1.GetAgentLifecyclePolicyResponse
+	32, // 72: boundflow.v1.WorkflowService.ApproveWorkflow:output_type -> boundflow.v1.ApproveWorkflowResponse
+	48, // 73: boundflow.v1.WorkflowService.RejectWorkflow:output_type -> boundflow.v1.RejectWorkflowResponse
+	35, // 74: boundflow.v1.WorkflowService.GetApprovalAudit:output_type -> boundflow.v1.GetApprovalAuditResponse
+	37, // 75: boundflow.v1.WorkflowService.GetApprovalAuditById:output_type -> boundflow.v1.GetApprovalAuditByIdResponse
+	39, // 76: boundflow.v1.WorkflowService.GetWorkflowPolicyAudit:output_type -> boundflow.v1.GetWorkflowPolicyAuditResponse
+	41, // 77: boundflow.v1.WorkflowService.GetAgentPolicyAudit:output_type -> boundflow.v1.GetAgentPolicyAuditResponse
+	43, // 78: boundflow.v1.WorkflowService.GetAuditLog:output_type -> boundflow.v1.GetAuditLogResponse
+	50, // 79: boundflow.v1.WorkflowService.ActivateWorkflow:output_type -> boundflow.v1.ActivateWorkflowResponse
+	52, // 80: boundflow.v1.WorkflowService.ResolveInterruptedWorkflow:output_type -> boundflow.v1.ResolveInterruptedWorkflowResponse
+	55, // 81: boundflow.v1.WorkflowService.ListWorkflowRuns:output_type -> boundflow.v1.ListWorkflowRunsResponse
+	58, // 82: boundflow.v1.WorkflowService.GetRequestInfo:output_type -> boundflow.v1.GetRequestInfoResponse
+	60, // [60:83] is the sub-list for method output_type
+	37, // [37:60] is the sub-list for method input_type
+	37, // [37:37] is the sub-list for extension type_name
+	37, // [37:37] is the sub-list for extension extendee
+	0,  // [0:37] is the sub-list for field type_name
 }
 
 func init() { file_boundflow_v1_lifecycle_proto_init() }
@@ -3267,7 +3587,7 @@ func file_boundflow_v1_lifecycle_proto_init() {
 	}
 	file_boundflow_v1_workflow_proto_init()
 	file_boundflow_v1_agent_policy_proto_init()
-	file_boundflow_v1_lifecycle_proto_msgTypes[35].OneofWrappers = []any{
+	file_boundflow_v1_lifecycle_proto_msgTypes[41].OneofWrappers = []any{
 		(*AuditEntry_Approval)(nil),
 		(*AuditEntry_WorkflowPolicy)(nil),
 		(*AuditEntry_AgentPolicy)(nil),
@@ -3278,7 +3598,7 @@ func file_boundflow_v1_lifecycle_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_boundflow_v1_lifecycle_proto_rawDesc), len(file_boundflow_v1_lifecycle_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   50,
+			NumMessages:   56,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

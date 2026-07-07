@@ -12,6 +12,7 @@ from datetime import datetime
 from enum import Enum
 
 import grpc
+from google.protobuf.json_format import MessageToDict
 from google.protobuf.struct_pb2 import Struct
 
 from boundflow.v1 import agent_policy_pb2 as ap
@@ -344,6 +345,7 @@ _WF_METRIC = {
     WorkflowMetric.APPROVAL_REJECTIONS: lc.WORKFLOW_METRIC_APPROVAL_REJECTIONS,
     WorkflowMetric.TOOL_FAILURE_RATE: lc.WORKFLOW_METRIC_TOOL_FAILURE_RATE,
 }
+_WF_METRIC_REV = {v: k for k, v in _WF_METRIC.items()}
 
 
 def _struct(d: dict) -> Struct:
@@ -648,6 +650,31 @@ class ControlPlaneClient:
                 rules=[_workflow_rule_proto(r) for r in rules]),
         ), metadata=self._metadata)
 
+    async def get_workflow_lifecycle_policy(self, workflow_id: str) -> list[WorkflowRule]:
+        """The armed workflow-lifecycle policy — the rules currently configured (the
+        inverse of set_workflow_lifecycle_policy). Empty list if none is set. Reflects the
+        current config, not a per-run snapshot; capture at run time for an audit receipt."""
+        resp = await self._lc.GetWorkflowLifecyclePolicy(
+            lc.GetWorkflowLifecyclePolicyRequest(workflow_id=workflow_id),
+            metadata=self._metadata)
+        return [_workflow_rule_from_proto(r) for r in resp.lifecycle_policy.rules]
+
+    async def get_agent_runtime_policy(self, workflow_id: str, agent_name: str) -> dict:
+        """The armed runtime policy (hard caps + model override) for one agent, as a dict.
+        Empty dict if none is set."""
+        resp = await self._lc.GetAgentRuntimePolicy(
+            lc.GetAgentRuntimePolicyRequest(workflow_id=workflow_id, agent_name=agent_name),
+            metadata=self._metadata)
+        return MessageToDict(resp.runtime_policy)
+
+    async def get_agent_lifecycle_policy(self, workflow_id: str, agent_name: str) -> dict:
+        """The armed lifecycle policy (adaptive rules) for one agent, as a dict. Empty dict
+        if none is set."""
+        resp = await self._lc.GetAgentLifecyclePolicy(
+            lc.GetAgentLifecyclePolicyRequest(workflow_id=workflow_id, agent_name=agent_name),
+            metadata=self._metadata)
+        return MessageToDict(resp.lifecycle_policy)
+
 
 def _workflow_rule_proto(rule: WorkflowRule) -> lc.WorkflowLifecyclePolicyRule:
     action = rule.action
@@ -670,4 +697,22 @@ def _workflow_rule_proto(rule: WorkflowRule) -> lc.WorkflowLifecyclePolicyRule:
         window=window,
         tool_name=rule.tool or "",
         action=act,
+    )
+
+
+def _workflow_rule_from_proto(r: lc.WorkflowLifecyclePolicyRule) -> WorkflowRule:
+    """Inverse of _workflow_rule_proto: proto rule → WorkflowRule. The rule's window
+    lives on the action in the SDK model (Pause/Cooldown), so it's folded back in."""
+    t = r.action.type
+    if t == lc.WORKFLOW_POLICY_ACTION_COOLDOWN:
+        action = Cooldown(window=r.window, seconds=r.action.cooldown_seconds)
+    elif t == lc.WORKFLOW_POLICY_ACTION_SET_VERSION:
+        action = SetVersion(target=r.action.target_version)
+    else:
+        action = Pause(window=r.window)
+    return WorkflowRule(
+        metric=_WF_METRIC_REV[r.metric],
+        threshold=r.threshold,
+        action=action,
+        tool=r.tool_name or None,
     )

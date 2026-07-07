@@ -90,6 +90,16 @@ func WorkflowLifecyclePolicyFromProto(p *boundflowv1.WorkflowLifecyclePolicy) do
 	return domain.WorkflowLifecyclePolicy{Rules: rules}
 }
 
+// WorkflowLifecyclePolicyToProto is the inverse of WorkflowLifecyclePolicyFromProto,
+// used by the policy getter to echo the armed policy back to the caller.
+func WorkflowLifecyclePolicyToProto(p domain.WorkflowLifecyclePolicy) *boundflowv1.WorkflowLifecyclePolicy {
+	rules := make([]*boundflowv1.WorkflowLifecyclePolicyRule, 0, len(p.Rules))
+	for _, r := range p.Rules {
+		rules = append(rules, WorkflowRuleToProto(r))
+	}
+	return &boundflowv1.WorkflowLifecyclePolicy{Rules: rules}
+}
+
 func workflowRuleFromProto(r *boundflowv1.WorkflowLifecyclePolicyRule) domain.WorkflowLifecyclePolicyRule {
 	var metric domain.WorkflowMetric
 	switch r.Metric {
