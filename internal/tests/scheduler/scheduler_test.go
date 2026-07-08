@@ -81,7 +81,7 @@ func TestScheduleRequest_WrittenSupercedes(t *testing.T) {
 	agentStates.EXPECT().GetAllForWorkflow(gomock.Any(), "workflow-1").Return(nil, nil)
 
 	schedulerRepo.EXPECT().
-		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any(), "invoke_entry", 30, 1, int64(1)).
+		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any(), "invoke_entry", 30, 1, int64(1), gomock.Any()).
 		Return("workflow-1", int64(3), true, nil)
 
 	schedulerRepo.EXPECT().
@@ -105,7 +105,7 @@ func TestScheduleRequest_NotWritten_NoSupercede(t *testing.T) {
 	agentStates.EXPECT().GetAllForWorkflow(gomock.Any(), "workflow-1").Return(nil, nil)
 
 	schedulerRepo.EXPECT().
-		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any(), "invoke_entry", 30, 1, int64(1)).
+		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any(), "invoke_entry", 30, 1, int64(1), gomock.Any()).
 		Return("", int64(0), false, nil)
 
 	// SupercedeOlderRequests must NOT be called
@@ -122,7 +122,7 @@ func TestScheduleRequest_UpsertError(t *testing.T) {
 	agentStates.EXPECT().GetAllForWorkflow(gomock.Any(), "workflow-1").Return(nil, nil)
 
 	schedulerRepo.EXPECT().
-		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any(), "invoke_entry", 30, 1, int64(1)).
+		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any(), "invoke_entry", 30, 1, int64(1), gomock.Any()).
 		Return("", int64(0), false, errors.New("db error"))
 
 	if err := s.ScheduleRequest(context.Background(), "req-1"); err == nil {
@@ -138,7 +138,7 @@ func TestScheduleRequest_SupercedeError(t *testing.T) {
 	agentStates.EXPECT().GetAllForWorkflow(gomock.Any(), "workflow-1").Return(nil, nil)
 
 	schedulerRepo.EXPECT().
-		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any(), "invoke_entry", 30, 1, int64(1)).
+		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.Any(), "invoke_entry", 30, 1, int64(1), gomock.Any()).
 		Return("workflow-1", int64(3), true, nil)
 
 	schedulerRepo.EXPECT().
@@ -189,8 +189,8 @@ func TestScheduleRequest_AgentStateInContext(t *testing.T) {
 	}, nil)
 
 	schedulerRepo.EXPECT().
-		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.AssignableToTypeOf(""), "invoke_entry", 30, 1, int64(1)).
-		DoAndReturn(func(_ context.Context, _ string, contextJSON string, op string, timeout int, wfVersion int, expectedCurrentVersion int64) (string, int64, bool, error) {
+		UpsertJobAndSchedule(gomock.Any(), "req-1", gomock.AssignableToTypeOf(""), "invoke_entry", 30, 1, int64(1), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, contextJSON string, op string, timeout int, wfVersion int, expectedCurrentVersion int64, _ string) (string, int64, bool, error) {
 			if contextJSON == "" || contextJSON == "{}" {
 				t.Error("expected non-empty context JSON")
 			}
