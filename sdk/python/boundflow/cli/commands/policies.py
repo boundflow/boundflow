@@ -7,7 +7,7 @@ from typing import List, Optional
 import typer
 
 from boundflow.cli._client import cp_call
-from boundflow.cli._output import success
+from boundflow.cli._output import output, success
 from boundflow.policies import AgentRule, RuntimePolicy, ToolCallLimit, WorkflowRule
 
 app = typer.Typer(help="Manage agent and workflow policies.")
@@ -65,6 +65,16 @@ def runtime_set(
     success(f"Runtime policy set on {workflow_id} / {agent_name}.")
 
 
+@app.command("get-runtime")
+def runtime_get(
+    workflow_id: str = typer.Argument(..., help="Workflow ID"),
+    agent_name: str = typer.Argument(..., help="Agent name"),
+):
+    """Show the armed runtime (hard cap) policy for an agent (empty if none is set)."""
+    policy = cp_call(lambda cp: cp.get_agent_runtime_policy(workflow_id, agent_name))
+    output(policy or {})
+
+
 @lifecycle_app.command("set-agent")
 def lifecycle_set_agent(
     workflow_id: str = typer.Argument(..., help="Workflow ID"),
@@ -98,3 +108,22 @@ def lifecycle_set_workflow(
     wf_rules = [WorkflowRule.model_validate(r) for r in raw]
     cp_call(lambda cp: cp.set_workflow_lifecycle_policy(workflow_id, wf_rules))
     success(f"Workflow lifecycle policy set on {workflow_id}.")
+
+
+@lifecycle_app.command("get-agent")
+def lifecycle_get_agent(
+    workflow_id: str = typer.Argument(..., help="Workflow ID"),
+    agent_name: str = typer.Argument(..., help="Agent name"),
+):
+    """Show the armed lifecycle rules for an agent (empty if none is set)."""
+    policy = cp_call(lambda cp: cp.get_agent_lifecycle_policy(workflow_id, agent_name))
+    output(policy or {})
+
+
+@lifecycle_app.command("get-workflow")
+def lifecycle_get_workflow(
+    workflow_id: str = typer.Argument(..., help="Workflow ID"),
+):
+    """Show the armed lifecycle rules for a workflow (empty if none is set)."""
+    rules = cp_call(lambda cp: cp.get_workflow_lifecycle_policy(workflow_id))
+    output([r.model_dump(mode="json") for r in rules])

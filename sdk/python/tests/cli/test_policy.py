@@ -159,6 +159,49 @@ def test_workflow_lifecycle_policy_set_version_via_file(runner, boundflow_api_ke
     assert result["status"] == "ok"
 
 
+# ── Policy getters (read the armed policy back) ───────────────────────────────
+
+
+def test_get_runtime_policy_reads_back(runner, boundflow_api_key):
+    tenant_id = make_tenant(runner, boundflow_api_key, "pol-get-rt")
+    wf_id = make_workflow(runner, boundflow_api_key, tenant_id)
+    run(runner, boundflow_api_key, [
+        "policy", "runtime", wf_id, "analyst",
+        "--max-cost-usd", "0.05", "--max-llm-calls", "8",
+    ])
+    got = run(runner, boundflow_api_key, ["policy", "get-runtime", wf_id, "analyst"])
+    assert got["max_cost_usd"] == 0.05
+    assert got["max_llm_calls"] == 8
+
+
+def test_get_runtime_policy_empty_when_unset(runner, boundflow_api_key):
+    tenant_id = make_tenant(runner, boundflow_api_key, "pol-get-rt-empty")
+    wf_id = make_workflow(runner, boundflow_api_key, tenant_id)
+    got = run(runner, boundflow_api_key, ["policy", "get-runtime", wf_id, "nobody"])
+    assert got == {}
+
+
+def test_get_workflow_lifecycle_policy_reads_back(runner, boundflow_api_key, tmp_path):
+    tenant_id = make_tenant(runner, boundflow_api_key, "pol-get-wf")
+    wf_id = make_workflow(runner, boundflow_api_key, tenant_id)
+    rules_file = write_json_file(tmp_path, "wf.json", [
+        {"metric": "cost", "threshold": 5.0, "action": {"kind": "set_version", "target": 1}},
+    ])
+    run(runner, boundflow_api_key, ["policy", "lifecycle", "set-workflow", wf_id, "--file", str(rules_file)])
+    rules = run(runner, boundflow_api_key, ["policy", "lifecycle", "get-workflow", wf_id])
+    assert len(rules) == 1
+    assert rules[0]["metric"] == "cost"
+    assert rules[0]["action"]["kind"] == "set_version"
+    assert rules[0]["action"]["target"] == 1
+
+
+def test_get_agent_lifecycle_policy_empty_when_unset(runner, boundflow_api_key):
+    tenant_id = make_tenant(runner, boundflow_api_key, "pol-get-agent-empty")
+    wf_id = make_workflow(runner, boundflow_api_key, tenant_id)
+    got = run(runner, boundflow_api_key, ["policy", "lifecycle", "get-agent", wf_id, "nobody"])
+    assert got == {}
+
+
 def test_workflow_lifecycle_policy_pause_via_file(runner, boundflow_api_key, tmp_path):
     tenant_id = make_tenant(runner, boundflow_api_key, "pol-wf-pause")
     wf_id = make_workflow(runner, boundflow_api_key, tenant_id)
