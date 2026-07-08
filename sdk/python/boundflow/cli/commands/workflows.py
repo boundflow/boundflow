@@ -6,7 +6,7 @@ import typer
 
 from boundflow.cli._client import cp_call
 from boundflow.cli._output import output, success
-from boundflow.control_plane import WorkflowConfig
+from boundflow.control_plane import InvokeMode, WorkflowConfig
 
 app = typer.Typer(help="Manage workflows.")
 
@@ -19,16 +19,14 @@ def create(
     timeout: int = typer.Option(60, "--timeout", help="Invoke timeout in seconds"),
     repeat: int = typer.Option(0, "--repeat", help="Repeat every N seconds (0 = no repeat)"),
     no_triggerable: bool = typer.Option(False, "--no-triggerable", help="Disable manual triggering"),
-    invoke_mode: str = typer.Option(
-        "coalesce", "--invoke-mode",
-        help="How piled-up invokes are handled: 'coalesce' (latest-wins) or 'queue' (run each, FIFO)"),
+    invoke_mode: InvokeMode = typer.Option(
+        InvokeMode.COALESCE, "--invoke-mode",
+        help="How piled-up invokes are handled: coalesce (latest-wins) or queue (run each, FIFO)"),
     max_queue_depth: int = typer.Option(
         0, "--max-queue-depth",
         help="Queue-mode backlog cap; invokes past it are rejected (0 = server default)"),
 ):
     """Create a new workflow."""
-    if invoke_mode not in ("coalesce", "queue"):
-        raise typer.BadParameter("--invoke-mode must be 'coalesce' or 'queue'")
     config = WorkflowConfig(
         version=version,
         invoke_timeout_seconds=timeout,

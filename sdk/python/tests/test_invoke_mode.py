@@ -14,6 +14,7 @@ import asyncio
 from boundflow import (
     BoundFlowWorker,
     Complete,
+    InvokeMode,
     RunStatus,
     WorkflowConfig,
 )
@@ -51,17 +52,21 @@ def _slow_worker(name: str, hold: float = 0.4):
 
 
 async def test_queue_runs_every_concurrent_invoke(cp):
-    """queue: 5 invokes fired at once all run — none is superceded."""
-    worker = _slow_worker("im_queue_all")
+    """queue: invokes fired at once all run — none is superceded.
+
+    Queue drain is scheduler-tick-bound (~seconds per queued run, slower under load), so
+    keep the count small and the wait generous — this asserts the no-drop guarantee, not
+    drain speed."""
+    worker = _slow_worker("im_queue_all", hold=0.2)
     async with run_worker(worker):
         tenant = await create_isolated_tenant(cp, "im-queue-all")
         wf = await cp.create_workflow("im_queue_all", tenant.id,
-                                      config=WorkflowConfig(version=1, invoke_mode="queue"))
+                                      config=WorkflowConfig(version=1, invoke_mode=InvokeMode.QUEUE))
         try:
             await cp.activate_workflow(wf.id)
             rids = await asyncio.gather(
-                *[cp.invoke_workflow(wf.id, operation_timeout_seconds=30) for _ in range(5)])
-            infos = await _wait_all_terminal(cp, rids)
+                *[cp.invoke_workflow(wf.id, operation_timeout_seconds=30) for _ in range(3)])
+            infos = await _wait_all_terminal(cp, rids, timeout=300)
             assert all(i.status == RunStatus.COMPLETED for i in infos), \
                 [i.status.value for i in infos]
         finally:
@@ -93,15 +98,15 @@ async def test_coalesce_supersedes_older_invokes(cp):
 
 async def test_queue_drains_in_fifo_order(cp):
     """queue: sequential invokes complete in the order they were made (FIFO by version)."""
-    worker = _slow_worker("im_queue_fifo", hold=0.3)
+    worker = _slow_worker("im_queue_fifo", hold=0.2)
     async with run_worker(worker):
         tenant = await create_isolated_tenant(cp, "im-queue-fifo")
         wf = await cp.create_workflow("im_queue_fifo", tenant.id,
-                                      config=WorkflowConfig(version=1, invoke_mode="queue"))
+                                      config=WorkflowConfig(version=1, invoke_mode=InvokeMode.QUEUE))
         try:
             await cp.activate_workflow(wf.id)
-            rids = [await cp.invoke_workflow(wf.id, operation_timeout_seconds=30) for _ in range(5)]
-            infos = await _wait_all_terminal(cp, rids)
+            rids = [await cp.invoke_workflow(wf.id, operation_timeout_seconds=30) for _ in range(4)]
+            infos = await _wait_all_terminal(cp, rids, timeout=300)
             assert all(i.status == RunStatus.COMPLETED for i in infos)
             completed_at = [i.completed_at for i in infos]
             # invoked in order rids[0..4]; queue drains oldest-first, so completion times
@@ -118,7 +123,7 @@ async def test_queue_backpressure_rejects_at_max_depth(cp):
     async with run_worker(worker):
         tenant = await create_isolated_tenant(cp, "im-backpressure")
         wf = await cp.create_workflow("im_backpressure", tenant.id,
-                                      config=WorkflowConfig(version=1, invoke_mode="queue", max_queue_depth=2))
+                                      config=WorkflowConfig(version=1, invoke_mode=InvokeMode.QUEUE, max_queue_depth=2))
         try:
             await cp.activate_workflow(wf.id)
             accepted, rejected, first_err = 0, 0, ""
