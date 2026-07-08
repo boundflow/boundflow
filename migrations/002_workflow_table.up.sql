@@ -25,6 +25,8 @@ CREATE TABLE workflows (
     invoke_timeout_seconds    INTEGER NOT NULL DEFAULT 0,
     repeat_every_seconds      INTEGER NOT NULL DEFAULT 0,
     triggerable               BOOLEAN NOT NULL DEFAULT true,
+    invoke_mode               TEXT NOT NULL DEFAULT 'coalesce',
+    max_queue_depth           INTEGER NOT NULL DEFAULT 0,
     lifecycle_state           lifecycle_state NOT NULL,
     workflow_state            workflow_state NOT NULL DEFAULT 'paused',
     lifecycle_policy          JSONB NOT NULL DEFAULT '[]',

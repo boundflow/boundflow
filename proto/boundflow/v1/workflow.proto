@@ -6,11 +6,24 @@ option go_package = "github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1
 
 import "google/protobuf/timestamp.proto";
 
+// InvokeMode controls what happens when invokes pile up for a workflow.
+enum InvokeMode {
+  INVOKE_MODE_UNSPECIFIED = 0;  // treated as COALESCE
+  // Latest-wins: a newer invoke supersedes older pending ones (reconcile/periodic).
+  INVOKE_MODE_COALESCE = 1;
+  // Every invoke runs, drained oldest-first, one at a time (fan-in / request-response).
+  INVOKE_MODE_QUEUE = 2;
+}
+
 message WorkflowConfig {
   int32 version = 1;
   int32 invoke_timeout_seconds = 2;
   int32 repeat_every_seconds = 3;
   bool triggerable = 4;
+  InvokeMode invoke_mode = 5;
+  // Only in queue mode: reject an invoke once this many requests are already queued.
+  // 0 uses a server default. Ignored in coalesce mode (latest-wins self-bounds to 1).
+  int32 max_queue_depth = 6;
 }
 
 enum WorkflowState {

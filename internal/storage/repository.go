@@ -92,7 +92,9 @@ type SchedulerRepository interface {
 	// timeoutSeconds and workflowVersion are read from request info and passed directly to the jobs table.
 	// expectedCurrentVersion guards the write: it only proceeds if the workflow's current_version
 	// still equals it (the run the caller validated against), else written=false.
-	UpsertJobAndSchedule(ctx context.Context, requestID string, contextJSON string, currentAtomicOperation string, timeoutSeconds int, workflowVersion int, expectedCurrentVersion int64) (workflowID string, version int64, written bool, err error)
+	// invokeMode is the workflow's invoke mode: "queue" never overwrites an occupied slot
+	// (insert-only, so requests drain one at a time); any other value keeps latest-wins.
+	UpsertJobAndSchedule(ctx context.Context, requestID string, contextJSON string, currentAtomicOperation string, timeoutSeconds int, workflowVersion int, expectedCurrentVersion int64, invokeMode string) (workflowID string, version int64, written bool, err error)
 	// MarkWorkflowScheduled sets lifecycle_state = scheduled, only while a job exists and the
 	// workflow isn't in a protected (terminal/delete) state.
 	MarkWorkflowScheduled(ctx context.Context, workflowID string) error
@@ -269,4 +271,7 @@ type CustomerRequestRepository interface {
 	FailRequest(ctx context.Context, id string, failureReason string) (*domain.CustomerRequest, error)
 	// ListForWorkflow returns every run (request) for a workflow, newest first.
 	ListForWorkflow(ctx context.Context, workflowID string) ([]*domain.CustomerRequest, error)
+	// CountUnscheduledRequests returns how many requests are queued (status unscheduled)
+	// for a workflow — the backlog depth used to enforce max_queue_depth in queue mode.
+	CountUnscheduledRequests(ctx context.Context, workflowID string) (int, error)
 }

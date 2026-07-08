@@ -28,6 +28,8 @@ func WorkflowToProto(r *domain.Workflow) *boundflowv1.Workflow {
 			InvokeTimeoutSeconds: r.WorkflowConfig.InvokeTimeoutSeconds,
 			RepeatEverySeconds:   r.WorkflowConfig.RepeatEverySeconds,
 			Triggerable:          r.WorkflowConfig.Triggerable,
+			InvokeMode:           invokeModeToProto(r.WorkflowConfig.InvokeMode),
+			MaxQueueDepth:        r.WorkflowConfig.MaxQueueDepth,
 		},
 		LifecycleState:      string(r.LifecycleState),
 		WorkflowState:       workflowStateToProto[r.WorkflowState],
@@ -194,5 +196,21 @@ func WorkflowConfigFromProto(p *boundflowv1.WorkflowConfig) domain.WorkflowConfi
 		InvokeTimeoutSeconds: p.InvokeTimeoutSeconds,
 		RepeatEverySeconds:   p.RepeatEverySeconds,
 		Triggerable:          p.Triggerable,
+		InvokeMode:           invokeModeFromProto(p.InvokeMode),
+		MaxQueueDepth:        p.MaxQueueDepth,
 	}
+}
+
+func invokeModeFromProto(m boundflowv1.InvokeMode) domain.InvokeMode {
+	if m == boundflowv1.InvokeMode_INVOKE_MODE_QUEUE {
+		return domain.InvokeModeQueue
+	}
+	return domain.InvokeModeCoalesce // UNSPECIFIED and COALESCE both default here
+}
+
+func invokeModeToProto(m domain.InvokeMode) boundflowv1.InvokeMode {
+	if m == domain.InvokeModeQueue {
+		return boundflowv1.InvokeMode_INVOKE_MODE_QUEUE
+	}
+	return boundflowv1.InvokeMode_INVOKE_MODE_COALESCE
 }

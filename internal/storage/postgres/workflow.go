@@ -28,18 +28,24 @@ func (r *WorkflowRepo) Create(ctx context.Context, instance *domain.Workflow) er
 	if err != nil {
 		return fmt.Errorf("marshal lifecycle policy: %w", err)
 	}
+	invokeMode := instance.WorkflowConfig.InvokeMode
+	if invokeMode == "" {
+		invokeMode = domain.InvokeModeCoalesce
+	}
 	_, err = r.pool.Exec(ctx,
 		`INSERT INTO workflows
 		   (id, tenant_id, workflow_type,
 		    current_workflow_version, invoke_timeout_seconds, repeat_every_seconds, triggerable,
+		    invoke_mode, max_queue_depth,
 		    lifecycle_state, workflow_state, lifecycle_policy, scheduler_partition_id,
 		    last_completed_request_at, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
 		instance.ID, instance.TenantID, instance.WorkflowType,
 		instance.CurrentWorkflowVersion,
 		instance.WorkflowConfig.InvokeTimeoutSeconds,
 		instance.WorkflowConfig.RepeatEverySeconds,
 		instance.WorkflowConfig.Triggerable,
+		string(invokeMode), instance.WorkflowConfig.MaxQueueDepth,
 		instance.LifecycleState, instance.WorkflowState, lifecyclePolicyJSON, instance.SchedulerPartitionID,
 		instance.LastCompletedRequestAt, instance.CreatedAt,
 	)
@@ -89,10 +95,11 @@ func (r *WorkflowRepo) ListForTenantGroup(ctx context.Context, tenantGroupID str
 func (r *WorkflowRepo) Get(ctx context.Context, id string) (*domain.Workflow, error) {
 	var instance domain.Workflow
 	var lifecyclePolicyJSON, invocationMetricsJSON []byte
+	var invokeMode string
 
 	err := r.pool.QueryRow(ctx,
 		`SELECT id, tenant_id, workflow_type,
-		        invoke_timeout_seconds, repeat_every_seconds, triggerable,
+		        invoke_timeout_seconds, repeat_every_seconds, triggerable, invoke_mode, max_queue_depth,
 		        lifecycle_state, workflow_state, lifecycle_policy, invocation_metrics, cooldown_until,
 		        lifecycle_last_resolved, current_workflow_version, scheduler_partition_id,
 		        target_version, current_version, last_completed_request_at,
@@ -103,6 +110,7 @@ func (r *WorkflowRepo) Get(ctx context.Context, id string) (*domain.Workflow, er
 		&instance.WorkflowConfig.InvokeTimeoutSeconds,
 		&instance.WorkflowConfig.RepeatEverySeconds,
 		&instance.WorkflowConfig.Triggerable,
+		&invokeMode, &instance.WorkflowConfig.MaxQueueDepth,
 		&instance.LifecycleState, &instance.WorkflowState,
 		&lifecyclePolicyJSON, &invocationMetricsJSON, &instance.CooldownUntil,
 		&instance.LifecycleLastResolved, &instance.CurrentWorkflowVersion, &instance.SchedulerPartitionID,
@@ -112,6 +120,7 @@ func (r *WorkflowRepo) Get(ctx context.Context, id string) (*domain.Workflow, er
 	if err != nil {
 		return nil, handleError(err, "workflow instance")
 	}
+	instance.WorkflowConfig.InvokeMode = domain.InvokeMode(invokeMode)
 
 	if err := json.Unmarshal(lifecyclePolicyJSON, &instance.LifecyclePolicy); err != nil {
 		return nil, fmt.Errorf("unmarshal lifecycle_policy: %w", err)

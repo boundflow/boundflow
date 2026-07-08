@@ -16,10 +16,25 @@ const (
 	LifecycleStateInterrupted      LifecycleState = "interrupted"
 )
 
+// InvokeMode controls what happens when invokes pile up for a workflow (see the
+// proto enum). Empty defaults to coalesce.
+type InvokeMode string
+
+const (
+	InvokeModeCoalesce InvokeMode = "coalesce"
+	InvokeModeQueue    InvokeMode = "queue"
+)
+
+// DefaultMaxQueueDepth bounds a queue-mode workflow's backlog when max_queue_depth
+// is left unset (0), so queue mode is never truly unbounded.
+const DefaultMaxQueueDepth = 1000
+
 type WorkflowConfig struct {
 	InvokeTimeoutSeconds int32
 	RepeatEverySeconds   int32
 	Triggerable          bool
+	InvokeMode           InvokeMode
+	MaxQueueDepth        int32
 }
 
 type WorkflowState string

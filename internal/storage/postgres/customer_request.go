@@ -130,6 +130,18 @@ func lifecycleStateStrings(states []domain.LifecycleState) []string {
 	return out
 }
 
+func (r *CustomerRequestRepo) CountUnscheduledRequests(ctx context.Context, workflowID string) (int, error) {
+	var n int
+	err := r.pool.QueryRow(ctx,
+		`SELECT count(*) FROM customer_requests WHERE workflow_id = $1 AND status = 'unscheduled'`,
+		workflowID,
+	).Scan(&n)
+	if err != nil {
+		return 0, fmt.Errorf("count unscheduled requests: %w", err)
+	}
+	return n, nil
+}
+
 func (r *CustomerRequestRepo) Get(ctx context.Context, id string) (*domain.CustomerRequest, error) {
 	var req domain.CustomerRequest
 	var requestInfoJSON []byte

@@ -126,6 +126,9 @@ func (h *WorkflowServiceHandler) InvokeWorkflow(ctx context.Context, req *boundf
 		if errors.Is(err, service.ErrInvalidWorkflowState) {
 			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
 		}
+		if errors.Is(err, service.ErrQueueFull) {
+			return nil, status.Errorf(codes.ResourceExhausted, "%v", err)
+		}
 		return nil, status.Errorf(codes.Internal, "invoke workflow: %v", err)
 	}
 
