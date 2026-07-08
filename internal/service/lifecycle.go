@@ -21,6 +21,7 @@ var ErrMissingRuntimeParams = errors.New("operation_timeout_seconds must be set 
 var ErrInvalidWorkflowState = errors.New("workflow cannot be invoked in its current state")
 var ErrNotInterrupted = errors.New("workflow is not interrupted or the request id does not match its last interruption")
 var ErrInvalidRepeatInterval = errors.New("repeat_every_seconds is below the minimum the scheduler can honor")
+var ErrQueueFull = errors.New("workflow invoke queue is full")
 
 // RequestScheduler is the scheduling capability the lifecycle service needs.
 // Satisfied by *scheduler.Scheduler.
@@ -187,6 +188,22 @@ func (s *LifecycleService) InvokeWorkflow(ctx context.Context, correlationID, wo
 
 	if instance.WorkflowState != domain.WorkflowStateActive {
 		return "", fmt.Errorf("%w: workflow is in state %s", ErrInvalidWorkflowState, instance.WorkflowState)
+	}
+
+	// Queue-mode backpressure: reject the invoke if the backlog is already at the cap.
+	// (Admission control — queued requests keep draining; only new invokes are refused.)
+	if instance.WorkflowConfig.InvokeMode == domain.InvokeModeQueue {
+		depthCap := instance.WorkflowConfig.MaxQueueDepth
+		if depthCap <= 0 {
+			depthCap = domain.DefaultMaxQueueDepth
+		}
+		depth, err := s.customerRequests.CountUnscheduledRequests(ctx, workflowID)
+		if err != nil {
+			return "", fmt.Errorf("count queued requests: %w", err)
+		}
+		if int32(depth) >= depthCap {
+			return "", fmt.Errorf("%w: %d/%d queued", ErrQueueFull, depth, depthCap)
+		}
 	}
 
 	requestInfo := map[string]any{

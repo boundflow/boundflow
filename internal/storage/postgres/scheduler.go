@@ -78,12 +78,15 @@ func (r *SchedulerRepo) GetDuePeriodicWorkflows(ctx context.Context, partitionID
 
 func (r *SchedulerRepo) GetTopUnscheduledRequests(ctx context.Context, partitionID string) ([]string, error) {
 	rows, err := r.pool.Query(ctx,
+		// One request per workflow: coalesce picks the newest (latest-wins), queue picks
+		// the oldest (FIFO drain). The CASE flips the sort direction per workflow's mode.
 		`SELECT DISTINCT ON (cr.workflow_id) cr.id
 		 FROM customer_requests cr
 		 JOIN workflows ri ON cr.workflow_id = ri.id
 		 WHERE ri.scheduler_partition_id = $1
 		   AND cr.status = 'unscheduled'
-		 ORDER BY cr.workflow_id, cr.version DESC`,
+		 ORDER BY cr.workflow_id,
+		          (CASE WHEN ri.invoke_mode = 'queue' THEN cr.version ELSE -cr.version END) ASC`,
 		partitionID,
 	)
 	if err != nil {
@@ -110,7 +113,7 @@ func (r *SchedulerRepo) GetTopUnscheduledRequests(ctx context.Context, partition
 // (a newer run completed in between) results in written=false rather than scheduling.
 // Returns written=false (no error) if any guard fails.
 // contextJSON and currentAtomicOperation are assembled by the scheduler layer before calling.
-func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID string, contextJSON string, currentAtomicOperation string, timeoutSeconds int, workflowVersion int, expectedCurrentVersion int64) (workflowID string, version int64, written bool, err error) {
+func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID string, contextJSON string, currentAtomicOperation string, timeoutSeconds int, workflowVersion int, expectedCurrentVersion int64, invokeMode string) (workflowID string, version int64, written bool, err error) {
 	err = r.pool.QueryRow(ctx,
 		`WITH candidate AS (
 		     SELECT cr.id, cr.workflow_id, cr.version, cr.request_type,
@@ -143,6 +146,7 @@ func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID stri
 
 		         WHERE jobs.version < EXCLUDED.version
 		           AND jobs.status = 'pending'
+		           AND $7 <> 'queue'
 		     RETURNING workflow_id, request_id
 		 )
 		 UPDATE customer_requests cr
@@ -150,7 +154,7 @@ func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID stri
 		 FROM upserted u
 		 WHERE cr.id = u.request_id
 		 RETURNING cr.workflow_id, cr.version`,
-		requestID, currentAtomicOperation, contextJSON, timeoutSeconds, workflowVersion, expectedCurrentVersion,
+		requestID, currentAtomicOperation, contextJSON, timeoutSeconds, workflowVersion, expectedCurrentVersion, invokeMode,
 	).Scan(&workflowID, &version)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

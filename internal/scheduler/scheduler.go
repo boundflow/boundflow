@@ -479,22 +479,31 @@ func (s *Scheduler) ScheduleRequest(ctx context.Context, req string) error {
 	// Both values are always float64 after JSON unmarshal from JSONB.
 	timeoutSeconds := int(request.RequestInfo["operationTimeoutSeconds"].(float64))
 
-	workflowID, ver, written, err := s.scheduler.UpsertJobAndSchedule(ctx, req, string(contextJSON), currentAtomicOperation, timeoutSeconds, workflow.CurrentWorkflowVersion, workflow.CurrentVersion)
+	invokeMode := workflow.WorkflowConfig.InvokeMode
+	if invokeMode == "" {
+		invokeMode = domain.InvokeModeCoalesce
+	}
+
+	workflowID, ver, written, err := s.scheduler.UpsertJobAndSchedule(ctx, req, string(contextJSON), currentAtomicOperation, timeoutSeconds, workflow.CurrentWorkflowVersion, workflow.CurrentVersion, string(invokeMode))
 	if err != nil {
 		return fmt.Errorf("error scheduling request %s: %w", req, err)
 	}
 
 	if !written {
-		s.log.Debug("request not scheduled, existing job has equal or higher version", "request_id", req)
+		s.log.Debug("request not scheduled, slot occupied or newer version present", "request_id", req)
 		return nil
 	}
 
 	s.log.Info("request scheduled", "request_id", req, "workflow_id", workflowID, "version", ver)
 
-	if err := s.scheduler.SupercedeOlderRequests(ctx, workflowID, ver); err != nil {
-		return fmt.Errorf("error with supercede requests with request %s: %w", req, err)
+	// Queue mode keeps every request alive (drains oldest-first); only coalesce drops the
+	// older pending ones in favor of the one just scheduled.
+	if invokeMode != domain.InvokeModeQueue {
+		if err := s.scheduler.SupercedeOlderRequests(ctx, workflowID, ver); err != nil {
+			return fmt.Errorf("error with supercede requests with request %s: %w", req, err)
+		}
+		s.log.Debug("older requests superceded", "workflow_id", workflowID, "version", ver)
 	}
-	s.log.Debug("older requests superceded", "workflow_id", workflowID, "version", ver)
 
 	// Best-effort: a run is now scheduled (the worker flips it to invoking on dispatch; the
 	// sweep reconciles either if lost).

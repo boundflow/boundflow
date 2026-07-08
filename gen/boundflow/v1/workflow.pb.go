@@ -22,6 +22,58 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// InvokeMode controls what happens when invokes pile up for a workflow.
+type InvokeMode int32
+
+const (
+	InvokeMode_INVOKE_MODE_UNSPECIFIED InvokeMode = 0 // treated as COALESCE
+	// Latest-wins: a newer invoke supersedes older pending ones (reconcile/periodic).
+	InvokeMode_INVOKE_MODE_COALESCE InvokeMode = 1
+	// Every invoke runs, drained oldest-first, one at a time (fan-in / request-response).
+	InvokeMode_INVOKE_MODE_QUEUE InvokeMode = 2
+)
+
+// Enum value maps for InvokeMode.
+var (
+	InvokeMode_name = map[int32]string{
+		0: "INVOKE_MODE_UNSPECIFIED",
+		1: "INVOKE_MODE_COALESCE",
+		2: "INVOKE_MODE_QUEUE",
+	}
+	InvokeMode_value = map[string]int32{
+		"INVOKE_MODE_UNSPECIFIED": 0,
+		"INVOKE_MODE_COALESCE":    1,
+		"INVOKE_MODE_QUEUE":       2,
+	}
+)
+
+func (x InvokeMode) Enum() *InvokeMode {
+	p := new(InvokeMode)
+	*p = x
+	return p
+}
+
+func (x InvokeMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (InvokeMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_boundflow_v1_workflow_proto_enumTypes[0].Descriptor()
+}
+
+func (InvokeMode) Type() protoreflect.EnumType {
+	return &file_boundflow_v1_workflow_proto_enumTypes[0]
+}
+
+func (x InvokeMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use InvokeMode.Descriptor instead.
+func (InvokeMode) EnumDescriptor() ([]byte, []int) {
+	return file_boundflow_v1_workflow_proto_rawDescGZIP(), []int{0}
+}
+
 type WorkflowState int32
 
 const (
@@ -61,11 +113,11 @@ func (x WorkflowState) String() string {
 }
 
 func (WorkflowState) Descriptor() protoreflect.EnumDescriptor {
-	return file_boundflow_v1_workflow_proto_enumTypes[0].Descriptor()
+	return file_boundflow_v1_workflow_proto_enumTypes[1].Descriptor()
 }
 
 func (WorkflowState) Type() protoreflect.EnumType {
-	return &file_boundflow_v1_workflow_proto_enumTypes[0]
+	return &file_boundflow_v1_workflow_proto_enumTypes[1]
 }
 
 func (x WorkflowState) Number() protoreflect.EnumNumber {
@@ -74,7 +126,7 @@ func (x WorkflowState) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use WorkflowState.Descriptor instead.
 func (WorkflowState) EnumDescriptor() ([]byte, []int) {
-	return file_boundflow_v1_workflow_proto_rawDescGZIP(), []int{0}
+	return file_boundflow_v1_workflow_proto_rawDescGZIP(), []int{1}
 }
 
 type WorkflowConfig struct {
@@ -83,8 +135,12 @@ type WorkflowConfig struct {
 	InvokeTimeoutSeconds int32                  `protobuf:"varint,2,opt,name=invoke_timeout_seconds,json=invokeTimeoutSeconds,proto3" json:"invoke_timeout_seconds,omitempty"`
 	RepeatEverySeconds   int32                  `protobuf:"varint,3,opt,name=repeat_every_seconds,json=repeatEverySeconds,proto3" json:"repeat_every_seconds,omitempty"`
 	Triggerable          bool                   `protobuf:"varint,4,opt,name=triggerable,proto3" json:"triggerable,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	InvokeMode           InvokeMode             `protobuf:"varint,5,opt,name=invoke_mode,json=invokeMode,proto3,enum=boundflow.v1.InvokeMode" json:"invoke_mode,omitempty"`
+	// Only in queue mode: reject an invoke once this many requests are already queued.
+	// 0 uses a server default. Ignored in coalesce mode (latest-wins self-bounds to 1).
+	MaxQueueDepth int32 `protobuf:"varint,6,opt,name=max_queue_depth,json=maxQueueDepth,proto3" json:"max_queue_depth,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *WorkflowConfig) Reset() {
@@ -143,6 +199,20 @@ func (x *WorkflowConfig) GetTriggerable() bool {
 		return x.Triggerable
 	}
 	return false
+}
+
+func (x *WorkflowConfig) GetInvokeMode() InvokeMode {
+	if x != nil {
+		return x.InvokeMode
+	}
+	return InvokeMode_INVOKE_MODE_UNSPECIFIED
+}
+
+func (x *WorkflowConfig) GetMaxQueueDepth() int32 {
+	if x != nil {
+		return x.MaxQueueDepth
+	}
+	return 0
 }
 
 // Workflow is a managed, stateful unit of agent execution tied to a specific
@@ -252,12 +322,15 @@ var File_boundflow_v1_workflow_proto protoreflect.FileDescriptor
 
 const file_boundflow_v1_workflow_proto_rawDesc = "" +
 	"\n" +
-	"\x1bboundflow/v1/workflow.proto\x12\fboundflow.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb4\x01\n" +
+	"\x1bboundflow/v1/workflow.proto\x12\fboundflow.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x97\x02\n" +
 	"\x0eWorkflowConfig\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\x05R\aversion\x124\n" +
 	"\x16invoke_timeout_seconds\x18\x02 \x01(\x05R\x14invokeTimeoutSeconds\x120\n" +
 	"\x14repeat_every_seconds\x18\x03 \x01(\x05R\x12repeatEverySeconds\x12 \n" +
-	"\vtriggerable\x18\x04 \x01(\bR\vtriggerable\"\x8a\x03\n" +
+	"\vtriggerable\x18\x04 \x01(\bR\vtriggerable\x129\n" +
+	"\vinvoke_mode\x18\x05 \x01(\x0e2\x18.boundflow.v1.InvokeModeR\n" +
+	"invokeMode\x12&\n" +
+	"\x0fmax_queue_depth\x18\x06 \x01(\x05R\rmaxQueueDepth\"\x8a\x03\n" +
 	"\bWorkflow\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
 	"\rworkflow_type\x18\x02 \x01(\tR\fworkflowType\x12\x1b\n" +
@@ -268,7 +341,12 @@ const file_boundflow_v1_workflow_proto_rawDesc = "" +
 	"\x0flifecycle_state\x18\t \x01(\tR\x0elifecycleState\x12B\n" +
 	"\x0eworkflow_state\x18\n" +
 	" \x01(\x0e2\x1b.boundflow.v1.WorkflowStateR\rworkflowState\x12=\n" +
-	"\x1blast_interrupted_request_id\x18\v \x01(\tR\x18lastInterruptedRequestId*\x9f\x01\n" +
+	"\x1blast_interrupted_request_id\x18\v \x01(\tR\x18lastInterruptedRequestId*Z\n" +
+	"\n" +
+	"InvokeMode\x12\x1b\n" +
+	"\x17INVOKE_MODE_UNSPECIFIED\x10\x00\x12\x18\n" +
+	"\x14INVOKE_MODE_COALESCE\x10\x01\x12\x15\n" +
+	"\x11INVOKE_MODE_QUEUE\x10\x02*\x9f\x01\n" +
 	"\rWorkflowState\x12\x1e\n" +
 	"\x1aWORKFLOW_STATE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15WORKFLOW_STATE_ACTIVE\x10\x01\x12\x19\n" +
@@ -288,23 +366,25 @@ func file_boundflow_v1_workflow_proto_rawDescGZIP() []byte {
 	return file_boundflow_v1_workflow_proto_rawDescData
 }
 
-var file_boundflow_v1_workflow_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_boundflow_v1_workflow_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_boundflow_v1_workflow_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_boundflow_v1_workflow_proto_goTypes = []any{
-	(WorkflowState)(0),            // 0: boundflow.v1.WorkflowState
-	(*WorkflowConfig)(nil),        // 1: boundflow.v1.WorkflowConfig
-	(*Workflow)(nil),              // 2: boundflow.v1.Workflow
-	(*timestamppb.Timestamp)(nil), // 3: google.protobuf.Timestamp
+	(InvokeMode)(0),               // 0: boundflow.v1.InvokeMode
+	(WorkflowState)(0),            // 1: boundflow.v1.WorkflowState
+	(*WorkflowConfig)(nil),        // 2: boundflow.v1.WorkflowConfig
+	(*Workflow)(nil),              // 3: boundflow.v1.Workflow
+	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
 }
 var file_boundflow_v1_workflow_proto_depIdxs = []int32{
-	3, // 0: boundflow.v1.Workflow.created_at:type_name -> google.protobuf.Timestamp
-	1, // 1: boundflow.v1.Workflow.workflow_config:type_name -> boundflow.v1.WorkflowConfig
-	0, // 2: boundflow.v1.Workflow.workflow_state:type_name -> boundflow.v1.WorkflowState
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	0, // 0: boundflow.v1.WorkflowConfig.invoke_mode:type_name -> boundflow.v1.InvokeMode
+	4, // 1: boundflow.v1.Workflow.created_at:type_name -> google.protobuf.Timestamp
+	2, // 2: boundflow.v1.Workflow.workflow_config:type_name -> boundflow.v1.WorkflowConfig
+	1, // 3: boundflow.v1.Workflow.workflow_state:type_name -> boundflow.v1.WorkflowState
+	4, // [4:4] is the sub-list for method output_type
+	4, // [4:4] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_boundflow_v1_workflow_proto_init() }
@@ -317,7 +397,7 @@ func file_boundflow_v1_workflow_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_boundflow_v1_workflow_proto_rawDesc), len(file_boundflow_v1_workflow_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      2,
 			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,

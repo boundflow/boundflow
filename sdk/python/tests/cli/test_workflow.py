@@ -38,6 +38,28 @@ def test_create_workflow_no_triggerable_flag(runner, boundflow_api_key):
     assert data["config"]["triggerable"] is False
 
 
+def test_create_workflow_queue_invoke_mode(runner, boundflow_api_key):
+    tenant_id = make_tenant(runner, boundflow_api_key, "wf-queue")
+    data = run(runner, boundflow_api_key,
+               ["workflow", "create", "fan-in-job", tenant_id,
+                "--invoke-mode", "queue", "--max-queue-depth", "7"])
+    assert data["config"]["invoke_mode"] == "queue"
+    assert data["config"]["max_queue_depth"] == 7
+
+
+def test_create_workflow_defaults_to_coalesce(runner, boundflow_api_key):
+    tenant_id = make_tenant(runner, boundflow_api_key, "wf-coalesce")
+    data = run(runner, boundflow_api_key,
+               ["workflow", "create", "reconcile-job", tenant_id])
+    assert data["config"]["invoke_mode"] == "coalesce"
+
+
+def test_create_workflow_invalid_invoke_mode_rejected(runner, boundflow_api_key):
+    tenant_id = make_tenant(runner, boundflow_api_key, "wf-badmode")
+    run_expect_fail(runner, boundflow_api_key,
+                    ["workflow", "create", "bad", tenant_id, "--invoke-mode", "bogus"])
+
+
 # ── Activate ─────────────────────────────────────────────────────────────────
 
 

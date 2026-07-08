@@ -44,12 +44,22 @@ class Tenant:
     tenant_group_id: str
 
 
+class InvokeMode(str, Enum):
+    """How piled-up invokes are handled for a workflow (WorkflowConfig.invoke_mode)."""
+    COALESCE = "coalesce"  # latest-wins: a newer invoke supersedes older pending ones
+    QUEUE = "queue"        # fan-in: every invoke runs, drained oldest-first (FIFO)
+
+
 @dataclass
 class WorkflowConfig:
     version: int = 0
     invoke_timeout_seconds: int = 60
     repeat_every_seconds: int = 0
     triggerable: bool = True
+    # max_queue_depth (0 = server default) bounds the queue-mode backlog; ignored in
+    # coalesce mode.
+    invoke_mode: InvokeMode = InvokeMode.COALESCE
+    max_queue_depth: int = 0
 
 
 @dataclass
@@ -481,12 +491,17 @@ class ControlPlaneClient:
                 invoke_timeout_seconds=cfg.invoke_timeout_seconds,
                 repeat_every_seconds=cfg.repeat_every_seconds,
                 triggerable=cfg.triggerable,
+                invoke_mode=(ri.INVOKE_MODE_QUEUE if cfg.invoke_mode == InvokeMode.QUEUE
+                             else ri.INVOKE_MODE_COALESCE),
+                max_queue_depth=cfg.max_queue_depth,
             ),
         ), metadata=self._metadata)
         inst = resp.workflow
         wc = inst.workflow_config
         return Workflow(inst.id, inst.tenant_id, WorkflowConfig(
-            wc.version, wc.invoke_timeout_seconds, wc.repeat_every_seconds, wc.triggerable))
+            wc.version, wc.invoke_timeout_seconds, wc.repeat_every_seconds, wc.triggerable,
+            InvokeMode.QUEUE if wc.invoke_mode == ri.INVOKE_MODE_QUEUE else InvokeMode.COALESCE,
+            wc.max_queue_depth))
 
     async def activate_workflow(self, workflow_id: str) -> None:
         await self._lc.ActivateWorkflow(
