@@ -178,7 +178,7 @@ func (s *LifecycleService) CreateWorkflow(ctx context.Context, correlationID, wo
 
 // InvokeWorkflow triggers a run and returns the created request's id — the run id
 // the caller can use to correlate this invocation (e.g. with its trace).
-func (s *LifecycleService) InvokeWorkflow(ctx context.Context, correlationID, workflowID string, params domain.WorkflowRuntimeParams) (string, error) {
+func (s *LifecycleService) InvokeWorkflow(ctx context.Context, correlationID, workflowID string, params domain.WorkflowRuntimeParams, initialContext map[string]any) (string, error) {
 	s.log.Info("invoking workflow", "correlation_id", correlationID, "workflow_id", workflowID)
 
 	instance, err := s.workflows.Get(ctx, workflowID)
@@ -218,6 +218,9 @@ func (s *LifecycleService) InvokeWorkflow(ctx context.Context, correlationID, wo
 	}
 	if err := s.ResolveModelPricing(ctx, workflowID, requestInfo); err != nil {
 		return "", err
+	}
+	if len(initialContext) > 0 {
+		requestInfo["input"] = initialContext
 	}
 
 	request := domain.CustomerRequest{

@@ -141,7 +141,13 @@ class OperationContext:
 
     @property
     def context(self) -> dict:
-        return self._op.context
+        """The operation's context — the caller's own keys, read and written freely
+        (seeded by invoke_workflow(context=...) and carried across operations). The
+        runtime's own keys live outside this view, so it's just the customer's data."""
+        raw = self._op.context
+        if not isinstance(raw.get("input"), dict):
+            raw["input"] = {}
+        return raw["input"]
 
     def add_context(self, metadata: str, payload: Any, *, key: str | None = None) -> "OperationContext":
         self._llm_context.append((key or metadata, metadata, payload))
@@ -156,8 +162,8 @@ class OperationContext:
         time; lifecycle policy + metrics history are injected by the scheduler.
         Lifecycle rules are evaluated before the run; metrics are written back on
         completion. Port of BoundFlowWorker.RunAgentAsync."""
-        runtime_node = (self.context.get("agentRuntimePolicies") or {}).get(agent.name)
-        state_node = (self.context.get("agentStates") or {}).get(agent.name)
+        runtime_node = (self._op.context.get("agentRuntimePolicies") or {}).get(agent.name)
+        state_node = (self._op.context.get("agentStates") or {}).get(agent.name)
 
         base_policy = load_runtime_policy(runtime_node)
         rules = load_lifecycle_rules(state_node)
@@ -184,7 +190,7 @@ class OperationContext:
             tools=agent.tools,
             output_schema=agent.output_schema,
             llm_context=self._llm_context,
-            pricing=(self.context.get("modelPricing") or {}),
+            pricing=(self._op.context.get("modelPricing") or {}),
             cache=agent.cache,
         )
 
@@ -371,11 +377,21 @@ class BoundFlowWorker:
 
         completed = op_pb.OPERATION_STATUS_COMPLETED
 
+        # The context handed to the next operation is the same bag we received (system
+        # keys and all) with the customer's data slotted back into "input" — so the
+        # runtime's keys keep flowing and ctx.context stays customer-only on the far side.
+        current = t.context_to_dict(op)
+
+        def carry(customer_context: dict):
+            bag = dict(current)
+            bag["input"] = customer_context or {}
+            return t.dict_to_struct(bag)
+
         def branch(r: OperationResult):
             # A Next branch becomes an AtomicOperation; Complete becomes None.
             if isinstance(r, Next):
                 return op_pb.AtomicOperation(
-                    name=r.operation, timeout_seconds=r.timeout, context=t.dict_to_struct(r.context))
+                    name=r.operation, timeout_seconds=r.timeout, context=carry(r.context))
             return None
 
         if isinstance(result, Complete):
@@ -386,7 +402,7 @@ class BoundFlowWorker:
                 status=completed,
                 next_operation=op_pb.AtomicOperation(
                     name=result.operation, timeout_seconds=result.timeout,
-                    context=t.dict_to_struct(result.context)))
+                    context=carry(result.context)))
 
         if isinstance(result, AwaitApproval):
             if approval_id is None:

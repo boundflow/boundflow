@@ -72,6 +72,9 @@ message InvokeWorkflowRequest {
   string correlation_id = 1;
   string workflow_id = 2;
   RuntimeOverrides runtime_overrides = 3;
+  // Caller-supplied input for this run, readable in operations via ctx.input.
+  // Persisted on the request; keep it small (coordination/input data, not a datastore).
+  google.protobuf.Struct initial_context = 4;
 }
 
 message InvokeWorkflowResponse {
