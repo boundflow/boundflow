@@ -165,27 +165,27 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 		} else if result.ApprovalGate != nil {
 			log.Info("operation requires approval, parking job", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "approval_id", result.ApprovalGate.ApprovalId)
 
-			var onApprove *domain.ApprovalBranch
-			if result.ApprovalGate.OnApprove != nil {
-				onApprove = &domain.ApprovalBranch{
-					OperationName:  result.ApprovalGate.OnApprove.Name,
-					Context:        result.ApprovalGate.OnApprove.Context.AsMap(),
-					TimeoutSeconds: int(result.ApprovalGate.OnApprove.TimeoutSeconds),
+			buildBranch := func(next *boundflowv1.AtomicOperation, result *structpb.Struct) domain.ApprovalBranch {
+				if next != nil {
+					return domain.ApprovalBranch{
+						Next: &domain.NextOperation{
+							OperationName:  next.Name,
+							Context:        next.Context.AsMap(),
+							TimeoutSeconds: int(next.TimeoutSeconds),
+						},
+					}
 				}
-			}
-			var onReject *domain.ApprovalBranch
-			if result.ApprovalGate.OnReject != nil {
-				onReject = &domain.ApprovalBranch{
-					OperationName:  result.ApprovalGate.OnReject.Name,
-					Context:        result.ApprovalGate.OnReject.Context.AsMap(),
-					TimeoutSeconds: int(result.ApprovalGate.OnReject.TimeoutSeconds),
+				var res map[string]any
+				if result != nil {
+					res = result.AsMap()
 				}
+				return domain.ApprovalBranch{Result: res}
 			}
 
 			jobMetadata := domain.JobMetadata{
 				ApprovalGate: &domain.ApprovalGateMetadata{
-					OnApprove: onApprove,
-					OnReject:  onReject,
+					OnApprove: buildBranch(result.ApprovalGate.OnApprove, result.ApprovalGate.OnApproveResult),
+					OnReject:  buildBranch(result.ApprovalGate.OnReject, result.ApprovalGate.OnRejectResult),
 				},
 			}
 
@@ -387,18 +387,24 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 							}
 						}(workflowID)
 
-						resolveBranch := func(branch *domain.ApprovalBranch, label string) bool {
-							if branch != nil {
-								job.Context = branch.Context
-								job.RuntimeParams.OperationTimeoutSeconds = branch.TimeoutSeconds
-								job.CurrentAtomicOperation = branch.OperationName
+						resolveBranch := func(branch domain.ApprovalBranch, label string) bool {
+							if branch.Next != nil {
+								job.Context = branch.Next.Context
+								job.RuntimeParams.OperationTimeoutSeconds = branch.Next.TimeoutSeconds
+								job.CurrentAtomicOperation = branch.Next.OperationName
 								return true
 							}
-							// nil branch = Complete() — finish the job without launching an operation.
+							// Next nil = Complete() — finish the job without launching an operation.
 							log.Info("approval branch is complete, finishing job", "request_id", job.RequestID, "branch", label)
-							completeOperation(cancelLease, job, &boundflowv1.AtomicOperationResult{
+							completionResult := &boundflowv1.AtomicOperationResult{
 								Status: boundflowv1.OperationStatus_OPERATION_STATUS_COMPLETED,
-							})
+							}
+							if branch.Result != nil {
+								if s, err := structpb.NewStruct(branch.Result); err == nil {
+									completionResult.Result = s
+								}
+							}
+							completeOperation(cancelLease, job, completionResult)
 							return false
 						}
 

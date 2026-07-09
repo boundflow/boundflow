@@ -82,15 +82,22 @@ type JobMetadata struct {
 }
 
 // ApprovalGateMetadata stores the two possible continuations of an approval gate.
-// A nil branch means that path completes the job with no further operation. The
-// gate's audit data (opened_at, timeout_at) lives in jobs columns, not here.
+// The gate's audit data (opened_at, timeout_at) lives in jobs columns, not here.
 type ApprovalGateMetadata struct {
-	OnApprove *ApprovalBranch `json:"on_approve,omitempty"`
-	OnReject  *ApprovalBranch `json:"on_reject,omitempty"`
+	OnApprove ApprovalBranch `json:"on_approve"`
+	OnReject  ApprovalBranch `json:"on_reject"`
 }
 
-// ApprovalBranch is the operation to dispatch when an approval gate resolves.
+// ApprovalBranch is what happens when an approval gate resolves down this path:
+// either advance to another operation (Next set), or complete the run (Next nil),
+// optionally publishing Result (only meaningful when Next is nil).
 type ApprovalBranch struct {
+	Next   *NextOperation `json:"next,omitempty"`
+	Result map[string]any `json:"result,omitempty"`
+}
+
+// NextOperation is the operation to dispatch when an approval branch advances.
+type NextOperation struct {
 	OperationName  string         `json:"name"`
 	Context        map[string]any `json:"context"`
 	TimeoutSeconds int            `json:"timeout_seconds"`
