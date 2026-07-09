@@ -324,6 +324,9 @@ type AtomicOperationResult struct {
 	FailureType OperationFailureType `protobuf:"varint,8,opt,name=failure_type,json=failureType,proto3,enum=boundflow.v1.OperationFailureType" json:"failure_type,omitempty"`
 	// Human-readable detail for a soft failure (e.g. the exception text).
 	FailureReason string `protobuf:"bytes,9,opt,name=failure_reason,json=failureReason,proto3" json:"failure_reason,omitempty"`
+	// Set by the SDK on Complete(result=...) — the run's published output, persisted
+	// on the request for later retrieval via GetRequestInfo. Unset otherwise.
+	Result        *structpb.Struct `protobuf:"bytes,10,opt,name=result,proto3" json:"result,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -419,6 +422,13 @@ func (x *AtomicOperationResult) GetFailureReason() string {
 		return x.FailureReason
 	}
 	return ""
+}
+
+func (x *AtomicOperationResult) GetResult() *structpb.Struct {
+	if x != nil {
+		return x.Result
+	}
+	return nil
 }
 
 // WorkflowInvocationMetrics holds workflow-level (non-agent) metrics the customer
@@ -604,7 +614,7 @@ const file_boundflow_v1_operation_proto_rawDesc = "" +
 	"\ton_reject\x18\x02 \x01(\v2\x1d.boundflow.v1.AtomicOperationR\bonReject\x12'\n" +
 	"\x0ftimeout_seconds\x18\x03 \x01(\x05R\x0etimeoutSeconds\x12\x1f\n" +
 	"\vapproval_id\x18\x04 \x01(\tR\n" +
-	"approvalId\"\xe0\x06\n" +
+	"approvalId\"\x91\a\n" +
 	"\x15AtomicOperationResult\x125\n" +
 	"\x06status\x18\x01 \x01(\x0e2\x1d.boundflow.v1.OperationStatusR\x06status\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12D\n" +
@@ -614,7 +624,9 @@ const file_boundflow_v1_operation_proto_rawDesc = "" +
 	"\x10workflow_metrics\x18\x06 \x01(\v2'.boundflow.v1.WorkflowInvocationMetricsR\x0fworkflowMetrics\x12m\n" +
 	"\x14agent_policy_actions\x18\a \x03(\v2;.boundflow.v1.AtomicOperationResult.AgentPolicyActionsEntryR\x12agentPolicyActions\x12E\n" +
 	"\ffailure_type\x18\b \x01(\x0e2\".boundflow.v1.OperationFailureTypeR\vfailureType\x12%\n" +
-	"\x0efailure_reason\x18\t \x01(\tR\rfailureReason\x1aj\n" +
+	"\x0efailure_reason\x18\t \x01(\tR\rfailureReason\x12/\n" +
+	"\x06result\x18\n" +
+	" \x01(\v2\x17.google.protobuf.StructR\x06result\x1aj\n" +
 	"\x16AgentStateUpdatesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12:\n" +
 	"\x05value\x18\x02 \x01(\v2$.boundflow.v1.AgentInvocationMetricsR\x05value:\x028\x01\x1af\n" +
@@ -702,15 +714,16 @@ var file_boundflow_v1_operation_proto_depIdxs = []int32{
 	5,  // 8: boundflow.v1.AtomicOperationResult.workflow_metrics:type_name -> boundflow.v1.WorkflowInvocationMetrics
 	8,  // 9: boundflow.v1.AtomicOperationResult.agent_policy_actions:type_name -> boundflow.v1.AtomicOperationResult.AgentPolicyActionsEntry
 	0,  // 10: boundflow.v1.AtomicOperationResult.failure_type:type_name -> boundflow.v1.OperationFailureType
-	9,  // 11: boundflow.v1.AgentInvocationMetrics.tool_failure_counts:type_name -> boundflow.v1.AgentInvocationMetrics.ToolFailureCountsEntry
-	10, // 12: boundflow.v1.AgentInvocationMetrics.calls_per_tool:type_name -> boundflow.v1.AgentInvocationMetrics.CallsPerToolEntry
-	6,  // 13: boundflow.v1.AtomicOperationResult.AgentStateUpdatesEntry.value:type_name -> boundflow.v1.AgentInvocationMetrics
-	13, // 14: boundflow.v1.AtomicOperationResult.AgentPolicyActionsEntry.value:type_name -> boundflow.v1.AgentPolicyAction
-	15, // [15:15] is the sub-list for method output_type
-	15, // [15:15] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	11, // 11: boundflow.v1.AtomicOperationResult.result:type_name -> google.protobuf.Struct
+	9,  // 12: boundflow.v1.AgentInvocationMetrics.tool_failure_counts:type_name -> boundflow.v1.AgentInvocationMetrics.ToolFailureCountsEntry
+	10, // 13: boundflow.v1.AgentInvocationMetrics.calls_per_tool:type_name -> boundflow.v1.AgentInvocationMetrics.CallsPerToolEntry
+	6,  // 14: boundflow.v1.AtomicOperationResult.AgentStateUpdatesEntry.value:type_name -> boundflow.v1.AgentInvocationMetrics
+	13, // 15: boundflow.v1.AtomicOperationResult.AgentPolicyActionsEntry.value:type_name -> boundflow.v1.AgentPolicyAction
+	16, // [16:16] is the sub-list for method output_type
+	16, // [16:16] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_boundflow_v1_operation_proto_init() }

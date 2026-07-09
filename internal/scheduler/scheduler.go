@@ -311,7 +311,7 @@ func (s *Scheduler) completeJobs(ctx context.Context, partitionID string) error 
 		go func(job domain.CompletedJob) {
 			defer wg.Done()
 			// Transfer the run result the worker recorded on the job onto the request.
-			if _, err := s.CompleteRequest(ctx, job.RequestID, job.ResultType, job.FailureReason); err != nil {
+			if _, err := s.CompleteRequest(ctx, job.RequestID, job.ResultType, job.FailureReason, job.Result); err != nil {
 				s.log.Error("failed to process completed request", "request_id", job.RequestID, "error", err)
 			}
 		}(job)
@@ -321,10 +321,10 @@ func (s *Scheduler) completeJobs(ctx context.Context, partitionID string) error 
 }
 
 // For now this is idempotent, in the future we can have more fine grained lifecycle states to avoid redundant stuff
-func (s *Scheduler) CompleteRequest(ctx context.Context, req string, outcome domain.RunOutcome, reason string) (bool, error) {
+func (s *Scheduler) CompleteRequest(ctx context.Context, req string, outcome domain.RunOutcome, reason string, result map[string]any) (bool, error) {
 	s.log.Debug("marking request as completed", "request_id", req, "outcome", outcome)
 
-	request, err := s.requests.CompleteRequest(ctx, req, outcome, reason)
+	request, err := s.requests.CompleteRequest(ctx, req, outcome, reason, result)
 	if err != nil {
 		return false, fmt.Errorf("error completing request %s: %w", req, err)
 	}

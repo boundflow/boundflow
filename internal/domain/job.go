@@ -52,11 +52,12 @@ type Job struct {
 
 // CompletedJob is the lightweight view the completeJobs sweeper needs: the request to
 // complete plus the run result the rpcworker recorded on the job, which it transfers
-// onto the request's run_outcome.
+// onto the request's run_outcome and result.
 type CompletedJob struct {
 	RequestID     string
 	ResultType    RunOutcome
 	FailureReason string
+	Result        map[string]any
 }
 
 // FailedJob is the view the failJobs sweeper needs: the request to fail plus the

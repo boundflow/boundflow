@@ -173,7 +173,8 @@ class RequestInfo:
     """Full state of one run, from get_request_info(request_id). `status` is the run's
     lifecycle (`RunStatus`); `run_outcome` is the terminal `RunOutcome`, or None until
     the run is terminal. sequence_number orders a workflow's runs (monotonic per
-    workflow)."""
+    workflow). `result` is the run's published output (Complete(result=...)), or None
+    if the run hasn't completed or didn't publish one."""
     request_id: str
     workflow_id: str
     request_type: str
@@ -183,6 +184,7 @@ class RequestInfo:
     sequence_number: int
     created_at: datetime | None
     completed_at: datetime | None
+    result: dict | None
 
 
 @dataclass
@@ -577,6 +579,7 @@ class ControlPlaneClient:
             sequence_number=r.version,
             created_at=_ts(r, "created_at"),
             completed_at=_ts(r, "completed_at"),
+            result=MessageToDict(r.result) if r.HasField("result") else None,
         )
 
     async def approve_workflow(self, workflow_id: str, approval_id: str, actor: str = "") -> None:

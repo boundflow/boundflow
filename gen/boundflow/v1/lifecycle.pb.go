@@ -3010,9 +3010,12 @@ type RequestInfo struct {
 	RunOutcome    string                 `protobuf:"bytes,5,opt,name=run_outcome,json=runOutcome,proto3" json:"run_outcome,omitempty"`
 	FailureReason string                 `protobuf:"bytes,6,opt,name=failure_reason,json=failureReason,proto3" json:"failure_reason,omitempty"`
 	// Monotonic per-workflow sequence number (bumped on each request); orders a workflow's runs.
-	Version       int64                  `protobuf:"varint,7,opt,name=version,proto3" json:"version,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	CompletedAt   *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=completed_at,json=completedAt,proto3" json:"completed_at,omitempty"`
+	Version     int64                  `protobuf:"varint,7,opt,name=version,proto3" json:"version,omitempty"`
+	CreatedAt   *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	CompletedAt *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=completed_at,json=completedAt,proto3" json:"completed_at,omitempty"`
+	// The run's published output, set via Complete(result=...); unset until the run
+	// completes, and only if the workflow actually published one.
+	Result        *structpb.Struct `protobuf:"bytes,10,opt,name=result,proto3" json:"result,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3106,6 +3109,13 @@ func (x *RequestInfo) GetCreatedAt() *timestamppb.Timestamp {
 func (x *RequestInfo) GetCompletedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.CompletedAt
+	}
+	return nil
+}
+
+func (x *RequestInfo) GetResult() *structpb.Struct {
+	if x != nil {
+		return x.Result
 	}
 	return nil
 }
@@ -3362,7 +3372,7 @@ const file_boundflow_v1_lifecycle_proto_rawDesc = "" +
 	"\x04runs\x18\x01 \x03(\v2\x11.boundflow.v1.RunR\x04runs\"6\n" +
 	"\x15GetRequestInfoRequest\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x01 \x01(\tR\trequestId\"\xe4\x02\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\"\x95\x03\n" +
 	"\vRequestInfo\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x01 \x01(\tR\trequestId\x12\x1f\n" +
@@ -3376,7 +3386,9 @@ const file_boundflow_v1_lifecycle_proto_rawDesc = "" +
 	"\aversion\x18\a \x01(\x03R\aversion\x129\n" +
 	"\n" +
 	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12=\n" +
-	"\fcompleted_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\vcompletedAt\"M\n" +
+	"\fcompleted_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\vcompletedAt\x12/\n" +
+	"\x06result\x18\n" +
+	" \x01(\v2\x17.google.protobuf.StructR\x06result\"M\n" +
 	"\x16GetRequestInfoResponse\x123\n" +
 	"\arequest\x18\x01 \x01(\v2\x19.boundflow.v1.RequestInfoR\arequest*\xdc\x01\n" +
 	"\x0eWorkflowMetric\x12 \n" +
@@ -3538,58 +3550,59 @@ var file_boundflow_v1_lifecycle_proto_depIdxs = []int32{
 	54, // 34: boundflow.v1.ListWorkflowRunsResponse.runs:type_name -> boundflow.v1.Run
 	62, // 35: boundflow.v1.RequestInfo.created_at:type_name -> google.protobuf.Timestamp
 	62, // 36: boundflow.v1.RequestInfo.completed_at:type_name -> google.protobuf.Timestamp
-	57, // 37: boundflow.v1.GetRequestInfoResponse.request:type_name -> boundflow.v1.RequestInfo
-	3,  // 38: boundflow.v1.WorkflowService.CreateWorkflow:input_type -> boundflow.v1.CreateWorkflowRequest
-	8,  // 39: boundflow.v1.WorkflowService.InvokeWorkflow:input_type -> boundflow.v1.InvokeWorkflowRequest
-	10, // 40: boundflow.v1.WorkflowService.DeleteWorkflow:input_type -> boundflow.v1.DeleteWorkflowRequest
-	12, // 41: boundflow.v1.WorkflowService.GetWorkflow:input_type -> boundflow.v1.GetWorkflowRequest
-	5,  // 42: boundflow.v1.WorkflowService.ListWorkflows:input_type -> boundflow.v1.ListWorkflowsRequest
-	14, // 43: boundflow.v1.WorkflowService.SetAgentRuntimePolicy:input_type -> boundflow.v1.SetAgentRuntimePolicyRequest
-	16, // 44: boundflow.v1.WorkflowService.SetAgentLifecyclePolicy:input_type -> boundflow.v1.SetAgentLifecyclePolicyRequest
-	18, // 45: boundflow.v1.WorkflowService.DeleteAgent:input_type -> boundflow.v1.DeleteAgentRequest
-	23, // 46: boundflow.v1.WorkflowService.SetWorkflowLifecyclePolicy:input_type -> boundflow.v1.SetWorkflowLifecyclePolicyRequest
-	25, // 47: boundflow.v1.WorkflowService.GetWorkflowLifecyclePolicy:input_type -> boundflow.v1.GetWorkflowLifecyclePolicyRequest
-	27, // 48: boundflow.v1.WorkflowService.GetAgentRuntimePolicy:input_type -> boundflow.v1.GetAgentRuntimePolicyRequest
-	29, // 49: boundflow.v1.WorkflowService.GetAgentLifecyclePolicy:input_type -> boundflow.v1.GetAgentLifecyclePolicyRequest
-	31, // 50: boundflow.v1.WorkflowService.ApproveWorkflow:input_type -> boundflow.v1.ApproveWorkflowRequest
-	33, // 51: boundflow.v1.WorkflowService.RejectWorkflow:input_type -> boundflow.v1.RejectWorkflowRequest
-	34, // 52: boundflow.v1.WorkflowService.GetApprovalAudit:input_type -> boundflow.v1.GetApprovalAuditRequest
-	36, // 53: boundflow.v1.WorkflowService.GetApprovalAuditById:input_type -> boundflow.v1.GetApprovalAuditByIdRequest
-	38, // 54: boundflow.v1.WorkflowService.GetWorkflowPolicyAudit:input_type -> boundflow.v1.GetWorkflowPolicyAuditRequest
-	40, // 55: boundflow.v1.WorkflowService.GetAgentPolicyAudit:input_type -> boundflow.v1.GetAgentPolicyAuditRequest
-	42, // 56: boundflow.v1.WorkflowService.GetAuditLog:input_type -> boundflow.v1.GetAuditLogRequest
-	49, // 57: boundflow.v1.WorkflowService.ActivateWorkflow:input_type -> boundflow.v1.ActivateWorkflowRequest
-	51, // 58: boundflow.v1.WorkflowService.ResolveInterruptedWorkflow:input_type -> boundflow.v1.ResolveInterruptedWorkflowRequest
-	53, // 59: boundflow.v1.WorkflowService.ListWorkflowRuns:input_type -> boundflow.v1.ListWorkflowRunsRequest
-	56, // 60: boundflow.v1.WorkflowService.GetRequestInfo:input_type -> boundflow.v1.GetRequestInfoRequest
-	4,  // 61: boundflow.v1.WorkflowService.CreateWorkflow:output_type -> boundflow.v1.CreateWorkflowResponse
-	9,  // 62: boundflow.v1.WorkflowService.InvokeWorkflow:output_type -> boundflow.v1.InvokeWorkflowResponse
-	11, // 63: boundflow.v1.WorkflowService.DeleteWorkflow:output_type -> boundflow.v1.DeleteWorkflowResponse
-	13, // 64: boundflow.v1.WorkflowService.GetWorkflow:output_type -> boundflow.v1.GetWorkflowResponse
-	6,  // 65: boundflow.v1.WorkflowService.ListWorkflows:output_type -> boundflow.v1.ListWorkflowsResponse
-	15, // 66: boundflow.v1.WorkflowService.SetAgentRuntimePolicy:output_type -> boundflow.v1.SetAgentRuntimePolicyResponse
-	17, // 67: boundflow.v1.WorkflowService.SetAgentLifecyclePolicy:output_type -> boundflow.v1.SetAgentLifecyclePolicyResponse
-	19, // 68: boundflow.v1.WorkflowService.DeleteAgent:output_type -> boundflow.v1.DeleteAgentResponse
-	24, // 69: boundflow.v1.WorkflowService.SetWorkflowLifecyclePolicy:output_type -> boundflow.v1.SetWorkflowLifecyclePolicyResponse
-	26, // 70: boundflow.v1.WorkflowService.GetWorkflowLifecyclePolicy:output_type -> boundflow.v1.GetWorkflowLifecyclePolicyResponse
-	28, // 71: boundflow.v1.WorkflowService.GetAgentRuntimePolicy:output_type -> boundflow.v1.GetAgentRuntimePolicyResponse
-	30, // 72: boundflow.v1.WorkflowService.GetAgentLifecyclePolicy:output_type -> boundflow.v1.GetAgentLifecyclePolicyResponse
-	32, // 73: boundflow.v1.WorkflowService.ApproveWorkflow:output_type -> boundflow.v1.ApproveWorkflowResponse
-	48, // 74: boundflow.v1.WorkflowService.RejectWorkflow:output_type -> boundflow.v1.RejectWorkflowResponse
-	35, // 75: boundflow.v1.WorkflowService.GetApprovalAudit:output_type -> boundflow.v1.GetApprovalAuditResponse
-	37, // 76: boundflow.v1.WorkflowService.GetApprovalAuditById:output_type -> boundflow.v1.GetApprovalAuditByIdResponse
-	39, // 77: boundflow.v1.WorkflowService.GetWorkflowPolicyAudit:output_type -> boundflow.v1.GetWorkflowPolicyAuditResponse
-	41, // 78: boundflow.v1.WorkflowService.GetAgentPolicyAudit:output_type -> boundflow.v1.GetAgentPolicyAuditResponse
-	43, // 79: boundflow.v1.WorkflowService.GetAuditLog:output_type -> boundflow.v1.GetAuditLogResponse
-	50, // 80: boundflow.v1.WorkflowService.ActivateWorkflow:output_type -> boundflow.v1.ActivateWorkflowResponse
-	52, // 81: boundflow.v1.WorkflowService.ResolveInterruptedWorkflow:output_type -> boundflow.v1.ResolveInterruptedWorkflowResponse
-	55, // 82: boundflow.v1.WorkflowService.ListWorkflowRuns:output_type -> boundflow.v1.ListWorkflowRunsResponse
-	58, // 83: boundflow.v1.WorkflowService.GetRequestInfo:output_type -> boundflow.v1.GetRequestInfoResponse
-	61, // [61:84] is the sub-list for method output_type
-	38, // [38:61] is the sub-list for method input_type
-	38, // [38:38] is the sub-list for extension type_name
-	38, // [38:38] is the sub-list for extension extendee
-	0,  // [0:38] is the sub-list for field type_name
+	61, // 37: boundflow.v1.RequestInfo.result:type_name -> google.protobuf.Struct
+	57, // 38: boundflow.v1.GetRequestInfoResponse.request:type_name -> boundflow.v1.RequestInfo
+	3,  // 39: boundflow.v1.WorkflowService.CreateWorkflow:input_type -> boundflow.v1.CreateWorkflowRequest
+	8,  // 40: boundflow.v1.WorkflowService.InvokeWorkflow:input_type -> boundflow.v1.InvokeWorkflowRequest
+	10, // 41: boundflow.v1.WorkflowService.DeleteWorkflow:input_type -> boundflow.v1.DeleteWorkflowRequest
+	12, // 42: boundflow.v1.WorkflowService.GetWorkflow:input_type -> boundflow.v1.GetWorkflowRequest
+	5,  // 43: boundflow.v1.WorkflowService.ListWorkflows:input_type -> boundflow.v1.ListWorkflowsRequest
+	14, // 44: boundflow.v1.WorkflowService.SetAgentRuntimePolicy:input_type -> boundflow.v1.SetAgentRuntimePolicyRequest
+	16, // 45: boundflow.v1.WorkflowService.SetAgentLifecyclePolicy:input_type -> boundflow.v1.SetAgentLifecyclePolicyRequest
+	18, // 46: boundflow.v1.WorkflowService.DeleteAgent:input_type -> boundflow.v1.DeleteAgentRequest
+	23, // 47: boundflow.v1.WorkflowService.SetWorkflowLifecyclePolicy:input_type -> boundflow.v1.SetWorkflowLifecyclePolicyRequest
+	25, // 48: boundflow.v1.WorkflowService.GetWorkflowLifecyclePolicy:input_type -> boundflow.v1.GetWorkflowLifecyclePolicyRequest
+	27, // 49: boundflow.v1.WorkflowService.GetAgentRuntimePolicy:input_type -> boundflow.v1.GetAgentRuntimePolicyRequest
+	29, // 50: boundflow.v1.WorkflowService.GetAgentLifecyclePolicy:input_type -> boundflow.v1.GetAgentLifecyclePolicyRequest
+	31, // 51: boundflow.v1.WorkflowService.ApproveWorkflow:input_type -> boundflow.v1.ApproveWorkflowRequest
+	33, // 52: boundflow.v1.WorkflowService.RejectWorkflow:input_type -> boundflow.v1.RejectWorkflowRequest
+	34, // 53: boundflow.v1.WorkflowService.GetApprovalAudit:input_type -> boundflow.v1.GetApprovalAuditRequest
+	36, // 54: boundflow.v1.WorkflowService.GetApprovalAuditById:input_type -> boundflow.v1.GetApprovalAuditByIdRequest
+	38, // 55: boundflow.v1.WorkflowService.GetWorkflowPolicyAudit:input_type -> boundflow.v1.GetWorkflowPolicyAuditRequest
+	40, // 56: boundflow.v1.WorkflowService.GetAgentPolicyAudit:input_type -> boundflow.v1.GetAgentPolicyAuditRequest
+	42, // 57: boundflow.v1.WorkflowService.GetAuditLog:input_type -> boundflow.v1.GetAuditLogRequest
+	49, // 58: boundflow.v1.WorkflowService.ActivateWorkflow:input_type -> boundflow.v1.ActivateWorkflowRequest
+	51, // 59: boundflow.v1.WorkflowService.ResolveInterruptedWorkflow:input_type -> boundflow.v1.ResolveInterruptedWorkflowRequest
+	53, // 60: boundflow.v1.WorkflowService.ListWorkflowRuns:input_type -> boundflow.v1.ListWorkflowRunsRequest
+	56, // 61: boundflow.v1.WorkflowService.GetRequestInfo:input_type -> boundflow.v1.GetRequestInfoRequest
+	4,  // 62: boundflow.v1.WorkflowService.CreateWorkflow:output_type -> boundflow.v1.CreateWorkflowResponse
+	9,  // 63: boundflow.v1.WorkflowService.InvokeWorkflow:output_type -> boundflow.v1.InvokeWorkflowResponse
+	11, // 64: boundflow.v1.WorkflowService.DeleteWorkflow:output_type -> boundflow.v1.DeleteWorkflowResponse
+	13, // 65: boundflow.v1.WorkflowService.GetWorkflow:output_type -> boundflow.v1.GetWorkflowResponse
+	6,  // 66: boundflow.v1.WorkflowService.ListWorkflows:output_type -> boundflow.v1.ListWorkflowsResponse
+	15, // 67: boundflow.v1.WorkflowService.SetAgentRuntimePolicy:output_type -> boundflow.v1.SetAgentRuntimePolicyResponse
+	17, // 68: boundflow.v1.WorkflowService.SetAgentLifecyclePolicy:output_type -> boundflow.v1.SetAgentLifecyclePolicyResponse
+	19, // 69: boundflow.v1.WorkflowService.DeleteAgent:output_type -> boundflow.v1.DeleteAgentResponse
+	24, // 70: boundflow.v1.WorkflowService.SetWorkflowLifecyclePolicy:output_type -> boundflow.v1.SetWorkflowLifecyclePolicyResponse
+	26, // 71: boundflow.v1.WorkflowService.GetWorkflowLifecyclePolicy:output_type -> boundflow.v1.GetWorkflowLifecyclePolicyResponse
+	28, // 72: boundflow.v1.WorkflowService.GetAgentRuntimePolicy:output_type -> boundflow.v1.GetAgentRuntimePolicyResponse
+	30, // 73: boundflow.v1.WorkflowService.GetAgentLifecyclePolicy:output_type -> boundflow.v1.GetAgentLifecyclePolicyResponse
+	32, // 74: boundflow.v1.WorkflowService.ApproveWorkflow:output_type -> boundflow.v1.ApproveWorkflowResponse
+	48, // 75: boundflow.v1.WorkflowService.RejectWorkflow:output_type -> boundflow.v1.RejectWorkflowResponse
+	35, // 76: boundflow.v1.WorkflowService.GetApprovalAudit:output_type -> boundflow.v1.GetApprovalAuditResponse
+	37, // 77: boundflow.v1.WorkflowService.GetApprovalAuditById:output_type -> boundflow.v1.GetApprovalAuditByIdResponse
+	39, // 78: boundflow.v1.WorkflowService.GetWorkflowPolicyAudit:output_type -> boundflow.v1.GetWorkflowPolicyAuditResponse
+	41, // 79: boundflow.v1.WorkflowService.GetAgentPolicyAudit:output_type -> boundflow.v1.GetAgentPolicyAuditResponse
+	43, // 80: boundflow.v1.WorkflowService.GetAuditLog:output_type -> boundflow.v1.GetAuditLogResponse
+	50, // 81: boundflow.v1.WorkflowService.ActivateWorkflow:output_type -> boundflow.v1.ActivateWorkflowResponse
+	52, // 82: boundflow.v1.WorkflowService.ResolveInterruptedWorkflow:output_type -> boundflow.v1.ResolveInterruptedWorkflowResponse
+	55, // 83: boundflow.v1.WorkflowService.ListWorkflowRuns:output_type -> boundflow.v1.ListWorkflowRunsResponse
+	58, // 84: boundflow.v1.WorkflowService.GetRequestInfo:output_type -> boundflow.v1.GetRequestInfoResponse
+	62, // [62:85] is the sub-list for method output_type
+	39, // [39:62] is the sub-list for method input_type
+	39, // [39:39] is the sub-list for extension type_name
+	39, // [39:39] is the sub-list for extension extendee
+	0,  // [0:39] is the sub-list for field type_name
 }
 
 func init() { file_boundflow_v1_lifecycle_proto_init() }

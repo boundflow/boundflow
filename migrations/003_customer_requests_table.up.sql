@@ -29,5 +29,8 @@ CREATE TABLE customer_requests (
     run_outcome           run_outcome,
     failure_reason        TEXT NOT NULL DEFAULT '',
     created_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
-    completed_at             TIMESTAMPTZ
+    completed_at             TIMESTAMPTZ,
+    -- The run's published output (Complete(result=...)), NULL until completed and
+    -- NULL if the workflow never published one.
+    result                JSONB
 );

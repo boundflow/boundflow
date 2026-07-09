@@ -127,7 +127,7 @@ func (r *JobRepo) UpdateJobStatusWithReason(ctx context.Context, workflowID stri
 	return tag.RowsAffected() == 1, nil
 }
 
-func (r *JobRepo) UpdateJobStatusWithMetrics(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, resultType domain.RunOutcome, failureReason string, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
+func (r *JobRepo) UpdateJobStatusWithMetrics(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, resultType domain.RunOutcome, failureReason string, result map[string]any, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
 	agentMetricsJSON, err := json.Marshal(agentMetrics)
 	if err != nil {
 		return false, fmt.Errorf("marshal agent metrics: %w", err)
@@ -136,10 +136,18 @@ func (r *JobRepo) UpdateJobStatusWithMetrics(ctx context.Context, workflowID str
 	if err != nil {
 		return false, fmt.Errorf("marshal workflow metrics: %w", err)
 	}
+	var resultParam any
+	if result != nil {
+		resultJSON, err := json.Marshal(result)
+		if err != nil {
+			return false, fmt.Errorf("marshal result: %w", err)
+		}
+		resultParam = resultJSON
+	}
 	tag, err := r.pool.Exec(ctx,
-		`UPDATE jobs SET status = $3, result_type = $4, failure_reason = $5, agent_metrics = $6, workflow_metrics = $7
+		`UPDATE jobs SET status = $3, result_type = $4, failure_reason = $5, result = $6, agent_metrics = $7, workflow_metrics = $8
 		 WHERE workflow_id = $1 AND owner = $2`,
-		workflowID, ownerID, status, resultType, failureReason, agentMetricsJSON, workflowMetricsJSON,
+		workflowID, ownerID, status, resultType, failureReason, resultParam, agentMetricsJSON, workflowMetricsJSON,
 	)
 	if err != nil {
 		return false, fmt.Errorf("update job status with metrics: %w", err)

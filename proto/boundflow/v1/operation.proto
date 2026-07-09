@@ -47,6 +47,9 @@ message AtomicOperationResult {
   OperationFailureType failure_type = 8;
   // Human-readable detail for a soft failure (e.g. the exception text).
   string failure_reason = 9;
+  // Set by the SDK on Complete(result=...) — the run's published output, persisted
+  // on the request for later retrieval via GetRequestInfo. Unset otherwise.
+  google.protobuf.Struct result = 10;
 }
 
 enum OperationFailureType {

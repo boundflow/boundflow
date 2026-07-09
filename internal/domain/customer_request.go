@@ -47,4 +47,7 @@ type CustomerRequest struct {
 	FailureReason string
 	CreatedAt     time.Time
 	CompletedAt   *time.Time
+	// Result is the run's published output, set via Complete(result=...); nil until
+	// the request is terminal, and nil if the workflow never published one.
+	Result map[string]any
 }

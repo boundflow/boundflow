@@ -1,6 +1,7 @@
 package convert
 
 import (
+	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
@@ -74,6 +75,11 @@ func RequestInfoToProto(r *domain.CustomerRequest) *boundflowv1.RequestInfo {
 	}
 	if r.CompletedAt != nil {
 		info.CompletedAt = timestamppb.New(*r.CompletedAt)
+	}
+	if r.Result != nil {
+		if s, err := structpb.NewStruct(r.Result); err == nil {
+			info.Result = s
+		}
 	}
 	return info
 }
