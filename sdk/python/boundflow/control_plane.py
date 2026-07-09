@@ -516,12 +516,18 @@ class ControlPlaneClient:
             lc.ResolveInterruptedWorkflowRequest(workflow_id=workflow_id, request_id=request_id),
             metadata=self._metadata)
 
-    async def invoke_workflow(self, workflow_id: str, *, operation_timeout_seconds: int = 0) -> str:
+    async def invoke_workflow(self, workflow_id: str, *, operation_timeout_seconds: int = 0,
+                              context: dict | None = None) -> str:
         """Trigger a run; returns the request_id — the run/trace id you can use to
-        find this invocation's trace later."""
+        find this invocation's trace later.
+
+        `context` is optional per-run input; operations read and write it via
+        `ctx.context` (the caller's own data, kept apart from the runtime's keys in the
+        raw job context). Keep it small (input/coordination data, not a datastore)."""
         resp = await self._lc.InvokeWorkflow(lc.InvokeWorkflowRequest(
             workflow_id=workflow_id,
             runtime_overrides=lc.RuntimeOverrides(operation_timeout_seconds=operation_timeout_seconds),
+            initial_context=_struct(context) if context else None,
         ), metadata=self._metadata)
         return resp.request_id
 

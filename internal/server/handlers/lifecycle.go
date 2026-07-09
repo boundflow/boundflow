@@ -112,7 +112,12 @@ func (h *WorkflowServiceHandler) InvokeWorkflow(ctx context.Context, req *boundf
 		params.OperationTimeoutSeconds = int(req.RuntimeOverrides.OperationTimeoutSeconds)
 	}
 
-	requestID, err := h.svc.InvokeWorkflow(ctx, req.CorrelationId, req.WorkflowId, params)
+	var initialContext map[string]any
+	if req.InitialContext != nil {
+		initialContext = req.InitialContext.AsMap()
+	}
+
+	requestID, err := h.svc.InvokeWorkflow(ctx, req.CorrelationId, req.WorkflowId, params, initialContext)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Errorf(codes.NotFound, "workflow instance not found")
