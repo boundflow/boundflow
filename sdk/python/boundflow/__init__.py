@@ -33,7 +33,7 @@ from .errors import (
     UnauthenticatedError,
     UnavailableError,
 )
-from .llm import MockLlmClient, MockContext, Turn, turn, submit
+from .llm import AgentCallTimeout, MockLlmClient, MockContext, Turn, turn, submit
 from .trace import (
     AgentRunTrace,
     JsonlFileTraceSink,
@@ -76,7 +76,7 @@ __all__ = [
     "AnthropicLlmClient",
     "ControlPlaneClient", "LifecycleState", "RunStatus", "RunOutcome", "Run", "RequestInfo",
     "Tenant", "TenantGroup", "Workflow",
-    "WorkflowConfig", "WorkflowState", "WorkflowInfo", "InvokeMode", "ApprovalAuditRecord", "ApprovalDecision", "PolicyActionRecord", "WorkflowPolicyAction", "AgentPolicyActionRecord", "MockLlmClient", "MockContext", "Turn",
+    "WorkflowConfig", "WorkflowState", "WorkflowInfo", "InvokeMode", "ApprovalAuditRecord", "ApprovalDecision", "PolicyActionRecord", "WorkflowPolicyAction", "AgentPolicyActionRecord", "AgentCallTimeout", "MockLlmClient", "MockContext", "Turn",
     "turn", "submit", "AgentMetric", "AgentRule", "Cooldown", "Op", "Pause",
     "RuntimePolicy", "SetMaxCostUsd", "SetMaxLlmCalls", "SetMaxTokensPerCall",
     "SetModel", "SetVersion", "ToolCallLimit", "WorkflowMetric", "WorkflowRule",

@@ -82,6 +82,7 @@ func agentRuntimePolicyFromProto(p *boundflowv1.AgentRuntimePolicy) domain.Agent
 		MaxLlmCalls:      int(p.MaxLlmCalls),
 		MaxCostUsd:       p.MaxCostUsd,
 		MaxTokensPerCall: int(p.MaxTokensPerCall),
+		MaxCallSeconds:   p.MaxCallSeconds,
 		ToolCallLimits:   limits,
 	}
 }
@@ -96,6 +97,7 @@ func agentRuntimePolicyToProto(p domain.AgentRuntimePolicy) *boundflowv1.AgentRu
 		MaxLlmCalls:      int32(p.MaxLlmCalls),
 		MaxCostUsd:       p.MaxCostUsd,
 		MaxTokensPerCall: int32(p.MaxTokensPerCall),
+		MaxCallSeconds:   p.MaxCallSeconds,
 		ToolCallLimits:   limits,
 	}
 }

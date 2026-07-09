@@ -38,6 +38,7 @@ message AgentRuntimePolicy {
   double max_cost_usd               = 3;
   int32  max_tokens_per_call        = 4;
   repeated ToolCallLimit tool_call_limits = 5;
+  double max_call_seconds           = 6;  // 0 = unset
 }
 
 enum AgentRuleActionField {

@@ -18,6 +18,7 @@ type AgentRuntimePolicy struct {
 	MaxLlmCalls      int             `json:"max_llm_calls"`
 	MaxCostUsd       float64         `json:"max_cost_usd"`
 	MaxTokensPerCall int             `json:"max_tokens_per_call"`
+	MaxCallSeconds   float64         `json:"max_call_seconds"`
 	ToolCallLimits   []ToolCallLimit `json:"tool_call_limits,omitempty"`
 }
 

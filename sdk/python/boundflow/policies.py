@@ -21,11 +21,14 @@ class ToolCallLimit(BaseModel):
 
 
 class RuntimePolicy(BaseModel):
-    """Hard caps enforced SDK-side during the agent loop."""
+    """Hard caps enforced SDK-side during the agent loop. Unlike the other caps —
+    which force a graceful submit_result on the next turn — max_call_seconds cancels
+    an in-flight LLM call outright, since a hung call never reaches a next turn."""
 
     max_llm_calls: int = 0
     max_cost_usd: float = 0
     max_tokens_per_call: int = 0
+    max_call_seconds: float = 0  # 0 = unset (no per-call timeout)
     tool_call_limits: list[ToolCallLimit] = Field(default_factory=list)
     model: str | None = None
 
