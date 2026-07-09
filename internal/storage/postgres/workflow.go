@@ -96,15 +96,21 @@ func (r *WorkflowRepo) Get(ctx context.Context, id string) (*domain.Workflow, er
 	var instance domain.Workflow
 	var lifecyclePolicyJSON, invocationMetricsJSON []byte
 	var invokeMode string
+	var approvalID, approvalJustification *string
+	var approvalMetadataJSON []byte
+	var approvalOpenedAt, approvalTimeoutAt *time.Time
 
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, tenant_id, workflow_type,
-		        invoke_timeout_seconds, repeat_every_seconds, triggerable, invoke_mode, max_queue_depth,
-		        lifecycle_state, workflow_state, lifecycle_policy, invocation_metrics, cooldown_until,
-		        lifecycle_last_resolved, current_workflow_version, scheduler_partition_id,
-		        target_version, current_version, last_completed_request_at,
-		        last_interrupted_request_id, created_at
-		 FROM workflows WHERE id = $1`, id,
+		`SELECT w.id, w.tenant_id, w.workflow_type,
+		        w.invoke_timeout_seconds, w.repeat_every_seconds, w.triggerable, w.invoke_mode, w.max_queue_depth,
+		        w.lifecycle_state, w.workflow_state, w.lifecycle_policy, w.invocation_metrics, w.cooldown_until,
+		        w.lifecycle_last_resolved, w.current_workflow_version, w.scheduler_partition_id,
+		        w.target_version, w.current_version, w.last_completed_request_at,
+		        w.last_interrupted_request_id, w.created_at,
+		        j.approval_id, j.approval_justification, j.approval_metadata, j.approval_opened_at, j.approval_timeout_at
+		 FROM workflows w
+		 LEFT JOIN jobs j ON j.workflow_id = w.id AND j.status = 'awaiting_approval'
+		 WHERE w.id = $1`, id,
 	).Scan(
 		&instance.ID, &instance.TenantID, &instance.WorkflowType,
 		&instance.WorkflowConfig.InvokeTimeoutSeconds,
@@ -116,6 +122,7 @@ func (r *WorkflowRepo) Get(ctx context.Context, id string) (*domain.Workflow, er
 		&instance.LifecycleLastResolved, &instance.CurrentWorkflowVersion, &instance.SchedulerPartitionID,
 		&instance.TargetVersion, &instance.CurrentVersion,
 		&instance.LastCompletedRequestAt, &instance.LastInterruptedRequestID, &instance.CreatedAt,
+		&approvalID, &approvalJustification, &approvalMetadataJSON, &approvalOpenedAt, &approvalTimeoutAt,
 	)
 	if err != nil {
 		return nil, handleError(err, "workflow instance")
@@ -131,6 +138,23 @@ func (r *WorkflowRepo) Get(ctx context.Context, id string) (*domain.Workflow, er
 	sort.Slice(instance.InvocationMetrics, func(i, j int) bool {
 		return instance.InvocationMetrics[i].RanAt < instance.InvocationMetrics[j].RanAt
 	})
+
+	if approvalID != nil {
+		pending := &domain.PendingApproval{
+			ApprovalID: *approvalID,
+			OpenedAt:   approvalOpenedAt,
+			TimeoutAt:  approvalTimeoutAt,
+		}
+		if approvalJustification != nil {
+			pending.Justification = *approvalJustification
+		}
+		if approvalMetadataJSON != nil {
+			if err := json.Unmarshal(approvalMetadataJSON, &pending.Metadata); err != nil {
+				return nil, fmt.Errorf("unmarshal approval metadata: %w", err)
+			}
+		}
+		instance.PendingApproval = pending
+	}
 
 	return &instance, nil
 }

@@ -37,5 +37,8 @@ CREATE TABLE jobs (
     -- Approval gate: only populated when status = awaiting_approval/approved/rejected.
     approval_id              TEXT,
     approval_opened_at       TIMESTAMPTZ,
-    approval_timeout_at      TIMESTAMPTZ
+    approval_timeout_at      TIMESTAMPTZ,
+    -- Published for external readers while the gate is open (Workflow.pending_approval).
+    approval_justification   TEXT NOT NULL DEFAULT '',
+    approval_metadata        JSONB
 );

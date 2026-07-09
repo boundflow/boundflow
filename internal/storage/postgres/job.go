@@ -246,7 +246,7 @@ func (r *JobRepo) SweepExpiredApprovals(ctx context.Context, partitionID string)
 	return out, rows.Err()
 }
 
-func (r *JobRepo) ParkForApproval(ctx context.Context, workflowID string, ownerID string, approvalID string, timeoutSeconds int, metadata domain.JobMetadata, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
+func (r *JobRepo) ParkForApproval(ctx context.Context, workflowID string, ownerID string, approvalID string, timeoutSeconds int, justification string, approvalMetadata map[string]any, metadata domain.JobMetadata, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
 	metadataJSON, err := json.Marshal(metadata)
 	if err != nil {
 		return false, fmt.Errorf("marshal job metadata: %w", err)
@@ -259,14 +259,24 @@ func (r *JobRepo) ParkForApproval(ctx context.Context, workflowID string, ownerI
 	if err != nil {
 		return false, fmt.Errorf("marshal workflow metrics: %w", err)
 	}
+	var approvalMetadataParam any
+	if approvalMetadata != nil {
+		approvalMetadataJSON, err := json.Marshal(approvalMetadata)
+		if err != nil {
+			return false, fmt.Errorf("marshal approval metadata: %w", err)
+		}
+		approvalMetadataParam = approvalMetadataJSON
+	}
 	tag, err := r.pool.Exec(ctx,
 		`UPDATE jobs
 		 SET status = $3, approval_id = $4,
 		     approval_opened_at = now(), approval_timeout_at = now() + make_interval(secs => $5),
-		     job_metadata = $6, agent_metrics = $7, workflow_metrics = $8,
+		     approval_justification = $6, approval_metadata = $7,
+		     job_metadata = $8, agent_metrics = $9, workflow_metrics = $10,
 		     context = '{}'::jsonb, timeout_seconds = 0, current_atomic_operation = ''
 		 WHERE workflow_id = $1 AND owner = $2`,
-		workflowID, ownerID, domain.JobStatusAwaitingApproval, approvalID, timeoutSeconds, metadataJSON, agentMetricsJSON, workflowMetricsJSON,
+		workflowID, ownerID, domain.JobStatusAwaitingApproval, approvalID, timeoutSeconds,
+		justification, approvalMetadataParam, metadataJSON, agentMetricsJSON, workflowMetricsJSON,
 	)
 	if err != nil {
 		return false, fmt.Errorf("park job for approval: %w", err)
@@ -324,7 +334,8 @@ func (r *JobRepo) UpdateJob(ctx context.Context, workflowID string, ownerID stri
 	tag, err := r.pool.Exec(ctx,
 		`UPDATE jobs
 		 SET status = $3, current_atomic_operation = $4, timeout_seconds = $5, context = $6,
-		     approval_id = NULL, approval_timeout_at = NULL, job_metadata = '{}'
+		     approval_id = NULL, approval_timeout_at = NULL, approval_justification = '', approval_metadata = NULL,
+		     job_metadata = '{}'
 		 WHERE workflow_id = $1 AND owner = $2`,
 		workflowID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, contextJSON,
 	)
@@ -351,7 +362,8 @@ func (r *JobRepo) UpdateJobWithMetrics(ctx context.Context, workflowID string, o
 	tag, err := r.pool.Exec(ctx,
 		`UPDATE jobs
 		 SET status = $3, current_atomic_operation = $4, timeout_seconds = $5, context = $6, agent_metrics = $7, workflow_metrics = $8,
-		     approval_id = NULL, approval_timeout_at = NULL, job_metadata = '{}'
+		     approval_id = NULL, approval_timeout_at = NULL, approval_justification = '', approval_metadata = NULL,
+		     job_metadata = '{}'
 		 WHERE workflow_id = $1 AND owner = $2`,
 		workflowID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, contextJSON, agentMetricsJSON, workflowMetricsJSON,
 	)

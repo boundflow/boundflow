@@ -804,18 +804,18 @@ func (mr *MockJobRepositoryMockRecorder) MarkOrphanedJobsFailed(ctx, partitionID
 }
 
 // ParkForApproval mocks base method.
-func (m *MockJobRepository) ParkForApproval(ctx context.Context, workflowID, ownerID, approvalID string, timeoutSeconds int, metadata domain.JobMetadata, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
+func (m *MockJobRepository) ParkForApproval(ctx context.Context, workflowID, ownerID, approvalID string, timeoutSeconds int, justification string, approvalMetadata map[string]any, metadata domain.JobMetadata, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ParkForApproval", ctx, workflowID, ownerID, approvalID, timeoutSeconds, metadata, agentMetrics, workflowMetrics)
+	ret := m.ctrl.Call(m, "ParkForApproval", ctx, workflowID, ownerID, approvalID, timeoutSeconds, justification, approvalMetadata, metadata, agentMetrics, workflowMetrics)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ParkForApproval indicates an expected call of ParkForApproval.
-func (mr *MockJobRepositoryMockRecorder) ParkForApproval(ctx, workflowID, ownerID, approvalID, timeoutSeconds, metadata, agentMetrics, workflowMetrics any) *gomock.Call {
+func (mr *MockJobRepositoryMockRecorder) ParkForApproval(ctx, workflowID, ownerID, approvalID, timeoutSeconds, justification, approvalMetadata, metadata, agentMetrics, workflowMetrics any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParkForApproval", reflect.TypeOf((*MockJobRepository)(nil).ParkForApproval), ctx, workflowID, ownerID, approvalID, timeoutSeconds, metadata, agentMetrics, workflowMetrics)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParkForApproval", reflect.TypeOf((*MockJobRepository)(nil).ParkForApproval), ctx, workflowID, ownerID, approvalID, timeoutSeconds, justification, approvalMetadata, metadata, agentMetrics, workflowMetrics)
 }
 
 // ReleaseJob mocks base method.

@@ -129,9 +129,24 @@ class WorkflowPolicyAction(str, Enum):
 
 
 @dataclass
+class PendingApproval:
+    """The currently open approval gate for a workflow (WorkflowInfo.pending_approval,
+    populated only while lifecycle_state is AWAITING_APPROVAL). approval_id is what
+    approve_workflow/reject_workflow expect — this is how an external caller (e.g. a
+    page reload with no in-process on_approval_requested state) discovers it."""
+    approval_id: str
+    justification: str
+    metadata: dict
+    opened_at: datetime | None
+    timeout_at: datetime | None
+
+
+@dataclass
 class WorkflowInfo:
     """A read-only view of a workflow — its current version, lifecycle state, and
-    workflow state. Returned by `get_workflow` (one) and `list_workflows` (all)."""
+    workflow state. Returned by `get_workflow` (one) and `list_workflows` (all).
+    pending_approval is only populated by `get_workflow` (None from `list_workflows`,
+    which returns a lighter view) and only while lifecycle_state is AWAITING_APPROVAL."""
     id: str
     workflow_type: str
     tenant_id: str
@@ -139,6 +154,7 @@ class WorkflowInfo:
     workflow_state: WorkflowState
     version: int
     last_interrupted_request_id: str
+    pending_approval: PendingApproval | None = None
 
 
 def _workflow_info(w) -> WorkflowInfo:
@@ -150,6 +166,18 @@ def _workflow_info(w) -> WorkflowInfo:
         workflow_state=_WF_STATE.get(w.workflow_state, WorkflowState.UNSPECIFIED),
         version=w.workflow_config.version,
         last_interrupted_request_id=w.last_interrupted_request_id,
+        pending_approval=_pending_approval(w) if w.HasField("pending_approval") else None,
+    )
+
+
+def _pending_approval(w) -> PendingApproval:
+    p = w.pending_approval
+    return PendingApproval(
+        approval_id=p.approval_id,
+        justification=p.justification,
+        metadata=MessageToDict(p.metadata) if p.HasField("metadata") else {},
+        opened_at=_ts(p, "opened_at"),
+        timeout_at=_ts(p, "timeout_at"),
     )
 
 
