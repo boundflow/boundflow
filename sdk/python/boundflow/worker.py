@@ -208,6 +208,7 @@ class OperationContext:
             "tokens_used": result.tokens_used,
             "calls_per_tool": dict(result.calls_per_tool),
             "tool_failure_counts": dict(result.tool_failure_counts),
+            "latency_seconds": (_run_end - _run_start) / 1000.0,
             "ran_at": int(time.time() * 1000),
         }
         if self._sink is not None:

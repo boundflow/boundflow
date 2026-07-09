@@ -55,6 +55,7 @@ def metrics_to_proto(snapshot: dict) -> op_pb.AgentInvocationMetrics:
         cost_usd=snapshot.get("cost_usd", 0.0),
         llm_calls=snapshot.get("llm_calls", 0),
         tokens_used=snapshot.get("tokens_used", 0),
+        latency_seconds=snapshot.get("latency_seconds", 0.0),
         ran_at=snapshot.get("ran_at", 0),
     )
     for tool, count in (snapshot.get("calls_per_tool") or {}).items():
@@ -89,6 +90,7 @@ def _runtime_policy_to_proto(p) -> ap_pb.AgentRuntimePolicy:
         max_llm_calls=p.max_llm_calls,
         max_cost_usd=p.max_cost_usd,
         max_tokens_per_call=p.max_tokens_per_call,
+        max_call_seconds=p.max_call_seconds,
         tool_call_limits=[ap_pb.ToolCallLimit(tool=l.tool, max_calls=l.max_calls) for l in p.tool_call_limits],
     )
 

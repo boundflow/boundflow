@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1f\x62oundflow/v1/agent_policy.proto\x12\x0c\x62oundflow.v1\"0\n\rToolCallLimit\x12\x0c\n\x04tool\x18\x01 \x01(\t\x12\x11\n\tmax_calls\x18\x02 \x01(\x05\"\xa4\x01\n\x12\x41gentRuntimePolicy\x12\r\n\x05model\x18\x01 \x01(\t\x12\x15\n\rmax_llm_calls\x18\x02 \x01(\x05\x12\x14\n\x0cmax_cost_usd\x18\x03 \x01(\x01\x12\x1b\n\x13max_tokens_per_call\x18\x04 \x01(\x05\x12\x35\n\x10tool_call_limits\x18\x05 \x03(\x0b\x32\x1b.boundflow.v1.ToolCallLimit\"\x9d\x01\n\x0f\x41gentRuleAction\x12\x31\n\x05\x66ield\x18\x01 \x01(\x0e\x32\".boundflow.v1.AgentRuleActionField\x12\r\n\x05model\x18\x02 \x01(\t\x12\x15\n\rmax_llm_calls\x18\x03 \x01(\x05\x12\x14\n\x0cmax_cost_usd\x18\x04 \x01(\x01\x12\x1b\n\x13max_tokens_per_call\x18\x05 \x01(\x05\"\xb9\x01\n\tAgentRule\x12)\n\x06metric\x18\x01 \x01(\x0e\x32\x19.boundflow.v1.AgentMetric\x12!\n\x02op\x18\x02 \x01(\x0e\x32\x15.boundflow.v1.AgentOp\x12\x11\n\tthreshold\x18\x03 \x01(\x01\x12\x0e\n\x06window\x18\x04 \x01(\x05\x12\x0c\n\x04tool\x18\x05 \x01(\t\x12-\n\x06\x61\x63tion\x18\x06 \x01(\x0b\x32\x1d.boundflow.v1.AgentRuleAction\"N\n\x0e\x46iredAgentRule\x12%\n\x04rule\x18\x01 \x01(\x0b\x32\x17.boundflow.v1.AgentRule\x12\x15\n\rtrigger_value\x18\x02 \x01(\x01\"\xb9\x01\n\x11\x41gentPolicyAction\x12\x35\n\x0b\x62\x61se_policy\x18\x01 \x01(\x0b\x32 .boundflow.v1.AgentRuntimePolicy\x12:\n\x10\x65\x66\x66\x65\x63tive_policy\x18\x02 \x01(\x0b\x32 .boundflow.v1.AgentRuntimePolicy\x12\x31\n\x0b\x66ired_rules\x18\x03 \x03(\x0b\x32\x1c.boundflow.v1.FiredAgentRule*\xa1\x01\n\x0b\x41gentMetric\x12\x1c\n\x18\x41GENT_METRIC_UNSPECIFIED\x10\x00\x12\x1c\n\x18\x41GENT_METRIC_TOKENS_USED\x10\x01\x12\x19\n\x15\x41GENT_METRIC_COST_USD\x10\x02\x12\x1a\n\x16\x41GENT_METRIC_LLM_CALLS\x10\x03\x12\x1f\n\x1b\x41GENT_METRIC_CALLS_PER_TOOL\x10\x04*z\n\x07\x41gentOp\x12\x18\n\x14\x41GENT_OP_UNSPECIFIED\x10\x00\x12\x0f\n\x0b\x41GENT_OP_LT\x10\x01\x12\x10\n\x0c\x41GENT_OP_LTE\x10\x02\x12\x0f\n\x0b\x41GENT_OP_GT\x10\x03\x12\x10\n\x0c\x41GENT_OP_GTE\x10\x04\x12\x0f\n\x0b\x41GENT_OP_EQ\x10\x05*\xda\x01\n\x14\x41gentRuleActionField\x12!\n\x1d\x41GENT_RULE_ACTION_UNSPECIFIED\x10\x00\x12\x1f\n\x1b\x41GENT_RULE_ACTION_SET_MODEL\x10\x01\x12\'\n#AGENT_RULE_ACTION_SET_MAX_LLM_CALLS\x10\x02\x12&\n\"AGENT_RULE_ACTION_SET_MAX_COST_USD\x10\x03\x12-\n)AGENT_RULE_ACTION_SET_MAX_TOKENS_PER_CALL\x10\x04\x42=Z;github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1f\x62oundflow/v1/agent_policy.proto\x12\x0c\x62oundflow.v1\"0\n\rToolCallLimit\x12\x0c\n\x04tool\x18\x01 \x01(\t\x12\x11\n\tmax_calls\x18\x02 \x01(\x05\"\xbe\x01\n\x12\x41gentRuntimePolicy\x12\r\n\x05model\x18\x01 \x01(\t\x12\x15\n\rmax_llm_calls\x18\x02 \x01(\x05\x12\x14\n\x0cmax_cost_usd\x18\x03 \x01(\x01\x12\x1b\n\x13max_tokens_per_call\x18\x04 \x01(\x05\x12\x35\n\x10tool_call_limits\x18\x05 \x03(\x0b\x32\x1b.boundflow.v1.ToolCallLimit\x12\x18\n\x10max_call_seconds\x18\x06 \x01(\x01\"\x9d\x01\n\x0f\x41gentRuleAction\x12\x31\n\x05\x66ield\x18\x01 \x01(\x0e\x32\".boundflow.v1.AgentRuleActionField\x12\r\n\x05model\x18\x02 \x01(\t\x12\x15\n\rmax_llm_calls\x18\x03 \x01(\x05\x12\x14\n\x0cmax_cost_usd\x18\x04 \x01(\x01\x12\x1b\n\x13max_tokens_per_call\x18\x05 \x01(\x05\"\xb9\x01\n\tAgentRule\x12)\n\x06metric\x18\x01 \x01(\x0e\x32\x19.boundflow.v1.AgentMetric\x12!\n\x02op\x18\x02 \x01(\x0e\x32\x15.boundflow.v1.AgentOp\x12\x11\n\tthreshold\x18\x03 \x01(\x01\x12\x0e\n\x06window\x18\x04 \x01(\x05\x12\x0c\n\x04tool\x18\x05 \x01(\t\x12-\n\x06\x61\x63tion\x18\x06 \x01(\x0b\x32\x1d.boundflow.v1.AgentRuleAction\"N\n\x0e\x46iredAgentRule\x12%\n\x04rule\x18\x01 \x01(\x0b\x32\x17.boundflow.v1.AgentRule\x12\x15\n\rtrigger_value\x18\x02 \x01(\x01\"\xb9\x01\n\x11\x41gentPolicyAction\x12\x35\n\x0b\x62\x61se_policy\x18\x01 \x01(\x0b\x32 .boundflow.v1.AgentRuntimePolicy\x12:\n\x10\x65\x66\x66\x65\x63tive_policy\x18\x02 \x01(\x0b\x32 .boundflow.v1.AgentRuntimePolicy\x12\x31\n\x0b\x66ired_rules\x18\x03 \x03(\x0b\x32\x1c.boundflow.v1.FiredAgentRule*\xa1\x01\n\x0b\x41gentMetric\x12\x1c\n\x18\x41GENT_METRIC_UNSPECIFIED\x10\x00\x12\x1c\n\x18\x41GENT_METRIC_TOKENS_USED\x10\x01\x12\x19\n\x15\x41GENT_METRIC_COST_USD\x10\x02\x12\x1a\n\x16\x41GENT_METRIC_LLM_CALLS\x10\x03\x12\x1f\n\x1b\x41GENT_METRIC_CALLS_PER_TOOL\x10\x04*z\n\x07\x41gentOp\x12\x18\n\x14\x41GENT_OP_UNSPECIFIED\x10\x00\x12\x0f\n\x0b\x41GENT_OP_LT\x10\x01\x12\x10\n\x0c\x41GENT_OP_LTE\x10\x02\x12\x0f\n\x0b\x41GENT_OP_GT\x10\x03\x12\x10\n\x0c\x41GENT_OP_GTE\x10\x04\x12\x0f\n\x0b\x41GENT_OP_EQ\x10\x05*\xda\x01\n\x14\x41gentRuleActionField\x12!\n\x1d\x41GENT_RULE_ACTION_UNSPECIFIED\x10\x00\x12\x1f\n\x1b\x41GENT_RULE_ACTION_SET_MODEL\x10\x01\x12\'\n#AGENT_RULE_ACTION_SET_MAX_LLM_CALLS\x10\x02\x12&\n\"AGENT_RULE_ACTION_SET_MAX_COST_USD\x10\x03\x12-\n)AGENT_RULE_ACTION_SET_MAX_TOKENS_PER_CALL\x10\x04\x42=Z;github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,22 +32,22 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'boundflow.v1.agent_policy_p
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z;github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1'
-  _globals['_AGENTMETRIC']._serialized_start=883
-  _globals['_AGENTMETRIC']._serialized_end=1044
-  _globals['_AGENTOP']._serialized_start=1046
-  _globals['_AGENTOP']._serialized_end=1168
-  _globals['_AGENTRULEACTIONFIELD']._serialized_start=1171
-  _globals['_AGENTRULEACTIONFIELD']._serialized_end=1389
+  _globals['_AGENTMETRIC']._serialized_start=909
+  _globals['_AGENTMETRIC']._serialized_end=1070
+  _globals['_AGENTOP']._serialized_start=1072
+  _globals['_AGENTOP']._serialized_end=1194
+  _globals['_AGENTRULEACTIONFIELD']._serialized_start=1197
+  _globals['_AGENTRULEACTIONFIELD']._serialized_end=1415
   _globals['_TOOLCALLLIMIT']._serialized_start=49
   _globals['_TOOLCALLLIMIT']._serialized_end=97
   _globals['_AGENTRUNTIMEPOLICY']._serialized_start=100
-  _globals['_AGENTRUNTIMEPOLICY']._serialized_end=264
-  _globals['_AGENTRULEACTION']._serialized_start=267
-  _globals['_AGENTRULEACTION']._serialized_end=424
-  _globals['_AGENTRULE']._serialized_start=427
-  _globals['_AGENTRULE']._serialized_end=612
-  _globals['_FIREDAGENTRULE']._serialized_start=614
-  _globals['_FIREDAGENTRULE']._serialized_end=692
-  _globals['_AGENTPOLICYACTION']._serialized_start=695
-  _globals['_AGENTPOLICYACTION']._serialized_end=880
+  _globals['_AGENTRUNTIMEPOLICY']._serialized_end=290
+  _globals['_AGENTRULEACTION']._serialized_start=293
+  _globals['_AGENTRULEACTION']._serialized_end=450
+  _globals['_AGENTRULE']._serialized_start=453
+  _globals['_AGENTRULE']._serialized_end=638
+  _globals['_FIREDAGENTRULE']._serialized_start=640
+  _globals['_FIREDAGENTRULE']._serialized_end=718
+  _globals['_AGENTPOLICYACTION']._serialized_start=721
+  _globals['_AGENTPOLICYACTION']._serialized_end=906
 # @@protoc_insertion_point(module_scope)

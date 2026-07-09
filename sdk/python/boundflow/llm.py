@@ -7,6 +7,7 @@ port of BoundFlow.SDK Orchestrator.RunAsync.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass, field
 from typing import Any, Callable, Protocol
@@ -128,6 +129,12 @@ class LlmResponse:
 
 class LlmClient(Protocol):
     async def complete(self, request: LlmRequest) -> LlmResponse: ...
+
+
+class AgentCallTimeout(Exception):
+    """Raised when an LLM call exceeds RuntimePolicy.max_call_seconds. A customer-
+    domain failure like any other callback exception — the operation completes
+    (marked failed) and the workflow stays active."""
 
 
 # ── Scripted mock ─────────────────────────────────────────────────────────────
@@ -318,7 +325,14 @@ class Orchestrator:
             )
             log.debug("llm_call #%d forced_tool=%s", llm_calls + 1, req.forced_tool)
             _llm_start = now_ms()
-            resp = await self._client.complete(req)
+            try:
+                if cfg.policy.max_call_seconds > 0:
+                    resp = await asyncio.wait_for(self._client.complete(req), timeout=cfg.policy.max_call_seconds)
+                else:
+                    resp = await self._client.complete(req)
+            except asyncio.TimeoutError:
+                raise AgentCallTimeout(
+                    f"LLM call exceeded max_call_seconds={cfg.policy.max_call_seconds}") from None
             _llm_end = now_ms()
             _input_messages = _gen_ai_input_messages(req)  # snapshot as-sent, before appending the reply
 

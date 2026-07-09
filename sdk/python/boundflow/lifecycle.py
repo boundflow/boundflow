@@ -47,6 +47,7 @@ def load_runtime_policy(node: dict | None) -> RuntimePolicy:
         max_llm_calls=node.get("max_llm_calls", 0),
         max_cost_usd=node.get("max_cost_usd", 0),
         max_tokens_per_call=node.get("max_tokens_per_call", 0),
+        max_call_seconds=node.get("max_call_seconds", 0),
         tool_call_limits=limits,
         model=node.get("model"),
     )

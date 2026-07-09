@@ -249,6 +249,7 @@ type AgentRuntimePolicy struct {
 	MaxCostUsd       float64                `protobuf:"fixed64,3,opt,name=max_cost_usd,json=maxCostUsd,proto3" json:"max_cost_usd,omitempty"`
 	MaxTokensPerCall int32                  `protobuf:"varint,4,opt,name=max_tokens_per_call,json=maxTokensPerCall,proto3" json:"max_tokens_per_call,omitempty"`
 	ToolCallLimits   []*ToolCallLimit       `protobuf:"bytes,5,rep,name=tool_call_limits,json=toolCallLimits,proto3" json:"tool_call_limits,omitempty"`
+	MaxCallSeconds   float64                `protobuf:"fixed64,6,opt,name=max_call_seconds,json=maxCallSeconds,proto3" json:"max_call_seconds,omitempty"` // 0 = unset
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -316,6 +317,13 @@ func (x *AgentRuntimePolicy) GetToolCallLimits() []*ToolCallLimit {
 		return x.ToolCallLimits
 	}
 	return nil
+}
+
+func (x *AgentRuntimePolicy) GetMaxCallSeconds() float64 {
+	if x != nil {
+		return x.MaxCallSeconds
+	}
+	return 0
 }
 
 // AgentRuleAction is the discriminated SDK action: the field set, with the value
@@ -603,14 +611,15 @@ const file_boundflow_v1_agent_policy_proto_rawDesc = "" +
 	"\x1fboundflow/v1/agent_policy.proto\x12\fboundflow.v1\"@\n" +
 	"\rToolCallLimit\x12\x12\n" +
 	"\x04tool\x18\x01 \x01(\tR\x04tool\x12\x1b\n" +
-	"\tmax_calls\x18\x02 \x01(\x05R\bmaxCalls\"\xe6\x01\n" +
+	"\tmax_calls\x18\x02 \x01(\x05R\bmaxCalls\"\x90\x02\n" +
 	"\x12AgentRuntimePolicy\x12\x14\n" +
 	"\x05model\x18\x01 \x01(\tR\x05model\x12\"\n" +
 	"\rmax_llm_calls\x18\x02 \x01(\x05R\vmaxLlmCalls\x12 \n" +
 	"\fmax_cost_usd\x18\x03 \x01(\x01R\n" +
 	"maxCostUsd\x12-\n" +
 	"\x13max_tokens_per_call\x18\x04 \x01(\x05R\x10maxTokensPerCall\x12E\n" +
-	"\x10tool_call_limits\x18\x05 \x03(\v2\x1b.boundflow.v1.ToolCallLimitR\x0etoolCallLimits\"\xd6\x01\n" +
+	"\x10tool_call_limits\x18\x05 \x03(\v2\x1b.boundflow.v1.ToolCallLimitR\x0etoolCallLimits\x12(\n" +
+	"\x10max_call_seconds\x18\x06 \x01(\x01R\x0emaxCallSeconds\"\xd6\x01\n" +
 	"\x0fAgentRuleAction\x128\n" +
 	"\x05field\x18\x01 \x01(\x0e2\".boundflow.v1.AgentRuleActionFieldR\x05field\x12\x14\n" +
 	"\x05model\x18\x02 \x01(\tR\x05model\x12\"\n" +
