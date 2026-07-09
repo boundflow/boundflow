@@ -19,7 +19,7 @@ func WorkflowToProto(r *domain.Workflow) *boundflowv1.Workflow {
 	if r == nil {
 		return nil
 	}
-	return &boundflowv1.Workflow{
+	w := &boundflowv1.Workflow{
 		Id:           r.ID,
 		WorkflowType: r.WorkflowType,
 		TenantId:     r.TenantID,
@@ -32,10 +32,33 @@ func WorkflowToProto(r *domain.Workflow) *boundflowv1.Workflow {
 			InvokeMode:           invokeModeToProto(r.WorkflowConfig.InvokeMode),
 			MaxQueueDepth:        r.WorkflowConfig.MaxQueueDepth,
 		},
-		LifecycleState:      string(r.LifecycleState),
-		WorkflowState:       workflowStateToProto[r.WorkflowState],
+		LifecycleState:           string(r.LifecycleState),
+		WorkflowState:            workflowStateToProto[r.WorkflowState],
 		LastInterruptedRequestId: r.LastInterruptedRequestID,
 	}
+	if r.PendingApproval != nil {
+		w.PendingApproval = pendingApprovalToProto(r.PendingApproval)
+	}
+	return w
+}
+
+func pendingApprovalToProto(p *domain.PendingApproval) *boundflowv1.PendingApproval {
+	pa := &boundflowv1.PendingApproval{
+		ApprovalId:    p.ApprovalID,
+		Justification: p.Justification,
+	}
+	if p.Metadata != nil {
+		if s, err := structpb.NewStruct(p.Metadata); err == nil {
+			pa.Metadata = s
+		}
+	}
+	if p.OpenedAt != nil {
+		pa.OpenedAt = timestamppb.New(*p.OpenedAt)
+	}
+	if p.TimeoutAt != nil {
+		pa.TimeoutAt = timestamppb.New(*p.TimeoutAt)
+	}
+	return pa
 }
 
 // RunToProto maps a customer request (a run) to the runs-API Run message. run_outcome

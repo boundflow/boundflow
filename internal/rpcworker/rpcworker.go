@@ -189,8 +189,14 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 				},
 			}
 
+			var approvalMetadata map[string]any
+			if result.ApprovalGate.Metadata != nil {
+				approvalMetadata = result.ApprovalGate.Metadata.AsMap()
+			}
+
 			// opened_at + timeout_at are stamped server-side (DB now()) inside ParkForApproval.
-			parked, err := s.jobs.ParkForApproval(ctx, job.WorkflowID, sessionID, result.ApprovalGate.ApprovalId, int(result.ApprovalGate.TimeoutSeconds), jobMetadata, job.AgentMetrics, job.WorkflowMetrics)
+			parked, err := s.jobs.ParkForApproval(ctx, job.WorkflowID, sessionID, result.ApprovalGate.ApprovalId, int(result.ApprovalGate.TimeoutSeconds),
+				result.ApprovalGate.Justification, approvalMetadata, jobMetadata, job.AgentMetrics, job.WorkflowMetrics)
 			if err != nil {
 				log.Error("failed to park job for approval", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "error", err)
 				return err

@@ -31,6 +31,10 @@ message ApprovalGate {
   string approval_id         = 4;
   google.protobuf.Struct on_approve_result = 5;
   google.protobuf.Struct on_reject_result  = 6;
+  // Published for external readers while the gate is open (WorkflowInfo.pending_approval)
+  // — not delivered to either branch, since the decision hasn't happened yet.
+  string justification       = 7;
+  google.protobuf.Struct metadata = 8;
 }
 
 message AtomicOperationResult {

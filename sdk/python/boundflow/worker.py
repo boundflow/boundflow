@@ -103,12 +103,16 @@ class Next:
 
 @dataclass
 class AwaitApproval:
-    """Park for human approval; branch on the decision."""
+    """Park for human approval; branch on the decision. justification and metadata
+    are published for external readers while the gate is open (WorkflowInfo's
+    pending_approval, via get_workflow) — not delivered to either branch, since the
+    decision hasn't happened yet."""
 
     on_approve: "OperationResult"
     on_reject: "OperationResult"
     timeout: int
     justification: str | None = None
+    metadata: dict | None = None
 
 
 OperationResult = Union[Complete, Next, AwaitApproval]
@@ -417,7 +421,11 @@ class BoundFlowWorker:
                     workflow_id=op.workflow_id, operation_name=op.name,
                     timeout=result.timeout, approval_id=approval_id,
                     justification=result.justification))
-            gate = op_pb.ApprovalGate(timeout_seconds=result.timeout, approval_id=approval_id)
+            gate = op_pb.ApprovalGate(
+                timeout_seconds=result.timeout, approval_id=approval_id,
+                justification=result.justification or "")
+            if result.metadata is not None:
+                gate.metadata.CopyFrom(t.dict_to_struct(result.metadata))
             ap = branch(result.on_approve)
             rj = branch(result.on_reject)
             if ap is not None:

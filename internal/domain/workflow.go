@@ -64,4 +64,18 @@ type Workflow struct {
 	LastCompletedRequestAt   *time.Time
 	LastInterruptedRequestID string
 	CreatedAt                time.Time
+	// PendingApproval is the currently open approval gate, nil unless
+	// LifecycleState == LifecycleStateAwaitingApproval.
+	PendingApproval *PendingApproval
+}
+
+// PendingApproval is the gate an external reader needs to discover and act on a
+// parked approval (approve_workflow/reject_workflow take ApprovalID) without
+// depending on the in-process worker's on_approval_requested hook.
+type PendingApproval struct {
+	ApprovalID    string
+	Justification string
+	Metadata      map[string]any
+	OpenedAt      *time.Time
+	TimeoutAt     *time.Time
 }

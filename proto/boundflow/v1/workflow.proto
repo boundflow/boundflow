@@ -4,6 +4,7 @@ package boundflow.v1;
 
 option go_package = "github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1";
 
+import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 
 // InvokeMode controls what happens when invokes pile up for a workflow.
@@ -34,6 +35,17 @@ enum WorkflowState {
   WORKFLOW_STATE_DISABLED = 4;
 }
 
+// PendingApproval is the currently open approval gate for a workflow — populated
+// on Workflow only while lifecycle_state is awaiting_approval. Read-only; the
+// approval_id here is what approve_workflow/reject_workflow expect.
+message PendingApproval {
+  string approval_id = 1;
+  string justification = 2;
+  google.protobuf.Struct metadata = 3;
+  google.protobuf.Timestamp opened_at = 4;
+  google.protobuf.Timestamp timeout_at = 5;
+}
+
 // Workflow is a managed, stateful unit of agent execution tied to a specific
 // tenant. Managed via the WorkflowService.
 message Workflow {
@@ -46,4 +58,5 @@ message Workflow {
   WorkflowState workflow_state = 10;
   // request_id of the run that interrupted the workflow; empty until one is interrupted.
   string last_interrupted_request_id = 11;
+  PendingApproval pending_approval = 12;
 }

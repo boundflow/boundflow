@@ -9,6 +9,7 @@ package boundflowv1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	structpb "google.golang.org/protobuf/types/known/structpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -215,6 +216,85 @@ func (x *WorkflowConfig) GetMaxQueueDepth() int32 {
 	return 0
 }
 
+// PendingApproval is the currently open approval gate for a workflow — populated
+// on Workflow only while lifecycle_state is awaiting_approval. Read-only; the
+// approval_id here is what approve_workflow/reject_workflow expect.
+type PendingApproval struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ApprovalId    string                 `protobuf:"bytes,1,opt,name=approval_id,json=approvalId,proto3" json:"approval_id,omitempty"`
+	Justification string                 `protobuf:"bytes,2,opt,name=justification,proto3" json:"justification,omitempty"`
+	Metadata      *structpb.Struct       `protobuf:"bytes,3,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	OpenedAt      *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=opened_at,json=openedAt,proto3" json:"opened_at,omitempty"`
+	TimeoutAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=timeout_at,json=timeoutAt,proto3" json:"timeout_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PendingApproval) Reset() {
+	*x = PendingApproval{}
+	mi := &file_boundflow_v1_workflow_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PendingApproval) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PendingApproval) ProtoMessage() {}
+
+func (x *PendingApproval) ProtoReflect() protoreflect.Message {
+	mi := &file_boundflow_v1_workflow_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PendingApproval.ProtoReflect.Descriptor instead.
+func (*PendingApproval) Descriptor() ([]byte, []int) {
+	return file_boundflow_v1_workflow_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *PendingApproval) GetApprovalId() string {
+	if x != nil {
+		return x.ApprovalId
+	}
+	return ""
+}
+
+func (x *PendingApproval) GetJustification() string {
+	if x != nil {
+		return x.Justification
+	}
+	return ""
+}
+
+func (x *PendingApproval) GetMetadata() *structpb.Struct {
+	if x != nil {
+		return x.Metadata
+	}
+	return nil
+}
+
+func (x *PendingApproval) GetOpenedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OpenedAt
+	}
+	return nil
+}
+
+func (x *PendingApproval) GetTimeoutAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.TimeoutAt
+	}
+	return nil
+}
+
 // Workflow is a managed, stateful unit of agent execution tied to a specific
 // tenant. Managed via the WorkflowService.
 type Workflow struct {
@@ -227,14 +307,15 @@ type Workflow struct {
 	LifecycleState string                 `protobuf:"bytes,9,opt,name=lifecycle_state,json=lifecycleState,proto3" json:"lifecycle_state,omitempty"`
 	WorkflowState  WorkflowState          `protobuf:"varint,10,opt,name=workflow_state,json=workflowState,proto3,enum=boundflow.v1.WorkflowState" json:"workflow_state,omitempty"`
 	// request_id of the run that interrupted the workflow; empty until one is interrupted.
-	LastInterruptedRequestId string `protobuf:"bytes,11,opt,name=last_interrupted_request_id,json=lastInterruptedRequestId,proto3" json:"last_interrupted_request_id,omitempty"`
+	LastInterruptedRequestId string           `protobuf:"bytes,11,opt,name=last_interrupted_request_id,json=lastInterruptedRequestId,proto3" json:"last_interrupted_request_id,omitempty"`
+	PendingApproval          *PendingApproval `protobuf:"bytes,12,opt,name=pending_approval,json=pendingApproval,proto3" json:"pending_approval,omitempty"`
 	unknownFields            protoimpl.UnknownFields
 	sizeCache                protoimpl.SizeCache
 }
 
 func (x *Workflow) Reset() {
 	*x = Workflow{}
-	mi := &file_boundflow_v1_workflow_proto_msgTypes[1]
+	mi := &file_boundflow_v1_workflow_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -246,7 +327,7 @@ func (x *Workflow) String() string {
 func (*Workflow) ProtoMessage() {}
 
 func (x *Workflow) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_workflow_proto_msgTypes[1]
+	mi := &file_boundflow_v1_workflow_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -259,7 +340,7 @@ func (x *Workflow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Workflow.ProtoReflect.Descriptor instead.
 func (*Workflow) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_workflow_proto_rawDescGZIP(), []int{1}
+	return file_boundflow_v1_workflow_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Workflow) GetId() string {
@@ -318,11 +399,18 @@ func (x *Workflow) GetLastInterruptedRequestId() string {
 	return ""
 }
 
+func (x *Workflow) GetPendingApproval() *PendingApproval {
+	if x != nil {
+		return x.PendingApproval
+	}
+	return nil
+}
+
 var File_boundflow_v1_workflow_proto protoreflect.FileDescriptor
 
 const file_boundflow_v1_workflow_proto_rawDesc = "" +
 	"\n" +
-	"\x1bboundflow/v1/workflow.proto\x12\fboundflow.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x97\x02\n" +
+	"\x1bboundflow/v1/workflow.proto\x12\fboundflow.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x97\x02\n" +
 	"\x0eWorkflowConfig\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\x05R\aversion\x124\n" +
 	"\x16invoke_timeout_seconds\x18\x02 \x01(\x05R\x14invokeTimeoutSeconds\x120\n" +
@@ -330,7 +418,15 @@ const file_boundflow_v1_workflow_proto_rawDesc = "" +
 	"\vtriggerable\x18\x04 \x01(\bR\vtriggerable\x129\n" +
 	"\vinvoke_mode\x18\x05 \x01(\x0e2\x18.boundflow.v1.InvokeModeR\n" +
 	"invokeMode\x12&\n" +
-	"\x0fmax_queue_depth\x18\x06 \x01(\x05R\rmaxQueueDepth\"\x8a\x03\n" +
+	"\x0fmax_queue_depth\x18\x06 \x01(\x05R\rmaxQueueDepth\"\x81\x02\n" +
+	"\x0fPendingApproval\x12\x1f\n" +
+	"\vapproval_id\x18\x01 \x01(\tR\n" +
+	"approvalId\x12$\n" +
+	"\rjustification\x18\x02 \x01(\tR\rjustification\x123\n" +
+	"\bmetadata\x18\x03 \x01(\v2\x17.google.protobuf.StructR\bmetadata\x127\n" +
+	"\topened_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\bopenedAt\x129\n" +
+	"\n" +
+	"timeout_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimeoutAt\"\xd4\x03\n" +
 	"\bWorkflow\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
 	"\rworkflow_type\x18\x02 \x01(\tR\fworkflowType\x12\x1b\n" +
@@ -341,7 +437,8 @@ const file_boundflow_v1_workflow_proto_rawDesc = "" +
 	"\x0flifecycle_state\x18\t \x01(\tR\x0elifecycleState\x12B\n" +
 	"\x0eworkflow_state\x18\n" +
 	" \x01(\x0e2\x1b.boundflow.v1.WorkflowStateR\rworkflowState\x12=\n" +
-	"\x1blast_interrupted_request_id\x18\v \x01(\tR\x18lastInterruptedRequestId*Z\n" +
+	"\x1blast_interrupted_request_id\x18\v \x01(\tR\x18lastInterruptedRequestId\x12H\n" +
+	"\x10pending_approval\x18\f \x01(\v2\x1d.boundflow.v1.PendingApprovalR\x0fpendingApproval*Z\n" +
 	"\n" +
 	"InvokeMode\x12\x1b\n" +
 	"\x17INVOKE_MODE_UNSPECIFIED\x10\x00\x12\x18\n" +
@@ -367,24 +464,30 @@ func file_boundflow_v1_workflow_proto_rawDescGZIP() []byte {
 }
 
 var file_boundflow_v1_workflow_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_boundflow_v1_workflow_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_boundflow_v1_workflow_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_boundflow_v1_workflow_proto_goTypes = []any{
 	(InvokeMode)(0),               // 0: boundflow.v1.InvokeMode
 	(WorkflowState)(0),            // 1: boundflow.v1.WorkflowState
 	(*WorkflowConfig)(nil),        // 2: boundflow.v1.WorkflowConfig
-	(*Workflow)(nil),              // 3: boundflow.v1.Workflow
-	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
+	(*PendingApproval)(nil),       // 3: boundflow.v1.PendingApproval
+	(*Workflow)(nil),              // 4: boundflow.v1.Workflow
+	(*structpb.Struct)(nil),       // 5: google.protobuf.Struct
+	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
 }
 var file_boundflow_v1_workflow_proto_depIdxs = []int32{
 	0, // 0: boundflow.v1.WorkflowConfig.invoke_mode:type_name -> boundflow.v1.InvokeMode
-	4, // 1: boundflow.v1.Workflow.created_at:type_name -> google.protobuf.Timestamp
-	2, // 2: boundflow.v1.Workflow.workflow_config:type_name -> boundflow.v1.WorkflowConfig
-	1, // 3: boundflow.v1.Workflow.workflow_state:type_name -> boundflow.v1.WorkflowState
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	5, // 1: boundflow.v1.PendingApproval.metadata:type_name -> google.protobuf.Struct
+	6, // 2: boundflow.v1.PendingApproval.opened_at:type_name -> google.protobuf.Timestamp
+	6, // 3: boundflow.v1.PendingApproval.timeout_at:type_name -> google.protobuf.Timestamp
+	6, // 4: boundflow.v1.Workflow.created_at:type_name -> google.protobuf.Timestamp
+	2, // 5: boundflow.v1.Workflow.workflow_config:type_name -> boundflow.v1.WorkflowConfig
+	1, // 6: boundflow.v1.Workflow.workflow_state:type_name -> boundflow.v1.WorkflowState
+	3, // 7: boundflow.v1.Workflow.pending_approval:type_name -> boundflow.v1.PendingApproval
+	8, // [8:8] is the sub-list for method output_type
+	8, // [8:8] is the sub-list for method input_type
+	8, // [8:8] is the sub-list for extension type_name
+	8, // [8:8] is the sub-list for extension extendee
+	0, // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_boundflow_v1_workflow_proto_init() }
@@ -398,7 +501,7 @@ func file_boundflow_v1_workflow_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_boundflow_v1_workflow_proto_rawDesc), len(file_boundflow_v1_workflow_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
