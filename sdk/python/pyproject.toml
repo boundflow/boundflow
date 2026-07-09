@@ -37,6 +37,8 @@ dev = [
     "pytest-asyncio",
     "langchain-core>=0.3",
     "langchain-anthropic>=0.3",
+    "opentelemetry-sdk",
+    "opentelemetry-exporter-otlp",
 ]
 # Optional: run BoundFlow agents through any LangChain chat model
 # (boundflow.langchain_client.LangChainLlmClient).
