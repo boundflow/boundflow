@@ -144,38 +144,56 @@ func (r *CustomerRequestRepo) CountUnscheduledRequests(ctx context.Context, work
 
 func (r *CustomerRequestRepo) Get(ctx context.Context, id string) (*domain.CustomerRequest, error) {
 	var req domain.CustomerRequest
-	var requestInfoJSON []byte
+	var requestInfoJSON, resultJSON []byte
 
 	err := r.pool.QueryRow(ctx,
 		`SELECT id, workflow_id, status, request_type, request_info, version,
-		        COALESCE(run_outcome::text, ''), failure_reason, created_at, completed_at
+		        COALESCE(run_outcome::text, ''), failure_reason, created_at, completed_at, result
 		 FROM customer_requests WHERE id = $1`,
 		id,
 	).Scan(&req.ID, &req.WorkflowID, &req.Status, &req.RequestType, &requestInfoJSON, &req.Version,
-		&req.RunOutcome, &req.FailureReason, &req.CreatedAt, &req.CompletedAt)
+		&req.RunOutcome, &req.FailureReason, &req.CreatedAt, &req.CompletedAt, &resultJSON)
 	if err != nil {
 		return nil, handleError(err, "customer request")
 	}
 	if err := json.Unmarshal(requestInfoJSON, &req.RequestInfo); err != nil {
 		return nil, fmt.Errorf("unmarshal request info: %w", err)
+	}
+	if resultJSON != nil {
+		if err := json.Unmarshal(resultJSON, &req.Result); err != nil {
+			return nil, fmt.Errorf("unmarshal result: %w", err)
+		}
 	}
 	return &req, nil
 }
 
-func (r *CustomerRequestRepo) CompleteRequest(ctx context.Context, id string, outcome domain.RunOutcome, failureReason string) (*domain.CustomerRequest, error) {
+func (r *CustomerRequestRepo) CompleteRequest(ctx context.Context, id string, outcome domain.RunOutcome, failureReason string, result map[string]any) (*domain.CustomerRequest, error) {
 	var req domain.CustomerRequest
-	var requestInfoJSON []byte
+	var requestInfoJSON, resultJSON []byte
+	var resultParam any
+	if result != nil {
+		marshaled, err := json.Marshal(result)
+		if err != nil {
+			return nil, fmt.Errorf("marshal result: %w", err)
+		}
+		resultParam = marshaled
+	}
 
 	err := r.pool.QueryRow(ctx,
-		`UPDATE customer_requests SET status = $1, run_outcome = $2, failure_reason = $3, completed_at = now() WHERE id = $4
-		 RETURNING id, workflow_id, status, request_type, request_info, version, created_at, completed_at`,
-		domain.CustomerRequestStatusCompleted, outcome, failureReason, id,
-	).Scan(&req.ID, &req.WorkflowID, &req.Status, &req.RequestType, &requestInfoJSON, &req.Version, &req.CreatedAt, &req.CompletedAt)
+		`UPDATE customer_requests SET status = $1, run_outcome = $2, failure_reason = $3, result = $4, completed_at = now() WHERE id = $5
+		 RETURNING id, workflow_id, status, request_type, request_info, version, created_at, completed_at, result`,
+		domain.CustomerRequestStatusCompleted, outcome, failureReason, resultParam, id,
+	).Scan(&req.ID, &req.WorkflowID, &req.Status, &req.RequestType, &requestInfoJSON, &req.Version, &req.CreatedAt, &req.CompletedAt, &resultJSON)
 	if err != nil {
 		return nil, handleError(err, "customer request")
 	}
 	if err := json.Unmarshal(requestInfoJSON, &req.RequestInfo); err != nil {
 		return nil, fmt.Errorf("unmarshal request info: %w", err)
+	}
+	if resultJSON != nil {
+		if err := json.Unmarshal(resultJSON, &req.Result); err != nil {
+			return nil, fmt.Errorf("unmarshal result: %w", err)
+		}
 	}
 	return &req, nil
 }

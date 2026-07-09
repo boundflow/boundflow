@@ -86,7 +86,10 @@ class AgentDefinition:
 
 @dataclass
 class Complete:
-    """The operation is done."""
+    """The operation is done. `result` is optional — the run's published output,
+    persisted on the request and readable later via get_request_info().result."""
+
+    result: dict | None = None
 
 
 @dataclass
@@ -395,7 +398,8 @@ class BoundFlowWorker:
             return None
 
         if isinstance(result, Complete):
-            return op_pb.AtomicOperationResult(status=completed)
+            proto_result = t.dict_to_struct(result.result) if result.result is not None else None
+            return op_pb.AtomicOperationResult(status=completed, result=proto_result)
 
         if isinstance(result, Next):
             return op_pb.AtomicOperationResult(

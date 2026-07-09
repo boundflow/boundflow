@@ -20,7 +20,7 @@ import (
 )
 
 type RequestScheduler interface {
-	CompleteRequest(ctx context.Context, req string, outcome domain.RunOutcome, reason string) (bool, error)
+	CompleteRequest(ctx context.Context, req string, outcome domain.RunOutcome, reason string, result map[string]any) (bool, error)
 	FailRequest(ctx context.Context, req string, reason string) (bool, error)
 	MarkInvoking(ctx context.Context, workflowID string) error
 	MarkAwaitingApproval(ctx context.Context, workflowID string) error
@@ -212,14 +212,18 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 			case boundflowv1.OperationFailureType_OPERATION_FAILURE_TYPE_UNCAUGHT_EXCEPTION:
 				outcome, reason = domain.RunOutcomeUncaughtException, result.FailureReason
 			}
-			updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.WorkflowID, sessionID, domain.JobStatusCompleted, outcome, reason, job.AgentMetrics, job.WorkflowMetrics)
+			var publishedResult map[string]any
+			if result.Result != nil {
+				publishedResult = result.Result.AsMap()
+			}
+			updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.WorkflowID, sessionID, domain.JobStatusCompleted, outcome, reason, publishedResult, job.AgentMetrics, job.WorkflowMetrics)
 			if err != nil {
 				log.Error("failed to mark job completed", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "error", err)
 				return err
 			}
 			if updated {
 				log.Info("job completed, notifying scheduler", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "outcome", outcome)
-				s.scheduler.CompleteRequest(ctx, job.RequestID, outcome, reason)
+				s.scheduler.CompleteRequest(ctx, job.RequestID, outcome, reason, publishedResult)
 			}
 		}
 
@@ -277,14 +281,14 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 		defer cancelLeaseIfExists(cancelLease)
 
 		job.WorkflowMetrics.Failures++
-		updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.WorkflowID, sessionID, domain.JobStatusCompleted, outcome, reason, job.AgentMetrics, job.WorkflowMetrics)
+		updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.WorkflowID, sessionID, domain.JobStatusCompleted, outcome, reason, nil, job.AgentMetrics, job.WorkflowMetrics)
 		if err != nil {
 			log.Error("failed to soft-fail job", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "error", err)
 			return
 		}
 		if updated {
 			log.Info("operation soft-failed, completing request", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "outcome", outcome)
-			s.scheduler.CompleteRequest(ctx, job.RequestID, outcome, reason)
+			s.scheduler.CompleteRequest(ctx, job.RequestID, outcome, reason, nil)
 		}
 	}
 

@@ -108,7 +108,7 @@ func newMockScheduler() *mockScheduler {
 	}
 }
 
-func (m *mockScheduler) CompleteRequest(_ context.Context, req string, _ domain.RunOutcome, _ string) (bool, error) {
+func (m *mockScheduler) CompleteRequest(_ context.Context, req string, _ domain.RunOutcome, _ string, _ map[string]any) (bool, error) {
 	m.completeCh <- req
 	return true, nil
 }
@@ -334,7 +334,7 @@ func TestWorkerSession_CompleteOperation(t *testing.T) {
 	worker, jobRepo, sched := newTestWorker(ctrl)
 	expectJobAcquired(jobRepo)
 	jobRepo.EXPECT().UpdateJobStatus(gomock.Any(), testWorkflowID, gomock.Any(), domain.JobStatusRunning).Return(true, nil)
-	jobRepo.EXPECT().UpdateJobStatusWithMetrics(gomock.Any(), testWorkflowID, gomock.Any(), domain.JobStatusCompleted, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+	jobRepo.EXPECT().UpdateJobStatusWithMetrics(gomock.Any(), testWorkflowID, gomock.Any(), domain.JobStatusCompleted, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 
 	stream := newMockStream(ctx)
 	errCh := runSession(worker, stream)

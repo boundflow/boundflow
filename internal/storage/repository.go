@@ -144,8 +144,9 @@ type JobRepository interface {
 	// so a platform interruption's cause is durable on the job for the failJobs sweeper.
 	UpdateJobStatusWithReason(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, failureReason string) (bool, error)
 	// UpdateJobStatusWithMetrics is UpdateJobStatus plus an atomic write of the accumulated
-	// per-agent and workflow-level metrics. Used when finalizing a job.
-	UpdateJobStatusWithMetrics(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, resultType domain.RunOutcome, failureReason string, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error)
+	// per-agent and workflow-level metrics, plus the run's published result (nil if the
+	// workflow didn't call Complete(result=...)). Used when finalizing a job.
+	UpdateJobStatusWithMetrics(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, resultType domain.RunOutcome, failureReason string, result map[string]any, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error)
 	// UpdateJob updates status, current_atomic_operation, timeout_seconds, and context only if ownerID is the current owner.
 	// Returns false if the ownership check failed (job taken by another worker or released).
 	UpdateJob(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any) (bool, error)
@@ -263,9 +264,10 @@ type CustomerRequestRepository interface {
 	CreateDuePeriodicRequest(ctx context.Context, req *domain.CustomerRequest, minGap time.Duration, invalidStates []domain.LifecycleState) (int64, bool, error)
 	Get(ctx context.Context, id string) (*domain.CustomerRequest, error)
 	UpdateStatus(ctx context.Context, workflowID, id string, status domain.CustomerRequestStatus) error
-	// CompleteRequest sets the request status to completed, records the run outcome +
-	// reason, and returns the full updated request.
-	CompleteRequest(ctx context.Context, id string, outcome domain.RunOutcome, failureReason string) (*domain.CustomerRequest, error)
+	// CompleteRequest sets the request status to completed, records the run outcome,
+	// reason, and published result (nil if the workflow didn't call Complete(result=...)),
+	// and returns the full updated request.
+	CompleteRequest(ctx context.Context, id string, outcome domain.RunOutcome, failureReason string, result map[string]any) (*domain.CustomerRequest, error)
 	// FailRequest sets the request status to failed (run_outcome=interrupted), records the
 	// reason, and returns the full updated request.
 	FailRequest(ctx context.Context, id string, failureReason string) (*domain.CustomerRequest, error)

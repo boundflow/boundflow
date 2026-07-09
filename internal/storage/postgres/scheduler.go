@@ -167,7 +167,7 @@ func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID stri
 
 func (r *SchedulerRepo) GetCompletedJobs(ctx context.Context, partitionID string) ([]domain.CompletedJob, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT j.request_id, j.result_type, j.failure_reason
+		`SELECT j.request_id, j.result_type, j.failure_reason, j.result
 		 FROM jobs j
 		 JOIN workflows ri ON j.workflow_id = ri.id
 		 WHERE ri.scheduler_partition_id = $1
@@ -182,8 +182,14 @@ func (r *SchedulerRepo) GetCompletedJobs(ctx context.Context, partitionID string
 	var jobs []domain.CompletedJob
 	for rows.Next() {
 		var j domain.CompletedJob
-		if err := rows.Scan(&j.RequestID, &j.ResultType, &j.FailureReason); err != nil {
+		var resultJSON []byte
+		if err := rows.Scan(&j.RequestID, &j.ResultType, &j.FailureReason, &resultJSON); err != nil {
 			return nil, fmt.Errorf("scan completed job: %w", err)
+		}
+		if resultJSON != nil {
+			if err := json.Unmarshal(resultJSON, &j.Result); err != nil {
+				return nil, fmt.Errorf("unmarshal completed job result: %w", err)
+			}
 		}
 		jobs = append(jobs, j)
 	}

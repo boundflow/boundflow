@@ -341,6 +341,9 @@ message RequestInfo {
   int64 version = 7;
   google.protobuf.Timestamp created_at = 8;
   google.protobuf.Timestamp completed_at = 9;
+  // The run's published output, set via Complete(result=...); unset until the run
+  // completes, and only if the workflow actually published one.
+  google.protobuf.Struct result = 10;
 }
 
 message GetRequestInfoResponse {
