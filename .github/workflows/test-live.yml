@@ -1,9 +1,10 @@
 name: Live tests (real LLM)
 
-# The integration tests that make real Anthropic calls. NOT a PR merge gate —
-# they cost money, are non-deterministic, and forks can't access the secret.
-# Runs nightly and on demand; requires the ANTHROPIC_API_KEY repo secret.
+# The integration tests that make real Anthropic calls. Runs on PRs, nightly, and
+# on demand; requires the ANTHROPIC_API_KEY repo secret. Fork PRs can't access the
+# secret, so the job below skips gracefully for them.
 on:
+  pull_request:
   schedule:
     - cron: "0 7 * * *" # 07:00 UTC daily
   workflow_dispatch:
