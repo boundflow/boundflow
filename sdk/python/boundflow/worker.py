@@ -421,8 +421,12 @@ class BoundFlowWorker:
             rj = branch(result.on_reject)
             if ap is not None:
                 gate.on_approve.CopyFrom(ap)
+            elif isinstance(result.on_approve, Complete) and result.on_approve.result is not None:
+                gate.on_approve_result.CopyFrom(t.dict_to_struct(result.on_approve.result))
             if rj is not None:
                 gate.on_reject.CopyFrom(rj)
+            elif isinstance(result.on_reject, Complete) and result.on_reject.result is not None:
+                gate.on_reject_result.CopyFrom(t.dict_to_struct(result.on_reject.result))
             return op_pb.AtomicOperationResult(status=completed, approval_gate=gate)
 
         raise RuntimeError(f"Unknown OperationResult: {type(result).__name__}")

@@ -237,13 +237,18 @@ func (x *AtomicOperation) GetWorkflowVersion() int32 {
 
 type ApprovalGate struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// null means Complete (terminal) for that branch.
-	OnApprove      *AtomicOperation `protobuf:"bytes,1,opt,name=on_approve,json=onApprove,proto3" json:"on_approve,omitempty"`
-	OnReject       *AtomicOperation `protobuf:"bytes,2,opt,name=on_reject,json=onReject,proto3" json:"on_reject,omitempty"`
-	TimeoutSeconds int32            `protobuf:"varint,3,opt,name=timeout_seconds,json=timeoutSeconds,proto3" json:"timeout_seconds,omitempty"`
-	ApprovalId     string           `protobuf:"bytes,4,opt,name=approval_id,json=approvalId,proto3" json:"approval_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// null means Complete (terminal) for that branch. When terminal, the branch may
+	// still publish a result via Complete(result=...) — carried in the sibling
+	// on_approve_result / on_reject_result field below, since a null AtomicOperation
+	// has nowhere else to put it.
+	OnApprove       *AtomicOperation `protobuf:"bytes,1,opt,name=on_approve,json=onApprove,proto3" json:"on_approve,omitempty"`
+	OnReject        *AtomicOperation `protobuf:"bytes,2,opt,name=on_reject,json=onReject,proto3" json:"on_reject,omitempty"`
+	TimeoutSeconds  int32            `protobuf:"varint,3,opt,name=timeout_seconds,json=timeoutSeconds,proto3" json:"timeout_seconds,omitempty"`
+	ApprovalId      string           `protobuf:"bytes,4,opt,name=approval_id,json=approvalId,proto3" json:"approval_id,omitempty"`
+	OnApproveResult *structpb.Struct `protobuf:"bytes,5,opt,name=on_approve_result,json=onApproveResult,proto3" json:"on_approve_result,omitempty"`
+	OnRejectResult  *structpb.Struct `protobuf:"bytes,6,opt,name=on_reject_result,json=onRejectResult,proto3" json:"on_reject_result,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ApprovalGate) Reset() {
@@ -302,6 +307,20 @@ func (x *ApprovalGate) GetApprovalId() string {
 		return x.ApprovalId
 	}
 	return ""
+}
+
+func (x *ApprovalGate) GetOnApproveResult() *structpb.Struct {
+	if x != nil {
+		return x.OnApproveResult
+	}
+	return nil
+}
+
+func (x *ApprovalGate) GetOnRejectResult() *structpb.Struct {
+	if x != nil {
+		return x.OnRejectResult
+	}
+	return nil
 }
 
 type AtomicOperationResult struct {
@@ -607,14 +626,16 @@ const file_boundflow_v1_operation_proto_rawDesc = "" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12'\n" +
 	"\x0ftimeout_seconds\x18\a \x01(\x05R\x0etimeoutSeconds\x12#\n" +
 	"\rworkflow_type\x18\b \x01(\tR\fworkflowType\x12)\n" +
-	"\x10workflow_version\x18\t \x01(\x05R\x0fworkflowVersion\"\xd2\x01\n" +
+	"\x10workflow_version\x18\t \x01(\x05R\x0fworkflowVersion\"\xda\x02\n" +
 	"\fApprovalGate\x12<\n" +
 	"\n" +
 	"on_approve\x18\x01 \x01(\v2\x1d.boundflow.v1.AtomicOperationR\tonApprove\x12:\n" +
 	"\ton_reject\x18\x02 \x01(\v2\x1d.boundflow.v1.AtomicOperationR\bonReject\x12'\n" +
 	"\x0ftimeout_seconds\x18\x03 \x01(\x05R\x0etimeoutSeconds\x12\x1f\n" +
 	"\vapproval_id\x18\x04 \x01(\tR\n" +
-	"approvalId\"\x91\a\n" +
+	"approvalId\x12C\n" +
+	"\x11on_approve_result\x18\x05 \x01(\v2\x17.google.protobuf.StructR\x0fonApproveResult\x12A\n" +
+	"\x10on_reject_result\x18\x06 \x01(\v2\x17.google.protobuf.StructR\x0eonRejectResult\"\x91\a\n" +
 	"\x15AtomicOperationResult\x125\n" +
 	"\x06status\x18\x01 \x01(\x0e2\x1d.boundflow.v1.OperationStatusR\x06status\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12D\n" +
@@ -707,23 +728,25 @@ var file_boundflow_v1_operation_proto_depIdxs = []int32{
 	12, // 1: boundflow.v1.AtomicOperation.created_at:type_name -> google.protobuf.Timestamp
 	2,  // 2: boundflow.v1.ApprovalGate.on_approve:type_name -> boundflow.v1.AtomicOperation
 	2,  // 3: boundflow.v1.ApprovalGate.on_reject:type_name -> boundflow.v1.AtomicOperation
-	1,  // 4: boundflow.v1.AtomicOperationResult.status:type_name -> boundflow.v1.OperationStatus
-	2,  // 5: boundflow.v1.AtomicOperationResult.next_operation:type_name -> boundflow.v1.AtomicOperation
-	7,  // 6: boundflow.v1.AtomicOperationResult.agent_state_updates:type_name -> boundflow.v1.AtomicOperationResult.AgentStateUpdatesEntry
-	3,  // 7: boundflow.v1.AtomicOperationResult.approval_gate:type_name -> boundflow.v1.ApprovalGate
-	5,  // 8: boundflow.v1.AtomicOperationResult.workflow_metrics:type_name -> boundflow.v1.WorkflowInvocationMetrics
-	8,  // 9: boundflow.v1.AtomicOperationResult.agent_policy_actions:type_name -> boundflow.v1.AtomicOperationResult.AgentPolicyActionsEntry
-	0,  // 10: boundflow.v1.AtomicOperationResult.failure_type:type_name -> boundflow.v1.OperationFailureType
-	11, // 11: boundflow.v1.AtomicOperationResult.result:type_name -> google.protobuf.Struct
-	9,  // 12: boundflow.v1.AgentInvocationMetrics.tool_failure_counts:type_name -> boundflow.v1.AgentInvocationMetrics.ToolFailureCountsEntry
-	10, // 13: boundflow.v1.AgentInvocationMetrics.calls_per_tool:type_name -> boundflow.v1.AgentInvocationMetrics.CallsPerToolEntry
-	6,  // 14: boundflow.v1.AtomicOperationResult.AgentStateUpdatesEntry.value:type_name -> boundflow.v1.AgentInvocationMetrics
-	13, // 15: boundflow.v1.AtomicOperationResult.AgentPolicyActionsEntry.value:type_name -> boundflow.v1.AgentPolicyAction
-	16, // [16:16] is the sub-list for method output_type
-	16, // [16:16] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	11, // 4: boundflow.v1.ApprovalGate.on_approve_result:type_name -> google.protobuf.Struct
+	11, // 5: boundflow.v1.ApprovalGate.on_reject_result:type_name -> google.protobuf.Struct
+	1,  // 6: boundflow.v1.AtomicOperationResult.status:type_name -> boundflow.v1.OperationStatus
+	2,  // 7: boundflow.v1.AtomicOperationResult.next_operation:type_name -> boundflow.v1.AtomicOperation
+	7,  // 8: boundflow.v1.AtomicOperationResult.agent_state_updates:type_name -> boundflow.v1.AtomicOperationResult.AgentStateUpdatesEntry
+	3,  // 9: boundflow.v1.AtomicOperationResult.approval_gate:type_name -> boundflow.v1.ApprovalGate
+	5,  // 10: boundflow.v1.AtomicOperationResult.workflow_metrics:type_name -> boundflow.v1.WorkflowInvocationMetrics
+	8,  // 11: boundflow.v1.AtomicOperationResult.agent_policy_actions:type_name -> boundflow.v1.AtomicOperationResult.AgentPolicyActionsEntry
+	0,  // 12: boundflow.v1.AtomicOperationResult.failure_type:type_name -> boundflow.v1.OperationFailureType
+	11, // 13: boundflow.v1.AtomicOperationResult.result:type_name -> google.protobuf.Struct
+	9,  // 14: boundflow.v1.AgentInvocationMetrics.tool_failure_counts:type_name -> boundflow.v1.AgentInvocationMetrics.ToolFailureCountsEntry
+	10, // 15: boundflow.v1.AgentInvocationMetrics.calls_per_tool:type_name -> boundflow.v1.AgentInvocationMetrics.CallsPerToolEntry
+	6,  // 16: boundflow.v1.AtomicOperationResult.AgentStateUpdatesEntry.value:type_name -> boundflow.v1.AgentInvocationMetrics
+	13, // 17: boundflow.v1.AtomicOperationResult.AgentPolicyActionsEntry.value:type_name -> boundflow.v1.AgentPolicyAction
+	18, // [18:18] is the sub-list for method output_type
+	18, // [18:18] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_boundflow_v1_operation_proto_init() }

@@ -21,11 +21,16 @@ message AtomicOperation {
 }
 
 message ApprovalGate {
-  // null means Complete (terminal) for that branch.
+  // null means Complete (terminal) for that branch. When terminal, the branch may
+  // still publish a result via Complete(result=...) — carried in the sibling
+  // on_approve_result / on_reject_result field below, since a null AtomicOperation
+  // has nowhere else to put it.
   AtomicOperation on_approve = 1;
   AtomicOperation on_reject  = 2;
   int32 timeout_seconds      = 3;
   string approval_id         = 4;
+  google.protobuf.Struct on_approve_result = 5;
+  google.protobuf.Struct on_reject_result  = 6;
 }
 
 message AtomicOperationResult {
