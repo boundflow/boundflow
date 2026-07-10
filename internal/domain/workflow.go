@@ -48,29 +48,61 @@ const (
 )
 
 type Workflow struct {
-	ID                       string
-	TenantID                 string
-	WorkflowType             string
-	WorkflowConfig           WorkflowConfig
-	LifecycleState           LifecycleState
-	WorkflowState            WorkflowState
-	LifecyclePolicy          WorkflowLifecyclePolicy
-	InvocationMetrics        []WorkflowInvocationSnapshot
-	CooldownUntil            *time.Time
-	LifecycleLastResolved    int64
-	CurrentWorkflowVersion   int
-	SchedulerPartitionID     string
-	TargetVersion            int64
-	CurrentVersion           int64
+	ID                     string
+	TenantID               string
+	WorkflowType           string
+	WorkflowConfig         WorkflowConfig
+	Lifecycle              LifecycleInfo
+	WorkflowState          WorkflowState
+	LifecyclePolicy        WorkflowLifecyclePolicy
+	InvocationMetrics      []WorkflowInvocationSnapshot
+	CooldownUntil          *time.Time
+	LifecycleLastResolved  int64
+	CurrentWorkflowVersion int
+	SchedulerPartitionID   string
+	TargetVersion          int64
+	CurrentVersion         int64
+	CreatedAt              time.Time
+}
+
+// LifecycleInfo groups a workflow's current lifecycle state with the raw gate log
+// (LastGate*). Log-style, like LastInterruptedRequestID: only written when a gate
+// opens, never cleared afterward, so it's only meaningful while State is the
+// matching Awaiting* value. Use PendingApproval()/PendingInput() for that check.
+type LifecycleInfo struct {
+	State                    LifecycleState
 	LastCompletedRequestAt   *time.Time
 	LastInterruptedRequestID string
-	CreatedAt                time.Time
-	// PendingApproval is the currently open approval gate, nil unless
-	// LifecycleState == LifecycleStateAwaitingApproval.
-	PendingApproval *PendingApproval
-	// PendingInput is the currently open input gate, nil unless
-	// LifecycleState == LifecycleStateAwaitingInput.
-	PendingInput *PendingInput
+	LastGateID               *string
+	LastGateDetail           string
+	LastGateMetadata         map[string]any
+	LastGateOpenedAt         *time.Time
+	LastGateTimeoutAt        *time.Time
+}
+
+// PendingApproval returns the currently open approval gate, or nil unless State
+// is LifecycleStateAwaitingApproval — a stale LastGate* can't leak through since
+// it's gated on live state, not column presence.
+func (l LifecycleInfo) PendingApproval() *PendingApproval {
+	if l.State != LifecycleStateAwaitingApproval || l.LastGateID == nil {
+		return nil
+	}
+	return &PendingApproval{
+		ApprovalID: *l.LastGateID, Justification: l.LastGateDetail, Metadata: l.LastGateMetadata,
+		OpenedAt: l.LastGateOpenedAt, TimeoutAt: l.LastGateTimeoutAt,
+	}
+}
+
+// PendingInput returns the currently open input gate, or nil unless State is
+// actually LifecycleStateAwaitingInput. See PendingApproval.
+func (l LifecycleInfo) PendingInput() *PendingInput {
+	if l.State != LifecycleStateAwaitingInput || l.LastGateID == nil {
+		return nil
+	}
+	return &PendingInput{
+		InputID: *l.LastGateID, Prompt: l.LastGateDetail, Metadata: l.LastGateMetadata,
+		OpenedAt: l.LastGateOpenedAt, TimeoutAt: l.LastGateTimeoutAt,
+	}
 }
 
 // PendingApproval is the gate an external reader needs to discover and act on a

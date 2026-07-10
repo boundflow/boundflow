@@ -46,8 +46,8 @@ func (r *WorkflowRepo) Create(ctx context.Context, instance *domain.Workflow) er
 		instance.WorkflowConfig.RepeatEverySeconds,
 		instance.WorkflowConfig.Triggerable,
 		string(invokeMode), instance.WorkflowConfig.MaxQueueDepth,
-		instance.LifecycleState, instance.WorkflowState, lifecyclePolicyJSON, instance.SchedulerPartitionID,
-		instance.LastCompletedRequestAt, instance.CreatedAt,
+		instance.Lifecycle.State, instance.WorkflowState, lifecyclePolicyJSON, instance.SchedulerPartitionID,
+		instance.Lifecycle.LastCompletedRequestAt, instance.CreatedAt,
 	)
 	if err != nil {
 		return handleError(err, "workflow instance")
@@ -79,8 +79,8 @@ func (r *WorkflowRepo) ListForTenantGroup(ctx context.Context, tenantGroupID str
 		var w domain.Workflow
 		if err := rows.Scan(
 			&w.ID, &w.TenantID, &w.WorkflowType, &w.CurrentWorkflowVersion,
-			&w.LifecycleState, &w.WorkflowState, &w.LastCompletedRequestAt,
-			&w.LastInterruptedRequestID, &w.CreatedAt,
+			&w.Lifecycle.State, &w.WorkflowState, &w.Lifecycle.LastCompletedRequestAt,
+			&w.Lifecycle.LastInterruptedRequestID, &w.CreatedAt,
 		); err != nil {
 			return nil, handleError(err, "workflow instance")
 		}
@@ -96,12 +96,8 @@ func (r *WorkflowRepo) Get(ctx context.Context, id string) (*domain.Workflow, er
 	var instance domain.Workflow
 	var lifecyclePolicyJSON, invocationMetricsJSON []byte
 	var invokeMode string
-	var approvalID, approvalJustification *string
-	var approvalMetadataJSON []byte
-	var approvalOpenedAt, approvalTimeoutAt *time.Time
-	var inputID, inputPrompt *string
-	var inputMetadataJSON []byte
-	var inputOpenedAt, inputTimeoutAt *time.Time
+	var gateMetadataJSON []byte
+	var gateDetail *string
 
 	err := r.pool.QueryRow(ctx,
 		`SELECT w.id, w.tenant_id, w.workflow_type,
@@ -110,10 +106,9 @@ func (r *WorkflowRepo) Get(ctx context.Context, id string) (*domain.Workflow, er
 		        w.lifecycle_last_resolved, w.current_workflow_version, w.scheduler_partition_id,
 		        w.target_version, w.current_version, w.last_completed_request_at,
 		        w.last_interrupted_request_id, w.created_at,
-		        j.approval_id, j.approval_justification, j.approval_metadata, j.approval_opened_at, j.approval_timeout_at,
-		        j.input_id, j.input_prompt, j.input_metadata, j.input_opened_at, j.input_timeout_at
+		        w.last_gate_id, w.last_gate_detail, w.last_gate_metadata,
+		        w.last_gate_opened_at, w.last_gate_timeout_at
 		 FROM workflows w
-		 LEFT JOIN jobs j ON j.workflow_id = w.id AND j.status IN ('awaiting_approval', 'awaiting_input')
 		 WHERE w.id = $1`, id,
 	).Scan(
 		&instance.ID, &instance.TenantID, &instance.WorkflowType,
@@ -121,18 +116,21 @@ func (r *WorkflowRepo) Get(ctx context.Context, id string) (*domain.Workflow, er
 		&instance.WorkflowConfig.RepeatEverySeconds,
 		&instance.WorkflowConfig.Triggerable,
 		&invokeMode, &instance.WorkflowConfig.MaxQueueDepth,
-		&instance.LifecycleState, &instance.WorkflowState,
+		&instance.Lifecycle.State, &instance.WorkflowState,
 		&lifecyclePolicyJSON, &invocationMetricsJSON, &instance.CooldownUntil,
 		&instance.LifecycleLastResolved, &instance.CurrentWorkflowVersion, &instance.SchedulerPartitionID,
 		&instance.TargetVersion, &instance.CurrentVersion,
-		&instance.LastCompletedRequestAt, &instance.LastInterruptedRequestID, &instance.CreatedAt,
-		&approvalID, &approvalJustification, &approvalMetadataJSON, &approvalOpenedAt, &approvalTimeoutAt,
-		&inputID, &inputPrompt, &inputMetadataJSON, &inputOpenedAt, &inputTimeoutAt,
+		&instance.Lifecycle.LastCompletedRequestAt, &instance.Lifecycle.LastInterruptedRequestID, &instance.CreatedAt,
+		&instance.Lifecycle.LastGateID, &gateDetail, &gateMetadataJSON,
+		&instance.Lifecycle.LastGateOpenedAt, &instance.Lifecycle.LastGateTimeoutAt,
 	)
 	if err != nil {
 		return nil, handleError(err, "workflow instance")
 	}
 	instance.WorkflowConfig.InvokeMode = domain.InvokeMode(invokeMode)
+	if gateDetail != nil {
+		instance.Lifecycle.LastGateDetail = *gateDetail
+	}
 
 	if err := json.Unmarshal(lifecyclePolicyJSON, &instance.LifecyclePolicy); err != nil {
 		return nil, fmt.Errorf("unmarshal lifecycle_policy: %w", err)
@@ -143,39 +141,10 @@ func (r *WorkflowRepo) Get(ctx context.Context, id string) (*domain.Workflow, er
 	sort.Slice(instance.InvocationMetrics, func(i, j int) bool {
 		return instance.InvocationMetrics[i].RanAt < instance.InvocationMetrics[j].RanAt
 	})
-
-	if approvalID != nil {
-		pending := &domain.PendingApproval{
-			ApprovalID: *approvalID,
-			OpenedAt:   approvalOpenedAt,
-			TimeoutAt:  approvalTimeoutAt,
+	if gateMetadataJSON != nil {
+		if err := json.Unmarshal(gateMetadataJSON, &instance.Lifecycle.LastGateMetadata); err != nil {
+			return nil, fmt.Errorf("unmarshal last gate metadata: %w", err)
 		}
-		if approvalJustification != nil {
-			pending.Justification = *approvalJustification
-		}
-		if approvalMetadataJSON != nil {
-			if err := json.Unmarshal(approvalMetadataJSON, &pending.Metadata); err != nil {
-				return nil, fmt.Errorf("unmarshal approval metadata: %w", err)
-			}
-		}
-		instance.PendingApproval = pending
-	}
-
-	if inputID != nil {
-		pending := &domain.PendingInput{
-			InputID:   *inputID,
-			OpenedAt:  inputOpenedAt,
-			TimeoutAt: inputTimeoutAt,
-		}
-		if inputPrompt != nil {
-			pending.Prompt = *inputPrompt
-		}
-		if inputMetadataJSON != nil {
-			if err := json.Unmarshal(inputMetadataJSON, &pending.Metadata); err != nil {
-				return nil, fmt.Errorf("unmarshal input metadata: %w", err)
-			}
-		}
-		instance.PendingInput = pending
 	}
 
 	return &instance, nil

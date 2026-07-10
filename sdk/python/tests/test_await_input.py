@@ -5,6 +5,7 @@ get_input_audit, and a timeout fallback (on_timeout) when nobody answers."""
 from __future__ import annotations
 
 from boundflow import (
+    AwaitApproval,
     AwaitInput,
     BoundFlowWorker,
     Complete,
@@ -146,5 +147,56 @@ async def test_pending_input_none_when_not_awaiting(cp):
 
             info = await cp.get_workflow(wf.id)
             assert info.pending_input is None
+        finally:
+            await cp.delete_workflow(wf.id)
+
+
+async def test_pending_input_cleared_once_workflow_moves_to_a_different_gate(cp):
+    """Regression: answering an input and then parking for approval on the resumed
+    operation must not leave the stale, already-resolved pending_input visible
+    alongside the new pending_approval."""
+    worker = BoundFlowWorker(WORKER_ADDRESS, dummy_mock())
+
+    @worker.workflow("await_input_then_approval", version=1)
+    async def _entry(ctx):
+        return AwaitInput(
+            on_answer=Next(operation="ask_for_approval", context=ctx.context, timeout=30),
+            on_timeout=Complete(result={"decision": "timed_out"}),
+            timeout=60,
+            prompt="Proceed?",
+        )
+
+    @worker.operation("await_input_then_approval", "ask_for_approval")
+    async def _ask_for_approval(ctx):
+        return AwaitApproval(
+            on_approve=Complete(result={"decision": "approved"}),
+            on_reject=Complete(result={"decision": "rejected"}),
+            timeout=60,
+        )
+
+    async with run_worker(worker):
+        tenant = await create_isolated_tenant(cp, "await-input-then-approval")
+        wf = await cp.create_workflow("await_input_then_approval", tenant.id, config=WorkflowConfig(version=1))
+        try:
+            await cp.activate_workflow(wf.id)
+            rid = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
+
+            await wait_for_lifecycle_state(cp, wf.id, LifecycleState.AWAITING_INPUT)
+            info = await cp.get_workflow(wf.id)
+            input_id = info.pending_input.input_id
+            await cp.submit_input(wf.id, input_id, {"go": True})
+
+            await wait_for_lifecycle_state(cp, wf.id, LifecycleState.AWAITING_APPROVAL)
+            info = await cp.get_workflow(wf.id)
+            assert info.pending_approval is not None
+            assert info.pending_input is None  # not the stale, already-answered request
+
+            await cp.approve_workflow(wf.id, info.pending_approval.approval_id)
+            result_info = await wait_for_completion(cp, rid)
+            assert result_info.result == {"decision": "approved"}
+
+            info_after = await cp.get_workflow(wf.id)
+            assert info_after.pending_approval is None
+            assert info_after.pending_input is None
         finally:
             await cp.delete_workflow(wf.id)

@@ -97,8 +97,8 @@ func TestCreateWorkflow(t *testing.T) {
 			if r.WorkflowType != "database" {
 				t.Errorf("expected workflow_type database, got %s", r.WorkflowType)
 			}
-			if r.LifecycleState != domain.LifecycleStateActive {
-				t.Errorf("expected lifecycle_state active, got %s", r.LifecycleState)
+			if r.Lifecycle.State != domain.LifecycleStateActive {
+				t.Errorf("expected lifecycle_state active, got %s", r.Lifecycle.State)
 			}
 			if r.WorkflowConfig != cfg {
 				t.Errorf("expected workflow config %+v, got %+v", cfg, r.WorkflowConfig)
@@ -232,7 +232,7 @@ func TestGetWorkflow(t *testing.T) {
 		WorkflowType:           "database",
 		CurrentWorkflowVersion: 2,
 		WorkflowConfig:         domain.WorkflowConfig{Triggerable: true},
-		LifecycleState:         domain.LifecycleStateInvoking,
+		Lifecycle:              domain.LifecycleInfo{State: domain.LifecycleStateInvoking},
 	}
 
 	workflowRepo.EXPECT().
@@ -243,8 +243,8 @@ func TestGetWorkflow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if instance.LifecycleState != domain.LifecycleStateInvoking {
-		t.Errorf("expected lifecycle_state invoking, got %s", instance.LifecycleState)
+	if instance.Lifecycle.State != domain.LifecycleStateInvoking {
+		t.Errorf("expected lifecycle_state invoking, got %s", instance.Lifecycle.State)
 	}
 	if instance.CurrentWorkflowVersion != 2 {
 		t.Errorf("expected current_workflow_version 2, got %d", instance.CurrentWorkflowVersion)

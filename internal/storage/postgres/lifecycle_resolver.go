@@ -48,11 +48,11 @@ func (r *LifecycleResolverRepo) GetExpiredCooldownWorkflows(ctx context.Context,
 			&inst.WorkflowConfig.InvokeTimeoutSeconds,
 			&inst.WorkflowConfig.RepeatEverySeconds,
 			&inst.WorkflowConfig.Triggerable,
-			&inst.LifecycleState, &inst.WorkflowState,
+			&inst.Lifecycle.State, &inst.WorkflowState,
 			&lifecyclePolicyJSON, &invocationMetricsJSON, &inst.CooldownUntil,
 			&inst.LifecycleLastResolved, &inst.CurrentWorkflowVersion, &inst.SchedulerPartitionID,
 			&inst.TargetVersion, &inst.CurrentVersion,
-			&inst.LastCompletedRequestAt, &inst.CreatedAt,
+			&inst.Lifecycle.LastCompletedRequestAt, &inst.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan workflow instance: %w", err)
 		}
