@@ -167,7 +167,7 @@ func (s *LifecycleService) CreateWorkflow(ctx context.Context, correlationID, wo
 		TenantID:               tenantID,
 		WorkflowType:           workflowType,
 		WorkflowConfig:         cfg,
-		LifecycleState:         domain.LifecycleStateActive,
+		Lifecycle:              domain.LifecycleInfo{State: domain.LifecycleStateActive},
 		WorkflowState:          domain.WorkflowStatePaused,
 		LifecyclePolicy:        domain.WorkflowLifecyclePolicy{Rules: []domain.WorkflowLifecyclePolicyRule{}},
 		CurrentWorkflowVersion: version,

@@ -40,5 +40,10 @@ CREATE TABLE workflows (
     metrics_emitted_at        BIGINT NOT NULL DEFAULT 0,
     last_completed_request_at TIMESTAMPTZ,
     last_interrupted_request_id    TEXT NOT NULL DEFAULT '',
+    last_gate_id           TEXT,
+    last_gate_detail       TEXT,
+    last_gate_metadata     JSONB,
+    last_gate_opened_at    TIMESTAMPTZ,
+    last_gate_timeout_at   TIMESTAMPTZ,
     created_at                TIMESTAMPTZ NOT NULL DEFAULT now()
 );

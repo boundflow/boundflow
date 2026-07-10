@@ -54,11 +54,11 @@ func (r *SchedulerRepo) GetDuePeriodicWorkflows(ctx context.Context, partitionID
 			&inst.WorkflowConfig.InvokeTimeoutSeconds,
 			&inst.WorkflowConfig.RepeatEverySeconds,
 			&inst.WorkflowConfig.Triggerable,
-			&inst.LifecycleState, &inst.WorkflowState,
+			&inst.Lifecycle.State, &inst.WorkflowState,
 			&lifecyclePolicyJSON, &invocationMetricsJSON, &inst.CooldownUntil,
 			&inst.LifecycleLastResolved, &inst.CurrentWorkflowVersion, &inst.SchedulerPartitionID,
 			&inst.TargetVersion, &inst.CurrentVersion,
-			&inst.LastCompletedRequestAt, &inst.CreatedAt,
+			&inst.Lifecycle.LastCompletedRequestAt, &inst.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan workflow instance: %w", err)
 		}
@@ -273,7 +273,12 @@ func (r *SchedulerRepo) MarkWorkflowInvoking(ctx context.Context, workflowID str
 func (r *SchedulerRepo) MarkWorkflowAwaitingApproval(ctx context.Context, workflowID string) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE workflows ri
-		 SET lifecycle_state = 'awaiting_approval'
+		 SET lifecycle_state = 'awaiting_approval',
+		     last_gate_id = j.approval_id,
+		     last_gate_detail = j.approval_justification,
+		     last_gate_metadata = j.approval_metadata,
+		     last_gate_opened_at = j.approval_opened_at,
+		     last_gate_timeout_at = j.approval_timeout_at
 		 FROM jobs j
 		 WHERE j.workflow_id = ri.id
 		   AND j.status = 'awaiting_approval'
@@ -289,7 +294,12 @@ func (r *SchedulerRepo) MarkWorkflowAwaitingApproval(ctx context.Context, workfl
 func (r *SchedulerRepo) MarkWorkflowAwaitingInput(ctx context.Context, workflowID string) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE workflows ri
-		 SET lifecycle_state = 'awaiting_input'
+		 SET lifecycle_state = 'awaiting_input',
+		     last_gate_id = j.input_id,
+		     last_gate_detail = j.input_prompt,
+		     last_gate_metadata = j.input_metadata,
+		     last_gate_opened_at = j.input_opened_at,
+		     last_gate_timeout_at = j.input_timeout_at
 		 FROM jobs j
 		 WHERE j.workflow_id = ri.id
 		   AND j.status = 'awaiting_input'
@@ -319,14 +329,33 @@ func (r *SchedulerRepo) ReconcileWorkflowLifecycles(ctx context.Context, partiti
 		                 WHEN j.status IN ('pending', 'awaiting_next', 'approved', 'rejected', 'answered', 'input_timed_out') AND j.owner IS NULL
 		                      AND now() - j.created_at > make_interval(secs => $2) THEN 'blocked'
 		                 WHEN j.status = 'pending' THEN 'scheduled'
-		             END)::lifecycle_state AS new_state
+		             END)::lifecycle_state AS new_state,
+		            j.approval_id, j.approval_justification, j.approval_metadata,
+		            j.approval_opened_at, j.approval_timeout_at,
+		            j.input_id, j.input_prompt, j.input_metadata,
+		            j.input_opened_at, j.input_timeout_at
 		     FROM jobs j
 		     JOIN workflows ri ON j.workflow_id = ri.id
 		     WHERE ri.scheduler_partition_id = $1
 		       AND ri.lifecycle_state NOT IN ('creating', 'deleting', 'deleted', 'interrupted')
 		 )
 		 UPDATE workflows ri
-		 SET lifecycle_state = t.new_state
+		 SET lifecycle_state = t.new_state,
+		     last_gate_id = CASE WHEN t.new_state = 'awaiting_approval' THEN t.approval_id
+		                         WHEN t.new_state = 'awaiting_input' THEN t.input_id
+		                         ELSE ri.last_gate_id END,
+		     last_gate_detail = CASE WHEN t.new_state = 'awaiting_approval' THEN t.approval_justification
+		                             WHEN t.new_state = 'awaiting_input' THEN t.input_prompt
+		                             ELSE ri.last_gate_detail END,
+		     last_gate_metadata = CASE WHEN t.new_state = 'awaiting_approval' THEN t.approval_metadata
+		                               WHEN t.new_state = 'awaiting_input' THEN t.input_metadata
+		                               ELSE ri.last_gate_metadata END,
+		     last_gate_opened_at = CASE WHEN t.new_state = 'awaiting_approval' THEN t.approval_opened_at
+		                                WHEN t.new_state = 'awaiting_input' THEN t.input_opened_at
+		                                ELSE ri.last_gate_opened_at END,
+		     last_gate_timeout_at = CASE WHEN t.new_state = 'awaiting_approval' THEN t.approval_timeout_at
+		                                 WHEN t.new_state = 'awaiting_input' THEN t.input_timeout_at
+		                                 ELSE ri.last_gate_timeout_at END
 		 FROM target t
 		 WHERE ri.id = t.id
 		   AND t.new_state <> t.current_state

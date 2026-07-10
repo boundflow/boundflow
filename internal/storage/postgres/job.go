@@ -229,7 +229,8 @@ func (r *JobRepo) SweepExpiredApprovals(ctx context.Context, partitionID string)
 		               approval_timeout_at, approval_opened_at
 		 ),
 		 wf AS (
-		     UPDATE workflows SET lifecycle_state = 'invoking'
+		     UPDATE workflows
+		     SET lifecycle_state = 'invoking'
 		     WHERE id IN (SELECT workflow_id FROM expired)
 		 )
 		 SELECT workflow_id, request_id, tenant_group_id, approval_id, approval_timeout_at, approval_opened_at FROM expired`,
@@ -343,7 +344,8 @@ func (r *JobRepo) SweepExpiredInputs(ctx context.Context, partitionID string) ([
 		               input_timeout_at, input_opened_at
 		 ),
 		 wf AS (
-		     UPDATE workflows SET lifecycle_state = 'invoking'
+		     UPDATE workflows
+		     SET lifecycle_state = 'invoking'
 		     WHERE id IN (SELECT workflow_id FROM expired)
 		 )
 		 SELECT workflow_id, request_id, tenant_group_id, input_id, input_timeout_at, input_opened_at FROM expired`,

@@ -32,15 +32,15 @@ func WorkflowToProto(r *domain.Workflow) *boundflowv1.Workflow {
 			InvokeMode:           invokeModeToProto(r.WorkflowConfig.InvokeMode),
 			MaxQueueDepth:        r.WorkflowConfig.MaxQueueDepth,
 		},
-		LifecycleState:           string(r.LifecycleState),
+		LifecycleState:           string(r.Lifecycle.State),
 		WorkflowState:            workflowStateToProto[r.WorkflowState],
-		LastInterruptedRequestId: r.LastInterruptedRequestID,
+		LastInterruptedRequestId: r.Lifecycle.LastInterruptedRequestID,
 	}
-	if r.PendingApproval != nil {
-		w.PendingApproval = pendingApprovalToProto(r.PendingApproval)
+	if pa := r.Lifecycle.PendingApproval(); pa != nil {
+		w.PendingApproval = pendingApprovalToProto(pa)
 	}
-	if r.PendingInput != nil {
-		w.PendingInput = pendingInputToProto(r.PendingInput)
+	if pi := r.Lifecycle.PendingInput(); pi != nil {
+		w.PendingInput = pendingInputToProto(pi)
 	}
 	return w
 }

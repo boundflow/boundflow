@@ -56,7 +56,7 @@ func newTestScheduler(ctrl *gomock.Controller) (
 		CurrentWorkflowVersion: 1,
 		CurrentVersion:         1,
 		LifecycleLastResolved:  1,
-		LifecycleState:         domain.LifecycleStateActive,
+		Lifecycle:              domain.LifecycleInfo{State: domain.LifecycleStateActive},
 		WorkflowState:          domain.WorkflowStateActive,
 	}, nil).AnyTimes()
 	s := scheduler.NewScheduler("test", 30, 25, partitions, schedulerRepo, requests, workflow, agentStates, jobs, noopMetricsHandler{}, noopPolicyResolver{}, mocks.NewMockAuditRepository(ctrl), discardLogger)
