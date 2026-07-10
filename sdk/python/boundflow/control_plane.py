@@ -237,7 +237,10 @@ class RequestInfo:
     lifecycle (`RunStatus`); `run_outcome` is the terminal `RunOutcome`, or None until
     the run is terminal. sequence_number orders a workflow's runs (monotonic per
     workflow). `result` is the run's published output (Complete(result=...)), or None
-    if the run hasn't completed or didn't publish one."""
+    if the run hasn't completed or didn't publish one. invoke_context, timeout_seconds,
+    and agent_runtime_policies are what was actually resolved for this specific run —
+    useful when workflow/agent config has since changed and you want to know what was
+    true at the time this run happened."""
     request_id: str
     workflow_id: str
     request_type: str
@@ -248,6 +251,9 @@ class RequestInfo:
     created_at: datetime | None
     completed_at: datetime | None
     result: dict | None
+    invoke_context: dict | None
+    timeout_seconds: int
+    agent_runtime_policies: dict | None
 
 
 @dataclass
@@ -674,6 +680,9 @@ class ControlPlaneClient:
             created_at=_ts(r, "created_at"),
             completed_at=_ts(r, "completed_at"),
             result=MessageToDict(r.result) if r.HasField("result") else None,
+            invoke_context=MessageToDict(r.invoke_context) if r.HasField("invoke_context") else None,
+            timeout_seconds=r.operation_timeout_seconds,
+            agent_runtime_policies=MessageToDict(r.agent_runtime_policies) if r.HasField("agent_runtime_policies") else None,
         )
 
     async def approve_workflow(self, workflow_id: str, approval_id: str, actor: str = "") -> None:
