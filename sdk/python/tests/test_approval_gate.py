@@ -37,6 +37,7 @@ async def test_approve_gate_runs_approve_operation(cp):
             on_reject=Complete(),
             timeout=60,
             justification="needs human sign-off",
+            metadata={"ticket": "T-42"},
         )
 
     @worker.operation("approval_approve", "approved_step")
@@ -62,6 +63,9 @@ async def test_approve_gate_runs_approve_operation(cp):
             req = captured[0]
             assert req.workflow_id == workflow.id
             assert req.justification == "needs human sign-off"
+            # Available synchronously, in-process, off the same result the workflow just
+            # returned — no round-trip back to the control plane needed to see it.
+            assert req.metadata == {"ticket": "T-42"}
             assert req.approval_id
 
             await cp.approve_workflow(workflow.id, req.approval_id)
