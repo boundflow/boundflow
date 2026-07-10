@@ -41,7 +41,10 @@ async def test_pending_input_discoverable_and_answer_resumes_the_run(cp):
 
     @worker.operation("await_input_wf", "handle_answer")
     async def _handle_answer(ctx):
-        return Complete(result={"decision": ctx.context["answer"]["choice"]})
+        answer = ctx.input_answer
+        assert answer == {"choice": "approve_refund"}
+        assert "answer" not in ctx.context  # popped, not leaked into customer keys
+        return Complete(result={"decision": answer["choice"]})
 
     @worker.on_input_requested
     async def _on_input(request: InputRequest):

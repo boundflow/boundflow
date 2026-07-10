@@ -119,7 +119,7 @@ class AwaitApproval:
 @dataclass
 class AwaitInput:
     """Park for a free-form answer, not a binary decision. One continuation
-    (on_answer) that resumes with the answer merged into ctx.context["answer"], plus
+    (on_answer) that resumes with the answer readable via ctx.input_answer, plus
     a separate on_timeout continuation for when nobody answers — there's no "explicit
     decline" branch, since if nobody wants to answer it just times out. prompt and
     metadata are published for external readers while the gate is open (WorkflowInfo's
@@ -173,6 +173,14 @@ class OperationContext:
         if not isinstance(raw.get("input"), dict):
             raw["input"] = {}
         return raw["input"]
+
+    @property
+    def input_answer(self) -> Any:
+        """The answer submitted via submit_input(), when this operation was reached
+        through an AwaitInput on_answer branch; None otherwise. Popped out of
+        .context on read, since .context is reserved for the customer's own keys —
+        the runtime shouldn't hand back a key the customer didn't put there."""
+        return self.context.pop("answer", None)
 
     def add_context(self, metadata: str, payload: Any, *, key: str | None = None) -> "OperationContext":
         self._llm_context.append((key or metadata, metadata, payload))
