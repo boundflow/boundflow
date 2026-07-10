@@ -237,6 +237,7 @@ class ApprovalRequest:
     timeout: int
     approval_id: str
     justification: str | None = None
+    metadata: dict | None = None
 
 
 # ── Worker ───────────────────────────────────────────────────────────────────
@@ -420,7 +421,7 @@ class BoundFlowWorker:
                 await self._on_approval(ApprovalRequest(
                     workflow_id=op.workflow_id, operation_name=op.name,
                     timeout=result.timeout, approval_id=approval_id,
-                    justification=result.justification))
+                    justification=result.justification, metadata=result.metadata))
             gate = op_pb.ApprovalGate(
                 timeout_seconds=result.timeout, approval_id=approval_id,
                 justification=result.justification or "")
