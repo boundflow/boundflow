@@ -36,6 +36,12 @@ type ApprovalResolver interface {
 	RejectJob(ctx context.Context, workflowID string, approvalID string) (bool, domain.ResolvedApproval, error)
 }
 
+// InputResolver handles answer submission for jobs awaiting input.
+// Satisfied by *scheduler.Scheduler.
+type InputResolver interface {
+	AnswerJob(ctx context.Context, workflowID string, inputID string, answer map[string]any) (bool, domain.ResolvedInput, error)
+}
+
 type LifecycleService struct {
 	workflows storage.WorkflowRepository
 	customerRequests  storage.CustomerRequestRepository
@@ -45,6 +51,7 @@ type LifecycleService struct {
 	modelPricing      storage.ModelPricingRepository
 	scheduler         RequestScheduler
 	approvalResolver  ApprovalResolver
+	inputResolver     InputResolver
 	audit             storage.AuditRepository
 	numPartitions     int
 	// minRepeatSeconds is the scheduler's periodic poll cadence; a smaller
@@ -62,6 +69,7 @@ func NewLifecycleService(
 	modelPricing storage.ModelPricingRepository,
 	scheduler RequestScheduler,
 	approvalResolver ApprovalResolver,
+	inputResolver InputResolver,
 	audit storage.AuditRepository,
 	numPartitions int,
 	minRepeatSeconds int,
@@ -76,6 +84,7 @@ func NewLifecycleService(
 		modelPricing:      modelPricing,
 		scheduler:         scheduler,
 		approvalResolver:  approvalResolver,
+		inputResolver:     inputResolver,
 		audit:             audit,
 		numPartitions:     numPartitions,
 		minRepeatSeconds:  minRepeatSeconds,
@@ -279,6 +288,11 @@ func (s *LifecycleService) GetApprovalAuditByID(ctx context.Context, tenantGroup
 	return s.audit.GetApprovalByID(ctx, tenantGroupID, approvalID)
 }
 
+// GetInputAudit returns a workflow's input decisions (newest first).
+func (s *LifecycleService) GetInputAudit(ctx context.Context, tenantGroupID, workflowID string) ([]domain.AuditEvent, error) {
+	return s.audit.ListAuditEvents(ctx, tenantGroupID, workflowID, "", []domain.AuditEventType{domain.AuditEventInput})
+}
+
 // GetWorkflowPolicyAudit returns a workflow's workflow-lifecycle policy firings.
 func (s *LifecycleService) GetWorkflowPolicyAudit(ctx context.Context, tenantGroupID, workflowID string) ([]domain.AuditEvent, error) {
 	return s.audit.ListAuditEvents(ctx, tenantGroupID, workflowID, "", []domain.AuditEventType{domain.AuditEventPolicyAction})
@@ -464,6 +478,48 @@ func (s *LifecycleService) recordApprovalDecision(ctx context.Context, workflowI
 		Details:       details,
 	}); err != nil {
 		s.log.Error("failed to append approval audit", "approval_id", approvalID, "error", err)
+	}
+}
+
+func (s *LifecycleService) SubmitInput(ctx context.Context, workflowID string, inputID string, answer map[string]any, actor string) error {
+	s.log.Info("submitting input", "workflow_id", workflowID, "input_id", inputID, "actor", actor)
+	resolved, info, err := s.inputResolver.AnswerJob(ctx, workflowID, inputID, answer)
+	if err != nil {
+		return fmt.Errorf("submit input: %w", err)
+	}
+	if !resolved {
+		return fmt.Errorf("%w: input ID did not match or workflow is not awaiting input", ErrInvalidWorkflowState)
+	}
+	s.recordInputDecision(ctx, workflowID, inputID, actor, domain.InputAnswered, answer, info)
+	return nil
+}
+
+// recordInputDecision appends the input audit row after an explicit submission.
+// Best-effort: the decision already committed, so a failed audit write is logged,
+// not surfaced as an error (matches the timeout sweep's behavior).
+func (s *LifecycleService) recordInputDecision(ctx context.Context, workflowID, inputID, actor string, decision domain.InputDecision, answer map[string]any, info domain.ResolvedInput) {
+	now := time.Now()
+	details, err := json.Marshal(domain.InputAuditDetails{
+		InputID:   inputID,
+		OpenedAt:  info.OpenedAt,
+		DecidedAt: &now,
+		Decision:  decision,
+		Answer:    answer,
+	})
+	if err != nil {
+		s.log.Error("failed to marshal input audit details", "input_id", inputID, "error", err)
+		return
+	}
+	if err := s.audit.Append(ctx, domain.AuditEvent{
+		TenantGroupID: info.TenantGroupID,
+		WorkflowID:    workflowID,
+		RequestID:     info.RequestID,
+		EventType:     domain.AuditEventInput,
+		Actor:         actor,
+		OccurredAt:    now,
+		Details:       details,
+	}); err != nil {
+		s.log.Error("failed to append input audit", "input_id", inputID, "error", err)
 	}
 }
 

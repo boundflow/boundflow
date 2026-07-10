@@ -77,6 +77,7 @@ class LifecycleState(str, Enum):
     BLOCKED = "blocked"
     INVOKING = "invoking"
     AWAITING_APPROVAL = "awaiting_approval"
+    AWAITING_INPUT = "awaiting_input"
     DELETING = "deleting"
     DELETED = "deleted"
     INTERRUPTED = "interrupted"
@@ -120,6 +121,13 @@ class ApprovalDecision(str, Enum):
     TIMED_OUT = "timed_out"
 
 
+class InputDecision(str, Enum):
+    """How an input gate was resolved (InputAuditRecord.decision)."""
+    UNSPECIFIED = "unspecified"
+    ANSWERED = "answered"
+    TIMED_OUT = "timed_out"
+
+
 class WorkflowPolicyAction(str, Enum):
     """The action a workflow-lifecycle rule took (PolicyActionRecord.action)."""
     UNSPECIFIED = "unspecified"
@@ -142,11 +150,25 @@ class PendingApproval:
 
 
 @dataclass
+class PendingInput:
+    """The currently open input gate for a workflow (WorkflowInfo.pending_input,
+    populated only while lifecycle_state is AWAITING_INPUT). input_id is what
+    submit_input expects — this is how an external caller (e.g. a page reload with
+    no in-process on_input_requested state) discovers it."""
+    input_id: str
+    prompt: str
+    metadata: dict
+    opened_at: datetime | None
+    timeout_at: datetime | None
+
+
+@dataclass
 class WorkflowInfo:
     """A read-only view of a workflow — its current version, lifecycle state, and
     workflow state. Returned by `get_workflow` (one) and `list_workflows` (all).
-    pending_approval is only populated by `get_workflow` (None from `list_workflows`,
-    which returns a lighter view) and only while lifecycle_state is AWAITING_APPROVAL."""
+    pending_approval/pending_input are only populated by `get_workflow` (None from
+    `list_workflows`, which returns a lighter view) and only while lifecycle_state
+    is AWAITING_APPROVAL / AWAITING_INPUT respectively."""
     id: str
     workflow_type: str
     tenant_id: str
@@ -155,6 +177,7 @@ class WorkflowInfo:
     version: int
     last_interrupted_request_id: str
     pending_approval: PendingApproval | None = None
+    pending_input: PendingInput | None = None
 
 
 def _workflow_info(w) -> WorkflowInfo:
@@ -167,6 +190,7 @@ def _workflow_info(w) -> WorkflowInfo:
         version=w.workflow_config.version,
         last_interrupted_request_id=w.last_interrupted_request_id,
         pending_approval=_pending_approval(w) if w.HasField("pending_approval") else None,
+        pending_input=_pending_input(w) if w.HasField("pending_input") else None,
     )
 
 
@@ -175,6 +199,17 @@ def _pending_approval(w) -> PendingApproval:
     return PendingApproval(
         approval_id=p.approval_id,
         justification=p.justification,
+        metadata=MessageToDict(p.metadata) if p.HasField("metadata") else {},
+        opened_at=_ts(p, "opened_at"),
+        timeout_at=_ts(p, "timeout_at"),
+    )
+
+
+def _pending_input(w) -> PendingInput:
+    p = w.pending_input
+    return PendingInput(
+        input_id=p.input_id,
+        prompt=p.prompt,
         metadata=MessageToDict(p.metadata) if p.HasField("metadata") else {},
         opened_at=_ts(p, "opened_at"),
         timeout_at=_ts(p, "timeout_at"),
@@ -231,6 +266,23 @@ class ApprovalAuditRecord:
 
 
 @dataclass
+class InputAuditRecord:
+    """One input decision from the audit log. Correlate with a run trace via
+    input_id (the trace's boundflow.input_id). answer is the submitted content
+    (unset on a timeout decision) — recorded here because it's the governance-
+    relevant content, same reasoning as auditing an approval decision."""
+    workflow_id: str
+    request_id: str
+    input_id: str
+    decision: InputDecision
+    opened_at: datetime | None
+    decided_at: datetime | None
+    actor: str                     # customer-supplied; empty for timeouts
+    occurred_at: datetime | None   # when the decision was recorded
+    answer: dict | None            # unset on a timeout decision
+
+
+@dataclass
 class PolicyActionRecord:
     """One workflow-lifecycle policy firing. Self-describing: the rule that fired
     (identified by content), the value that crossed, and the prior state."""
@@ -269,6 +321,10 @@ _APPROVAL_DECISION = {
     lc.APPROVAL_DECISION_APPROVED: ApprovalDecision.APPROVED,
     lc.APPROVAL_DECISION_REJECTED: ApprovalDecision.REJECTED,
     lc.APPROVAL_DECISION_TIMED_OUT: ApprovalDecision.TIMED_OUT,
+}
+_INPUT_DECISION = {
+    lc.INPUT_DECISION_ANSWERED: InputDecision.ANSWERED,
+    lc.INPUT_DECISION_TIMED_OUT: InputDecision.TIMED_OUT,
 }
 _WORKFLOW_METRIC = {
     lc.WORKFLOW_METRIC_NUM_FAILURES: "num_failures",
@@ -314,6 +370,15 @@ def _approval_record(r) -> ApprovalAuditRecord:
         decision=_APPROVAL_DECISION.get(r.decision, ApprovalDecision.UNSPECIFIED),
         opened_at=_ts(r, "opened_at"), decided_at=_ts(r, "decided_at"),
         actor=r.actor, occurred_at=_ts(r, "occurred_at"))
+
+
+def _input_record(r) -> InputAuditRecord:
+    return InputAuditRecord(
+        workflow_id=r.workflow_id, request_id=r.request_id, input_id=r.input_id,
+        decision=_INPUT_DECISION.get(r.decision, InputDecision.UNSPECIFIED),
+        opened_at=_ts(r, "opened_at"), decided_at=_ts(r, "decided_at"),
+        actor=r.actor, occurred_at=_ts(r, "occurred_at"),
+        answer=MessageToDict(r.answer) if r.HasField("answer") else None)
 
 
 def _workflow_policy_record(r) -> PolicyActionRecord:
@@ -365,6 +430,7 @@ _LIFECYCLE = {
     "blocked": LifecycleState.BLOCKED,
     "invoking": LifecycleState.INVOKING,
     "awaiting_approval": LifecycleState.AWAITING_APPROVAL,
+    "awaiting_input": LifecycleState.AWAITING_INPUT,
     "deleting": LifecycleState.DELETING,
     "deleted": LifecycleState.DELETED,
     "interrupted": LifecycleState.INTERRUPTED,
@@ -636,6 +702,21 @@ class ControlPlaneClient:
             lc.GetApprovalAuditByIdRequest(approval_id=approval_id), metadata=self._metadata)
         return _approval_record(resp.record) if resp.HasField("record") else None
 
+    async def submit_input(self, workflow_id: str, input_id: str, answer: dict, actor: str = "") -> None:
+        """Answer a parked input gate. `actor` identifies who supplied the answer
+        (e.g. an email or user id); it's recorded in the input audit log (auth is
+        tenant-scoped, so the customer's gate is the source of actor identity)."""
+        await self._lc.SubmitInput(
+            lc.SubmitInputRequest(workflow_id=workflow_id, input_id=input_id,
+                                  answer=_struct(answer), actor=actor),
+            metadata=self._metadata)
+
+    async def get_input_audit(self, workflow_id: str) -> list[InputAuditRecord]:
+        """A workflow's input decisions (newest first)."""
+        resp = await self._lc.GetInputAudit(
+            lc.GetInputAuditRequest(workflow_id=workflow_id), metadata=self._metadata)
+        return [_input_record(r) for r in resp.records]
+
     async def get_workflow_policy_audit(self, workflow_id: str) -> list[PolicyActionRecord]:
         """A workflow's workflow-lifecycle policy firings (newest first)."""
         resp = await self._lc.GetWorkflowPolicyAudit(
@@ -653,7 +734,7 @@ class ControlPlaneClient:
     async def get_audit_log(self, workflow_id: str = ""):
         """The unified, time-ordered audit log (newest first). workflow_id is optional
         — omit for the whole tenant group. Each item is an ApprovalAuditRecord,
-        PolicyActionRecord, or AgentPolicyActionRecord."""
+        InputAuditRecord, PolicyActionRecord, or AgentPolicyActionRecord."""
         resp = await self._lc.GetAuditLog(
             lc.GetAuditLogRequest(workflow_id=workflow_id), metadata=self._metadata)
         out = []
@@ -665,6 +746,8 @@ class ControlPlaneClient:
                 out.append(_workflow_policy_record(e.workflow_policy))
             elif which == "agent_policy":
                 out.append(_agent_policy_record(e.agent_policy))
+            elif which == "input":
+                out.append(_input_record(e.input))
         return out
 
     async def delete_workflow(self, workflow_id: str) -> None:

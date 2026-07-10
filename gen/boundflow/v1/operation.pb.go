@@ -341,6 +341,113 @@ func (x *ApprovalGate) GetMetadata() *structpb.Struct {
 	return nil
 }
 
+// InputGate parks the run for a free-form answer, not a binary decision — a single
+// continuation (on_answer) that resumes with the answer merged into its context under
+// context["answer"], plus a separate on_timeout continuation for when nobody answers.
+// There's no "explicit decline" branch: if nobody wants to answer, it just times out.
+type InputGate struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OnAnswer       *AtomicOperation       `protobuf:"bytes,1,opt,name=on_answer,json=onAnswer,proto3" json:"on_answer,omitempty"`
+	OnTimeout      *AtomicOperation       `protobuf:"bytes,2,opt,name=on_timeout,json=onTimeout,proto3" json:"on_timeout,omitempty"`
+	TimeoutSeconds int32                  `protobuf:"varint,3,opt,name=timeout_seconds,json=timeoutSeconds,proto3" json:"timeout_seconds,omitempty"`
+	InputId        string                 `protobuf:"bytes,4,opt,name=input_id,json=inputId,proto3" json:"input_id,omitempty"`
+	// Published for external readers while the gate is open (WorkflowInfo.pending_input).
+	Prompt   string           `protobuf:"bytes,5,opt,name=prompt,proto3" json:"prompt,omitempty"`
+	Metadata *structpb.Struct `protobuf:"bytes,6,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	// Complete(result=...) on a terminal branch — same reasoning as ApprovalGate's
+	// on_approve_result/on_reject_result.
+	OnAnswerResult  *structpb.Struct `protobuf:"bytes,7,opt,name=on_answer_result,json=onAnswerResult,proto3" json:"on_answer_result,omitempty"`
+	OnTimeoutResult *structpb.Struct `protobuf:"bytes,8,opt,name=on_timeout_result,json=onTimeoutResult,proto3" json:"on_timeout_result,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *InputGate) Reset() {
+	*x = InputGate{}
+	mi := &file_boundflow_v1_operation_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InputGate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InputGate) ProtoMessage() {}
+
+func (x *InputGate) ProtoReflect() protoreflect.Message {
+	mi := &file_boundflow_v1_operation_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InputGate.ProtoReflect.Descriptor instead.
+func (*InputGate) Descriptor() ([]byte, []int) {
+	return file_boundflow_v1_operation_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *InputGate) GetOnAnswer() *AtomicOperation {
+	if x != nil {
+		return x.OnAnswer
+	}
+	return nil
+}
+
+func (x *InputGate) GetOnTimeout() *AtomicOperation {
+	if x != nil {
+		return x.OnTimeout
+	}
+	return nil
+}
+
+func (x *InputGate) GetTimeoutSeconds() int32 {
+	if x != nil {
+		return x.TimeoutSeconds
+	}
+	return 0
+}
+
+func (x *InputGate) GetInputId() string {
+	if x != nil {
+		return x.InputId
+	}
+	return ""
+}
+
+func (x *InputGate) GetPrompt() string {
+	if x != nil {
+		return x.Prompt
+	}
+	return ""
+}
+
+func (x *InputGate) GetMetadata() *structpb.Struct {
+	if x != nil {
+		return x.Metadata
+	}
+	return nil
+}
+
+func (x *InputGate) GetOnAnswerResult() *structpb.Struct {
+	if x != nil {
+		return x.OnAnswerResult
+	}
+	return nil
+}
+
+func (x *InputGate) GetOnTimeoutResult() *structpb.Struct {
+	if x != nil {
+		return x.OnTimeoutResult
+	}
+	return nil
+}
+
 type AtomicOperationResult struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Status        OperationStatus        `protobuf:"varint,1,opt,name=status,proto3,enum=boundflow.v1.OperationStatus" json:"status,omitempty"`
@@ -349,6 +456,7 @@ type AtomicOperationResult struct {
 	// Per-agent invocation metrics observed during this operation, keyed by agent name.
 	AgentStateUpdates map[string]*AgentInvocationMetrics `protobuf:"bytes,4,rep,name=agent_state_updates,json=agentStateUpdates,proto3" json:"agent_state_updates,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	ApprovalGate      *ApprovalGate                      `protobuf:"bytes,5,opt,name=approval_gate,json=approvalGate,proto3" json:"approval_gate,omitempty"`
+	InputGate         *InputGate                         `protobuf:"bytes,11,opt,name=input_gate,json=inputGate,proto3" json:"input_gate,omitempty"`
 	// Workflow-level metrics the customer emits for this operation (e.g. a failed run).
 	// Accumulated across the job's operations and folded into the rolling snapshot.
 	WorkflowMetrics *WorkflowInvocationMetrics `protobuf:"bytes,6,opt,name=workflow_metrics,json=workflowMetrics,proto3" json:"workflow_metrics,omitempty"`
@@ -370,7 +478,7 @@ type AtomicOperationResult struct {
 
 func (x *AtomicOperationResult) Reset() {
 	*x = AtomicOperationResult{}
-	mi := &file_boundflow_v1_operation_proto_msgTypes[2]
+	mi := &file_boundflow_v1_operation_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -382,7 +490,7 @@ func (x *AtomicOperationResult) String() string {
 func (*AtomicOperationResult) ProtoMessage() {}
 
 func (x *AtomicOperationResult) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_operation_proto_msgTypes[2]
+	mi := &file_boundflow_v1_operation_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -395,7 +503,7 @@ func (x *AtomicOperationResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AtomicOperationResult.ProtoReflect.Descriptor instead.
 func (*AtomicOperationResult) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_operation_proto_rawDescGZIP(), []int{2}
+	return file_boundflow_v1_operation_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *AtomicOperationResult) GetStatus() OperationStatus {
@@ -429,6 +537,13 @@ func (x *AtomicOperationResult) GetAgentStateUpdates() map[string]*AgentInvocati
 func (x *AtomicOperationResult) GetApprovalGate() *ApprovalGate {
 	if x != nil {
 		return x.ApprovalGate
+	}
+	return nil
+}
+
+func (x *AtomicOperationResult) GetInputGate() *InputGate {
+	if x != nil {
+		return x.InputGate
 	}
 	return nil
 }
@@ -480,7 +595,7 @@ type WorkflowInvocationMetrics struct {
 
 func (x *WorkflowInvocationMetrics) Reset() {
 	*x = WorkflowInvocationMetrics{}
-	mi := &file_boundflow_v1_operation_proto_msgTypes[3]
+	mi := &file_boundflow_v1_operation_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -492,7 +607,7 @@ func (x *WorkflowInvocationMetrics) String() string {
 func (*WorkflowInvocationMetrics) ProtoMessage() {}
 
 func (x *WorkflowInvocationMetrics) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_operation_proto_msgTypes[3]
+	mi := &file_boundflow_v1_operation_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -505,7 +620,7 @@ func (x *WorkflowInvocationMetrics) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkflowInvocationMetrics.ProtoReflect.Descriptor instead.
 func (*WorkflowInvocationMetrics) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_operation_proto_rawDescGZIP(), []int{3}
+	return file_boundflow_v1_operation_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *WorkflowInvocationMetrics) GetFailures() int32 {
@@ -537,7 +652,7 @@ type AgentInvocationMetrics struct {
 
 func (x *AgentInvocationMetrics) Reset() {
 	*x = AgentInvocationMetrics{}
-	mi := &file_boundflow_v1_operation_proto_msgTypes[4]
+	mi := &file_boundflow_v1_operation_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -549,7 +664,7 @@ func (x *AgentInvocationMetrics) String() string {
 func (*AgentInvocationMetrics) ProtoMessage() {}
 
 func (x *AgentInvocationMetrics) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_operation_proto_msgTypes[4]
+	mi := &file_boundflow_v1_operation_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -562,7 +677,7 @@ func (x *AgentInvocationMetrics) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentInvocationMetrics.ProtoReflect.Descriptor instead.
 func (*AgentInvocationMetrics) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_operation_proto_rawDescGZIP(), []int{4}
+	return file_boundflow_v1_operation_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *AgentInvocationMetrics) GetCostUsd() float64 {
@@ -655,13 +770,25 @@ const file_boundflow_v1_operation_proto_rawDesc = "" +
 	"\x11on_approve_result\x18\x05 \x01(\v2\x17.google.protobuf.StructR\x0fonApproveResult\x12A\n" +
 	"\x10on_reject_result\x18\x06 \x01(\v2\x17.google.protobuf.StructR\x0eonRejectResult\x12$\n" +
 	"\rjustification\x18\a \x01(\tR\rjustification\x123\n" +
-	"\bmetadata\x18\b \x01(\v2\x17.google.protobuf.StructR\bmetadata\"\x91\a\n" +
+	"\bmetadata\x18\b \x01(\v2\x17.google.protobuf.StructR\bmetadata\"\x9e\x03\n" +
+	"\tInputGate\x12:\n" +
+	"\ton_answer\x18\x01 \x01(\v2\x1d.boundflow.v1.AtomicOperationR\bonAnswer\x12<\n" +
+	"\n" +
+	"on_timeout\x18\x02 \x01(\v2\x1d.boundflow.v1.AtomicOperationR\tonTimeout\x12'\n" +
+	"\x0ftimeout_seconds\x18\x03 \x01(\x05R\x0etimeoutSeconds\x12\x19\n" +
+	"\binput_id\x18\x04 \x01(\tR\ainputId\x12\x16\n" +
+	"\x06prompt\x18\x05 \x01(\tR\x06prompt\x123\n" +
+	"\bmetadata\x18\x06 \x01(\v2\x17.google.protobuf.StructR\bmetadata\x12A\n" +
+	"\x10on_answer_result\x18\a \x01(\v2\x17.google.protobuf.StructR\x0eonAnswerResult\x12C\n" +
+	"\x11on_timeout_result\x18\b \x01(\v2\x17.google.protobuf.StructR\x0fonTimeoutResult\"\xc9\a\n" +
 	"\x15AtomicOperationResult\x125\n" +
 	"\x06status\x18\x01 \x01(\x0e2\x1d.boundflow.v1.OperationStatusR\x06status\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12D\n" +
 	"\x0enext_operation\x18\x03 \x01(\v2\x1d.boundflow.v1.AtomicOperationR\rnextOperation\x12j\n" +
 	"\x13agent_state_updates\x18\x04 \x03(\v2:.boundflow.v1.AtomicOperationResult.AgentStateUpdatesEntryR\x11agentStateUpdates\x12?\n" +
-	"\rapproval_gate\x18\x05 \x01(\v2\x1a.boundflow.v1.ApprovalGateR\fapprovalGate\x12R\n" +
+	"\rapproval_gate\x18\x05 \x01(\v2\x1a.boundflow.v1.ApprovalGateR\fapprovalGate\x126\n" +
+	"\n" +
+	"input_gate\x18\v \x01(\v2\x17.boundflow.v1.InputGateR\tinputGate\x12R\n" +
 	"\x10workflow_metrics\x18\x06 \x01(\v2'.boundflow.v1.WorkflowInvocationMetricsR\x0fworkflowMetrics\x12m\n" +
 	"\x14agent_policy_actions\x18\a \x03(\v2;.boundflow.v1.AtomicOperationResult.AgentPolicyActionsEntryR\x12agentPolicyActions\x12E\n" +
 	"\ffailure_type\x18\b \x01(\x0e2\".boundflow.v1.OperationFailureTypeR\vfailureType\x12%\n" +
@@ -726,48 +853,55 @@ func file_boundflow_v1_operation_proto_rawDescGZIP() []byte {
 }
 
 var file_boundflow_v1_operation_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_boundflow_v1_operation_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_boundflow_v1_operation_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_boundflow_v1_operation_proto_goTypes = []any{
 	(OperationFailureType)(0),         // 0: boundflow.v1.OperationFailureType
 	(OperationStatus)(0),              // 1: boundflow.v1.OperationStatus
 	(*AtomicOperation)(nil),           // 2: boundflow.v1.AtomicOperation
 	(*ApprovalGate)(nil),              // 3: boundflow.v1.ApprovalGate
-	(*AtomicOperationResult)(nil),     // 4: boundflow.v1.AtomicOperationResult
-	(*WorkflowInvocationMetrics)(nil), // 5: boundflow.v1.WorkflowInvocationMetrics
-	(*AgentInvocationMetrics)(nil),    // 6: boundflow.v1.AgentInvocationMetrics
-	nil,                               // 7: boundflow.v1.AtomicOperationResult.AgentStateUpdatesEntry
-	nil,                               // 8: boundflow.v1.AtomicOperationResult.AgentPolicyActionsEntry
-	nil,                               // 9: boundflow.v1.AgentInvocationMetrics.ToolFailureCountsEntry
-	nil,                               // 10: boundflow.v1.AgentInvocationMetrics.CallsPerToolEntry
-	(*structpb.Struct)(nil),           // 11: google.protobuf.Struct
-	(*timestamppb.Timestamp)(nil),     // 12: google.protobuf.Timestamp
-	(*AgentPolicyAction)(nil),         // 13: boundflow.v1.AgentPolicyAction
+	(*InputGate)(nil),                 // 4: boundflow.v1.InputGate
+	(*AtomicOperationResult)(nil),     // 5: boundflow.v1.AtomicOperationResult
+	(*WorkflowInvocationMetrics)(nil), // 6: boundflow.v1.WorkflowInvocationMetrics
+	(*AgentInvocationMetrics)(nil),    // 7: boundflow.v1.AgentInvocationMetrics
+	nil,                               // 8: boundflow.v1.AtomicOperationResult.AgentStateUpdatesEntry
+	nil,                               // 9: boundflow.v1.AtomicOperationResult.AgentPolicyActionsEntry
+	nil,                               // 10: boundflow.v1.AgentInvocationMetrics.ToolFailureCountsEntry
+	nil,                               // 11: boundflow.v1.AgentInvocationMetrics.CallsPerToolEntry
+	(*structpb.Struct)(nil),           // 12: google.protobuf.Struct
+	(*timestamppb.Timestamp)(nil),     // 13: google.protobuf.Timestamp
+	(*AgentPolicyAction)(nil),         // 14: boundflow.v1.AgentPolicyAction
 }
 var file_boundflow_v1_operation_proto_depIdxs = []int32{
-	11, // 0: boundflow.v1.AtomicOperation.context:type_name -> google.protobuf.Struct
-	12, // 1: boundflow.v1.AtomicOperation.created_at:type_name -> google.protobuf.Timestamp
+	12, // 0: boundflow.v1.AtomicOperation.context:type_name -> google.protobuf.Struct
+	13, // 1: boundflow.v1.AtomicOperation.created_at:type_name -> google.protobuf.Timestamp
 	2,  // 2: boundflow.v1.ApprovalGate.on_approve:type_name -> boundflow.v1.AtomicOperation
 	2,  // 3: boundflow.v1.ApprovalGate.on_reject:type_name -> boundflow.v1.AtomicOperation
-	11, // 4: boundflow.v1.ApprovalGate.on_approve_result:type_name -> google.protobuf.Struct
-	11, // 5: boundflow.v1.ApprovalGate.on_reject_result:type_name -> google.protobuf.Struct
-	11, // 6: boundflow.v1.ApprovalGate.metadata:type_name -> google.protobuf.Struct
-	1,  // 7: boundflow.v1.AtomicOperationResult.status:type_name -> boundflow.v1.OperationStatus
-	2,  // 8: boundflow.v1.AtomicOperationResult.next_operation:type_name -> boundflow.v1.AtomicOperation
-	7,  // 9: boundflow.v1.AtomicOperationResult.agent_state_updates:type_name -> boundflow.v1.AtomicOperationResult.AgentStateUpdatesEntry
-	3,  // 10: boundflow.v1.AtomicOperationResult.approval_gate:type_name -> boundflow.v1.ApprovalGate
-	5,  // 11: boundflow.v1.AtomicOperationResult.workflow_metrics:type_name -> boundflow.v1.WorkflowInvocationMetrics
-	8,  // 12: boundflow.v1.AtomicOperationResult.agent_policy_actions:type_name -> boundflow.v1.AtomicOperationResult.AgentPolicyActionsEntry
-	0,  // 13: boundflow.v1.AtomicOperationResult.failure_type:type_name -> boundflow.v1.OperationFailureType
-	11, // 14: boundflow.v1.AtomicOperationResult.result:type_name -> google.protobuf.Struct
-	9,  // 15: boundflow.v1.AgentInvocationMetrics.tool_failure_counts:type_name -> boundflow.v1.AgentInvocationMetrics.ToolFailureCountsEntry
-	10, // 16: boundflow.v1.AgentInvocationMetrics.calls_per_tool:type_name -> boundflow.v1.AgentInvocationMetrics.CallsPerToolEntry
-	6,  // 17: boundflow.v1.AtomicOperationResult.AgentStateUpdatesEntry.value:type_name -> boundflow.v1.AgentInvocationMetrics
-	13, // 18: boundflow.v1.AtomicOperationResult.AgentPolicyActionsEntry.value:type_name -> boundflow.v1.AgentPolicyAction
-	19, // [19:19] is the sub-list for method output_type
-	19, // [19:19] is the sub-list for method input_type
-	19, // [19:19] is the sub-list for extension type_name
-	19, // [19:19] is the sub-list for extension extendee
-	0,  // [0:19] is the sub-list for field type_name
+	12, // 4: boundflow.v1.ApprovalGate.on_approve_result:type_name -> google.protobuf.Struct
+	12, // 5: boundflow.v1.ApprovalGate.on_reject_result:type_name -> google.protobuf.Struct
+	12, // 6: boundflow.v1.ApprovalGate.metadata:type_name -> google.protobuf.Struct
+	2,  // 7: boundflow.v1.InputGate.on_answer:type_name -> boundflow.v1.AtomicOperation
+	2,  // 8: boundflow.v1.InputGate.on_timeout:type_name -> boundflow.v1.AtomicOperation
+	12, // 9: boundflow.v1.InputGate.metadata:type_name -> google.protobuf.Struct
+	12, // 10: boundflow.v1.InputGate.on_answer_result:type_name -> google.protobuf.Struct
+	12, // 11: boundflow.v1.InputGate.on_timeout_result:type_name -> google.protobuf.Struct
+	1,  // 12: boundflow.v1.AtomicOperationResult.status:type_name -> boundflow.v1.OperationStatus
+	2,  // 13: boundflow.v1.AtomicOperationResult.next_operation:type_name -> boundflow.v1.AtomicOperation
+	8,  // 14: boundflow.v1.AtomicOperationResult.agent_state_updates:type_name -> boundflow.v1.AtomicOperationResult.AgentStateUpdatesEntry
+	3,  // 15: boundflow.v1.AtomicOperationResult.approval_gate:type_name -> boundflow.v1.ApprovalGate
+	4,  // 16: boundflow.v1.AtomicOperationResult.input_gate:type_name -> boundflow.v1.InputGate
+	6,  // 17: boundflow.v1.AtomicOperationResult.workflow_metrics:type_name -> boundflow.v1.WorkflowInvocationMetrics
+	9,  // 18: boundflow.v1.AtomicOperationResult.agent_policy_actions:type_name -> boundflow.v1.AtomicOperationResult.AgentPolicyActionsEntry
+	0,  // 19: boundflow.v1.AtomicOperationResult.failure_type:type_name -> boundflow.v1.OperationFailureType
+	12, // 20: boundflow.v1.AtomicOperationResult.result:type_name -> google.protobuf.Struct
+	10, // 21: boundflow.v1.AgentInvocationMetrics.tool_failure_counts:type_name -> boundflow.v1.AgentInvocationMetrics.ToolFailureCountsEntry
+	11, // 22: boundflow.v1.AgentInvocationMetrics.calls_per_tool:type_name -> boundflow.v1.AgentInvocationMetrics.CallsPerToolEntry
+	7,  // 23: boundflow.v1.AtomicOperationResult.AgentStateUpdatesEntry.value:type_name -> boundflow.v1.AgentInvocationMetrics
+	14, // 24: boundflow.v1.AtomicOperationResult.AgentPolicyActionsEntry.value:type_name -> boundflow.v1.AgentPolicyAction
+	25, // [25:25] is the sub-list for method output_type
+	25, // [25:25] is the sub-list for method input_type
+	25, // [25:25] is the sub-list for extension type_name
+	25, // [25:25] is the sub-list for extension extendee
+	0,  // [0:25] is the sub-list for field type_name
 }
 
 func init() { file_boundflow_v1_operation_proto_init() }
@@ -776,15 +910,15 @@ func file_boundflow_v1_operation_proto_init() {
 		return
 	}
 	file_boundflow_v1_agent_policy_proto_init()
-	file_boundflow_v1_operation_proto_msgTypes[3].OneofWrappers = []any{}
 	file_boundflow_v1_operation_proto_msgTypes[4].OneofWrappers = []any{}
+	file_boundflow_v1_operation_proto_msgTypes[5].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_boundflow_v1_operation_proto_rawDesc), len(file_boundflow_v1_operation_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   9,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

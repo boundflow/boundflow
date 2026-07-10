@@ -59,6 +59,7 @@ BF_OPERATION = "boundflow.operation"
 BF_OUTCOME = "boundflow.outcome"
 BF_FAILED = "boundflow.failed"
 BF_APPROVAL_ID = "boundflow.approval_id"
+BF_INPUT_ID = "boundflow.input_id"
 
 # ── Vocabulary values (not attribute keys) ────────────────────────────────────
 # GenAI operation-name values (the value of gen_ai.operation.name):
@@ -81,6 +82,7 @@ SPAN_KIND_TOOL = "tool"
 OUTCOME_COMPLETED = "completed"
 OUTCOME_NEXT = "next"
 OUTCOME_AWAIT_APPROVAL = "await_approval"
+OUTCOME_AWAIT_INPUT = "await_input"
 # Generic error attribute keys:
 ERROR = "error"
 ERROR_MESSAGE = "error.message"
@@ -141,6 +143,9 @@ class OperationTrace:
     # actor, and timing server-side via GetApprovalAudit. The decision itself is
     # NOT in the trace by design — it lives in the BoundFlow audit log.
     approval_id: str | None = None
+    # Set only when outcome == "await_input": the key to look up the answer, actor,
+    # and timing server-side via GetInputAudit. Same reasoning as approval_id.
+    input_id: str | None = None
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -239,6 +244,8 @@ class OTelTraceSink:
         op.set_attribute(BF_FAILED, trace.failed)
         if trace.approval_id:
             op.set_attribute(BF_APPROVAL_ID, trace.approval_id)
+        if trace.input_id:
+            op.set_attribute(BF_INPUT_ID, trace.input_id)
         op_ctx = self._ot.set_span_in_context(op)
         for run in trace.agent_runs:
             agent = self._tracer.start_span(f"agent {run.agent}", context=op_ctx,

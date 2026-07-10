@@ -104,6 +104,11 @@ class WorkflowServiceStub:
                 request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.RejectWorkflowRequest.SerializeToString,
                 response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.RejectWorkflowResponse.FromString,
                 _registered_method=True)
+        self.SubmitInput = channel.unary_unary(
+                '/boundflow.v1.WorkflowService/SubmitInput',
+                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.SubmitInputRequest.SerializeToString,
+                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.SubmitInputResponse.FromString,
+                _registered_method=True)
         self.GetApprovalAudit = channel.unary_unary(
                 '/boundflow.v1.WorkflowService/GetApprovalAudit',
                 request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetApprovalAuditRequest.SerializeToString,
@@ -113,6 +118,11 @@ class WorkflowServiceStub:
                 '/boundflow.v1.WorkflowService/GetApprovalAuditById',
                 request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetApprovalAuditByIdRequest.SerializeToString,
                 response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetApprovalAuditByIdResponse.FromString,
+                _registered_method=True)
+        self.GetInputAudit = channel.unary_unary(
+                '/boundflow.v1.WorkflowService/GetInputAudit',
+                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetInputAuditRequest.SerializeToString,
+                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetInputAuditResponse.FromString,
                 _registered_method=True)
         self.GetWorkflowPolicyAudit = channel.unary_unary(
                 '/boundflow.v1.WorkflowService/GetWorkflowPolicyAudit',
@@ -241,6 +251,12 @@ class WorkflowServiceServicer:
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def SubmitInput(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def GetApprovalAudit(self, request, context):
         """Per-type audit getters (workflow_id required); GetAuditLog is the unified,
         time-ordered log (workflow_id optional — omitted = whole tenant group).
@@ -250,6 +266,12 @@ class WorkflowServiceServicer:
         raise NotImplementedError('Method not implemented!')
 
     def GetApprovalAuditById(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetInputAudit(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -370,6 +392,11 @@ def add_WorkflowServiceServicer_to_server(servicer, server):
                     request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.RejectWorkflowRequest.FromString,
                     response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.RejectWorkflowResponse.SerializeToString,
             ),
+            'SubmitInput': grpc.unary_unary_rpc_method_handler(
+                    servicer.SubmitInput,
+                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.SubmitInputRequest.FromString,
+                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.SubmitInputResponse.SerializeToString,
+            ),
             'GetApprovalAudit': grpc.unary_unary_rpc_method_handler(
                     servicer.GetApprovalAudit,
                     request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetApprovalAuditRequest.FromString,
@@ -379,6 +406,11 @@ def add_WorkflowServiceServicer_to_server(servicer, server):
                     servicer.GetApprovalAuditById,
                     request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetApprovalAuditByIdRequest.FromString,
                     response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetApprovalAuditByIdResponse.SerializeToString,
+            ),
+            'GetInputAudit': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetInputAudit,
+                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetInputAuditRequest.FromString,
+                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetInputAuditResponse.SerializeToString,
             ),
             'GetWorkflowPolicyAudit': grpc.unary_unary_rpc_method_handler(
                     servicer.GetWorkflowPolicyAudit,
@@ -805,6 +837,33 @@ class WorkflowService:
             _registered_method=True)
 
     @staticmethod
+    def SubmitInput(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/boundflow.v1.WorkflowService/SubmitInput',
+            boundflow_dot_v1_dot_lifecycle__pb2.SubmitInputRequest.SerializeToString,
+            boundflow_dot_v1_dot_lifecycle__pb2.SubmitInputResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
     def GetApprovalAudit(request,
             target,
             options=(),
@@ -848,6 +907,33 @@ class WorkflowService:
             '/boundflow.v1.WorkflowService/GetApprovalAuditById',
             boundflow_dot_v1_dot_lifecycle__pb2.GetApprovalAuditByIdRequest.SerializeToString,
             boundflow_dot_v1_dot_lifecycle__pb2.GetApprovalAuditByIdResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetInputAudit(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/boundflow.v1.WorkflowService/GetInputAudit',
+            boundflow_dot_v1_dot_lifecycle__pb2.GetInputAuditRequest.SerializeToString,
+            boundflow_dot_v1_dot_lifecycle__pb2.GetInputAuditResponse.FromString,
             options,
             channel_credentials,
             insecure,

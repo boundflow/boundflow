@@ -41,6 +41,16 @@ func (m *mockApprovalResolver) RejectJob(_ context.Context, _ string, _ string) 
 	return m.rejectResult, domain.ResolvedApproval{}, m.rejectErr
 }
 
+// mockInputResolver is a simple test double for service.InputResolver.
+type mockInputResolver struct {
+	answerResult bool
+	answerErr    error
+}
+
+func (m *mockInputResolver) AnswerJob(_ context.Context, _ string, _ string, _ map[string]any) (bool, domain.ResolvedInput, error) {
+	return m.answerResult, domain.ResolvedInput{}, m.answerErr
+}
+
 // policy used in all tests — non-zero so resolveJobPolicy returns immediately.
 var testPolicy = domain.WorkflowRuntimeParams{OperationTimeoutSeconds: 30}
 
@@ -64,7 +74,8 @@ func newSvcWithApproval(ctrl *gomock.Controller, approval service.ApprovalResolv
 	modelPricingRepo.EXPECT().ListForTenantGroup(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 	// Approval decisions append an audit row on success; tests don't assert on it.
 	auditRepo.EXPECT().Append(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-	svc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, sched, approval, auditRepo, 10, 30, discardLogger)
+	input := &mockInputResolver{answerResult: true}
+	svc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, sched, approval, input, auditRepo, 10, 30, discardLogger)
 	return svc, workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo
 }
 

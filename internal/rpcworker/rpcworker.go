@@ -24,6 +24,7 @@ type RequestScheduler interface {
 	FailRequest(ctx context.Context, req string, reason string) (bool, error)
 	MarkInvoking(ctx context.Context, workflowID string) error
 	MarkAwaitingApproval(ctx context.Context, workflowID string) error
+	MarkAwaitingInput(ctx context.Context, workflowID string) error
 }
 
 type MetricsHandler interface {
@@ -206,6 +207,51 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 			}
 			if err := s.scheduler.MarkAwaitingApproval(ctx, job.WorkflowID); err != nil {
 				log.Warn("failed to mark workflow awaiting approval, scheduler will sync", "workflow_id", job.WorkflowID, "error", err)
+			}
+		} else if result.InputGate != nil {
+			log.Info("operation requires input, parking job", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "input_id", result.InputGate.InputId)
+
+			buildInputBranch := func(next *boundflowv1.AtomicOperation, result *structpb.Struct) domain.InputBranch {
+				if next != nil {
+					return domain.InputBranch{
+						Next: &domain.NextOperation{
+							OperationName:  next.Name,
+							Context:        next.Context.AsMap(),
+							TimeoutSeconds: int(next.TimeoutSeconds),
+						},
+					}
+				}
+				var res map[string]any
+				if result != nil {
+					res = result.AsMap()
+				}
+				return domain.InputBranch{Result: res}
+			}
+
+			jobMetadata := domain.JobMetadata{
+				InputGate: &domain.InputGateMetadata{
+					OnAnswer:  buildInputBranch(result.InputGate.OnAnswer, result.InputGate.OnAnswerResult),
+					OnTimeout: buildInputBranch(result.InputGate.OnTimeout, result.InputGate.OnTimeoutResult),
+				},
+			}
+
+			var inputMetadata map[string]any
+			if result.InputGate.Metadata != nil {
+				inputMetadata = result.InputGate.Metadata.AsMap()
+			}
+
+			// opened_at + timeout_at are stamped server-side (DB now()) inside ParkForInput.
+			parked, err := s.jobs.ParkForInput(ctx, job.WorkflowID, sessionID, result.InputGate.InputId, int(result.InputGate.TimeoutSeconds),
+				result.InputGate.Prompt, inputMetadata, jobMetadata, job.AgentMetrics, job.WorkflowMetrics)
+			if err != nil {
+				log.Error("failed to park job for input", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "error", err)
+				return err
+			}
+			if !parked {
+				log.Warn("lost ownership while parking job for input", "request_id", job.RequestID, "workflow_id", job.WorkflowID)
+			}
+			if err := s.scheduler.MarkAwaitingInput(ctx, job.WorkflowID); err != nil {
+				log.Warn("failed to mark workflow awaiting input, scheduler will sync", "workflow_id", job.WorkflowID, "error", err)
 			}
 		} else {
 			// The SDK tags soft failures (customer_marked / uncaught_exception); a clean
@@ -414,6 +460,39 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 							return false
 						}
 
+						resolveInputBranch := func(branch domain.InputBranch, answer map[string]any, label string) bool {
+							if branch.Next != nil {
+								ctx := branch.Next.Context
+								if answer != nil {
+									if ctx == nil {
+										ctx = map[string]any{}
+									}
+									inputLane, _ := ctx["input"].(map[string]any)
+									if inputLane == nil {
+										inputLane = map[string]any{}
+									}
+									inputLane["answer"] = answer
+									ctx["input"] = inputLane
+								}
+								job.Context = ctx
+								job.RuntimeParams.OperationTimeoutSeconds = branch.Next.TimeoutSeconds
+								job.CurrentAtomicOperation = branch.Next.OperationName
+								return true
+							}
+							// Next nil = Complete() — finish the job without launching an operation.
+							log.Info("input branch is complete, finishing job", "request_id", job.RequestID, "branch", label)
+							completionResult := &boundflowv1.AtomicOperationResult{
+								Status: boundflowv1.OperationStatus_OPERATION_STATUS_COMPLETED,
+							}
+							if branch.Result != nil {
+								if s, err := structpb.NewStruct(branch.Result); err == nil {
+									completionResult.Result = s
+								}
+							}
+							completeOperation(cancelLease, job, completionResult)
+							return false
+						}
+
 						var shouldLaunch bool
 						switch job.Status {
 						case domain.JobStatusApproved:
@@ -424,6 +503,10 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 							// policies can act on it.
 							job.WorkflowMetrics.ApprovalRejections++
 							shouldLaunch = resolveBranch(job.JobMetadata.ApprovalGate.OnReject, "on_reject")
+						case domain.JobStatusAnswered:
+							shouldLaunch = resolveInputBranch(job.JobMetadata.InputGate.OnAnswer, job.InputAnswer, "on_answer")
+						case domain.JobStatusInputTimedOut:
+							shouldLaunch = resolveInputBranch(job.JobMetadata.InputGate.OnTimeout, nil, "on_timeout")
 						case domain.JobStatusAwaitingNext, domain.JobStatusPending:
 							shouldLaunch = true
 						default:

@@ -5,6 +5,7 @@ CREATE TYPE lifecycle_state AS ENUM (
     'blocked',
     'invoking',
     'awaiting_approval',
+    'awaiting_input',
     'deleting',
     'deleted',
     'interrupted'

@@ -50,6 +50,10 @@ def new_approval_id() -> str:
     return str(uuid.uuid4())
 
 
+def new_input_id() -> str:
+    return str(uuid.uuid4())
+
+
 def metrics_to_proto(snapshot: dict) -> op_pb.AgentInvocationMetrics:
     m = op_pb.AgentInvocationMetrics(
         cost_usd=snapshot.get("cost_usd", 0.0),

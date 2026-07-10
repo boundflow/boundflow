@@ -26,7 +26,7 @@ from google.protobuf import struct_pb2 as google_dot_protobuf_dot_struct__pb2
 from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1b\x62oundflow/v1/workflow.proto\x12\x0c\x62oundflow.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xbc\x01\n\x0eWorkflowConfig\x12\x0f\n\x07version\x18\x01 \x01(\x05\x12\x1e\n\x16invoke_timeout_seconds\x18\x02 \x01(\x05\x12\x1c\n\x14repeat_every_seconds\x18\x03 \x01(\x05\x12\x13\n\x0btriggerable\x18\x04 \x01(\x08\x12-\n\x0binvoke_mode\x18\x05 \x01(\x0e\x32\x18.boundflow.v1.InvokeMode\x12\x17\n\x0fmax_queue_depth\x18\x06 \x01(\x05\"\xc7\x01\n\x0fPendingApproval\x12\x13\n\x0b\x61pproval_id\x18\x01 \x01(\t\x12\x15\n\rjustification\x18\x02 \x01(\t\x12)\n\x08metadata\x18\x03 \x01(\x0b\x32\x17.google.protobuf.Struct\x12-\n\topened_at\x18\x04 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12.\n\ntimeout_at\x18\x05 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\"\xd3\x02\n\x08Workflow\x12\n\n\x02id\x18\x01 \x01(\t\x12\x15\n\rworkflow_type\x18\x02 \x01(\t\x12\x11\n\ttenant_id\x18\x03 \x01(\t\x12.\n\ncreated_at\x18\x06 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x35\n\x0fworkflow_config\x18\x08 \x01(\x0b\x32\x1c.boundflow.v1.WorkflowConfig\x12\x17\n\x0flifecycle_state\x18\t \x01(\t\x12\x33\n\x0eworkflow_state\x18\n \x01(\x0e\x32\x1b.boundflow.v1.WorkflowState\x12#\n\x1blast_interrupted_request_id\x18\x0b \x01(\t\x12\x37\n\x10pending_approval\x18\x0c \x01(\x0b\x32\x1d.boundflow.v1.PendingApproval*Z\n\nInvokeMode\x12\x1b\n\x17INVOKE_MODE_UNSPECIFIED\x10\x00\x12\x18\n\x14INVOKE_MODE_COALESCE\x10\x01\x12\x15\n\x11INVOKE_MODE_QUEUE\x10\x02*\x9f\x01\n\rWorkflowState\x12\x1e\n\x1aWORKFLOW_STATE_UNSPECIFIED\x10\x00\x12\x19\n\x15WORKFLOW_STATE_ACTIVE\x10\x01\x12\x19\n\x15WORKFLOW_STATE_PAUSED\x10\x02\x12\x1b\n\x17WORKFLOW_STATE_COOLDOWN\x10\x03\x12\x1b\n\x17WORKFLOW_STATE_DISABLED\x10\x04\x42=Z;github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1b\x62oundflow/v1/workflow.proto\x12\x0c\x62oundflow.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xbc\x01\n\x0eWorkflowConfig\x12\x0f\n\x07version\x18\x01 \x01(\x05\x12\x1e\n\x16invoke_timeout_seconds\x18\x02 \x01(\x05\x12\x1c\n\x14repeat_every_seconds\x18\x03 \x01(\x05\x12\x13\n\x0btriggerable\x18\x04 \x01(\x08\x12-\n\x0binvoke_mode\x18\x05 \x01(\x0e\x32\x18.boundflow.v1.InvokeMode\x12\x17\n\x0fmax_queue_depth\x18\x06 \x01(\x05\"\xc7\x01\n\x0fPendingApproval\x12\x13\n\x0b\x61pproval_id\x18\x01 \x01(\t\x12\x15\n\rjustification\x18\x02 \x01(\t\x12)\n\x08metadata\x18\x03 \x01(\x0b\x32\x17.google.protobuf.Struct\x12-\n\topened_at\x18\x04 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12.\n\ntimeout_at\x18\x05 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\"\xba\x01\n\x0cPendingInput\x12\x10\n\x08input_id\x18\x01 \x01(\t\x12\x0e\n\x06prompt\x18\x02 \x01(\t\x12)\n\x08metadata\x18\x03 \x01(\x0b\x32\x17.google.protobuf.Struct\x12-\n\topened_at\x18\x04 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12.\n\ntimeout_at\x18\x05 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\"\x86\x03\n\x08Workflow\x12\n\n\x02id\x18\x01 \x01(\t\x12\x15\n\rworkflow_type\x18\x02 \x01(\t\x12\x11\n\ttenant_id\x18\x03 \x01(\t\x12.\n\ncreated_at\x18\x06 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x35\n\x0fworkflow_config\x18\x08 \x01(\x0b\x32\x1c.boundflow.v1.WorkflowConfig\x12\x17\n\x0flifecycle_state\x18\t \x01(\t\x12\x33\n\x0eworkflow_state\x18\n \x01(\x0e\x32\x1b.boundflow.v1.WorkflowState\x12#\n\x1blast_interrupted_request_id\x18\x0b \x01(\t\x12\x37\n\x10pending_approval\x18\x0c \x01(\x0b\x32\x1d.boundflow.v1.PendingApproval\x12\x31\n\rpending_input\x18\r \x01(\x0b\x32\x1a.boundflow.v1.PendingInput*Z\n\nInvokeMode\x12\x1b\n\x17INVOKE_MODE_UNSPECIFIED\x10\x00\x12\x18\n\x14INVOKE_MODE_COALESCE\x10\x01\x12\x15\n\x11INVOKE_MODE_QUEUE\x10\x02*\x9f\x01\n\rWorkflowState\x12\x1e\n\x1aWORKFLOW_STATE_UNSPECIFIED\x10\x00\x12\x19\n\x15WORKFLOW_STATE_ACTIVE\x10\x01\x12\x19\n\x15WORKFLOW_STATE_PAUSED\x10\x02\x12\x1b\n\x17WORKFLOW_STATE_COOLDOWN\x10\x03\x12\x1b\n\x17WORKFLOW_STATE_DISABLED\x10\x04\x42=Z;github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,14 +34,16 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'boundflow.v1.workflow_pb2',
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z;github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1'
-  _globals['_INVOKEMODE']._serialized_start=843
-  _globals['_INVOKEMODE']._serialized_end=933
-  _globals['_WORKFLOWSTATE']._serialized_start=936
-  _globals['_WORKFLOWSTATE']._serialized_end=1095
+  _globals['_INVOKEMODE']._serialized_start=1083
+  _globals['_INVOKEMODE']._serialized_end=1173
+  _globals['_WORKFLOWSTATE']._serialized_start=1176
+  _globals['_WORKFLOWSTATE']._serialized_end=1335
   _globals['_WORKFLOWCONFIG']._serialized_start=109
   _globals['_WORKFLOWCONFIG']._serialized_end=297
   _globals['_PENDINGAPPROVAL']._serialized_start=300
   _globals['_PENDINGAPPROVAL']._serialized_end=499
-  _globals['_WORKFLOW']._serialized_start=502
-  _globals['_WORKFLOW']._serialized_end=841
+  _globals['_PENDINGINPUT']._serialized_start=502
+  _globals['_PENDINGINPUT']._serialized_end=688
+  _globals['_WORKFLOW']._serialized_start=691
+  _globals['_WORKFLOW']._serialized_end=1081
 # @@protoc_insertion_point(module_scope)

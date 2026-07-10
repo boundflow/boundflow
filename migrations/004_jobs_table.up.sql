@@ -6,6 +6,9 @@ CREATE TYPE job_status AS ENUM (
     'awaiting_approval',
     'approved',
     'rejected',
+    'awaiting_input',
+    'answered',
+    'input_timed_out',
     'completed',
     'failed'
 );
@@ -40,5 +43,15 @@ CREATE TABLE jobs (
     approval_timeout_at      TIMESTAMPTZ,
     -- Published for external readers while the gate is open (Workflow.pending_approval).
     approval_justification   TEXT NOT NULL DEFAULT '',
-    approval_metadata        JSONB
+    approval_metadata        JSONB,
+    -- Input gate: only populated when status = awaiting_input/answered/input_timed_out.
+    input_id                 TEXT,
+    input_opened_at          TIMESTAMPTZ,
+    input_timeout_at         TIMESTAMPTZ,
+    -- Published for external readers while the gate is open (Workflow.pending_input).
+    input_prompt              TEXT NOT NULL DEFAULT '',
+    input_metadata            JSONB,
+    -- The submitted answer, set by submit_input at resolve time (the answer doesn't
+    -- exist yet when the gate opens, unlike approval branches' pre-wired context).
+    input_answer              JSONB
 );

@@ -103,6 +103,9 @@ type SchedulerRepository interface {
 	// MarkWorkflowAwaitingApproval sets lifecycle_state = awaiting_approval for the given workflow,
 	// guarded so it only fires if the job still shows awaiting_approval status at update time.
 	MarkWorkflowAwaitingApproval(ctx context.Context, workflowID string) error
+	// MarkWorkflowAwaitingInput sets lifecycle_state = awaiting_input for the given workflow,
+	// guarded so it only fires if the job still shows awaiting_input status at update time.
+	MarkWorkflowAwaitingInput(ctx context.Context, workflowID string) error
 	// ReconcileWorkflowLifecycles atomically projects each in-flight job's status onto its
 	// workflow's lifecycle (scheduled/blocked/invoking/awaiting_approval), the safety net for
 	// lost direct writes. Returns the reconciled workflow ids.
@@ -179,6 +182,20 @@ type JobRepository interface {
 	// timeout has passed (status awaiting_approval, approval_timeout_at <= now) to
 	// JobStatusRejected, returning the resolved gates so the caller can audit them.
 	SweepExpiredApprovals(ctx context.Context, partitionID string) ([]domain.ExpiredApproval, error)
+	// ParkForInput transitions a job to awaiting_input, storing the input ID, job
+	// metadata, and the prompt/inputMetadata published for external readers
+	// (Workflow.pending_input), and stamping input_opened_at = now() and
+	// input_timeout_at = now() + timeoutSeconds. Only succeeds if ownerID holds the job.
+	ParkForInput(ctx context.Context, workflowID string, ownerID string, inputID string, timeoutSeconds int, prompt string, inputMetadata map[string]any, metadata domain.JobMetadata, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error)
+	// ResolveInput transitions a job from awaiting_input to answered, storing the
+	// submitted answer, guarded by inputID match. Returns false if the ID doesn't
+	// match or the job isn't awaiting input; on success also returns the job bits
+	// needed to write the input audit row.
+	ResolveInput(ctx context.Context, workflowID string, inputID string, answer map[string]any) (bool, domain.ResolvedInput, error)
+	// SweepExpiredInputs atomically resolves the partition's input gates whose
+	// timeout has passed (status awaiting_input, input_timeout_at <= now) to
+	// JobStatusInputTimedOut, returning the resolved gates so the caller can audit them.
+	SweepExpiredInputs(ctx context.Context, partitionID string) ([]domain.ExpiredInput, error)
 }
 
 // AuditRepository is the append-only governance audit log.

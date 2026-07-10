@@ -173,6 +173,10 @@ func (s *Scheduler) RejectJob(ctx context.Context, workflowID string, approvalID
 	return s.jobs.ResolveApproval(ctx, workflowID, approvalID, domain.JobStatusRejected)
 }
 
+func (s *Scheduler) AnswerJob(ctx context.Context, workflowID string, inputID string, answer map[string]any) (bool, domain.ResolvedInput, error) {
+	return s.jobs.ResolveInput(ctx, workflowID, inputID, answer)
+}
+
 // recordPolicyAction appends the audit row for a lifecycle-policy firing. Best-effort:
 // the policy already applied, so a failed audit write is logged, not surfaced.
 func (s *Scheduler) recordPolicyAction(ctx context.Context, workflow *domain.Workflow, requestID string, action *domain.PolicyActionDetails) {
@@ -205,6 +209,10 @@ func (s *Scheduler) MarkInvoking(ctx context.Context, workflowID string) error {
 
 func (s *Scheduler) MarkAwaitingApproval(ctx context.Context, workflowID string) error {
 	return s.scheduler.MarkWorkflowAwaitingApproval(ctx, workflowID)
+}
+
+func (s *Scheduler) MarkAwaitingInput(ctx context.Context, workflowID string) error {
+	return s.scheduler.MarkWorkflowAwaitingInput(ctx, workflowID)
 }
 
 func (s *Scheduler) markOrphanedJobsFailed(ctx context.Context, partitionID string) {

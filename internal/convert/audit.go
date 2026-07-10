@@ -3,6 +3,7 @@ package convert
 import (
 	"fmt"
 
+	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
@@ -66,6 +67,34 @@ func AgentPolicyAuditRecord(e domain.AuditEvent) (*boundflowv1.AgentPolicyAuditR
 	}, nil
 }
 
+// InputAuditRecord builds the proto record from an input audit event.
+func InputAuditRecord(e domain.AuditEvent) (*boundflowv1.InputAuditRecord, error) {
+	d, err := e.InputDetails()
+	if err != nil {
+		return nil, err
+	}
+	rec := &boundflowv1.InputAuditRecord{
+		InputId:    d.InputID,
+		WorkflowId: e.WorkflowID,
+		RequestId:  e.RequestID,
+		Decision:   inputDecisionToProto(d.Decision),
+		Actor:      e.Actor,
+		OccurredAt: timestamppb.New(e.OccurredAt),
+	}
+	if d.OpenedAt != nil {
+		rec.OpenedAt = timestamppb.New(*d.OpenedAt)
+	}
+	if d.DecidedAt != nil {
+		rec.DecidedAt = timestamppb.New(*d.DecidedAt)
+	}
+	if d.Answer != nil {
+		if s, err := structpb.NewStruct(d.Answer); err == nil {
+			rec.Answer = s
+		}
+	}
+	return rec, nil
+}
+
 // AuditEntry maps an audit event to a unified-log entry (oneof by event type).
 func AuditEntry(e domain.AuditEvent) (*boundflowv1.AuditEntry, error) {
 	switch e.EventType {
@@ -87,6 +116,12 @@ func AuditEntry(e domain.AuditEvent) (*boundflowv1.AuditEntry, error) {
 			return nil, err
 		}
 		return &boundflowv1.AuditEntry{Entry: &boundflowv1.AuditEntry_AgentPolicy{AgentPolicy: rec}}, nil
+	case domain.AuditEventInput:
+		rec, err := InputAuditRecord(e)
+		if err != nil {
+			return nil, err
+		}
+		return &boundflowv1.AuditEntry{Entry: &boundflowv1.AuditEntry_Input{Input: rec}}, nil
 	}
 	return nil, fmt.Errorf("unknown audit event type %q", e.EventType)
 }
@@ -101,4 +136,14 @@ func approvalDecisionToProto(d domain.ApprovalDecision) boundflowv1.ApprovalDeci
 		return boundflowv1.ApprovalDecision_APPROVAL_DECISION_TIMED_OUT
 	}
 	return boundflowv1.ApprovalDecision_APPROVAL_DECISION_UNSPECIFIED
+}
+
+func inputDecisionToProto(d domain.InputDecision) boundflowv1.InputDecision {
+	switch d {
+	case domain.InputAnswered:
+		return boundflowv1.InputDecision_INPUT_DECISION_ANSWERED
+	case domain.InputTimedOut:
+		return boundflowv1.InputDecision_INPUT_DECISION_TIMED_OUT
+	}
+	return boundflowv1.InputDecision_INPUT_DECISION_UNSPECIFIED
 }

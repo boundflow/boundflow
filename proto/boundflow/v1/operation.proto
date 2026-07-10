@@ -37,6 +37,24 @@ message ApprovalGate {
   google.protobuf.Struct metadata = 8;
 }
 
+// InputGate parks the run for a free-form answer, not a binary decision — a single
+// continuation (on_answer) that resumes with the answer merged into its context under
+// context["answer"], plus a separate on_timeout continuation for when nobody answers.
+// There's no "explicit decline" branch: if nobody wants to answer, it just times out.
+message InputGate {
+  AtomicOperation on_answer  = 1;
+  AtomicOperation on_timeout = 2;
+  int32 timeout_seconds      = 3;
+  string input_id            = 4;
+  // Published for external readers while the gate is open (WorkflowInfo.pending_input).
+  string prompt               = 5;
+  google.protobuf.Struct metadata = 6;
+  // Complete(result=...) on a terminal branch — same reasoning as ApprovalGate's
+  // on_approve_result/on_reject_result.
+  google.protobuf.Struct on_answer_result  = 7;
+  google.protobuf.Struct on_timeout_result = 8;
+}
+
 message AtomicOperationResult {
   OperationStatus status = 1;
   string message = 2;
@@ -44,6 +62,7 @@ message AtomicOperationResult {
   // Per-agent invocation metrics observed during this operation, keyed by agent name.
   map<string, AgentInvocationMetrics> agent_state_updates = 4;
   ApprovalGate approval_gate = 5;
+  InputGate input_gate = 11;
   // Workflow-level metrics the customer emits for this operation (e.g. a failed run).
   // Accumulated across the job's operations and folded into the rolling snapshot.
   WorkflowInvocationMetrics workflow_metrics = 6;

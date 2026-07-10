@@ -513,6 +513,51 @@ func (h *WorkflowServiceHandler) GetApprovalAuditById(ctx context.Context, req *
 	return &boundflowv1.GetApprovalAuditByIdResponse{Record: rec}, nil
 }
 
+func (h *WorkflowServiceHandler) SubmitInput(ctx context.Context, req *boundflowv1.SubmitInputRequest) (*boundflowv1.SubmitInputResponse, error) {
+	if req.WorkflowId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
+	}
+	if req.InputId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "input_id is required")
+	}
+
+	if err := h.checkWorkflowOwner(ctx, req.WorkflowId); err != nil {
+		return nil, err
+	}
+
+	var answer map[string]any
+	if req.Answer != nil {
+		answer = req.Answer.AsMap()
+	}
+	if err := h.svc.SubmitInput(ctx, req.WorkflowId, req.InputId, answer, req.Actor); err != nil {
+		if errors.Is(err, service.ErrInvalidWorkflowState) {
+			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
+		}
+		return nil, status.Errorf(codes.Internal, "submit input: %v", err)
+	}
+	return &boundflowv1.SubmitInputResponse{}, nil
+}
+
+func (h *WorkflowServiceHandler) GetInputAudit(ctx context.Context, req *boundflowv1.GetInputAuditRequest) (*boundflowv1.GetInputAuditResponse, error) {
+	group, err := callerTenantGroup(ctx)
+	if err != nil {
+		return nil, err
+	}
+	events, err := h.svc.GetInputAudit(ctx, group, req.WorkflowId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "get input audit: %v", err)
+	}
+	out := make([]*boundflowv1.InputAuditRecord, 0, len(events))
+	for _, e := range events {
+		rec, err := convert.InputAuditRecord(e)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "resolve input audit: %v", err)
+		}
+		out = append(out, rec)
+	}
+	return &boundflowv1.GetInputAuditResponse{Records: out}, nil
+}
+
 func (h *WorkflowServiceHandler) GetWorkflowPolicyAudit(ctx context.Context, req *boundflowv1.GetWorkflowPolicyAuditRequest) (*boundflowv1.GetWorkflowPolicyAuditResponse, error) {
 	group, err := callerTenantGroup(ctx)
 	if err != nil {
