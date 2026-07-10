@@ -46,6 +46,17 @@ message PendingApproval {
   google.protobuf.Timestamp timeout_at = 5;
 }
 
+// PendingInput is the currently open input gate for a workflow — populated on
+// Workflow only while lifecycle_state is awaiting_input. Read-only; the input_id
+// here is what submit_input expects.
+message PendingInput {
+  string input_id = 1;
+  string prompt = 2;
+  google.protobuf.Struct metadata = 3;
+  google.protobuf.Timestamp opened_at = 4;
+  google.protobuf.Timestamp timeout_at = 5;
+}
+
 // Workflow is a managed, stateful unit of agent execution tied to a specific
 // tenant. Managed via the WorkflowService.
 message Workflow {
@@ -59,4 +70,5 @@ message Workflow {
   // request_id of the run that interrupted the workflow; empty until one is interrupted.
   string last_interrupted_request_id = 11;
   PendingApproval pending_approval = 12;
+  PendingInput pending_input = 13;
 }

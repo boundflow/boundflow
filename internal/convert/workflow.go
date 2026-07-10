@@ -39,6 +39,9 @@ func WorkflowToProto(r *domain.Workflow) *boundflowv1.Workflow {
 	if r.PendingApproval != nil {
 		w.PendingApproval = pendingApprovalToProto(r.PendingApproval)
 	}
+	if r.PendingInput != nil {
+		w.PendingInput = pendingInputToProto(r.PendingInput)
+	}
 	return w
 }
 
@@ -59,6 +62,25 @@ func pendingApprovalToProto(p *domain.PendingApproval) *boundflowv1.PendingAppro
 		pa.TimeoutAt = timestamppb.New(*p.TimeoutAt)
 	}
 	return pa
+}
+
+func pendingInputToProto(p *domain.PendingInput) *boundflowv1.PendingInput {
+	pi := &boundflowv1.PendingInput{
+		InputId: p.InputID,
+		Prompt:  p.Prompt,
+	}
+	if p.Metadata != nil {
+		if s, err := structpb.NewStruct(p.Metadata); err == nil {
+			pi.Metadata = s
+		}
+	}
+	if p.OpenedAt != nil {
+		pi.OpenedAt = timestamppb.New(*p.OpenedAt)
+	}
+	if p.TimeoutAt != nil {
+		pi.TimeoutAt = timestamppb.New(*p.TimeoutAt)
+	}
+	return pi
 }
 
 // RunToProto maps a customer request (a run) to the runs-API Run message. run_outcome

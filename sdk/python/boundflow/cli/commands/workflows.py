@@ -1,5 +1,6 @@
 """boundflow workflow — workflow lifecycle commands."""
 
+import json
 from typing import Optional
 
 import typer
@@ -122,6 +123,23 @@ def reject(
     """Reject a pending workflow approval gate."""
     cp_call(lambda cp: cp.reject_workflow(workflow_id, approval_id, actor=actor))
     success(f"Approval {approval_id} rejected.")
+
+
+@app.command("submit-input")
+def submit_input(
+    workflow_id: str = typer.Argument(..., help="Workflow ID"),
+    input_id: str = typer.Argument(..., help="Input ID (from the input request)"),
+    answer: str = typer.Option(..., "--answer", help="Answer as a JSON object, e.g. '{\"choice\": \"refund\"}'"),
+    actor: str = typer.Option("", "--actor", help="Who supplied the answer (e.g. email or user ID)"),
+):
+    """Answer a pending workflow input gate."""
+    try:
+        parsed = json.loads(answer)
+    except json.JSONDecodeError as e:
+        typer.echo(f"Error: --answer must be valid JSON: {e}", err=True)
+        raise typer.Exit(1)
+    cp_call(lambda cp: cp.submit_input(workflow_id, input_id, parsed, actor=actor))
+    success(f"Input {input_id} submitted.")
 
 
 @app.command("delete")

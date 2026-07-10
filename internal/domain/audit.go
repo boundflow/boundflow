@@ -13,6 +13,7 @@ const (
 	AuditEventApproval          AuditEventType = "approval"
 	AuditEventPolicyAction      AuditEventType = "policy_action"       // workflow lifecycle policy
 	AuditEventAgentPolicyAction AuditEventType = "agent_policy_action" // agent lifecycle policy
+	AuditEventInput             AuditEventType = "input"
 )
 
 // AuditEvent is one row of the governance audit log. The common query dimensions
@@ -56,6 +57,38 @@ func (e AuditEvent) ApprovalDetails() (*ApprovalAuditDetails, error) {
 	var d ApprovalAuditDetails
 	if err := json.Unmarshal(e.Details, &d); err != nil {
 		return nil, fmt.Errorf("unmarshal approval audit details: %w", err)
+	}
+	return &d, nil
+}
+
+// InputDecision is how an input gate resolved.
+type InputDecision string
+
+const (
+	InputAnswered InputDecision = "answered"
+	InputTimedOut InputDecision = "timed_out"
+)
+
+// InputAuditDetails is the typed payload of an AuditEventInput event. Answer is the
+// submitted content — recorded here (not just threaded into the resumed context)
+// because it's the governance-relevant content, same as an approval decision.
+type InputAuditDetails struct {
+	InputID   string         `json:"input_id"`
+	OpenedAt  *time.Time     `json:"opened_at,omitempty"`
+	DecidedAt *time.Time     `json:"decided_at,omitempty"`
+	Decision  InputDecision  `json:"decision"`
+	Answer    map[string]any `json:"answer,omitempty"`
+}
+
+// InputDetails resolves the event's Details as an input record. It errors if the
+// event is not an input event.
+func (e AuditEvent) InputDetails() (*InputAuditDetails, error) {
+	if e.EventType != AuditEventInput {
+		return nil, fmt.Errorf("audit event %s is %s, not an input event", e.ID, e.EventType)
+	}
+	var d InputAuditDetails
+	if err := json.Unmarshal(e.Details, &d); err != nil {
+		return nil, fmt.Errorf("unmarshal input audit details: %w", err)
 	}
 	return &d, nil
 }

@@ -22,6 +22,7 @@ from .lifecycle import (
 from .llm import AgentStepConfig, LlmClient, Orchestrator, StepResult
 from .trace import (
     OUTCOME_AWAIT_APPROVAL,
+    OUTCOME_AWAIT_INPUT,
     OUTCOME_COMPLETED,
     OUTCOME_NEXT,
     AgentRunTrace,
@@ -115,7 +116,24 @@ class AwaitApproval:
     metadata: dict | None = None
 
 
-OperationResult = Union[Complete, Next, AwaitApproval]
+@dataclass
+class AwaitInput:
+    """Park for a free-form answer, not a binary decision. One continuation
+    (on_answer) that resumes with the answer merged into ctx.context["answer"], plus
+    a separate on_timeout continuation for when nobody answers — there's no "explicit
+    decline" branch, since if nobody wants to answer it just times out. prompt and
+    metadata are published for external readers while the gate is open (WorkflowInfo's
+    pending_input, via get_workflow) — not delivered to the resumed operation, since
+    they describe the question, not the answer."""
+
+    on_answer: "OperationResult"
+    on_timeout: "OperationResult"
+    timeout: int
+    prompt: str | None = None
+    metadata: dict | None = None
+
+
+OperationResult = Union[Complete, Next, AwaitApproval, AwaitInput]
 
 
 # ── Operation context (handed to every handler) ──────────────────────────────
@@ -228,6 +246,7 @@ class OperationContext:
 
 HandlerFn = Callable[[OperationContext], Awaitable[OperationResult]]
 ApprovalFn = Callable[["ApprovalRequest"], Awaitable[None]]
+InputFn = Callable[["InputRequest"], Awaitable[None]]
 
 
 @dataclass
@@ -237,6 +256,16 @@ class ApprovalRequest:
     timeout: int
     approval_id: str
     justification: str | None = None
+    metadata: dict | None = None
+
+
+@dataclass
+class InputRequest:
+    workflow_id: str
+    operation_name: str
+    timeout: int
+    input_id: str
+    prompt: str | None = None
     metadata: dict | None = None
 
 
@@ -265,6 +294,7 @@ class BoundFlowWorker:
         self._workflows: dict[tuple[str, int], HandlerFn] = {}
         self._operations: dict[tuple[str, str], HandlerFn] = {}
         self._on_approval: ApprovalFn | None = None
+        self._on_input: InputFn | None = None
 
     def workflow(self, type: str, *, version: int) -> Callable[[HandlerFn], HandlerFn]:
         """Register the entry handler for a workflow type + version."""
@@ -286,6 +316,10 @@ class BoundFlowWorker:
 
     def on_approval_requested(self, fn: ApprovalFn) -> ApprovalFn:
         self._on_approval = fn
+        return fn
+
+    def on_input_requested(self, fn: InputFn) -> InputFn:
+        self._on_input = fn
         return fn
 
     async def run(self) -> None:
@@ -325,14 +359,16 @@ class BoundFlowWorker:
                 uncaught_reason = f"{type(ex).__name__}: {ex}"
             _op_end = now_ms()
 
-            # Mint the approval id once when the gate opens, so the trace's correlation
-            # id matches the one sent to the server (and recorded in the audit log).
+            # Mint the approval/input id once when the gate opens, so the trace's
+            # correlation id matches the one sent to the server (and recorded in the
+            # audit log).
             approval_id = t.new_approval_id() if isinstance(result, AwaitApproval) else None
+            input_id = t.new_input_id() if isinstance(result, AwaitInput) else None
 
             if self._trace_sink is not None:
-                await self._emit_operation_trace(op, ctx, result, _op_start, _op_end, approval_id)
+                await self._emit_operation_trace(op, ctx, result, _op_start, _op_end, approval_id, input_id)
 
-            proto = await self._to_proto(result, op, approval_id)
+            proto = await self._to_proto(result, op, approval_id, input_id)
             for name, snap in ctx.agent_state_updates.items():
                 proto.agent_state_updates[name].CopyFrom(t.metrics_to_proto(snap))
             for name, action in ctx.agent_policy_actions.items():
@@ -351,13 +387,16 @@ class BoundFlowWorker:
         capabilities = list(self._workflows.keys())
         await t.WorkerSession(self._address, self._api_key, capabilities).run(dispatch)
 
-    async def _emit_operation_trace(self, op, ctx, result, start_ms: int, end_ms: int, approval_id: str | None = None) -> None:
+    async def _emit_operation_trace(self, op, ctx, result, start_ms: int, end_ms: int,
+                                     approval_id: str | None = None, input_id: str | None = None) -> None:
         """Build the operation trace (its agent runs + outcome) and hand it to the
         sink. Tracing is best-effort: a sink failure is logged and dropped, never
         fatal to the run. All operations of one invocation share trace_id (= op.id).
-        When the operation parks for approval, approval_id is the key to correlate
-        this trace with the server-side approval audit (GetApprovalAudit)."""
+        When the operation parks for approval/input, approval_id/input_id is the key
+        to correlate this trace with the server-side audit (GetApprovalAudit /
+        GetInputAudit)."""
         outcome = (OUTCOME_AWAIT_APPROVAL if isinstance(result, AwaitApproval)
+                   else OUTCOME_AWAIT_INPUT if isinstance(result, AwaitInput)
                    else OUTCOME_NEXT if isinstance(result, Next)
                    else OUTCOME_COMPLETED)
         try:
@@ -373,14 +412,16 @@ class BoundFlowWorker:
                 end_ms=end_ms,
                 agent_runs=ctx._agent_runs,
                 approval_id=approval_id,
+                input_id=input_id,
             ))
         except Exception:  # noqa: BLE001 — tracing is best-effort, never fatal
             log.exception("trace sink emit failed; dropping operation trace %s", op.name)
 
-    async def _to_proto(self, result: OperationResult, op, approval_id: str | None = None):
-        """Map an OperationResult to an AtomicOperationResult proto. approval_id, when
-        the result is an AwaitApproval, is the id minted by the caller (shared with
-        the trace) rather than minted here."""
+    async def _to_proto(self, result: OperationResult, op, approval_id: str | None = None,
+                         input_id: str | None = None):
+        """Map an OperationResult to an AtomicOperationResult proto. approval_id/input_id,
+        when the result is an AwaitApproval/AwaitInput, is the id minted by the caller
+        (shared with the trace) rather than minted here."""
         from . import _transport as t
         from boundflow.v1 import operation_pb2 as op_pb
 
@@ -438,6 +479,31 @@ class BoundFlowWorker:
             elif isinstance(result.on_reject, Complete) and result.on_reject.result is not None:
                 gate.on_reject_result.CopyFrom(t.dict_to_struct(result.on_reject.result))
             return op_pb.AtomicOperationResult(status=completed, approval_gate=gate)
+
+        if isinstance(result, AwaitInput):
+            if input_id is None:
+                input_id = t.new_input_id()
+            if self._on_input is not None:
+                await self._on_input(InputRequest(
+                    workflow_id=op.workflow_id, operation_name=op.name,
+                    timeout=result.timeout, input_id=input_id,
+                    prompt=result.prompt, metadata=result.metadata))
+            gate = op_pb.InputGate(
+                timeout_seconds=result.timeout, input_id=input_id,
+                prompt=result.prompt or "")
+            if result.metadata is not None:
+                gate.metadata.CopyFrom(t.dict_to_struct(result.metadata))
+            ans = branch(result.on_answer)
+            to = branch(result.on_timeout)
+            if ans is not None:
+                gate.on_answer.CopyFrom(ans)
+            elif isinstance(result.on_answer, Complete) and result.on_answer.result is not None:
+                gate.on_answer_result.CopyFrom(t.dict_to_struct(result.on_answer.result))
+            if to is not None:
+                gate.on_timeout.CopyFrom(to)
+            elif isinstance(result.on_timeout, Complete) and result.on_timeout.result is not None:
+                gate.on_timeout_result.CopyFrom(t.dict_to_struct(result.on_timeout.result))
+            return op_pb.AtomicOperationResult(status=completed, input_gate=gate)
 
         raise RuntimeError(f"Unknown OperationResult: {type(result).__name__}")
 

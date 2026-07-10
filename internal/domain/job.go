@@ -16,6 +16,9 @@ const (
 	JobStatusAwaitingApproval JobStatus = "awaiting_approval"
 	JobStatusApproved         JobStatus = "approved"
 	JobStatusRejected         JobStatus = "rejected"
+	JobStatusAwaitingInput    JobStatus = "awaiting_input"
+	JobStatusAnswered         JobStatus = "answered"
+	JobStatusInputTimedOut    JobStatus = "input_timed_out"
 	JobStatusCompleted        JobStatus = "completed"
 	JobStatusFailed           JobStatus = "failed"
 )
@@ -48,6 +51,12 @@ type Job struct {
 	// Approval gate — only populated when Status == JobStatusAwaitingApproval/Approved/Rejected.
 	ApprovalID        *string
 	ApprovalTimeoutAt *time.Time
+	// Input gate — only populated when Status == JobStatusAwaitingInput/Answered/InputTimedOut.
+	// InputAnswer is the submitted answer, set by ResolveInput and merged into the
+	// on_answer branch's context when the dispatch loop resumes it.
+	InputID        *string
+	InputTimeoutAt *time.Time
+	InputAnswer    map[string]any
 }
 
 // CompletedJob is the lightweight view the completeJobs sweeper needs: the request to
@@ -79,6 +88,23 @@ type WorkflowJobMetrics struct {
 // Serialized as JSONB in the jobs table.
 type JobMetadata struct {
 	ApprovalGate *ApprovalGateMetadata `json:"approval_gate,omitempty"`
+	InputGate    *InputGateMetadata    `json:"input_gate,omitempty"`
+}
+
+// InputGateMetadata stores the two possible continuations of an input gate. The
+// gate's audit data (opened_at, timeout_at) lives in jobs columns, not here.
+type InputGateMetadata struct {
+	OnAnswer  InputBranch `json:"on_answer"`
+	OnTimeout InputBranch `json:"on_timeout"`
+}
+
+// InputBranch is what happens when an input gate resolves down this path: either
+// advance to another operation (Next set), or complete the run (Next nil),
+// optionally publishing Result (only meaningful when Next is nil). Same shape as
+// ApprovalBranch, kept separate since the two gates are conceptually distinct.
+type InputBranch struct {
+	Next   *NextOperation `json:"next,omitempty"`
+	Result map[string]any `json:"result,omitempty"`
 }
 
 // ApprovalGateMetadata stores the two possible continuations of an approval gate.
@@ -120,4 +146,23 @@ type ExpiredApproval struct {
 	ApprovalID    string
 	OpenedAt      *time.Time
 	TimedOutAt    time.Time // approval_timeout_at — the decided_at for a timeout
+}
+
+// ResolvedInput carries the job bits an input resolution needs to write its
+// audit row (so the caller doesn't re-fetch the job after the status flip).
+type ResolvedInput struct {
+	RequestID     string
+	TenantGroupID string
+	OpenedAt      *time.Time
+}
+
+// ExpiredInput is a gate the scheduler resolved by timeout; carries everything
+// needed to write its timed_out audit row.
+type ExpiredInput struct {
+	WorkflowID    string
+	RequestID     string
+	TenantGroupID string
+	InputID       string
+	OpenedAt      *time.Time
+	TimedOutAt    time.Time // input_timeout_at — the decided_at for a timeout
 }

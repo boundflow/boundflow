@@ -26,7 +26,7 @@ func (r *JobRepo) GetAvailableJob(ctx context.Context, tenantGroupID string, wor
 	var workflowID string
 	err := r.pool.QueryRow(ctx,
 		`SELECT workflow_id FROM jobs
-		 WHERE status IN ('pending', 'awaiting_next', 'approved', 'rejected')
+		 WHERE status IN ('pending', 'awaiting_next', 'approved', 'rejected', 'answered', 'input_timed_out')
 		   AND (owner IS NULL OR lease_expires_at < now())
 		   AND tenant_group_id = $1
 		   AND (workflow_type, workflow_version) IN (
@@ -46,25 +46,25 @@ func (r *JobRepo) GetAvailableJob(ctx context.Context, tenantGroupID string, wor
 
 func (r *JobRepo) AcquireJob(ctx context.Context, workflowID string, ownerID string, leaseDuration time.Duration, tenantGroupID string) (*domain.Job, error) {
 	var job domain.Job
-	var contextJSON, agentMetricsJSON, jobMetadataJSON, workflowMetricsJSON []byte
+	var contextJSON, agentMetricsJSON, jobMetadataJSON, workflowMetricsJSON, inputAnswerJSON []byte
 
 	err := r.pool.QueryRow(ctx,
 		`UPDATE jobs
 		 SET owner = $2, lease_expires_at = now() + $3::interval
 		 WHERE workflow_id = $1
-		   AND status IN ('pending', 'awaiting_next', 'approved', 'rejected')
+		   AND status IN ('pending', 'awaiting_next', 'approved', 'rejected', 'answered', 'input_timed_out')
 		   AND (owner IS NULL OR lease_expires_at < now())
 		   AND tenant_group_id = $4
 		 RETURNING workflow_id, request_id, version, current_atomic_operation, context, status,
 		           job_type, workflow_type, timeout_seconds, workflow_version, agent_metrics, workflow_metrics,
-		           job_metadata, approval_id, approval_timeout_at,
+		           job_metadata, approval_id, approval_timeout_at, input_id, input_timeout_at, input_answer,
 		           owner, lease_expires_at, created_at`,
 		workflowID, ownerID, leaseDuration.String(), tenantGroupID,
 	).Scan(
 		&job.WorkflowID, &job.RequestID, &job.Version,
 		&job.CurrentAtomicOperation, &contextJSON, &job.Status,
 		&job.JobType, &job.WorkflowType, &job.RuntimeParams.OperationTimeoutSeconds, &job.WorkflowVersion, &agentMetricsJSON, &workflowMetricsJSON,
-		&jobMetadataJSON, &job.ApprovalID, &job.ApprovalTimeoutAt,
+		&jobMetadataJSON, &job.ApprovalID, &job.ApprovalTimeoutAt, &job.InputID, &job.InputTimeoutAt, &inputAnswerJSON,
 		&job.Owner, &job.LeaseExpiresAt, &job.CreatedAt,
 	)
 	if err != nil {
@@ -85,6 +85,11 @@ func (r *JobRepo) AcquireJob(ctx context.Context, workflowID string, ownerID str
 	}
 	if err := json.Unmarshal(jobMetadataJSON, &job.JobMetadata); err != nil {
 		return nil, fmt.Errorf("unmarshal job metadata: %w", err)
+	}
+	if inputAnswerJSON != nil {
+		if err := json.Unmarshal(inputAnswerJSON, &job.InputAnswer); err != nil {
+			return nil, fmt.Errorf("unmarshal input answer: %w", err)
+		}
 	}
 
 	return &job, nil
@@ -284,6 +289,120 @@ func (r *JobRepo) ParkForApproval(ctx context.Context, workflowID string, ownerI
 	return tag.RowsAffected() == 1, nil
 }
 
+func (r *JobRepo) ResolveInput(ctx context.Context, workflowID string, inputID string, answer map[string]any) (bool, domain.ResolvedInput, error) {
+	var info domain.ResolvedInput
+	var answerParam any
+	if answer != nil {
+		answerJSON, err := json.Marshal(answer)
+		if err != nil {
+			return false, domain.ResolvedInput{}, fmt.Errorf("marshal answer: %w", err)
+		}
+		answerParam = answerJSON
+	}
+	err := r.pool.QueryRow(ctx,
+		`WITH job_update AS (
+		     UPDATE jobs
+		     SET status = $3, input_answer = $4
+		     WHERE workflow_id = $1
+		       AND input_id = $2
+		       AND status = 'awaiting_input'
+		     RETURNING workflow_id, request_id, tenant_group_id, input_opened_at
+		 ),
+		 wf AS (
+		     UPDATE workflows
+		     SET lifecycle_state = 'invoking'
+		     WHERE id IN (SELECT workflow_id FROM job_update)
+		 )
+		 SELECT request_id, tenant_group_id, input_opened_at FROM job_update`,
+		workflowID, inputID, domain.JobStatusAnswered, answerParam,
+	).Scan(&info.RequestID, &info.TenantGroupID, &info.OpenedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, domain.ResolvedInput{}, nil
+		}
+		return false, domain.ResolvedInput{}, fmt.Errorf("resolve input: %w", err)
+	}
+	return true, info, nil
+}
+
+// SweepExpiredInputs atomically times out the partition's input gates past their
+// deadline and re-queues the workflows (lifecycle_state='invoking', so the
+// rpcworker dispatches the on_timeout branch). Partition-scoped like
+// SweepExpiredApprovals: the partition owner is unique, so no cross-scheduler
+// locking is needed. Returns the resolved gates so the caller can write timed_out
+// audit rows.
+func (r *JobRepo) SweepExpiredInputs(ctx context.Context, partitionID string) ([]domain.ExpiredInput, error) {
+	rows, err := r.pool.Query(ctx,
+		`WITH expired AS (
+		     UPDATE jobs
+		     SET status = 'input_timed_out'
+		     WHERE workflow_id IN (SELECT id FROM workflows WHERE scheduler_partition_id = $1)
+		       AND status = 'awaiting_input'
+		       AND input_timeout_at <= now()
+		     RETURNING workflow_id, request_id, tenant_group_id, input_id,
+		               input_timeout_at, input_opened_at
+		 ),
+		 wf AS (
+		     UPDATE workflows SET lifecycle_state = 'invoking'
+		     WHERE id IN (SELECT workflow_id FROM expired)
+		 )
+		 SELECT workflow_id, request_id, tenant_group_id, input_id, input_timeout_at, input_opened_at FROM expired`,
+		partitionID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("sweep expired inputs: %w", err)
+	}
+	defer rows.Close()
+
+	var out []domain.ExpiredInput
+	for rows.Next() {
+		var e domain.ExpiredInput
+		if err := rows.Scan(&e.WorkflowID, &e.RequestID, &e.TenantGroupID, &e.InputID, &e.TimedOutAt, &e.OpenedAt); err != nil {
+			return nil, fmt.Errorf("scan expired input: %w", err)
+		}
+		out = append(out, e)
+	}
+	return out, rows.Err()
+}
+
+func (r *JobRepo) ParkForInput(ctx context.Context, workflowID string, ownerID string, inputID string, timeoutSeconds int, prompt string, inputMetadata map[string]any, metadata domain.JobMetadata, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
+	metadataJSON, err := json.Marshal(metadata)
+	if err != nil {
+		return false, fmt.Errorf("marshal job metadata: %w", err)
+	}
+	agentMetricsJSON, err := json.Marshal(agentMetrics)
+	if err != nil {
+		return false, fmt.Errorf("marshal agent metrics: %w", err)
+	}
+	workflowMetricsJSON, err := json.Marshal(workflowMetrics)
+	if err != nil {
+		return false, fmt.Errorf("marshal workflow metrics: %w", err)
+	}
+	var inputMetadataParam any
+	if inputMetadata != nil {
+		inputMetadataJSON, err := json.Marshal(inputMetadata)
+		if err != nil {
+			return false, fmt.Errorf("marshal input metadata: %w", err)
+		}
+		inputMetadataParam = inputMetadataJSON
+	}
+	tag, err := r.pool.Exec(ctx,
+		`UPDATE jobs
+		 SET status = $3, input_id = $4,
+		     input_opened_at = now(), input_timeout_at = now() + make_interval(secs => $5),
+		     input_prompt = $6, input_metadata = $7,
+		     job_metadata = $8, agent_metrics = $9, workflow_metrics = $10,
+		     context = '{}'::jsonb, timeout_seconds = 0, current_atomic_operation = ''
+		 WHERE workflow_id = $1 AND owner = $2`,
+		workflowID, ownerID, domain.JobStatusAwaitingInput, inputID, timeoutSeconds,
+		prompt, inputMetadataParam, metadataJSON, agentMetricsJSON, workflowMetricsJSON,
+	)
+	if err != nil {
+		return false, fmt.Errorf("park job for input: %w", err)
+	}
+	return tag.RowsAffected() == 1, nil
+}
+
 func (r *JobRepo) MarkOrphanedJobsFailed(ctx context.Context, partitionID string, gracePeriodSeconds int) (int, error) {
 	tag, err := r.pool.Exec(ctx,
 		`UPDATE jobs
@@ -335,6 +454,7 @@ func (r *JobRepo) UpdateJob(ctx context.Context, workflowID string, ownerID stri
 		`UPDATE jobs
 		 SET status = $3, current_atomic_operation = $4, timeout_seconds = $5, context = $6,
 		     approval_id = NULL, approval_timeout_at = NULL, approval_justification = '', approval_metadata = NULL,
+		     input_id = NULL, input_timeout_at = NULL, input_prompt = '', input_metadata = NULL, input_answer = NULL,
 		     job_metadata = '{}'
 		 WHERE workflow_id = $1 AND owner = $2`,
 		workflowID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, contextJSON,
@@ -363,6 +483,7 @@ func (r *JobRepo) UpdateJobWithMetrics(ctx context.Context, workflowID string, o
 		`UPDATE jobs
 		 SET status = $3, current_atomic_operation = $4, timeout_seconds = $5, context = $6, agent_metrics = $7, workflow_metrics = $8,
 		     approval_id = NULL, approval_timeout_at = NULL, approval_justification = '', approval_metadata = NULL,
+		     input_id = NULL, input_timeout_at = NULL, input_prompt = '', input_metadata = NULL, input_answer = NULL,
 		     job_metadata = '{}'
 		 WHERE workflow_id = $1 AND owner = $2`,
 		workflowID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, contextJSON, agentMetricsJSON, workflowMetricsJSON,

@@ -126,6 +126,10 @@ func (m *mockScheduler) MarkAwaitingApproval(_ context.Context, _ string) error 
 	return nil
 }
 
+func (m *mockScheduler) MarkAwaitingInput(_ context.Context, _ string) error {
+	return nil
+}
+
 // ---- metrics handler mock ----
 
 type mockMetrics struct{}

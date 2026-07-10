@@ -11,6 +11,7 @@ const (
 	LifecycleStateBlocked          LifecycleState = "blocked"
 	LifecycleStateInvoking         LifecycleState = "invoking"
 	LifecycleStateAwaitingApproval LifecycleState = "awaiting_approval"
+	LifecycleStateAwaitingInput    LifecycleState = "awaiting_input"
 	LifecycleStateDeleting         LifecycleState = "deleting"
 	LifecycleStateDeleted          LifecycleState = "deleted"
 	LifecycleStateInterrupted      LifecycleState = "interrupted"
@@ -67,6 +68,9 @@ type Workflow struct {
 	// PendingApproval is the currently open approval gate, nil unless
 	// LifecycleState == LifecycleStateAwaitingApproval.
 	PendingApproval *PendingApproval
+	// PendingInput is the currently open input gate, nil unless
+	// LifecycleState == LifecycleStateAwaitingInput.
+	PendingInput *PendingInput
 }
 
 // PendingApproval is the gate an external reader needs to discover and act on a
@@ -78,4 +82,15 @@ type PendingApproval struct {
 	Metadata      map[string]any
 	OpenedAt      *time.Time
 	TimeoutAt     *time.Time
+}
+
+// PendingInput is the gate an external reader needs to discover and act on a
+// parked input request (submit_input takes InputID) without depending on the
+// in-process worker's on_input_requested hook.
+type PendingInput struct {
+	InputID   string
+	Prompt    string
+	Metadata  map[string]any
+	OpenedAt  *time.Time
+	TimeoutAt *time.Time
 }

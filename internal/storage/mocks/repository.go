@@ -644,6 +644,20 @@ func (mr *MockSchedulerRepositoryMockRecorder) MarkWorkflowAwaitingApproval(ctx,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkWorkflowAwaitingApproval", reflect.TypeOf((*MockSchedulerRepository)(nil).MarkWorkflowAwaitingApproval), ctx, workflowID)
 }
 
+// MarkWorkflowAwaitingInput mocks base method.
+func (m *MockSchedulerRepository) MarkWorkflowAwaitingInput(ctx context.Context, workflowID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkWorkflowAwaitingInput", ctx, workflowID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MarkWorkflowAwaitingInput indicates an expected call of MarkWorkflowAwaitingInput.
+func (mr *MockSchedulerRepositoryMockRecorder) MarkWorkflowAwaitingInput(ctx, workflowID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkWorkflowAwaitingInput", reflect.TypeOf((*MockSchedulerRepository)(nil).MarkWorkflowAwaitingInput), ctx, workflowID)
+}
+
 // MarkWorkflowInvoking mocks base method.
 func (m *MockSchedulerRepository) MarkWorkflowInvoking(ctx context.Context, workflowID string) error {
 	m.ctrl.T.Helper()
@@ -818,6 +832,21 @@ func (mr *MockJobRepositoryMockRecorder) ParkForApproval(ctx, workflowID, ownerI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParkForApproval", reflect.TypeOf((*MockJobRepository)(nil).ParkForApproval), ctx, workflowID, ownerID, approvalID, timeoutSeconds, justification, approvalMetadata, metadata, agentMetrics, workflowMetrics)
 }
 
+// ParkForInput mocks base method.
+func (m *MockJobRepository) ParkForInput(ctx context.Context, workflowID, ownerID, inputID string, timeoutSeconds int, prompt string, inputMetadata map[string]any, metadata domain.JobMetadata, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ParkForInput", ctx, workflowID, ownerID, inputID, timeoutSeconds, prompt, inputMetadata, metadata, agentMetrics, workflowMetrics)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ParkForInput indicates an expected call of ParkForInput.
+func (mr *MockJobRepositoryMockRecorder) ParkForInput(ctx, workflowID, ownerID, inputID, timeoutSeconds, prompt, inputMetadata, metadata, agentMetrics, workflowMetrics any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParkForInput", reflect.TypeOf((*MockJobRepository)(nil).ParkForInput), ctx, workflowID, ownerID, inputID, timeoutSeconds, prompt, inputMetadata, metadata, agentMetrics, workflowMetrics)
+}
+
 // ReleaseJob mocks base method.
 func (m *MockJobRepository) ReleaseJob(ctx context.Context, workflowID, ownerID string) error {
 	m.ctrl.T.Helper()
@@ -863,6 +892,22 @@ func (mr *MockJobRepositoryMockRecorder) ResolveApproval(ctx, workflowID, approv
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveApproval", reflect.TypeOf((*MockJobRepository)(nil).ResolveApproval), ctx, workflowID, approvalID, status)
 }
 
+// ResolveInput mocks base method.
+func (m *MockJobRepository) ResolveInput(ctx context.Context, workflowID, inputID string, answer map[string]any) (bool, domain.ResolvedInput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResolveInput", ctx, workflowID, inputID, answer)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(domain.ResolvedInput)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ResolveInput indicates an expected call of ResolveInput.
+func (mr *MockJobRepositoryMockRecorder) ResolveInput(ctx, workflowID, inputID, answer any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveInput", reflect.TypeOf((*MockJobRepository)(nil).ResolveInput), ctx, workflowID, inputID, answer)
+}
+
 // SetJobDispatched mocks base method.
 func (m *MockJobRepository) SetJobDispatched(ctx context.Context, workflowID, ownerID string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -891,6 +936,21 @@ func (m *MockJobRepository) SweepExpiredApprovals(ctx context.Context, partition
 func (mr *MockJobRepositoryMockRecorder) SweepExpiredApprovals(ctx, partitionID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SweepExpiredApprovals", reflect.TypeOf((*MockJobRepository)(nil).SweepExpiredApprovals), ctx, partitionID)
+}
+
+// SweepExpiredInputs mocks base method.
+func (m *MockJobRepository) SweepExpiredInputs(ctx context.Context, partitionID string) ([]domain.ExpiredInput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SweepExpiredInputs", ctx, partitionID)
+	ret0, _ := ret[0].([]domain.ExpiredInput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SweepExpiredInputs indicates an expected call of SweepExpiredInputs.
+func (mr *MockJobRepositoryMockRecorder) SweepExpiredInputs(ctx, partitionID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SweepExpiredInputs", reflect.TypeOf((*MockJobRepository)(nil).SweepExpiredInputs), ctx, partitionID)
 }
 
 // UpdateJob mocks base method.
