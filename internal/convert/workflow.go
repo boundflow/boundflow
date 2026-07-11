@@ -126,6 +126,21 @@ func RequestInfoToProto(r *domain.CustomerRequest) *boundflowv1.RequestInfo {
 			info.Result = s
 		}
 	}
+	// RequestInfo always arrives via a JSONB round-trip, so nested values are plain
+	// map[string]any/float64/etc regardless of what type wrote them originally.
+	if input, ok := r.RequestInfo["input"].(map[string]any); ok {
+		if s, err := structpb.NewStruct(input); err == nil {
+			info.InvokeContext = s
+		}
+	}
+	if timeout, ok := r.RequestInfo["operationTimeoutSeconds"].(float64); ok {
+		info.OperationTimeoutSeconds = int32(timeout)
+	}
+	if policies, ok := r.RequestInfo["agentRuntimePolicies"].(map[string]any); ok {
+		if s, err := structpb.NewStruct(policies); err == nil {
+			info.AgentRuntimePolicies = s
+		}
+	}
 	return info
 }
 

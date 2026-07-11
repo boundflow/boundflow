@@ -382,6 +382,12 @@ message RequestInfo {
   // The run's published output, set via Complete(result=...); unset until the run
   // completes, and only if the workflow actually published one.
   google.protobuf.Struct result = 10;
+  // The context passed to invoke_workflow(context=...) that started this run, if any.
+  google.protobuf.Struct invoke_context = 11;
+  // The operation timeout actually applied to this run.
+  int32 operation_timeout_seconds = 12;
+  // Each agent's resolved runtime policy in effect for this run, keyed by agent name.
+  google.protobuf.Struct agent_runtime_policies = 13;
 }
 
 message GetRequestInfoResponse {
