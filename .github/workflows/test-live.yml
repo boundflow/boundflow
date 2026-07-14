@@ -13,11 +13,40 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    name: Detect code changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.decide.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        if: github.event_name == 'pull_request'
+        with:
+          filters: |
+            code:
+              - '**'
+              - '!landing/**'
+              - '!docs/**'
+              - '!demo/**'
+              - '!mkdocs.yml'
+              - '!**/*.md'
+      # schedule/workflow_dispatch runs have no diff to filter -- always run the full suite then.
+      - id: decide
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "code=${{ steps.filter.outputs.code }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          fi
+
   live:
     name: Python SDK (real LLM)
+    needs: changes
     runs-on: ubuntu-latest
-    # Skip gracefully if the secret isn't configured (e.g. on a fork).
-    if: ${{ github.repository == 'boundflow/boundflow' }}
+    # Skip gracefully if the secret isn't configured (e.g. on a fork) or nothing code-relevant changed.
+    if: ${{ github.repository == 'boundflow/boundflow' && needs.changes.outputs.code == 'true' }}
     steps:
       - uses: actions/checkout@v4
 
