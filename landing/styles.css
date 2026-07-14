@@ -1,0 +1,270 @@
+:root {
+  --bg: #1e1e2e;
+  --bg-alt: #181825;
+  --surface: #24243a;
+  --border: #33334d;
+  --text: #cdd6f4;
+  --text-dim: #a6adc8;
+  --accent: #7c9dff;
+  --accent-strong: #97b3ff;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.55;
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: var(--surface);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+a { color: var(--accent-strong); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+h1, h2, h3 { line-height: 1.25; margin: 0 0 0.5em; }
+h1 { font-size: 2.6rem; letter-spacing: -0.02em; }
+h2 { font-size: 1.9rem; letter-spacing: -0.01em; }
+h3 { font-size: 1.1rem; margin-bottom: 0.4em; }
+
+p { margin: 0 0 1em; color: var(--text-dim); }
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent-strong);
+  margin: 0 0 0.6em;
+}
+
+.section-inner, .nav-inner, .footer-inner, .hero-inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.section-sub { max-width: 640px; }
+
+/* Nav */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(24, 24, 37, 0.85);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-inner {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  height: 60px;
+}
+
+.wordmark {
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--text);
+}
+.wordmark:hover { text-decoration: none; color: var(--accent-strong); }
+
+.nav-links {
+  display: flex;
+  gap: 20px;
+  flex: 1;
+  font-size: 0.92rem;
+}
+.nav-links a { color: var(--text-dim); }
+.nav-links a:hover { color: var(--text); text-decoration: none; }
+
+.nav-cta { display: flex; align-items: center; gap: 12px; }
+
+.badge, .pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.25em 0.6em;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.pill { background: rgba(124, 157, 255, 0.12); color: var(--accent-strong); border-color: transparent; margin-left: 0.4em; }
+
+/* Buttons */
+.btn {
+  display: inline-block;
+  padding: 0.65em 1.3em;
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.btn:hover { text-decoration: none; }
+.btn-primary { background: var(--accent); color: #101018; }
+.btn-primary:hover { background: var(--accent-strong); }
+.btn-ghost { border: 1px solid var(--border); color: var(--text); }
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent-strong); }
+
+/* Hero */
+.hero { padding: 96px 0 64px; text-align: center; }
+.hero-sub {
+  max-width: 620px;
+  margin: 0 auto 2em;
+  font-size: 1.15rem;
+}
+.hero-cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+/* Sections */
+section { padding: 72px 0; border-top: 1px solid var(--border); }
+.hero { border-top: none; }
+
+.demo-frame {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg-alt);
+  margin-top: 1.5em;
+}
+.demo-frame img { display: block; width: 100%; height: auto; }
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 2em;
+}
+.feature-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.feature-card p { margin: 0; font-size: 0.92rem; }
+
+.who-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 1.5em;
+}
+.who-card {
+  border-left: 3px solid var(--accent);
+  padding: 4px 0 4px 18px;
+}
+.who-card p { color: var(--text); margin: 0; }
+
+.arch-diagram {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin: 2em 0;
+  flex-wrap: wrap;
+}
+.arch-spokes {
+  flex: 1.4;
+  min-width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.arch-spoke {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.arch-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  text-align: center;
+}
+.arch-spoke .arch-box { flex: 1; }
+.arch-box-hub {
+  flex: 1;
+  min-width: 220px;
+  border-color: var(--accent);
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.arch-label { display: block; font-weight: 700; margin-bottom: 6px; }
+.arch-detail { display: block; font-size: 0.82rem; color: var(--text-dim); }
+.arch-arrow {
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.arch-caption {
+  font-size: 0.85rem;
+  max-width: 640px;
+}
+
+.arch-notes {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 1.5em;
+}
+.arch-note {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+}
+.arch-note p { margin: 0; font-size: 0.92rem; }
+
+/* Cloud + Contact: a distinct, centered closing CTA block, set apart from
+   the left-aligned content sections above it */
+.cloud-section, .contact-section {
+  background: var(--bg-alt);
+}
+.cloud-section .section-inner,
+.contact-section .section-inner {
+  text-align: center;
+}
+.cloud-section .eyebrow,
+.contact-section .eyebrow {
+  display: flex;
+  justify-content: center;
+}
+.cloud-section .section-sub,
+.contact-section .section-sub {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Footer */
+.footer { border-top: 1px solid var(--border); padding: 32px 0; }
+.footer-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: var(--text-dim);
+  font-size: 0.88rem;
+}
+.footer-links { display: flex; gap: 18px; }
+.footer-links a { color: var(--text-dim); }
+.footer-links a:hover { color: var(--text); }
+
+@media (max-width: 860px) {
+  .nav-links { display: none; }
+  h1 { font-size: 2rem; }
+  .feature-grid, .who-grid, .arch-notes { grid-template-columns: 1fr; }
+  .arch-diagram { flex-direction: column; }
+}

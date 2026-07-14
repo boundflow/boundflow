@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BoundFlow — The operational control plane for production AI agents</title>
+  <meta name="description" content="BoundFlow enforces cost caps, approval gates, model-lifecycle policy, and audit logging for LLM agents you run unattended. Self-hosted, open source." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="nav">
+    <div class="nav-inner">
+      <a class="wordmark" href="#top">BoundFlow</a>
+      <nav class="nav-links">
+        <a href="#what">What is BoundFlow?</a>
+        <a href="#who">Who is it for?</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#cloud">Cloud <span class="pill">Early Access</span></a>
+        <a href="#contact">Contact</a>
+      </nav>
+      <div class="nav-cta">
+        <span class="badge">Open Source</span>
+        <a class="btn btn-ghost" href="https://github.com/boundflow/boundflow" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+
+    <section class="hero">
+      <div class="hero-inner">
+        <h1>The operational control plane for production AI agents.</h1>
+        <p class="hero-sub">
+          Cost caps, approval gates, model-lifecycle policy, and a durable audit log —
+          enforced by a control plane, not hand-coded into every agent.
+        </p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="docs/quickstart/">Get started</a>
+          <a class="btn btn-ghost" href="#demo">30 second demo ↓</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="demo" class="demo">
+      <div class="section-inner">
+        <p class="eyebrow">See it work</p>
+        <h2>A cost regression, caught and rolled back automatically.</h2>
+        <p class="section-sub">
+          A workflow runs on a periodic schedule under a lifecycle policy. When its
+          lifetime cost crosses the configured budget, BoundFlow rolls it back to
+          the last good version — no one paged, no manual intervention.
+        </p>
+        <div class="demo-frame">
+          <img src="assets/periodic_selfheal.gif" alt="Terminal recording of a periodic workflow's lifetime cost crossing its budget, and BoundFlow automatically rolling it back to the last good version" loading="lazy" />
+        </div>
+      </div>
+    </section>
+
+    <section id="what" class="feature-section">
+      <div class="section-inner">
+        <p class="eyebrow">Production guardrails</p>
+        <h2>Agents are easy to demo and hard to guardrail in production.</h2>
+        <p class="section-sub">
+          The moment an agent runs unattended, you need answers to: what if it loops?
+          What if it spends $50? What if it's about to do something irreversible?
+          Which model should it use, and when should that change? BoundFlow makes
+          those decisions <strong>policy</strong>, not code you scatter across every agent.
+        </p>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <h3>Cost caps</h3>
+            <p>A <code>max_cost_usd</code> runtime cap halts a run the moment its cost crosses budget.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Model lifecycle policy</h3>
+            <p>Automatically switch models on cost or loop signals — downgrade to a cheaper model after a spike.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Human approval gates</h3>
+            <p>Park the workflow for a human decision before it takes an irreversible action.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Tool-call limits</h3>
+            <p>Per-tool call limits and token caps stop output and action blowups before they compound.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Cooldowns &amp; rollback</h3>
+            <p>Flaky or failing runs cool down automatically; bad versions roll back to the last good one.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Durable audit log</h3>
+            <p>Every approval and policy decision is recorded and queryable — not scattered across logs.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="who" class="who-section">
+      <div class="section-inner">
+        <p class="eyebrow">Who is it for?</p>
+        <h2>Teams running agents unattended, past the demo stage.</h2>
+        <div class="who-grid">
+          <div class="who-card">
+            <p>You're running LLM agents in production without a human watching every run — and something has already gone wrong, or you're waiting for it to.</p>
+          </div>
+          <div class="who-card">
+            <p>You've hand-coded budget checks, retry limits, or approval flows into your agents, and want them declared as policy instead of scattered exception code.</p>
+          </div>
+          <div class="who-card">
+            <p>You need an audit trail of every approval and policy decision your agents make — not something you have to stitch together after an incident.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="architecture" class="architecture-section">
+      <div class="section-inner">
+        <p class="eyebrow">Architecture</p>
+        <h2>Bring your own inference. Always.</h2>
+        <p class="section-sub">
+          Your agents call Claude with your own Anthropic key, running in your worker.
+          The BoundFlow backend schedules, dispatches, governs, and audits — but it
+          never sees your key or your inference traffic. Your keys, your data, and
+          your token spend stay on your side of the wire.
+        </p>
+        <div class="arch-diagram">
+          <div class="arch-spokes">
+            <div class="arch-spoke">
+              <div class="arch-box">
+                <span class="arch-label">Your client / SDK</span>
+                <span class="arch-detail">invoke · approve · query</span>
+              </div>
+              <div class="arch-arrow">gRPC — invoke · approve · query →</div>
+            </div>
+            <div class="arch-spoke">
+              <div class="arch-box">
+                <span class="arch-label">Your worker</span>
+                <span class="arch-detail">runs agents + tools, with your API key</span>
+              </div>
+              <div class="arch-arrow">↔ gRPC stream — launch / result</div>
+            </div>
+          </div>
+          <div class="arch-box arch-box-hub">
+            <span class="arch-label">BoundFlow backend</span>
+            <span class="arch-detail">schedules · dispatches · governs · audits</span>
+          </div>
+        </div>
+        <p class="arch-caption">
+          Two independent connections into the same control plane — your client
+          drives and observes workflows, your worker executes them. They never talk
+          to each other directly.
+        </p>
+        <div class="arch-notes">
+          <div class="arch-note">
+            <h3>Backend</h3>
+            <p>Open source (Apache-2.0), self-hostable as a single container.</p>
+          </div>
+          <div class="arch-note">
+            <h3>Python SDK</h3>
+            <p>Open source (MIT). <code>pip install boundflow</code>.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="cloud" class="cloud-section">
+      <div class="section-inner">
+        <p class="eyebrow">Cloud <span class="pill">Early Access</span></p>
+        <h2>Don't want to run the control plane yourself?</h2>
+        <p class="section-sub">
+          BoundFlow Cloud is an early-access managed deployment — same gRPC API, same
+          <code>pip install boundflow</code> SDK. Inference stays bring-your-own, so
+          your Anthropic key and token spend remain yours; we just run the control
+          plane. It's early and design-partner–oriented while we onboard the first
+          users.
+        </p>
+        <a class="btn btn-primary" href="mailto:hello@boundflow.dev?subject=BoundFlow%20Cloud%20early%20access">Get in touch</a>
+      </div>
+    </section>
+
+    <section id="contact" class="contact-section">
+      <div class="section-inner">
+        <p class="eyebrow">Contact</p>
+        <h2>Let's talk about how you're running agents today.</h2>
+        <p class="section-sub">
+          We're working closely with a small group of early adopters and design
+          partners as we head toward 1.0. If that's you, we'd like to hear from you.
+        </p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="mailto:hello@boundflow.dev">hello@boundflow.dev</a>
+          <a class="btn btn-ghost" href="https://github.com/boundflow/boundflow" target="_blank" rel="noopener">View on GitHub</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <span>&copy; BoundFlow</span>
+      <div class="footer-links">
+        <a href="docs/">Docs</a>
+        <a href="https://github.com/boundflow/boundflow" target="_blank" rel="noopener">GitHub</a>
+        <a href="mailto:hello@boundflow.dev">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

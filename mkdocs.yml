@@ -1,9 +1,10 @@
 site_name: BoundFlow
 site_description: The operational layer for the LLM agents and workflows you run unattended — cost caps, approval gates, and self-healing policy, enforced by a control plane.
-site_url: https://boundflow.github.io/boundflow/
+site_url: https://boundflow.dev/docs/
 repo_url: https://github.com/boundflow/boundflow
 repo_name: boundflow/boundflow
 edit_uri: edit/main/docs/
+site_dir: site/docs
 
 theme:
   name: material

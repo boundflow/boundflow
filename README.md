@@ -30,6 +30,12 @@ failing — none of that logic living in your agent code. You declare it as poli
 the control plane enforces it and keeps a durable, queryable **audit log** of every
 approval and policy decision.
 
+**Below:** a periodic workflow running unattended under a lifecycle policy. When
+its lifetime cost crosses the configured budget, BoundFlow rolls it back to the
+last good version automatically — no one paged, no manual intervention.
+
+![A periodic workflow's lifetime cost crossing its budget, and BoundFlow automatically rolling it back to the last good version](demo/periodic_selfheal.gif)
+
 BoundFlow is *not* a prompt framework, an inference provider, or an agent-builder —
 it's the operational layer *around* the agents you build.
 
