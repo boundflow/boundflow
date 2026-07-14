@@ -1,10 +1,11 @@
-name: docs
+name: site
 
 on:
   push:
     branches: [main]
     paths:
       - 'docs/**'
+      - 'landing/**'
       - 'mkdocs.yml'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
@@ -28,6 +29,10 @@ jobs:
           python-version: '3.12'
       - run: pip install -r docs/requirements.txt
       - run: mkdocs build --strict
+      - name: Assemble landing page around the docs build
+        run: |
+          cp -r landing/. site/
+          echo 'boundflow.dev' > site/CNAME
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

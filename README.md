@@ -30,6 +30,8 @@ failing — none of that logic living in your agent code. You declare it as poli
 the control plane enforces it and keeps a durable, queryable **audit log** of every
 approval and policy decision.
 
+![A failing workflow version detected and automatically rolled back to the last good version](demo/periodic_selfheal.gif)
+
 BoundFlow is *not* a prompt framework, an inference provider, or an agent-builder —
 it's the operational layer *around* the agents you build.
 
