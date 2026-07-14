@@ -45,14 +45,14 @@
     <section id="demo" class="demo">
       <div class="section-inner">
         <p class="eyebrow">See it work</p>
-        <h2>A failing version, caught and rolled back automatically.</h2>
+        <h2>A cost regression, caught and rolled back automatically.</h2>
         <p class="section-sub">
-          A workflow runs on a periodic schedule under a lifecycle policy. When a
-          version starts failing, BoundFlow notices and rolls it back to the last
-          good version — no one paged, no manual intervention.
+          A workflow runs on a periodic schedule under a lifecycle policy. When its
+          lifetime cost crosses the configured budget, BoundFlow rolls it back to
+          the last good version — no one paged, no manual intervention.
         </p>
         <div class="demo-frame">
-          <img src="assets/periodic_selfheal.gif" alt="Terminal recording of BoundFlow detecting a failing workflow version and automatically rolling it back to the last good version" loading="lazy" />
+          <img src="assets/periodic_selfheal.gif" alt="Terminal recording of a periodic workflow's lifetime cost crossing its budget, and BoundFlow automatically rolling it back to the last good version" loading="lazy" />
         </div>
       </div>
     </section>
