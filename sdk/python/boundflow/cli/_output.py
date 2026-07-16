@@ -18,6 +18,10 @@ def set_json(value: bool) -> None:
     _json_mode = value
 
 
+def is_json() -> bool:
+    return _json_mode
+
+
 def _normalize(value):
     """Recursively convert enum instances to their .value, so table display
     and JSON output both show plain strings rather than 'EnumClass.member'."""
@@ -88,3 +92,13 @@ def success(msg: str) -> None:
         typer.echo(json.dumps({"status": "ok", "message": msg}))
     else:
         console.print(f"[green]{msg}[/green]")
+
+
+def error(msg: str) -> None:
+    """Report a failure. In --json mode this goes to stdout as structured JSON,
+    so scripted/--json callers get a machine-readable error instead of having
+    to parse stderr text."""
+    if _json_mode:
+        typer.echo(json.dumps({"status": "error", "message": msg}))
+    else:
+        typer.echo(f"Error: {msg}", err=True)
