@@ -6,7 +6,7 @@ from typing import Optional
 import typer
 
 from boundflow.cli._client import cp_call
-from boundflow.cli._output import output, success
+from boundflow.cli._output import error, output, success
 from boundflow.control_plane import InvokeMode, WorkflowConfig
 
 app = typer.Typer(help="Manage workflows.")
@@ -136,7 +136,7 @@ def submit_input(
     try:
         parsed = json.loads(answer)
     except json.JSONDecodeError as e:
-        typer.echo(f"Error: --answer must be valid JSON: {e}", err=True)
+        error(f"--answer must be valid JSON: {e}")
         raise typer.Exit(1)
     cp_call(lambda cp: cp.submit_input(workflow_id, input_id, parsed, actor=actor))
     success(f"Input {input_id} submitted.")

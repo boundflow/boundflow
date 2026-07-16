@@ -7,7 +7,7 @@ from typing import List, Optional
 import typer
 
 from boundflow.cli._client import cp_call
-from boundflow.cli._output import output, success
+from boundflow.cli._output import error, output, success
 from boundflow.policies import AgentRule, RuntimePolicy, ToolCallLimit, WorkflowRule
 
 app = typer.Typer(help="Manage agent and workflow policies.")
@@ -28,13 +28,13 @@ def _parse_tool_limit(value: str) -> ToolCallLimit:
 
 def _load_json(file: Optional[Path], inline: Optional[str]) -> list:
     if file and inline:
-        typer.echo("Error: provide --file or --rules, not both.", err=True)
+        error("provide --file or --rules, not both.")
         raise typer.Exit(1)
     if file:
         return json.loads(file.read_text(encoding="utf-8-sig"))
     if inline:
         return json.loads(inline)
-    typer.echo("Error: provide --file or --rules.", err=True)
+    error("provide --file or --rules.")
     raise typer.Exit(1)
 
 

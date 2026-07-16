@@ -5,6 +5,7 @@ import os
 
 import typer
 
+from boundflow.cli._output import error as report_error
 from boundflow.control_plane import ControlPlaneClient, DEFAULT_SERVER_ADDRESS
 
 _server: str = DEFAULT_SERVER_ADDRESS
@@ -26,7 +27,7 @@ def cp_call(fn):
     Converts any exception into a user-facing error message + Exit(1).
     """
     if not _api_key:
-        typer.echo("Error: no API key. Set BOUNDFLOW_API_KEY or pass --api-key.", err=True)
+        report_error("no API key. Set BOUNDFLOW_API_KEY or pass --api-key.")
         raise typer.Exit(1)
 
     async def _run():
@@ -38,5 +39,5 @@ def cp_call(fn):
     except typer.Exit:
         raise
     except Exception as exc:
-        typer.echo(f"Error: {exc}", err=True)
+        report_error(str(exc))
         raise typer.Exit(1)
