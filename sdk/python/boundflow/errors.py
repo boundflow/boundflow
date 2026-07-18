@@ -27,13 +27,13 @@ class BoundflowError(Exception):
 
 
 class PlatformError(Exception):
-    """A platform-level failure raised from inside a worker's handler or LLM client.
+    """A platform-level failure raised from inside a worker's handler or LLM client
+    when the run can't be governed at all (e.g. the LLM provider reported no token
+    usage, so cost caps can't apply). The operation is reported as *failed* and the
+    workflow is interrupted; the message becomes the request's `failure_reason`.
 
-    Unlike a customer callback that raises (a customer-domain failure that completes
-    the run and keeps the workflow active), this signals the run couldn't be governed
-    at all — e.g. the LLM provider reported no token usage, so cost caps can't be
-    enforced. The worker lets it propagate so the operation is reported as *failed*,
-    interrupting the workflow; its message becomes the request's `failure_reason`.
+    Distinct from a customer callback raising, which completes the run and leaves the
+    workflow active.
     """
 
 

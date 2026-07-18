@@ -1,7 +1,6 @@
 """Worker-side surface: agent definitions, tools, operation handlers.
 
-Mirrors BoundFlow.SDK.BoundFlowWorker + OperationContext, made Python-native:
-decorators for registration, plain async functions for tools and handlers.
+Decorators for registration; plain async functions for tools and handlers.
 """
 
 from __future__ import annotations
@@ -104,10 +103,9 @@ class Next:
 
 @dataclass
 class AwaitApproval:
-    """Park for human approval; branch on the decision. justification and metadata
-    are published for external readers while the gate is open (WorkflowInfo's
-    pending_approval, via get_workflow) — not delivered to either branch, since the
-    decision hasn't happened yet."""
+    """Park for human approval; branch on the decision. `justification` and
+    `metadata` are published for external readers while the gate is open
+    (WorkflowInfo.pending_approval, via get_workflow)."""
 
     on_approve: "OperationResult"
     on_reject: "OperationResult"
@@ -118,13 +116,10 @@ class AwaitApproval:
 
 @dataclass
 class AwaitInput:
-    """Park for a free-form answer, not a binary decision. One continuation
-    (on_answer) that resumes with the answer readable via ctx.input_answer, plus
-    a separate on_timeout continuation for when nobody answers — there's no "explicit
-    decline" branch, since if nobody wants to answer it just times out. prompt and
-    metadata are published for external readers while the gate is open (WorkflowInfo's
-    pending_input, via get_workflow) — not delivered to the resumed operation, since
-    they describe the question, not the answer."""
+    """Park for a free-form answer, not a binary decision. `on_answer` resumes with
+    the answer readable via `ctx.input_answer`; `on_timeout` runs if nobody answers.
+    `prompt` and `metadata` are published for external readers while the gate is open
+    (WorkflowInfo.pending_input, via get_workflow)."""
 
     on_answer: "OperationResult"
     on_timeout: "OperationResult"
@@ -167,8 +162,7 @@ class OperationContext:
     @property
     def context(self) -> dict:
         """The operation's context — the caller's own keys, read and written freely
-        (seeded by invoke_workflow(context=...) and carried across operations). The
-        runtime's own keys live outside this view, so it's just the customer's data."""
+        (seeded by invoke_workflow(context=...) and carried across operations)."""
         raw = self._op.context
         if not isinstance(raw.get("input"), dict):
             raw["input"] = {}
@@ -177,9 +171,7 @@ class OperationContext:
     @property
     def input_answer(self) -> Any:
         """The answer submitted via submit_input(), when this operation was reached
-        through an AwaitInput on_answer branch; None otherwise. Popped out of
-        .context on read, since .context is reserved for the customer's own keys —
-        the runtime shouldn't hand back a key the customer didn't put there."""
+        through an AwaitInput on_answer branch; None otherwise."""
         return self.context.pop("answer", None)
 
     def add_context(self, metadata: str, payload: Any, *, key: str | None = None) -> "OperationContext":
@@ -194,7 +186,7 @@ class OperationContext:
         """Run an agent step. Runtime policy is snapshotted at request-creation
         time; lifecycle policy + metrics history are injected by the scheduler.
         Lifecycle rules are evaluated before the run; metrics are written back on
-        completion. Port of BoundFlowWorker.RunAgentAsync."""
+        completion."""
         runtime_node = (self._op.context.get("agentRuntimePolicies") or {}).get(agent.name)
         state_node = (self._op.context.get("agentStates") or {}).get(agent.name)
 
