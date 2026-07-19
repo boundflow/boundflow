@@ -89,7 +89,7 @@ def apply_lifecycle_rules(
     the resulting policy plus the rules that fired, each with the metric value that
     crossed (for the agent-lifecycle audit).
 
-    Multiple firing rules compose left-to-right, exactly like the .NET version.
+    Multiple firing rules compose left-to-right.
     """
     fired: list[tuple[AgentRule, float]] = []
     for rule in rules:

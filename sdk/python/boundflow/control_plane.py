@@ -1,7 +1,7 @@
 """Async control-plane client — registration, workflow lifecycle, policies.
 
-Port of BoundFlow.ControlPlane.ControlPlaneClient on grpc.aio. Async +
-context-manager; policy methods take a list of rules directly (no wrapper).
+Async and context-managed (grpc.aio); policy methods take a list of rules
+directly (no wrapper).
 """
 
 from __future__ import annotations
@@ -236,11 +236,9 @@ class RequestInfo:
     """Full state of one run, from get_request_info(request_id). `status` is the run's
     lifecycle (`RunStatus`); `run_outcome` is the terminal `RunOutcome`, or None until
     the run is terminal. sequence_number orders a workflow's runs (monotonic per
-    workflow). `result` is the run's published output (Complete(result=...)), or None
-    if the run hasn't completed or didn't publish one. invoke_context, timeout_seconds,
-    and agent_runtime_policies are what was actually resolved for this specific run —
-    useful when workflow/agent config has since changed and you want to know what was
-    true at the time this run happened."""
+    workflow). `result` is the published output (Complete(result=...)), or None.
+    invoke_context, timeout_seconds, and agent_runtime_policies are what was resolved
+    for this specific run — a snapshot at run time, not current config."""
     request_id: str
     workflow_id: str
     request_type: str
@@ -275,8 +273,7 @@ class ApprovalAuditRecord:
 class InputAuditRecord:
     """One input decision from the audit log. Correlate with a run trace via
     input_id (the trace's boundflow.input_id). answer is the submitted content
-    (unset on a timeout decision) — recorded here because it's the governance-
-    relevant content, same reasoning as auditing an approval decision."""
+    (unset on a timeout decision)."""
     workflow_id: str
     request_id: str
     input_id: str
@@ -687,8 +684,7 @@ class ControlPlaneClient:
 
     async def approve_workflow(self, workflow_id: str, approval_id: str, actor: str = "") -> None:
         """Approve a parked gate. `actor` identifies the approver (e.g. an email or
-        user id); it's recorded in the approval audit log (auth is tenant-scoped, so
-        the customer's gate is the source of approver identity)."""
+        user id) and is recorded in the approval audit log."""
         await self._lc.ApproveWorkflow(
             lc.ApproveWorkflowRequest(workflow_id=workflow_id, approval_id=approval_id, actor=actor),
             metadata=self._metadata)

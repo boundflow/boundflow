@@ -1,8 +1,7 @@
 """LLM message protocol, the scripted mock, and the orchestrator loop.
 
 Provider-agnostic: the orchestrator speaks the small message protocol below, so
-the mock and a real Anthropic client are interchangeable. The loop is a direct
-port of BoundFlow.SDK Orchestrator.RunAsync.
+the mock and a real Anthropic client are interchangeable.
 """
 
 from __future__ import annotations
@@ -187,7 +186,7 @@ class MockLlmClient:
         if request.forced_tool:
             return _build([ToolCall(request.forced_tool, {})], 0, 0)
         # turn_index = assistant turns already in history (history grows by one
-        # assistant message per prior model call), matching the .NET mock.
+        # assistant message per prior model call).
         idx = sum(1 for m in request.messages if m.role == "assistant")
         t = self._next(MockContext(idx, request.system))
         return _build(t.tool_calls, t.input_tokens, t.output_tokens)
@@ -292,7 +291,7 @@ class Orchestrator:
     async def run_step(self, cfg: AgentStepConfig) -> StepResult:
         """Run the agentic loop to completion. The model may call allowed tools
         freely and calls submit_result when done; if a policy limit is hit first,
-        one final forced submit_result is made. Port of Orchestrator.RunAsync."""
+        one final forced submit_result is made."""
         callbacks = {t.name: t for t in cfg.tools}
         tools = [ToolSpec(t.name, t.description or t.name, _wrap_schema(t.input_schema)) for t in cfg.tools]
         tools.append(ToolSpec(SUBMIT_RESULT, "Call this when done to submit your final result.",

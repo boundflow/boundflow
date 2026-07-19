@@ -1,9 +1,9 @@
 """gRPC transport — worker bidi stream + proto⇄domain conversion.
 
-Port of BoundFlow.SDK WorkerClient (the stream loop) and the MapToProto helpers
-in BoundFlowWorker, on top of grpc.aio. The server drives the session with
-Launch/Cancel commands; the worker acks IN_PROGRESS, runs the operation off the
-receive loop, then reports the result and re-arms with ReadyForWork.
+The worker stream loop and proto mapping helpers, on top of grpc.aio. The server
+drives the session with Launch/Cancel commands; the worker acks IN_PROGRESS, runs
+the operation off the receive loop, then reports the result and re-arms with
+ReadyForWork.
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ def _strip_scheme(addr: str) -> str:
 
 def context_to_dict(op: op_pb.AtomicOperation) -> dict:
     """AtomicOperation.context (Struct) → plain dict, camelCase top-level keys
-    (matching the .NET JsonFormatter), opaque policy contents preserved."""
+    (proto JSON convention), opaque policy contents preserved."""
     if not op.HasField("context"):
         return {}
     return json_format.MessageToDict(op.context)
