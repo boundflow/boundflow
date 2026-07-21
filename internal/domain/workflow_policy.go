@@ -46,6 +46,7 @@ type WorkflowInvocationSnapshot struct {
 	ApprovalRejections *int           `json:"approval_rejections,omitempty"`
 	ToolFailureCounts  map[string]int `json:"tool_failure_counts,omitempty"`
 	RanAt              int64          `json:"ran_at"`
+	RequestID          string         `json:"request_id,omitempty"`
 }
 
 type WorkflowVersionMetrics struct {

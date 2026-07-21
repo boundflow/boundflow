@@ -29,7 +29,7 @@ func NewMetricsHandler(workflow storage.WorkflowRepository, agentState storage.A
 	}
 }
 
-func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, invocationMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics, workflow *domain.Workflow) (error, *domain.WorkflowVersionMetrics) {
+func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, requestID string, invocationMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics, workflow *domain.Workflow) (error, *domain.WorkflowVersionMetrics) {
 
 	workFlowId := workflow.ID
 
@@ -57,7 +57,7 @@ func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, invocationMetri
 	}
 
 	// Build the workflow-level snapshot for this run as the sum across all agents.
-	snapshot := domain.WorkflowInvocationSnapshot{RanAt: time.Now().UnixMilli()}
+	snapshot := domain.WorkflowInvocationSnapshot{RanAt: time.Now().UnixMilli(), RequestID: requestID}
 	versionMetrics.RunCount++
 
 	for agent, metrics := range invocationMetrics {
