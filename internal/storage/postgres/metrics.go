@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
 	"github.com/boundflow/boundflow/internal/domain"
 )
 
@@ -33,7 +32,7 @@ func (r *MetricsRepo) EmitMetrics(
 	emittedVersion int64,
 	rollingMetrics []domain.WorkflowInvocationSnapshot,
 	versionMetrics *domain.WorkflowVersionMetrics,
-	agentMetrics map[string][]*boundflowv1.AgentInvocationMetrics,
+	agentMetrics map[string][]domain.AgentInvocationSnapshot,
 ) (bool, error) {
 	rollingJSON, err := json.Marshal(rollingMetrics)
 	if err != nil {

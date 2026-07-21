@@ -66,13 +66,14 @@ func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, requestID strin
 		}
 
 		// Append this run's snapshot to the agent's history (metrics only, never policy).
+		agentSnapshot := toAgentInvocationSnapshot(metrics, requestID)
 		if st, ok := agentStates[agent]; ok {
-			st.InvocationMetrics = append(st.InvocationMetrics, metrics)
+			st.InvocationMetrics = append(st.InvocationMetrics, agentSnapshot)
 		} else {
 			agentStates[agent] = &domain.AgentState{
 				WorkflowID: workFlowId,
 				AgentName:          agent,
-				InvocationMetrics:  []*boundflowv1.AgentInvocationMetrics{metrics},
+				InvocationMetrics:  []domain.AgentInvocationSnapshot{agentSnapshot},
 			}
 		}
 
@@ -116,7 +117,7 @@ func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, requestID strin
 	}
 
 	// Collect the updated histories for only the agents touched this run.
-	agentMetrics := make(map[string][]*boundflowv1.AgentInvocationMetrics, len(invocationMetrics))
+	agentMetrics := make(map[string][]domain.AgentInvocationSnapshot, len(invocationMetrics))
 	for agent := range invocationMetrics {
 		agentMetrics[agent] = agentStates[agent].InvocationMetrics
 	}
@@ -132,6 +133,44 @@ func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, requestID strin
 		m.log.Debug("metrics already emitted for this run, skipping", "workflow_id", workFlowId, "version", workflow.CurrentVersion)
 	}
 	return nil, versionMetrics
+}
+
+// toAgentInvocationSnapshot converts the client-reported wire metrics into the
+// stored domain snapshot, stamping requestID -- server-known metadata the SDK
+// never sends -- on the way in.
+func toAgentInvocationSnapshot(metrics *boundflowv1.AgentInvocationMetrics, requestID string) domain.AgentInvocationSnapshot {
+	toIntPtr := func(v *int32) *int {
+		if v == nil {
+			return nil
+		}
+		x := int(*v)
+		return &x
+	}
+	var toolFailureCounts, callsPerTool map[string]int
+	if len(metrics.ToolFailureCounts) > 0 {
+		toolFailureCounts = make(map[string]int, len(metrics.ToolFailureCounts))
+		for tool, count := range metrics.ToolFailureCounts {
+			toolFailureCounts[tool] = int(count)
+		}
+	}
+	if len(metrics.CallsPerTool) > 0 {
+		callsPerTool = make(map[string]int, len(metrics.CallsPerTool))
+		for tool, count := range metrics.CallsPerTool {
+			callsPerTool[tool] = int(count)
+		}
+	}
+	return domain.AgentInvocationSnapshot{
+		CostUsd:            metrics.CostUsd,
+		LlmCalls:           toIntPtr(metrics.LlmCalls),
+		TokensUsed:         toIntPtr(metrics.TokensUsed),
+		LatencySeconds:     metrics.LatencySeconds,
+		Failures:           toIntPtr(metrics.Failures),
+		ApprovalRejections: toIntPtr(metrics.ApprovalRejections),
+		ToolFailureCounts:  toolFailureCounts,
+		CallsPerTool:       callsPerTool,
+		RanAt:              metrics.RanAt,
+		RequestID:          requestID,
+	}
 }
 
 // accF64 adds v into the domain snapshot field, allocating it on first emit (nil = not emitted).
