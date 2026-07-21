@@ -22,7 +22,7 @@ func i32(v int32) *int32 { return &v }
 // no-op doubles for the post-completion metric + policy steps in CompleteRequest.
 type noopMetricsHandler struct{}
 
-func (noopMetricsHandler) HandleAgentMetrics(_ context.Context, _ map[string]*boundflowv1.AgentInvocationMetrics, _ domain.WorkflowJobMetrics, _ *domain.Workflow) (error, *domain.WorkflowVersionMetrics) {
+func (noopMetricsHandler) HandleAgentMetrics(_ context.Context, _ string, _ map[string]*boundflowv1.AgentInvocationMetrics, _ domain.WorkflowJobMetrics, _ *domain.Workflow) (error, *domain.WorkflowVersionMetrics) {
 	return nil, nil
 }
 

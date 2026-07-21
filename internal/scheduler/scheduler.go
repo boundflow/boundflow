@@ -15,7 +15,7 @@ import (
 )
 
 type MetricsHandler interface {
-	HandleAgentMetrics(ctx context.Context, invocationMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics, workflow *domain.Workflow) (error, *domain.WorkflowVersionMetrics)
+	HandleAgentMetrics(ctx context.Context, requestID string, invocationMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics, workflow *domain.Workflow) (error, *domain.WorkflowVersionMetrics)
 }
 
 type PolicyResolver interface {
@@ -373,7 +373,7 @@ func (s *Scheduler) CompleteRequest(ctx context.Context, req string, outcome dom
 
 	// update metrics in storage
 	var versionMetrics *domain.WorkflowVersionMetrics
-	err, versionMetrics = s.metricsHandler.HandleAgentMetrics(ctx, metrics, workflowMetrics, workflow)
+	err, versionMetrics = s.metricsHandler.HandleAgentMetrics(ctx, req, metrics, workflowMetrics, workflow)
 	if err != nil {
 		s.log.Error("failed to handle agent metrics", "request_id", req, "workflow_id", request.WorkflowID, "error", err)
 		return false, err
