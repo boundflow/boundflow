@@ -1,0 +1,7 @@
+[
+  {
+    "metric": "num_failures",
+    "threshold": 2,
+    "action": {"kind": "set_version", "target": 1}
+  }
+]
