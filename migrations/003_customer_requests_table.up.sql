@@ -34,3 +34,5 @@ CREATE TABLE customer_requests (
     -- NULL if the workflow never published one.
     result                JSONB
 );
+
+CREATE INDEX customer_requests_workflow_id_created_at_idx ON customer_requests (workflow_id, created_at DESC);
