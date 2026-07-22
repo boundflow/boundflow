@@ -173,16 +173,55 @@ func (r *WorkflowRepo) UpdateLifecyclePolicy(ctx context.Context, id string, pol
 }
 
 func (r *WorkflowRepo) UpdateConfig(ctx context.Context, id string, cfg domain.WorkflowConfig, version int) error {
-	_, err := r.pool.Exec(ctx,
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin update config tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var oldVersion int
+	if err := tx.QueryRow(ctx,
+		`SELECT current_workflow_version FROM workflows WHERE id = $1 FOR UPDATE`, id,
+	).Scan(&oldVersion); err != nil {
+		return fmt.Errorf("lock workflow for config update: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx,
 		`UPDATE workflows
 		   SET current_workflow_version = $1, invoke_timeout_seconds = $2, repeat_every_seconds = $3,
 		       triggerable = $4, invoke_mode = $5, max_queue_depth = $6
 		 WHERE id = $7`,
 		version, cfg.InvokeTimeoutSeconds, cfg.RepeatEverySeconds, cfg.Triggerable,
 		string(cfg.InvokeMode), cfg.MaxQueueDepth, id,
+	); err != nil {
+		return fmt.Errorf("update workflow config: %w", err)
+	}
+
+	if oldVersion != version {
+		if err := startNewMetricsEpoch(ctx, tx, id, version); err != nil {
+			return err
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit update config tx: %w", err)
+	}
+	return nil
+}
+
+// startNewMetricsEpoch starts a fresh (zeroed) workflow_version_metrics row for a
+// workflow that just transitioned to the given version, so its cumulative totals
+// begin from zero rather than resuming a stale streak from a prior time on this
+// version. Must be called within the same transaction as the version change.
+func startNewMetricsEpoch(ctx context.Context, tx pgx.Tx, workflowID string, version int) error {
+	_, err := tx.Exec(ctx,
+		`INSERT INTO workflow_version_metrics (workflow_id, version, epoch)
+		 SELECT $1, $2, COALESCE(MAX(epoch), 0) + 1
+		 FROM workflow_version_metrics WHERE workflow_id = $1 AND version = $2`,
+		workflowID, version,
 	)
 	if err != nil {
-		return fmt.Errorf("update workflow config: %w", err)
+		return fmt.Errorf("start new metrics epoch: %w", err)
 	}
 	return nil
 }

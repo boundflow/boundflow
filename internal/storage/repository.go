@@ -233,11 +233,23 @@ type LifecycleResolverRepository interface {
 	// ExpireCooldowns atomically flips all expired-cooldown workflows in the partition back to
 	// active and returns the IDs that were resumed.
 	ExpireCooldowns(ctx context.Context, partitionID string) ([]string, error)
-	// TryApplyPolicyResolution atomically updates lifecycle_last_resolved,
-	// current_workflow_version, workflow_state, and cooldown_until only if the stored
-	// lifecycle_last_resolved is less than resolved. Returns true if the update was applied.
+	// TryApplyVersionResolution atomically updates lifecycle_last_resolved and
+	// current_workflow_version for a set_version policy resolution, only if the stored
+	// lifecycle_last_resolved is less than resolved AND current_workflow_version still
+	// equals expectedVersion -- the version the resolver observed before deciding to
+	// fire. That guard means a manual SetWorkflowConfig call that moved the version
+	// elsewhere in the meantime is never silently overwritten by a stale decision.
+	// Returns true if the update was applied. When applied and targetVersion differs
+	// from expectedVersion, also starts a fresh metrics epoch for targetVersion.
+	TryApplyVersionResolution(ctx context.Context, workflowID string, resolved int64, expectedVersion int, targetVersion int) (bool, error)
+	// TryApplyStateResolution atomically updates lifecycle_last_resolved, workflow_state,
+	// and cooldown_until for a pause/cooldown policy resolution, only if the stored
+	// lifecycle_last_resolved is less than resolved. Never touches current_workflow_version
+	// -- pause/cooldown are safety measures whose cause isn't necessarily version-specific,
+	// so they're not guarded against (and can't clobber) a concurrent version change.
 	// cooldownUntil should be non-nil only when workflowState is WorkflowStateCooldown.
-	TryApplyPolicyResolution(ctx context.Context, workflowID string, resolved int64, workflowVersion int, workflowState domain.WorkflowState, cooldownUntil *time.Time) (bool, error)
+	// Returns true if the update was applied.
+	TryApplyStateResolution(ctx context.Context, workflowID string, resolved int64, workflowState domain.WorkflowState, cooldownUntil *time.Time) (bool, error)
 }
 
 type MetricsRepository interface {
