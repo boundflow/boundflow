@@ -303,6 +303,32 @@ func TestGetWorkflowMetrics_NoneEmittedYet(t *testing.T) {
 	}
 }
 
+// --- SetWorkflowConfig ---
+
+func TestSetWorkflowConfig_DelegatesToRepo(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	svc, workflowRepo, _, _, _, _ := newSvc(ctrl)
+
+	cfg := domain.WorkflowConfig{InvokeTimeoutSeconds: 30, RepeatEverySeconds: 60, Triggerable: true}
+	workflowRepo.EXPECT().UpdateConfig(gomock.Any(), "wf-1", cfg, 2).Return(nil)
+
+	if err := svc.SetWorkflowConfig(context.Background(), "wf-1", cfg, 2); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestSetWorkflowConfig_RejectsRepeatBelowMinimum(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	svc, _, _, _, _, _ := newSvc(ctrl)
+
+	cfg := domain.WorkflowConfig{RepeatEverySeconds: 1}
+
+	err := svc.SetWorkflowConfig(context.Background(), "wf-1", cfg, 1)
+	if !errors.Is(err, service.ErrInvalidRepeatInterval) {
+		t.Fatalf("expected ErrInvalidRepeatInterval, got %v", err)
+	}
+}
+
 // --- SetAgentRuntimePolicy ---
 
 func TestSetAgentRuntimePolicy_DelegatesToRepo(t *testing.T) {

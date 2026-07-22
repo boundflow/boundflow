@@ -7,20 +7,20 @@
 # Prerequisites: BOUNDFLOW_API_KEY and BOUNDFLOW_SERVER_ADDRESS must be set.
 set -euo pipefail
 
-echo "=== boundflowgovernance demo ==="
+echo "=== boundflow governance demo ==="
 echo
 
 # ── Setup ────────────────────────────────────────────────────────────────────
 TENANT_ID=$(boundflow --json tenant create gov-demo | python -c "import sys,json; print(json.load(sys.stdin)['id'])")
 WF_ID=$(boundflow --json workflow create order-remediation "$TENANT_ID" --version 1 | python -c "import sys,json; print(json.load(sys.stdin)['id'])")
-boundflowworkflow activate "$WF_ID"
+boundflow workflow activate "$WF_ID"
 echo "tenant:   $TENANT_ID"
 echo "workflow: $WF_ID"
 echo
 
 # ── Runtime policy (hard caps, enforced SDK-side during the agent loop) ───────
 echo "-- runtime policy via flags --"
-boundflowpolicy runtime "$WF_ID" analyst \
+boundflow policy runtime "$WF_ID" analyst \
   --max-llm-calls 5 \
   --max-cost-usd 0.50 \
   --max-tokens-per-call 4096 \
@@ -39,7 +39,7 @@ cat > /tmp/runtime_policy.json << 'EOF'
   ]
 }
 EOF
-boundflowpolicy runtime "$WF_ID" analyst --file /tmp/runtime_policy.json
+boundflow policy runtime "$WF_ID" analyst --file /tmp/runtime_policy.json
 echo
 
 # ── Agent lifecycle policy (adapts the model based on prior-run metrics) ──────
@@ -65,7 +65,7 @@ cat > /tmp/agent_rules.json << 'EOF'
   }
 ]
 EOF
-boundflowpolicy lifecycle set-agent "$WF_ID" analyst --file /tmp/agent_rules.json
+boundflow policy lifecycle set-agent "$WF_ID" analyst --file /tmp/agent_rules.json
 echo
 
 # ── Workflow lifecycle policy (reacts to whole-workflow metrics) ──────────────
@@ -86,33 +86,33 @@ cat > /tmp/wf_rules.json << 'EOF'
   }
 ]
 EOF
-boundflowpolicy lifecycle set-workflow "$WF_ID" --file /tmp/wf_rules.json
+boundflow policy lifecycle set-workflow "$WF_ID" --file /tmp/wf_rules.json
 echo
 
 # ── Pricing overrides ─────────────────────────────────────────────────────────
 echo "-- model pricing --"
-boundflowpricing list
+boundflow pricing list
 echo
-boundflowpricing set claude-haiku-4-5 --input 1.00 --output 5.00
+boundflow pricing set claude-haiku-4-5 --input 1.00 --output 5.00
 echo "  updated haiku pricing:"
-boundflowpricing list
+boundflow pricing list
 echo
 
 # ── Audit (empty on a fresh workflow with no worker runs) ─────────────────────
 echo "-- audit commands --"
 echo "  approvals:"
-boundflowaudit approvals "$WF_ID"
+boundflow audit approvals "$WF_ID"
 echo
 echo "  workflow policy firings:"
-boundflowaudit workflow "$WF_ID"
+boundflow audit workflow "$WF_ID"
 echo
 echo "  agent policy firings:"
-boundflowaudit agent "$WF_ID" analyst
+boundflow audit agent "$WF_ID" analyst
 echo
 echo "  unified audit log:"
-boundflowaudit log "$WF_ID"
+boundflow audit log "$WF_ID"
 
 # ── Clean up ──────────────────────────────────────────────────────────────────
 echo
-boundflowworkflow delete "$WF_ID" --yes
+boundflow workflow delete "$WF_ID" --yes
 echo "=== done ==="

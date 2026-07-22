@@ -14,3 +14,5 @@ site/
 # Local env / secrets — compose reads .env automatically; never commit real values
 .env
 .env.local
+docker-compose.override.yml
+sdk/python/examples/lifecycle_demo/.demo_wf_id

@@ -345,6 +345,20 @@ func (mr *MockWorkflowRepositoryMockRecorder) TenantGroupIDForWorkflow(ctx, work
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TenantGroupIDForWorkflow", reflect.TypeOf((*MockWorkflowRepository)(nil).TenantGroupIDForWorkflow), ctx, workflowID)
 }
 
+// UpdateConfig mocks base method.
+func (m *MockWorkflowRepository) UpdateConfig(ctx context.Context, id string, cfg domain.WorkflowConfig, version int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateConfig", ctx, id, cfg, version)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateConfig indicates an expected call of UpdateConfig.
+func (mr *MockWorkflowRepositoryMockRecorder) UpdateConfig(ctx, id, cfg, version any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateConfig", reflect.TypeOf((*MockWorkflowRepository)(nil).UpdateConfig), ctx, id, cfg, version)
+}
+
 // UpdateCurrentVersion mocks base method.
 func (m *MockWorkflowRepository) UpdateCurrentVersion(ctx context.Context, id string, version int64) error {
 	m.ctrl.T.Helper()

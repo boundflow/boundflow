@@ -188,6 +188,18 @@ func (s *LifecycleService) CreateWorkflow(ctx context.Context, correlationID, wo
 	return &workflow, nil
 }
 
+// SetWorkflowConfig updates a workflow's config settings.
+func (s *LifecycleService) SetWorkflowConfig(ctx context.Context, workflowID string, cfg domain.WorkflowConfig, version int) error {
+	if cfg.RepeatEverySeconds > 0 && int(cfg.RepeatEverySeconds) < s.minRepeatSeconds {
+		return fmt.Errorf("%w: must be 0 (no repeat) or >= %d", ErrInvalidRepeatInterval, s.minRepeatSeconds)
+	}
+	s.log.Info("setting workflow config", "workflow_id", workflowID)
+	if err := s.workflows.UpdateConfig(ctx, workflowID, cfg, version); err != nil {
+		return fmt.Errorf("set workflow config: %w", err)
+	}
+	return nil
+}
+
 // InvokeWorkflow triggers a run and returns the created request's id — the run id
 // the caller can use to correlate this invocation (e.g. with its trace).
 func (s *LifecycleService) InvokeWorkflow(ctx context.Context, correlationID, workflowID string, params domain.WorkflowRuntimeParams, initialContext map[string]any) (string, error) {

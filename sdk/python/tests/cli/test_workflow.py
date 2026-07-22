@@ -189,6 +189,45 @@ def test_delete_workflow_removes_it(runner, boundflow_api_key):
     run_expect_fail(runner, boundflow_api_key, ["workflow", "get", wf_id])
 
 
+# ── Set config ───────────────────────────────────────────────────────────────
+
+
+def test_set_config_returns_updated_workflow(runner, boundflow_api_key):
+    tenant_id = make_tenant(runner, boundflow_api_key, "wf-set-config")
+    wf_id = make_workflow(runner, boundflow_api_key, tenant_id)
+
+    data = run(runner, boundflow_api_key,
+               ["workflow", "set-config", wf_id, "--version", "2", "--repeat", "30"])
+    assert data["id"] == wf_id
+    assert data["config"]["version"] == 2
+    assert data["config"]["repeat_every_seconds"] == 30
+
+
+def test_set_config_reflected_by_get(runner, boundflow_api_key):
+    tenant_id = make_tenant(runner, boundflow_api_key, "wf-set-config-get")
+    wf_id = make_workflow(runner, boundflow_api_key, tenant_id)
+
+    run(runner, boundflow_api_key, ["workflow", "set-config", wf_id, "--version", "5"])
+
+    after = run(runner, boundflow_api_key, ["workflow", "get", wf_id])
+    assert after["version"] == 5
+
+
+def test_set_config_rejects_repeat_below_minimum(runner, boundflow_api_key):
+    tenant_id = make_tenant(runner, boundflow_api_key, "wf-set-config-badrepeat")
+    wf_id = make_workflow(runner, boundflow_api_key, tenant_id)
+
+    run_expect_fail(runner, boundflow_api_key,
+                    ["workflow", "set-config", wf_id, "--version", "1", "--repeat", "1"])
+
+
+def test_set_config_nonexistent_workflow_fails(runner, boundflow_api_key):
+    run_expect_fail(
+        runner, boundflow_api_key,
+        ["workflow", "set-config", "00000000-0000-0000-0000-000000000000", "--version", "1"],
+    )
+
+
 # ── Metrics ──────────────────────────────────────────────────────────────────
 
 
