@@ -23,6 +23,7 @@ from .control_plane import (
     Workflow,
     WorkflowConfig,
     WorkflowInfo,
+    WorkflowMetrics,
     WorkflowState,
 )
 from .errors import (
@@ -82,7 +83,7 @@ __all__ = [
     "AnthropicLlmClient",
     "ControlPlaneClient", "LifecycleState", "RunStatus", "RunOutcome", "Run", "RequestInfo",
     "Tenant", "TenantGroup", "Workflow",
-    "WorkflowConfig", "WorkflowState", "WorkflowInfo", "PendingApproval", "PendingInput", "InvokeMode", "ApprovalAuditRecord", "ApprovalDecision", "InputAuditRecord", "InputDecision", "PolicyActionRecord", "WorkflowPolicyAction", "AgentPolicyActionRecord", "AgentCallTimeout", "MockLlmClient", "MockContext", "Turn",
+    "WorkflowConfig", "WorkflowState", "WorkflowInfo", "WorkflowMetrics", "PendingApproval", "PendingInput", "InvokeMode", "ApprovalAuditRecord", "ApprovalDecision", "InputAuditRecord", "InputDecision", "PolicyActionRecord", "WorkflowPolicyAction", "AgentPolicyActionRecord", "AgentCallTimeout", "MockLlmClient", "MockContext", "Turn",
     "turn", "submit", "AgentMetric", "AgentRule", "Cooldown", "Op", "Pause",
     "RuntimePolicy", "SetMaxCostUsd", "SetMaxLlmCalls", "SetMaxTokensPerCall",
     "SetModel", "SetVersion", "ToolCallLimit", "WorkflowMetric", "WorkflowRule",

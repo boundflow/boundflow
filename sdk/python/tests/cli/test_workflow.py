@@ -189,6 +189,27 @@ def test_delete_workflow_removes_it(runner, boundflow_api_key):
     run_expect_fail(runner, boundflow_api_key, ["workflow", "get", wf_id])
 
 
+# ── Metrics ──────────────────────────────────────────────────────────────────
+
+
+def test_metrics_zero_value_before_any_run(runner, boundflow_api_key):
+    tenant_id = make_tenant(runner, boundflow_api_key, "wf-metrics")
+    wf_id = make_workflow(runner, boundflow_api_key, tenant_id)
+
+    data = run(runner, boundflow_api_key, ["workflow", "metrics", wf_id])
+    assert data["version"] == 1
+    assert data["run_count"] == 0
+    assert data["total_cost_usd"] == 0
+    assert data["tool_failure_counts"] == {}
+
+
+def test_metrics_nonexistent_workflow_fails(runner, boundflow_api_key):
+    run_expect_fail(
+        runner, boundflow_api_key,
+        ["workflow", "metrics", "00000000-0000-0000-0000-000000000000"],
+    )
+
+
 # ── Runs ─────────────────────────────────────────────────────────────────────
 
 
