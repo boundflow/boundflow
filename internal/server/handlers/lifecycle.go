@@ -475,6 +475,40 @@ func (h *WorkflowServiceHandler) GetRequestInfo(ctx context.Context, req *boundf
 	return &boundflowv1.GetRequestInfoResponse{Request: convert.RequestInfoToProto(request)}, nil
 }
 
+func (h *WorkflowServiceHandler) GetWorkflowMetrics(ctx context.Context, req *boundflowv1.GetWorkflowMetricsRequest) (*boundflowv1.GetWorkflowMetricsResponse, error) {
+	if req.WorkflowId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
+	}
+
+	if err := h.checkWorkflowOwner(ctx, req.WorkflowId); err != nil {
+		return nil, err
+	}
+
+	metrics, err := h.svc.GetWorkflowMetrics(ctx, req.WorkflowId)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Errorf(codes.NotFound, "workflow instance not found")
+		}
+		return nil, status.Errorf(codes.Internal, "get workflow metrics: %v", err)
+	}
+
+	toolFailureCounts := make(map[string]int32, len(metrics.ToolFailureCounts))
+	for tool, count := range metrics.ToolFailureCounts {
+		toolFailureCounts[tool] = int32(count)
+	}
+
+	return &boundflowv1.GetWorkflowMetricsResponse{
+		Version:                 int32(metrics.Version),
+		TotalCost:               metrics.TotalCost,
+		RunCount:                int32(metrics.RunCount),
+		TotalFailures:           int32(metrics.TotalFailures),
+		TotalLlmCalls:           int32(metrics.TotalLLMCalls),
+		TotalLatencySeconds:     metrics.TotalLatencySeconds,
+		TotalApprovalRejections: int32(metrics.TotalApprovalRejections),
+		ToolFailureCounts:       toolFailureCounts,
+	}, nil
+}
+
 func (h *WorkflowServiceHandler) ApproveWorkflow(ctx context.Context, req *boundflowv1.ApproveWorkflowRequest) (*boundflowv1.ApproveWorkflowResponse, error) {
 	if req.WorkflowId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")

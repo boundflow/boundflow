@@ -23,12 +23,13 @@ var discardLogger = slog.New(slog.NewTextHandler(io.Discard, nil))
 
 const testTenantGroup = "test-group"
 
-func newHandler(ctrl *gomock.Controller) (*handlers.WorkflowServiceHandler, *mocks.MockWorkflowRepository, *mocks.MockAgentStateRepository) {
+func newHandler(ctrl *gomock.Controller) (*handlers.WorkflowServiceHandler, *mocks.MockWorkflowRepository, *mocks.MockAgentStateRepository, *mocks.MockVersionMetricsRepository) {
 	workflowRepo := mocks.NewMockWorkflowRepository(ctrl)
 	agentStateRepo := mocks.NewMockAgentStateRepository(ctrl)
 	tenantRepo := mocks.NewMockTenantRepository(ctrl)
 	tenantGroupRepo := mocks.NewMockTenantGroupRepository(ctrl)
 	modelPricingRepo := mocks.NewMockModelPricingRepository(ctrl)
+	versionMetricsRepo := mocks.NewMockVersionMetricsRepository(ctrl)
 	auditRepo := mocks.NewMockAuditRepository(ctrl)
 	customerRequestRepo := mocks.NewMockCustomerRequestRepository(ctrl)
 
@@ -36,9 +37,9 @@ func newHandler(ctrl *gomock.Controller) (*handlers.WorkflowServiceHandler, *moc
 
 	svc := service.NewLifecycleService(
 		workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo,
-		modelPricingRepo, nil, nil, nil, auditRepo, 10, 30, discardLogger,
+		modelPricingRepo, versionMetricsRepo, nil, nil, nil, auditRepo, 10, 30, discardLogger,
 	)
-	return handlers.NewWorkflowServiceHandler(svc), workflowRepo, agentStateRepo
+	return handlers.NewWorkflowServiceHandler(svc), workflowRepo, agentStateRepo, versionMetricsRepo
 }
 
 func authedCtx() context.Context {
@@ -164,7 +165,7 @@ func TestValidateAgentLifecycleRules_RulesNotAnArray(t *testing.T) {
 
 func TestSetAgentLifecyclePolicy_RejectsWindowOverMax(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	h, _, _ := newHandler(ctrl)
+	h, _, _, _ := newHandler(ctrl)
 
 	_, err := h.SetAgentLifecyclePolicy(authedCtx(), &boundflowv1.SetAgentLifecyclePolicyRequest{
 		WorkflowId:      "wf-1",
@@ -176,7 +177,7 @@ func TestSetAgentLifecyclePolicy_RejectsWindowOverMax(t *testing.T) {
 
 func TestSetAgentLifecyclePolicy_RejectsZeroWindow(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	h, _, _ := newHandler(ctrl)
+	h, _, _, _ := newHandler(ctrl)
 
 	_, err := h.SetAgentLifecyclePolicy(authedCtx(), &boundflowv1.SetAgentLifecyclePolicyRequest{
 		WorkflowId:      "wf-1",
@@ -188,7 +189,7 @@ func TestSetAgentLifecyclePolicy_RejectsZeroWindow(t *testing.T) {
 
 func TestSetAgentLifecyclePolicy_AcceptsValidWindow(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	h, _, agentStateRepo := newHandler(ctrl)
+	h, _, agentStateRepo, _ := newHandler(ctrl)
 	agentStateRepo.EXPECT().UpsertLifecyclePolicy(gomock.Any(), "wf-1", "analyst", gomock.Any()).Return(nil)
 
 	_, err := h.SetAgentLifecyclePolicy(authedCtx(), &boundflowv1.SetAgentLifecyclePolicyRequest{
@@ -205,7 +206,7 @@ func TestSetAgentLifecyclePolicy_AcceptsValidWindow(t *testing.T) {
 
 func TestSetWorkflowLifecyclePolicy_RejectsWindowOverMax(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	h, _, _ := newHandler(ctrl)
+	h, _, _, _ := newHandler(ctrl)
 
 	_, err := h.SetWorkflowLifecyclePolicy(authedCtx(), &boundflowv1.SetWorkflowLifecyclePolicyRequest{
 		WorkflowId:      "wf-1",
@@ -216,7 +217,7 @@ func TestSetWorkflowLifecyclePolicy_RejectsWindowOverMax(t *testing.T) {
 
 func TestSetWorkflowLifecyclePolicy_RejectsZeroWindow(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	h, _, _ := newHandler(ctrl)
+	h, _, _, _ := newHandler(ctrl)
 
 	_, err := h.SetWorkflowLifecyclePolicy(authedCtx(), &boundflowv1.SetWorkflowLifecyclePolicyRequest{
 		WorkflowId:      "wf-1",
@@ -227,7 +228,7 @@ func TestSetWorkflowLifecyclePolicy_RejectsZeroWindow(t *testing.T) {
 
 func TestSetWorkflowLifecyclePolicy_AcceptsValidWindow(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	h, workflowRepo, _ := newHandler(ctrl)
+	h, workflowRepo, _, _ := newHandler(ctrl)
 	workflowRepo.EXPECT().UpdateLifecyclePolicy(gomock.Any(), "wf-1", gomock.Any()).Return(nil)
 
 	_, err := h.SetWorkflowLifecyclePolicy(authedCtx(), &boundflowv1.SetWorkflowLifecyclePolicyRequest{
@@ -236,5 +237,40 @@ func TestSetWorkflowLifecyclePolicy_AcceptsValidWindow(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("expected nil, got %v", err)
+	}
+}
+
+// --- GetWorkflowMetrics (handler, over the actual RPC request shape) ---
+
+func TestGetWorkflowMetrics_RequiresWorkflowId(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	h, _, _, _ := newHandler(ctrl)
+
+	_, err := h.GetWorkflowMetrics(authedCtx(), &boundflowv1.GetWorkflowMetricsRequest{})
+	requireInvalidArgument(t, err)
+}
+
+func TestGetWorkflowMetrics_ReturnsConvertedTotals(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	h, workflowRepo, _, versionMetricsRepo := newHandler(ctrl)
+
+	workflowRepo.EXPECT().Get(gomock.Any(), "wf-1").
+		Return(&domain.Workflow{ID: "wf-1", CurrentWorkflowVersion: 3}, nil)
+	versionMetricsRepo.EXPECT().GetCurrentVersionMetrics(gomock.Any(), "wf-1", 3).
+		Return(&domain.WorkflowVersionMetrics{
+			Version: 3, TotalCost: 2.5, RunCount: 10, TotalFailures: 2, TotalLLMCalls: 40,
+			TotalLatencySeconds: 12.5, TotalApprovalRejections: 1,
+			ToolFailureCounts: map[string]int{"refund_policy": 3},
+		}, nil)
+
+	resp, err := h.GetWorkflowMetrics(authedCtx(), &boundflowv1.GetWorkflowMetricsRequest{WorkflowId: "wf-1"})
+	if err != nil {
+		t.Fatalf("expected nil, got %v", err)
+	}
+	if resp.Version != 3 || resp.TotalCost != 2.5 || resp.RunCount != 10 {
+		t.Errorf("unexpected response: %+v", resp)
+	}
+	if resp.ToolFailureCounts["refund_policy"] != 3 {
+		t.Errorf("expected tool_failure_counts to carry through, got %+v", resp.ToolFailureCounts)
 	}
 }

@@ -103,7 +103,7 @@ func runServer(sigCh <-chan os.Signal) {
 
 	modelPricingRepo := postgres.NewModelPricingRepo(pool)
 	regSvc := service.NewRegistrationService(tenantGroupRepo, tenantRepo, modelPricingRepo)
-	lifecycleSvc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, sched, sched, sched, auditRepo, cfg.NumPartitions, cfg.PeriodicPollSeconds, logger)
+	lifecycleSvc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, versionMetricsRepo, sched, sched, sched, auditRepo, cfg.NumPartitions, cfg.PeriodicPollSeconds, logger)
 
 	authn := auth.NewAuthenticator(postgres.NewApiKeyRepo(pool))
 	srv := server.New(cfg, regSvc, lifecycleSvc, authn, cfg.Debug)
@@ -157,7 +157,7 @@ func runScheduler(sigCh <-chan os.Signal) {
 		resolver := internalscheduler.NewLifecycleResolver(30, logger, lifecycleResolverRepo, workflowRepo, versionMetricsRepo)
 		sched := internalscheduler.NewScheduler(schedulerID, 30, 25, partitionRepo, schedulerRepo, customerRequestRepo, workflowRepo, agentStateRepo, jobRepo, metricsHandler, resolver, auditRepo, logger)
 		// The periodic handler invokes due workflows via the scheduler + lifecycle service.
-		lifecycleSvc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, sched, sched, sched, auditRepo, cfg.NumPartitions, cfg.PeriodicPollSeconds, logger)
+		lifecycleSvc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, versionMetricsRepo, sched, sched, sched, auditRepo, cfg.NumPartitions, cfg.PeriodicPollSeconds, logger)
 		periodic := internalscheduler.NewPeriodicWorkflowHandler(cfg.PeriodicPollSeconds, logger, sched, lifecycleSvc, schedulerRepo, customerRequestRepo)
 		// Approval-gate timeouts resolve here (partition-scoped, like cooldown expiry)
 		approvalTimeouts := internalscheduler.NewApprovalTimeoutResolver(30, jobRepo, auditRepo, logger)

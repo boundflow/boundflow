@@ -180,6 +180,20 @@ class WorkflowInfo:
     pending_input: PendingInput | None = None
 
 
+@dataclass
+class WorkflowMetrics:
+    """Cumulative totals for a workflow's current version -- not windowed, never
+    trimmed. Returned by `get_workflow_metrics`."""
+    version: int
+    total_cost_usd: float
+    run_count: int
+    total_failures: int
+    total_llm_calls: int
+    total_latency_seconds: float
+    total_approval_rejections: int
+    tool_failure_counts: dict[str, int]
+
+
 def _workflow_info(w) -> WorkflowInfo:
     return WorkflowInfo(
         id=w.id,
@@ -642,6 +656,22 @@ class ControlPlaneClient:
         resp = await self._lc.ListWorkflows(
             lc.ListWorkflowsRequest(), metadata=self._metadata)
         return [_workflow_info(w) for w in resp.workflows]
+
+    async def get_workflow_metrics(self, workflow_id: str) -> WorkflowMetrics:
+        """Cumulative totals (cost, run count, failures, ...) for a workflow's
+        current version. Zero-value totals if none have been emitted yet."""
+        resp = await self._lc.GetWorkflowMetrics(
+            lc.GetWorkflowMetricsRequest(workflow_id=workflow_id), metadata=self._metadata)
+        return WorkflowMetrics(
+            version=resp.version,
+            total_cost_usd=resp.total_cost,
+            run_count=resp.run_count,
+            total_failures=resp.total_failures,
+            total_llm_calls=resp.total_llm_calls,
+            total_latency_seconds=resp.total_latency_seconds,
+            total_approval_rejections=resp.total_approval_rejections,
+            tool_failure_counts=dict(resp.tool_failure_counts),
+        )
 
     async def list_workflow_runs(self, workflow_id: str) -> list[Run]:
         """List a workflow's runs (invocations), newest first, with each run's outcome

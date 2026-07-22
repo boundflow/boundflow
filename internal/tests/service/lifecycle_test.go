@@ -65,6 +65,7 @@ func newSvcWithApproval(ctrl *gomock.Controller, approval service.ApprovalResolv
 	tenantGroupRepo := mocks.NewMockTenantGroupRepository(ctrl)
 	agentStateRepo := mocks.NewMockAgentStateRepository(ctrl)
 	modelPricingRepo := mocks.NewMockModelPricingRepository(ctrl)
+	versionMetricsRepo := mocks.NewMockVersionMetricsRepository(ctrl)
 	auditRepo := mocks.NewMockAuditRepository(ctrl)
 	sched := &mockRequestScheduler{}
 	// Permissive defaults for the pricing snapshot taken during invoke/invoke;
@@ -75,7 +76,7 @@ func newSvcWithApproval(ctrl *gomock.Controller, approval service.ApprovalResolv
 	// Approval decisions append an audit row on success; tests don't assert on it.
 	auditRepo.EXPECT().Append(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	input := &mockInputResolver{answerResult: true}
-	svc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, sched, approval, input, auditRepo, 10, 30, discardLogger)
+	svc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, versionMetricsRepo, sched, approval, input, auditRepo, 10, 30, discardLogger)
 	return svc, workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo
 }
 
@@ -248,6 +249,57 @@ func TestGetWorkflow(t *testing.T) {
 	}
 	if instance.CurrentWorkflowVersion != 2 {
 		t.Errorf("expected current_workflow_version 2, got %d", instance.CurrentWorkflowVersion)
+	}
+}
+
+// --- GetWorkflowMetrics ---
+
+func newSvcForMetrics(ctrl *gomock.Controller) (*service.LifecycleService, *mocks.MockWorkflowRepository, *mocks.MockVersionMetricsRepository) {
+	workflowRepo := mocks.NewMockWorkflowRepository(ctrl)
+	versionMetricsRepo := mocks.NewMockVersionMetricsRepository(ctrl)
+	svc := service.NewLifecycleService(
+		workflowRepo, nil, nil, nil, nil, nil, versionMetricsRepo, nil, nil, nil, nil, 10, 30, discardLogger,
+	)
+	return svc, workflowRepo, versionMetricsRepo
+}
+
+func TestGetWorkflowMetrics_ReturnsCurrentVersionTotals(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	svc, workflowRepo, versionMetricsRepo := newSvcForMetrics(ctrl)
+
+	workflowRepo.EXPECT().Get(gomock.Any(), "wf-1").
+		Return(&domain.Workflow{ID: "wf-1", CurrentWorkflowVersion: 2}, nil)
+	versionMetricsRepo.EXPECT().GetCurrentVersionMetrics(gomock.Any(), "wf-1", 2).
+		Return(&domain.WorkflowVersionMetrics{
+			Version: 2, TotalCost: 1.23, RunCount: 5, TotalFailures: 1, TotalLLMCalls: 9,
+			TotalLatencySeconds: 4.5, TotalApprovalRejections: 2,
+			ToolFailureCounts: map[string]int{"lookup_order": 1},
+		}, nil)
+
+	metrics, err := svc.GetWorkflowMetrics(context.Background(), "wf-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if metrics.TotalCost != 1.23 || metrics.RunCount != 5 || metrics.ToolFailureCounts["lookup_order"] != 1 {
+		t.Errorf("unexpected metrics: %+v", metrics)
+	}
+}
+
+func TestGetWorkflowMetrics_NoneEmittedYet(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	svc, workflowRepo, versionMetricsRepo := newSvcForMetrics(ctrl)
+
+	workflowRepo.EXPECT().Get(gomock.Any(), "wf-1").
+		Return(&domain.Workflow{ID: "wf-1", CurrentWorkflowVersion: 1}, nil)
+	versionMetricsRepo.EXPECT().GetCurrentVersionMetrics(gomock.Any(), "wf-1", 1).
+		Return(nil, nil)
+
+	metrics, err := svc.GetWorkflowMetrics(context.Background(), "wf-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if metrics.RunCount != 0 || metrics.Version != 1 {
+		t.Errorf("expected zero-value metrics for version 1, got %+v", metrics)
 	}
 }
 

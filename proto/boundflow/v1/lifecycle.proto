@@ -42,6 +42,7 @@ service WorkflowService {
   rpc ResolveInterruptedWorkflow(ResolveInterruptedWorkflowRequest) returns (ResolveInterruptedWorkflowResponse);
   rpc ListWorkflowRuns(ListWorkflowRunsRequest) returns (ListWorkflowRunsResponse);
   rpc GetRequestInfo(GetRequestInfoRequest) returns (GetRequestInfoResponse);
+  rpc GetWorkflowMetrics(GetWorkflowMetricsRequest) returns (GetWorkflowMetricsResponse);
 }
 
 message CreateWorkflowRequest {
@@ -392,4 +393,22 @@ message RequestInfo {
 
 message GetRequestInfoResponse {
   RequestInfo request = 1;
+}
+
+message GetWorkflowMetricsRequest {
+  string workflow_id = 1;
+}
+
+// Cumulative totals for the workflow's current version -- not windowed, never
+// trimmed. version identifies which version these totals belong to (they reset
+// per version).
+message GetWorkflowMetricsResponse {
+  int32 version = 1;
+  double total_cost = 2;
+  int32 run_count = 3;
+  int32 total_failures = 4;
+  int32 total_llm_calls = 5;
+  double total_latency_seconds = 6;
+  int32 total_approval_rejections = 7;
+  map<string, int32> tool_failure_counts = 8;
 }

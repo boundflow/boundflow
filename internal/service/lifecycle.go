@@ -49,6 +49,7 @@ type LifecycleService struct {
 	tenantGroups      storage.TenantGroupRepository
 	agentStates       storage.AgentStateRepository
 	modelPricing      storage.ModelPricingRepository
+	versionMetrics    storage.VersionMetricsRepository
 	scheduler         RequestScheduler
 	approvalResolver  ApprovalResolver
 	inputResolver     InputResolver
@@ -67,6 +68,7 @@ func NewLifecycleService(
 	tenantGroups storage.TenantGroupRepository,
 	agentStates storage.AgentStateRepository,
 	modelPricing storage.ModelPricingRepository,
+	versionMetrics storage.VersionMetricsRepository,
 	scheduler RequestScheduler,
 	approvalResolver ApprovalResolver,
 	inputResolver InputResolver,
@@ -82,6 +84,7 @@ func NewLifecycleService(
 		tenantGroups:      tenantGroups,
 		agentStates:       agentStates,
 		modelPricing:      modelPricing,
+		versionMetrics:    versionMetrics,
 		scheduler:         scheduler,
 		approvalResolver:  approvalResolver,
 		inputResolver:     inputResolver,
@@ -275,6 +278,26 @@ func (s *LifecycleService) DeleteWorkflow(ctx context.Context, correlationID, wo
 func (s *LifecycleService) GetWorkflow(ctx context.Context, workflowID string) (*domain.Workflow, error) {
 	s.log.Debug("getting workflow state", "workflow_id", workflowID)
 	return s.workflows.Get(ctx, workflowID)
+}
+
+// GetWorkflowMetrics returns the cumulative totals for the workflow's current
+// version. Empty (zero-value) totals if none have been emitted yet.
+func (s *LifecycleService) GetWorkflowMetrics(ctx context.Context, workflowID string) (*domain.WorkflowVersionMetrics, error) {
+	workflow, err := s.workflows.Get(ctx, workflowID)
+	if err != nil {
+		return nil, err
+	}
+	metrics, err := s.versionMetrics.GetCurrentVersionMetrics(ctx, workflowID, workflow.CurrentWorkflowVersion)
+	if err != nil {
+		return nil, err
+	}
+	if metrics == nil {
+		metrics = &domain.WorkflowVersionMetrics{
+			WorkflowID: workflowID,
+			Version:    workflow.CurrentWorkflowVersion,
+		}
+	}
+	return metrics, nil
 }
 
 // ListWorkflows returns all workflows owned by the given tenant group, newest first.

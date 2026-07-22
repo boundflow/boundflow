@@ -68,6 +68,15 @@ def get(
     output(result)
 
 
+@app.command("metrics")
+def metrics(
+    workflow_id: str = typer.Argument(..., help="Workflow ID"),
+):
+    """Cumulative totals (cost, run count, failures, ...) for a workflow's current version."""
+    result = cp_call(lambda cp: cp.get_workflow_metrics(workflow_id))
+    output(result)
+
+
 @app.command("list")
 def list_workflows():
     """List all workflows in the tenant group."""
