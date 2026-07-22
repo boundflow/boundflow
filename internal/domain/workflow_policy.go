@@ -25,6 +25,9 @@ type WorkflowLifecyclePolicyAction struct {
 	TargetVersion   int                      `json:"target_version"`
 }
 
+// MaxLifecycleWindow bounds how many recent runs a windowed rule may look back over.
+const MaxLifecycleWindow = 100
+
 type WorkflowLifecyclePolicyRule struct {
 	Metric    WorkflowMetric                `json:"metric"`
 	Threshold float64                       `json:"threshold"`
