@@ -28,10 +28,6 @@ func (r *WorkflowRepo) Create(ctx context.Context, instance *domain.Workflow) er
 	if err != nil {
 		return fmt.Errorf("marshal lifecycle policy: %w", err)
 	}
-	invokeMode := instance.WorkflowConfig.InvokeMode
-	if invokeMode == "" {
-		invokeMode = domain.InvokeModeCoalesce
-	}
 	_, err = r.pool.Exec(ctx,
 		`INSERT INTO workflows
 		   (id, tenant_id, workflow_type,
@@ -45,7 +41,7 @@ func (r *WorkflowRepo) Create(ctx context.Context, instance *domain.Workflow) er
 		instance.WorkflowConfig.InvokeTimeoutSeconds,
 		instance.WorkflowConfig.RepeatEverySeconds,
 		instance.WorkflowConfig.Triggerable,
-		string(invokeMode), instance.WorkflowConfig.MaxQueueDepth,
+		string(instance.WorkflowConfig.InvokeMode), instance.WorkflowConfig.MaxQueueDepth,
 		instance.Lifecycle.State, instance.WorkflowState, lifecyclePolicyJSON, instance.SchedulerPartitionID,
 		instance.Lifecycle.LastCompletedRequestAt, instance.CreatedAt,
 	)
@@ -177,17 +173,13 @@ func (r *WorkflowRepo) UpdateLifecyclePolicy(ctx context.Context, id string, pol
 }
 
 func (r *WorkflowRepo) UpdateConfig(ctx context.Context, id string, cfg domain.WorkflowConfig, version int) error {
-	invokeMode := cfg.InvokeMode
-	if invokeMode == "" {
-		invokeMode = domain.InvokeModeCoalesce
-	}
 	_, err := r.pool.Exec(ctx,
 		`UPDATE workflows
 		   SET current_workflow_version = $1, invoke_timeout_seconds = $2, repeat_every_seconds = $3,
 		       triggerable = $4, invoke_mode = $5, max_queue_depth = $6
 		 WHERE id = $7`,
 		version, cfg.InvokeTimeoutSeconds, cfg.RepeatEverySeconds, cfg.Triggerable,
-		string(invokeMode), cfg.MaxQueueDepth, id,
+		string(cfg.InvokeMode), cfg.MaxQueueDepth, id,
 	)
 	if err != nil {
 		return fmt.Errorf("update workflow config: %w", err)

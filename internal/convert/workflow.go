@@ -256,7 +256,7 @@ func WorkflowRuleToProto(r domain.WorkflowLifecyclePolicyRule) *boundflowv1.Work
 
 func WorkflowConfigFromProto(p *boundflowv1.WorkflowConfig) domain.WorkflowConfig {
 	if p == nil {
-		return domain.WorkflowConfig{Triggerable: true}
+		return domain.WorkflowConfig{Triggerable: true, InvokeMode: domain.InvokeModeCoalesce}
 	}
 	return domain.WorkflowConfig{
 		InvokeTimeoutSeconds: p.InvokeTimeoutSeconds,
