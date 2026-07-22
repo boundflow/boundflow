@@ -217,7 +217,7 @@ type AgentStateRepository interface {
 	// UpsertLifecyclePolicy sets the lifecycle policy for an agent, creating the row if needed.
 	UpsertLifecyclePolicy(ctx context.Context, workflowID, agentName string, policy map[string]any) error
 	// UpdateMetrics persists updated invocation metrics for an agent.
-	UpdateMetrics(ctx context.Context, workflowID, agentName string, metrics []*boundflowv1.AgentInvocationMetrics) error
+	UpdateMetrics(ctx context.Context, workflowID, agentName string, metrics []domain.AgentInvocationSnapshot) error
 	// GetAllForWorkflow returns all agent states for a workflow instance, keyed by agent name.
 	GetAllForWorkflow(ctx context.Context, workflowID string) (map[string]*domain.AgentState, error)
 	// Delete removes the agent state row entirely.
@@ -242,7 +242,7 @@ type MetricsRepository interface {
 	// EmitMetrics atomically appends the rolling snapshot, upserts version-metric totals,
 	// and upserts each agent's metrics history — only if metrics_emitted_at < emittedVersion.
 	// Returns false if the gate fails (metrics already emitted for this run).
-	EmitMetrics(ctx context.Context, workflowID string, emittedVersion int64, rollingMetrics []domain.WorkflowInvocationSnapshot, versionMetrics *domain.WorkflowVersionMetrics, agentMetrics map[string][]*boundflowv1.AgentInvocationMetrics) (bool, error)
+	EmitMetrics(ctx context.Context, workflowID string, emittedVersion int64, rollingMetrics []domain.WorkflowInvocationSnapshot, versionMetrics *domain.WorkflowVersionMetrics, agentMetrics map[string][]domain.AgentInvocationSnapshot) (bool, error)
 }
 
 type VersionMetricsRepository interface {

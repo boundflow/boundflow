@@ -7,7 +7,6 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
 	"github.com/boundflow/boundflow/internal/domain"
 )
 
@@ -49,7 +48,7 @@ func (r *AgentStateRepo) UpsertLifecyclePolicy(ctx context.Context, workflowID, 
 	return err
 }
 
-func (r *AgentStateRepo) UpdateMetrics(ctx context.Context, workflowID, agentName string, metrics []*boundflowv1.AgentInvocationMetrics) error {
+func (r *AgentStateRepo) UpdateMetrics(ctx context.Context, workflowID, agentName string, metrics []domain.AgentInvocationSnapshot) error {
 	metricsJSON, err := json.Marshal(metrics)
 	if err != nil {
 		return fmt.Errorf("marshal metrics: %w", err)

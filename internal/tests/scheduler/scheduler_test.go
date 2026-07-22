@@ -184,7 +184,7 @@ func TestScheduleRequest_AgentStateInContext(t *testing.T) {
 		"my_agent": {
 			AgentName:         "my_agent",
 			LifecyclePolicy:   map[string]any{"rules": []any{}},
-			InvocationMetrics: []*boundflowv1.AgentInvocationMetrics{{}},
+			InvocationMetrics: []domain.AgentInvocationSnapshot{{}},
 		},
 	}, nil)
 
@@ -213,48 +213,6 @@ func TestScheduleRequest_AgentStateInContext(t *testing.T) {
 
 	if err := s.ScheduleRequest(context.Background(), "req-1"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-// --- UpdateAgentMetrics ---
-
-func TestUpdateAgentMetrics_CallsRepoForEachAgent(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	s, _, _, _, _, agentStates := newTestScheduler(ctrl)
-
-	metrics1 := []*boundflowv1.AgentInvocationMetrics{{TokensUsed: i32(100)}}
-	metrics2 := []*boundflowv1.AgentInvocationMetrics{{TokensUsed: i32(200)}}
-
-	agentStates.EXPECT().
-		UpdateMetrics(gomock.Any(), "workflow-1", "agent_a", metrics1).
-		Return(nil)
-	agentStates.EXPECT().
-		UpdateMetrics(gomock.Any(), "workflow-1", "agent_b", metrics2).
-		Return(nil)
-
-	err := s.UpdateAgentMetrics(context.Background(), "workflow-1", map[string][]*boundflowv1.AgentInvocationMetrics{
-		"agent_a": metrics1,
-		"agent_b": metrics2,
-	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func TestUpdateAgentMetrics_RepoErrorDoesNotStop(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	s, _, _, _, _, agentStates := newTestScheduler(ctrl)
-
-	agentStates.EXPECT().
-		UpdateMetrics(gomock.Any(), "workflow-1", "agent_a", gomock.Any()).
-		Return(errors.New("db error"))
-
-	// UpdateAgentMetrics logs and continues — should return nil.
-	err := s.UpdateAgentMetrics(context.Background(), "workflow-1", map[string][]*boundflowv1.AgentInvocationMetrics{
-		"agent_a": {{TokensUsed: i32(50)}},
-	})
-	if err != nil {
-		t.Fatalf("expected nil despite repo error, got %v", err)
 	}
 }
 

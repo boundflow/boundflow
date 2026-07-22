@@ -521,12 +521,3 @@ func (s *Scheduler) ScheduleRequest(ctx context.Context, req string) error {
 
 	return nil
 }
-
-func (s *Scheduler) UpdateAgentMetrics(ctx context.Context, workflowID string, updates map[string][]*boundflowv1.AgentInvocationMetrics) error {
-	for agentName, metrics := range updates {
-		if err := s.agentStates.UpdateMetrics(ctx, workflowID, agentName, metrics); err != nil {
-			s.log.Warn("failed to update agent metrics", "workflow_id", workflowID, "agent", agentName, "error", err)
-		}
-	}
-	return nil
-}

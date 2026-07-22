@@ -1150,7 +1150,7 @@ func (mr *MockAgentStateRepositoryMockRecorder) GetAllForWorkflow(ctx, workflowI
 }
 
 // UpdateMetrics mocks base method.
-func (m *MockAgentStateRepository) UpdateMetrics(ctx context.Context, workflowID, agentName string, metrics []*boundflowv1.AgentInvocationMetrics) error {
+func (m *MockAgentStateRepository) UpdateMetrics(ctx context.Context, workflowID, agentName string, metrics []domain.AgentInvocationSnapshot) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateMetrics", ctx, workflowID, agentName, metrics)
 	ret0, _ := ret[0].(error)
@@ -1285,7 +1285,7 @@ func (m *MockMetricsRepository) EXPECT() *MockMetricsRepositoryMockRecorder {
 }
 
 // EmitMetrics mocks base method.
-func (m *MockMetricsRepository) EmitMetrics(ctx context.Context, workflowID string, emittedVersion int64, rollingMetrics []domain.WorkflowInvocationSnapshot, versionMetrics *domain.WorkflowVersionMetrics, agentMetrics map[string][]*boundflowv1.AgentInvocationMetrics) (bool, error) {
+func (m *MockMetricsRepository) EmitMetrics(ctx context.Context, workflowID string, emittedVersion int64, rollingMetrics []domain.WorkflowInvocationSnapshot, versionMetrics *domain.WorkflowVersionMetrics, agentMetrics map[string][]domain.AgentInvocationSnapshot) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EmitMetrics", ctx, workflowID, emittedVersion, rollingMetrics, versionMetrics, agentMetrics)
 	ret0, _ := ret[0].(bool)
