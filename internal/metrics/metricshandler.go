@@ -69,6 +69,9 @@ func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, requestID strin
 		agentSnapshot := toAgentInvocationSnapshot(metrics, requestID)
 		if st, ok := agentStates[agent]; ok {
 			st.InvocationMetrics = append(st.InvocationMetrics, agentSnapshot)
+			if n := len(st.InvocationMetrics); n > domain.MaxLifecycleWindow {
+				st.InvocationMetrics = st.InvocationMetrics[n-domain.MaxLifecycleWindow:]
+			}
 		} else {
 			agentStates[agent] = &domain.AgentState{
 				WorkflowID: workFlowId,
@@ -123,6 +126,9 @@ func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, requestID strin
 	}
 
 	workflow.InvocationMetrics = append(workflow.InvocationMetrics, snapshot)
+	if n := len(workflow.InvocationMetrics); n > domain.MaxLifecycleWindow {
+		workflow.InvocationMetrics = workflow.InvocationMetrics[n-domain.MaxLifecycleWindow:]
+	}
 
 	applied, err := m.metrics.EmitMetrics(ctx, workFlowId, workflow.CurrentVersion, workflow.InvocationMetrics, versionMetrics, agentMetrics)
 	if err != nil {
