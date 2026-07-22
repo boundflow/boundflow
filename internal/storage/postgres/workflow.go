@@ -209,9 +209,7 @@ func (r *WorkflowRepo) UpdateConfig(ctx context.Context, id string, cfg domain.W
 	return nil
 }
 
-// startNewMetricsEpoch starts a fresh (zeroed) workflow_version_metrics row for a
-// workflow that just transitioned to the given version, so its cumulative totals
-// begin from zero rather than resuming a stale streak from a prior time on this
+// startNewMetricsEpoch starts a fresh workflow_version_metrics row for the given
 // version. Must be called within the same transaction as the version change.
 func startNewMetricsEpoch(ctx context.Context, tx pgx.Tx, workflowID string, version int) error {
 	_, err := tx.Exec(ctx,
