@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -239,10 +240,47 @@ func (h *WorkflowServiceHandler) SetAgentLifecyclePolicy(ctx context.Context, re
 	if req.LifecyclePolicy != nil {
 		policy = req.LifecyclePolicy.AsMap()
 	}
+	if err := ValidateAgentLifecycleRules(policy); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
 	if err := h.svc.SetAgentLifecyclePolicy(ctx, req.WorkflowId, req.AgentName, policy); err != nil {
 		return nil, status.Errorf(codes.Internal, "set agent lifecycle policy: %v", err)
 	}
 	return &boundflowv1.SetAgentLifecyclePolicyResponse{}, nil
+}
+
+// ValidateAgentLifecycleRules checks that every rule's window is present and
+// within (0, domain.MaxLifecycleWindow].
+func ValidateAgentLifecycleRules(policy map[string]any) error {
+	rawRules, ok := policy["rules"]
+	if !ok {
+		return nil
+	}
+	rules, ok := rawRules.([]any)
+	if !ok {
+		return fmt.Errorf("rules must be an array")
+	}
+	for i, rawRule := range rules {
+		rule, ok := rawRule.(map[string]any)
+		if !ok {
+			return fmt.Errorf("rule %d: must be an object", i)
+		}
+		rawWindow, ok := rule["window"]
+		if !ok {
+			return fmt.Errorf("rule %d: window is required", i)
+		}
+		window, ok := rawWindow.(float64)
+		if !ok {
+			return fmt.Errorf("rule %d: window must be a number", i)
+		}
+		if window <= 0 {
+			return fmt.Errorf("rule %d: window must be > 0", i)
+		}
+		if window > domain.MaxLifecycleWindow {
+			return fmt.Errorf("rule %d: window must be <= %d", i, domain.MaxLifecycleWindow)
+		}
+	}
+	return nil
 }
 
 func (h *WorkflowServiceHandler) DeleteAgent(ctx context.Context, req *boundflowv1.DeleteAgentRequest) (*boundflowv1.DeleteAgentResponse, error) {
@@ -271,8 +309,13 @@ func (h *WorkflowServiceHandler) SetWorkflowLifecyclePolicy(ctx context.Context,
 		if rule.Action == nil {
 			return nil, status.Errorf(codes.InvalidArgument, "rule %d: action is required", i)
 		}
-		if rule.Action.Type != boundflowv1.WorkflowPolicyActionType_WORKFLOW_POLICY_ACTION_SET_VERSION && rule.Window <= 0 {
-			return nil, status.Errorf(codes.InvalidArgument, "rule %d: window must be > 0 for %s actions", i, rule.Action.Type)
+		if rule.Action.Type != boundflowv1.WorkflowPolicyActionType_WORKFLOW_POLICY_ACTION_SET_VERSION {
+			if rule.Window <= 0 {
+				return nil, status.Errorf(codes.InvalidArgument, "rule %d: window must be > 0 for %s actions", i, rule.Action.Type)
+			}
+			if rule.Window > domain.MaxLifecycleWindow {
+				return nil, status.Errorf(codes.InvalidArgument, "rule %d: window must be <= %d", i, domain.MaxLifecycleWindow)
+			}
 		}
 	}
 
