@@ -164,6 +164,11 @@ class WorkflowServiceStub:
                 request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowMetricsRequest.SerializeToString,
                 response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowMetricsResponse.FromString,
                 _registered_method=True)
+        self.SetWorkflowConfig = channel.unary_unary(
+                '/boundflow.v1.WorkflowService/SetWorkflowConfig',
+                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.SetWorkflowConfigRequest.SerializeToString,
+                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.SetWorkflowConfigResponse.FromString,
+                _registered_method=True)
 
 
 class WorkflowServiceServicer:
@@ -330,6 +335,12 @@ class WorkflowServiceServicer:
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def SetWorkflowConfig(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_WorkflowServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -462,6 +473,11 @@ def add_WorkflowServiceServicer_to_server(servicer, server):
                     servicer.GetWorkflowMetrics,
                     request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowMetricsRequest.FromString,
                     response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowMetricsResponse.SerializeToString,
+            ),
+            'SetWorkflowConfig': grpc.unary_unary_rpc_method_handler(
+                    servicer.SetWorkflowConfig,
+                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.SetWorkflowConfigRequest.FromString,
+                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.SetWorkflowConfigResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -1166,6 +1182,33 @@ class WorkflowService:
             '/boundflow.v1.WorkflowService/GetWorkflowMetrics',
             boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowMetricsRequest.SerializeToString,
             boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowMetricsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SetWorkflowConfig(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/boundflow.v1.WorkflowService/SetWorkflowConfig',
+            boundflow_dot_v1_dot_lifecycle__pb2.SetWorkflowConfigRequest.SerializeToString,
+            boundflow_dot_v1_dot_lifecycle__pb2.SetWorkflowConfigResponse.FromString,
             options,
             channel_credentials,
             insecure,

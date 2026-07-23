@@ -99,6 +99,37 @@ func (h *WorkflowServiceHandler) CreateWorkflow(ctx context.Context, req *boundf
 	}, nil
 }
 
+func (h *WorkflowServiceHandler) SetWorkflowConfig(ctx context.Context, req *boundflowv1.SetWorkflowConfigRequest) (*boundflowv1.SetWorkflowConfigResponse, error) {
+	if req.WorkflowId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
+	}
+
+	if err := h.checkWorkflowOwner(ctx, req.WorkflowId); err != nil {
+		return nil, err
+	}
+
+	cfg := convert.WorkflowConfigFromProto(req.Config)
+	version := 0
+	if req.Config != nil {
+		version = int(req.Config.Version)
+	}
+
+	if err := h.svc.SetWorkflowConfig(ctx, req.WorkflowId, cfg, version); err != nil {
+		if errors.Is(err, service.ErrInvalidRepeatInterval) {
+			return nil, status.Errorf(codes.InvalidArgument, "%v", err)
+		}
+		return nil, status.Errorf(codes.Internal, "set workflow config: %v", err)
+	}
+
+	instance, err := h.svc.GetWorkflow(ctx, req.WorkflowId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "get workflow after config update: %v", err)
+	}
+	return &boundflowv1.SetWorkflowConfigResponse{
+		Workflow: convert.WorkflowToProto(instance),
+	}, nil
+}
+
 func (h *WorkflowServiceHandler) InvokeWorkflow(ctx context.Context, req *boundflowv1.InvokeWorkflowRequest) (*boundflowv1.InvokeWorkflowResponse, error) {
 	if req.WorkflowId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")

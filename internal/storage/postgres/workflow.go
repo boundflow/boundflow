@@ -28,10 +28,6 @@ func (r *WorkflowRepo) Create(ctx context.Context, instance *domain.Workflow) er
 	if err != nil {
 		return fmt.Errorf("marshal lifecycle policy: %w", err)
 	}
-	invokeMode := instance.WorkflowConfig.InvokeMode
-	if invokeMode == "" {
-		invokeMode = domain.InvokeModeCoalesce
-	}
 	_, err = r.pool.Exec(ctx,
 		`INSERT INTO workflows
 		   (id, tenant_id, workflow_type,
@@ -45,7 +41,7 @@ func (r *WorkflowRepo) Create(ctx context.Context, instance *domain.Workflow) er
 		instance.WorkflowConfig.InvokeTimeoutSeconds,
 		instance.WorkflowConfig.RepeatEverySeconds,
 		instance.WorkflowConfig.Triggerable,
-		string(invokeMode), instance.WorkflowConfig.MaxQueueDepth,
+		string(instance.WorkflowConfig.InvokeMode), instance.WorkflowConfig.MaxQueueDepth,
 		instance.Lifecycle.State, instance.WorkflowState, lifecyclePolicyJSON, instance.SchedulerPartitionID,
 		instance.Lifecycle.LastCompletedRequestAt, instance.CreatedAt,
 	)
@@ -172,6 +168,58 @@ func (r *WorkflowRepo) UpdateLifecyclePolicy(ctx context.Context, id string, pol
 	)
 	if err != nil {
 		return fmt.Errorf("update lifecycle policy: %w", err)
+	}
+	return nil
+}
+
+func (r *WorkflowRepo) UpdateConfig(ctx context.Context, id string, cfg domain.WorkflowConfig, version int) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin update config tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var oldVersion int
+	if err := tx.QueryRow(ctx,
+		`SELECT current_workflow_version FROM workflows WHERE id = $1 FOR UPDATE`, id,
+	).Scan(&oldVersion); err != nil {
+		return fmt.Errorf("lock workflow for config update: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx,
+		`UPDATE workflows
+		   SET current_workflow_version = $1, invoke_timeout_seconds = $2, repeat_every_seconds = $3,
+		       triggerable = $4, invoke_mode = $5, max_queue_depth = $6
+		 WHERE id = $7`,
+		version, cfg.InvokeTimeoutSeconds, cfg.RepeatEverySeconds, cfg.Triggerable,
+		string(cfg.InvokeMode), cfg.MaxQueueDepth, id,
+	); err != nil {
+		return fmt.Errorf("update workflow config: %w", err)
+	}
+
+	if oldVersion != version {
+		if err := startNewMetricsEpoch(ctx, tx, id, version); err != nil {
+			return err
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit update config tx: %w", err)
+	}
+	return nil
+}
+
+// startNewMetricsEpoch starts a fresh workflow_version_metrics row for the given
+// version. Must be called within the same transaction as the version change.
+func startNewMetricsEpoch(ctx context.Context, tx pgx.Tx, workflowID string, version int) error {
+	_, err := tx.Exec(ctx,
+		`INSERT INTO workflow_version_metrics (workflow_id, version, epoch)
+		 SELECT $1, $2, COALESCE(MAX(epoch), 0) + 1
+		 FROM workflow_version_metrics WHERE workflow_id = $1 AND version = $2`,
+		workflowID, version,
+	)
+	if err != nil {
+		return fmt.Errorf("start new metrics epoch: %w", err)
 	}
 	return nil
 }

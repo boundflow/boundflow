@@ -616,6 +616,27 @@ class ControlPlaneClient:
             InvokeMode.QUEUE if wc.invoke_mode == ri.INVOKE_MODE_QUEUE else InvokeMode.COALESCE,
             wc.max_queue_depth))
 
+    async def set_workflow_config(self, workflow_id: str, config: WorkflowConfig) -> Workflow:
+        """Update a workflow's config settings. Returns the updated workflow."""
+        resp = await self._lc.SetWorkflowConfig(lc.SetWorkflowConfigRequest(
+            workflow_id=workflow_id,
+            config=ri.WorkflowConfig(
+                version=config.version,
+                invoke_timeout_seconds=config.invoke_timeout_seconds,
+                repeat_every_seconds=config.repeat_every_seconds,
+                triggerable=config.triggerable,
+                invoke_mode=(ri.INVOKE_MODE_QUEUE if config.invoke_mode == InvokeMode.QUEUE
+                             else ri.INVOKE_MODE_COALESCE),
+                max_queue_depth=config.max_queue_depth,
+            ),
+        ), metadata=self._metadata)
+        inst = resp.workflow
+        wc = inst.workflow_config
+        return Workflow(inst.id, inst.tenant_id, WorkflowConfig(
+            wc.version, wc.invoke_timeout_seconds, wc.repeat_every_seconds, wc.triggerable,
+            InvokeMode.QUEUE if wc.invoke_mode == ri.INVOKE_MODE_QUEUE else InvokeMode.COALESCE,
+            wc.max_queue_depth))
+
     async def activate_workflow(self, workflow_id: str) -> None:
         await self._lc.ActivateWorkflow(
             lc.ActivateWorkflowRequest(workflow_id=workflow_id),

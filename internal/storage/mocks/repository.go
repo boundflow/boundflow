@@ -345,6 +345,20 @@ func (mr *MockWorkflowRepositoryMockRecorder) TenantGroupIDForWorkflow(ctx, work
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TenantGroupIDForWorkflow", reflect.TypeOf((*MockWorkflowRepository)(nil).TenantGroupIDForWorkflow), ctx, workflowID)
 }
 
+// UpdateConfig mocks base method.
+func (m *MockWorkflowRepository) UpdateConfig(ctx context.Context, id string, cfg domain.WorkflowConfig, version int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateConfig", ctx, id, cfg, version)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateConfig indicates an expected call of UpdateConfig.
+func (mr *MockWorkflowRepositoryMockRecorder) UpdateConfig(ctx, id, cfg, version any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateConfig", reflect.TypeOf((*MockWorkflowRepository)(nil).UpdateConfig), ctx, id, cfg, version)
+}
+
 // UpdateCurrentVersion mocks base method.
 func (m *MockWorkflowRepository) UpdateCurrentVersion(ctx context.Context, id string, version int64) error {
 	m.ctrl.T.Helper()
@@ -1245,19 +1259,34 @@ func (mr *MockLifecycleResolverRepositoryMockRecorder) GetExpiredCooldownWorkflo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExpiredCooldownWorkflows", reflect.TypeOf((*MockLifecycleResolverRepository)(nil).GetExpiredCooldownWorkflows), ctx, partitionID)
 }
 
-// TryApplyPolicyResolution mocks base method.
-func (m *MockLifecycleResolverRepository) TryApplyPolicyResolution(ctx context.Context, workflowID string, resolved int64, workflowVersion int, workflowState domain.WorkflowState, cooldownUntil *time.Time) (bool, error) {
+// TryApplyStateResolution mocks base method.
+func (m *MockLifecycleResolverRepository) TryApplyStateResolution(ctx context.Context, workflowID string, resolved int64, workflowState domain.WorkflowState, cooldownUntil *time.Time) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TryApplyPolicyResolution", ctx, workflowID, resolved, workflowVersion, workflowState, cooldownUntil)
+	ret := m.ctrl.Call(m, "TryApplyStateResolution", ctx, workflowID, resolved, workflowState, cooldownUntil)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// TryApplyPolicyResolution indicates an expected call of TryApplyPolicyResolution.
-func (mr *MockLifecycleResolverRepositoryMockRecorder) TryApplyPolicyResolution(ctx, workflowID, resolved, workflowVersion, workflowState, cooldownUntil any) *gomock.Call {
+// TryApplyStateResolution indicates an expected call of TryApplyStateResolution.
+func (mr *MockLifecycleResolverRepositoryMockRecorder) TryApplyStateResolution(ctx, workflowID, resolved, workflowState, cooldownUntil any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryApplyPolicyResolution", reflect.TypeOf((*MockLifecycleResolverRepository)(nil).TryApplyPolicyResolution), ctx, workflowID, resolved, workflowVersion, workflowState, cooldownUntil)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryApplyStateResolution", reflect.TypeOf((*MockLifecycleResolverRepository)(nil).TryApplyStateResolution), ctx, workflowID, resolved, workflowState, cooldownUntil)
+}
+
+// TryApplyVersionResolution mocks base method.
+func (m *MockLifecycleResolverRepository) TryApplyVersionResolution(ctx context.Context, workflowID string, resolved int64, expectedVersion, targetVersion int) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TryApplyVersionResolution", ctx, workflowID, resolved, expectedVersion, targetVersion)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TryApplyVersionResolution indicates an expected call of TryApplyVersionResolution.
+func (mr *MockLifecycleResolverRepositoryMockRecorder) TryApplyVersionResolution(ctx, workflowID, resolved, expectedVersion, targetVersion any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryApplyVersionResolution", reflect.TypeOf((*MockLifecycleResolverRepository)(nil).TryApplyVersionResolution), ctx, workflowID, resolved, expectedVersion, targetVersion)
 }
 
 // MockMetricsRepository is a mock of MetricsRepository interface.
