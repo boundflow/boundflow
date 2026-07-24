@@ -389,8 +389,12 @@ type Workflow struct {
 	LastInterruptedRequestId string           `protobuf:"bytes,11,opt,name=last_interrupted_request_id,json=lastInterruptedRequestId,proto3" json:"last_interrupted_request_id,omitempty"`
 	PendingApproval          *PendingApproval `protobuf:"bytes,12,opt,name=pending_approval,json=pendingApproval,proto3" json:"pending_approval,omitempty"`
 	PendingInput             *PendingInput    `protobuf:"bytes,13,opt,name=pending_input,json=pendingInput,proto3" json:"pending_input,omitempty"`
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	// Set once DeleteWorkflow has been called; unset while the workflow is not
+	// pending deletion. lifecycle_state only moves to "deleted" once any in-flight
+	// work has finished.
+	DeletionRequestedAt *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=deletion_requested_at,json=deletionRequestedAt,proto3" json:"deletion_requested_at,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *Workflow) Reset() {
@@ -493,6 +497,13 @@ func (x *Workflow) GetPendingInput() *PendingInput {
 	return nil
 }
 
+func (x *Workflow) GetDeletionRequestedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DeletionRequestedAt
+	}
+	return nil
+}
+
 var File_boundflow_v1_workflow_proto protoreflect.FileDescriptor
 
 const file_boundflow_v1_workflow_proto_rawDesc = "" +
@@ -520,7 +531,7 @@ const file_boundflow_v1_workflow_proto_rawDesc = "" +
 	"\bmetadata\x18\x03 \x01(\v2\x17.google.protobuf.StructR\bmetadata\x127\n" +
 	"\topened_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\bopenedAt\x129\n" +
 	"\n" +
-	"timeout_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimeoutAt\"\x95\x04\n" +
+	"timeout_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimeoutAt\"\xe5\x04\n" +
 	"\bWorkflow\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
 	"\rworkflow_type\x18\x02 \x01(\tR\fworkflowType\x12\x1b\n" +
@@ -533,7 +544,8 @@ const file_boundflow_v1_workflow_proto_rawDesc = "" +
 	" \x01(\x0e2\x1b.boundflow.v1.WorkflowStateR\rworkflowState\x12=\n" +
 	"\x1blast_interrupted_request_id\x18\v \x01(\tR\x18lastInterruptedRequestId\x12H\n" +
 	"\x10pending_approval\x18\f \x01(\v2\x1d.boundflow.v1.PendingApprovalR\x0fpendingApproval\x12?\n" +
-	"\rpending_input\x18\r \x01(\v2\x1a.boundflow.v1.PendingInputR\fpendingInput*Z\n" +
+	"\rpending_input\x18\r \x01(\v2\x1a.boundflow.v1.PendingInputR\fpendingInput\x12N\n" +
+	"\x15deletion_requested_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\x13deletionRequestedAt*Z\n" +
 	"\n" +
 	"InvokeMode\x12\x1b\n" +
 	"\x17INVOKE_MODE_UNSPECIFIED\x10\x00\x12\x18\n" +
@@ -583,11 +595,12 @@ var file_boundflow_v1_workflow_proto_depIdxs = []int32{
 	1,  // 9: boundflow.v1.Workflow.workflow_state:type_name -> boundflow.v1.WorkflowState
 	3,  // 10: boundflow.v1.Workflow.pending_approval:type_name -> boundflow.v1.PendingApproval
 	4,  // 11: boundflow.v1.Workflow.pending_input:type_name -> boundflow.v1.PendingInput
-	12, // [12:12] is the sub-list for method output_type
-	12, // [12:12] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	7,  // 12: boundflow.v1.Workflow.deletion_requested_at:type_name -> google.protobuf.Timestamp
+	13, // [13:13] is the sub-list for method output_type
+	13, // [13:13] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_boundflow_v1_workflow_proto_init() }

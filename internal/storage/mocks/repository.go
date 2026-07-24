@@ -310,6 +310,21 @@ func (mr *MockWorkflowRepositoryMockRecorder) FinalizeDeleted(ctx, id any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeDeleted", reflect.TypeOf((*MockWorkflowRepository)(nil).FinalizeDeleted), ctx, id)
 }
 
+// ListPendingDeletion mocks base method.
+func (m *MockWorkflowRepository) ListPendingDeletion(ctx context.Context, partitionID string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPendingDeletion", ctx, partitionID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPendingDeletion indicates an expected call of ListPendingDeletion.
+func (mr *MockWorkflowRepositoryMockRecorder) ListPendingDeletion(ctx, partitionID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPendingDeletion", reflect.TypeOf((*MockWorkflowRepository)(nil).ListPendingDeletion), ctx, partitionID)
+}
+
 // ResolveInterruptedWorkflow mocks base method.
 func (m *MockWorkflowRepository) ResolveInterruptedWorkflow(ctx context.Context, id, requestID string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -1615,9 +1630,9 @@ func (mr *MockCustomerRequestRepositoryMockRecorder) Create(ctx, req any) *gomoc
 }
 
 // CreateDuePeriodicRequest mocks base method.
-func (m *MockCustomerRequestRepository) CreateDuePeriodicRequest(ctx context.Context, req *domain.CustomerRequest, minGap time.Duration, invalidStates []domain.LifecycleState) (int64, bool, error) {
+func (m *MockCustomerRequestRepository) CreateDuePeriodicRequest(ctx context.Context, req *domain.CustomerRequest, minGap time.Duration) (int64, bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateDuePeriodicRequest", ctx, req, minGap, invalidStates)
+	ret := m.ctrl.Call(m, "CreateDuePeriodicRequest", ctx, req, minGap)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(bool)
 	ret2, _ := ret[2].(error)
@@ -1625,24 +1640,24 @@ func (m *MockCustomerRequestRepository) CreateDuePeriodicRequest(ctx context.Con
 }
 
 // CreateDuePeriodicRequest indicates an expected call of CreateDuePeriodicRequest.
-func (mr *MockCustomerRequestRepositoryMockRecorder) CreateDuePeriodicRequest(ctx, req, minGap, invalidStates any) *gomock.Call {
+func (mr *MockCustomerRequestRepositoryMockRecorder) CreateDuePeriodicRequest(ctx, req, minGap any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDuePeriodicRequest", reflect.TypeOf((*MockCustomerRequestRepository)(nil).CreateDuePeriodicRequest), ctx, req, minGap, invalidStates)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDuePeriodicRequest", reflect.TypeOf((*MockCustomerRequestRepository)(nil).CreateDuePeriodicRequest), ctx, req, minGap)
 }
 
 // CreateInvocationRequest mocks base method.
-func (m *MockCustomerRequestRepository) CreateInvocationRequest(ctx context.Context, req *domain.CustomerRequest, invalidStates []domain.LifecycleState) (int64, error) {
+func (m *MockCustomerRequestRepository) CreateInvocationRequest(ctx context.Context, req *domain.CustomerRequest) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateInvocationRequest", ctx, req, invalidStates)
+	ret := m.ctrl.Call(m, "CreateInvocationRequest", ctx, req)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateInvocationRequest indicates an expected call of CreateInvocationRequest.
-func (mr *MockCustomerRequestRepositoryMockRecorder) CreateInvocationRequest(ctx, req, invalidStates any) *gomock.Call {
+func (mr *MockCustomerRequestRepositoryMockRecorder) CreateInvocationRequest(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInvocationRequest", reflect.TypeOf((*MockCustomerRequestRepository)(nil).CreateInvocationRequest), ctx, req, invalidStates)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInvocationRequest", reflect.TypeOf((*MockCustomerRequestRepository)(nil).CreateInvocationRequest), ctx, req)
 }
 
 // FailRequest mocks base method.

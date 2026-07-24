@@ -23,8 +23,10 @@ func NewSchedulerRepo(pool *pgxpool.Pool) *SchedulerRepo {
 
 // GetDuePeriodicWorkflows returns the workflow instances in the partition whose next periodic
 // invocation is due: repeat_every_seconds has elapsed since the last completion (or since
-// creation if it has never run), and the workflow is active. Full instances are returned so the
-// caller can build the request's runtime params from the workflow config without a second fetch.
+// creation if it has never run), and the workflow is active. Whether anything is currently
+// in flight is checked directly against customer_requests by CreateDuePeriodicRequest, not
+// via lifecycle_state here. Full instances are returned so the caller can build the request's
+// runtime params from the workflow config without a second fetch.
 func (r *SchedulerRepo) GetDuePeriodicWorkflows(ctx context.Context, partitionID string) ([]*domain.Workflow, error) {
 	rows, err := r.pool.Query(ctx,
 		`SELECT id, tenant_id, workflow_type,
@@ -36,7 +38,6 @@ func (r *SchedulerRepo) GetDuePeriodicWorkflows(ctx context.Context, partitionID
 		 WHERE scheduler_partition_id = $1
 		   AND repeat_every_seconds > 0
 		   AND workflow_state = 'active'
-		   AND lifecycle_state = 'active'
 		   AND COALESCE(last_completed_request_at, created_at) + make_interval(secs => repeat_every_seconds) < now()`,
 		partitionID,
 	)
@@ -122,7 +123,9 @@ func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID stri
 		     JOIN workflows ri ON ri.id = cr.workflow_id
 		     JOIN tenants t ON t.id = ri.tenant_id
 		     WHERE cr.id = $1
+		       AND cr.status = 'unscheduled'
 		       AND ri.current_version = $6
+		     FOR UPDATE OF cr
 		 ),
 		 upserted AS (
 		     INSERT INTO jobs (workflow_id, request_id, version, current_atomic_operation, context, status, job_type, workflow_type, timeout_seconds, workflow_version, tenant_group_id)
@@ -153,6 +156,7 @@ func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID stri
 		 SET status = 'scheduled'
 		 FROM upserted u
 		 WHERE cr.id = u.request_id
+		   AND cr.status = 'unscheduled'
 		 RETURNING cr.workflow_id, cr.version`,
 		requestID, currentAtomicOperation, contextJSON, timeoutSeconds, workflowVersion, expectedCurrentVersion, invokeMode,
 	).Scan(&workflowID, &version)
@@ -167,7 +171,7 @@ func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID stri
 
 func (r *SchedulerRepo) GetCompletedJobs(ctx context.Context, partitionID string) ([]domain.CompletedJob, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT j.request_id, j.result_type, j.failure_reason, j.result
+		`SELECT j.request_id, j.workflow_id, j.version, j.job_type, j.result_type, j.failure_reason, j.result
 		 FROM jobs j
 		 JOIN workflows ri ON j.workflow_id = ri.id
 		 WHERE ri.scheduler_partition_id = $1
@@ -183,7 +187,7 @@ func (r *SchedulerRepo) GetCompletedJobs(ctx context.Context, partitionID string
 	for rows.Next() {
 		var j domain.CompletedJob
 		var resultJSON []byte
-		if err := rows.Scan(&j.RequestID, &j.ResultType, &j.FailureReason, &resultJSON); err != nil {
+		if err := rows.Scan(&j.RequestID, &j.WorkflowID, &j.Version, &j.RequestType, &j.ResultType, &j.FailureReason, &resultJSON); err != nil {
 			return nil, fmt.Errorf("scan completed job: %w", err)
 		}
 		if resultJSON != nil {
@@ -198,7 +202,7 @@ func (r *SchedulerRepo) GetCompletedJobs(ctx context.Context, partitionID string
 
 func (r *SchedulerRepo) GetFailedJobs(ctx context.Context, partitionID string) ([]domain.FailedJob, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT j.request_id, j.failure_reason
+		`SELECT j.request_id, j.workflow_id, j.version, j.failure_reason
 		 FROM jobs j
 		 JOIN workflows ri ON j.workflow_id = ri.id
 		 WHERE ri.scheduler_partition_id = $1
@@ -213,7 +217,7 @@ func (r *SchedulerRepo) GetFailedJobs(ctx context.Context, partitionID string) (
 	var jobs []domain.FailedJob
 	for rows.Next() {
 		var j domain.FailedJob
-		if err := rows.Scan(&j.RequestID, &j.FailureReason); err != nil {
+		if err := rows.Scan(&j.RequestID, &j.WorkflowID, &j.Version, &j.FailureReason); err != nil {
 			return nil, fmt.Errorf("scan failed job: %w", err)
 		}
 		jobs = append(jobs, j)
@@ -244,7 +248,7 @@ func (r *SchedulerRepo) MarkWorkflowScheduled(ctx context.Context, workflowID st
 		 FROM jobs j
 		 WHERE j.workflow_id = ri.id
 		   AND ri.id = $1
-		   AND ri.lifecycle_state NOT IN ('creating', 'deleting', 'deleted', 'interrupted')`,
+		   AND ri.lifecycle_state NOT IN ('creating', 'deleted', 'interrupted')`,
 		workflowID,
 	)
 	if err != nil {
@@ -261,7 +265,7 @@ func (r *SchedulerRepo) MarkWorkflowInvoking(ctx context.Context, workflowID str
 		 FROM jobs j
 		 WHERE j.workflow_id = ri.id
 		   AND ri.id = $1
-		   AND ri.lifecycle_state NOT IN ('creating', 'deleting', 'deleted', 'interrupted')`,
+		   AND ri.lifecycle_state NOT IN ('creating', 'deleted', 'interrupted')`,
 		workflowID,
 	)
 	if err != nil {
@@ -337,7 +341,7 @@ func (r *SchedulerRepo) ReconcileWorkflowLifecycles(ctx context.Context, partiti
 		     FROM jobs j
 		     JOIN workflows ri ON j.workflow_id = ri.id
 		     WHERE ri.scheduler_partition_id = $1
-		       AND ri.lifecycle_state NOT IN ('creating', 'deleting', 'deleted', 'interrupted')
+		       AND ri.lifecycle_state NOT IN ('creating', 'deleted', 'interrupted')
 		 )
 		 UPDATE workflows ri
 		 SET lifecycle_state = t.new_state,

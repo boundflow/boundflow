@@ -71,4 +71,8 @@ message Workflow {
   string last_interrupted_request_id = 11;
   PendingApproval pending_approval = 12;
   PendingInput pending_input = 13;
+  // Set once DeleteWorkflow has been called; unset while the workflow is not
+  // pending deletion. lifecycle_state only moves to "deleted" once any in-flight
+  // work has finished.
+  google.protobuf.Timestamp deletion_requested_at = 14;
 }

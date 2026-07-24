@@ -256,8 +256,7 @@ func (s *LifecycleService) InvokeWorkflow(ctx context.Context, correlationID, wo
 	}
 
 	// Atomically allocates the version, flips to invoking, and inserts the request.
-	ver, err := s.customerRequests.CreateInvocationRequest(ctx, &request,
-		[]domain.LifecycleState{domain.LifecycleStateDeleting, domain.LifecycleStateDeleted})
+	ver, err := s.customerRequests.CreateInvocationRequest(ctx, &request)
 	if err != nil {
 		s.log.Error("failed to create invoke request", "correlation_id", correlationID, "workflow_id", workflowID, "error", err)
 		return "", fmt.Errorf("create invocation request: %w", err)

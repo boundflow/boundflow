@@ -31,6 +31,9 @@ type WorkflowRepository interface {
 	UpdateWorkflowState(ctx context.Context, id string, state domain.WorkflowState) error
 	MarkDeletionRequested(ctx context.Context, id string) error
 	FinalizeDeleted(ctx context.Context, id string) error
+	// ListPendingDeletion returns IDs of workflows in the partition where deletion has been
+	// requested but not yet finalized.
+	ListPendingDeletion(ctx context.Context, partitionID string) ([]string, error)
 	UpdateLifecyclePolicy(ctx context.Context, id string, policy domain.WorkflowLifecyclePolicy) error
 	// UpdateConfig replaces a workflow's operational config and current version wholesale.
 	UpdateConfig(ctx context.Context, id string, cfg domain.WorkflowConfig, version int) error
@@ -279,12 +282,12 @@ type CustomerRequestRepository interface {
 	Create(ctx context.Context, req *domain.CustomerRequest) error
 	// CreateInvocationRequest atomically bumps the workflow's target_version, flips lifecycle_state
 	// to invoking, and inserts req with the allocated version (one statement). Fails with
-	// ErrInvalidLifecycleState if the workflow is in one of invalidStates. Sets req.Version.
-	CreateInvocationRequest(ctx context.Context, req *domain.CustomerRequest, invalidStates []domain.LifecycleState) (int64, error)
+	// ErrInvalidLifecycleState if the workflow isn't active. Sets req.Version.
+	CreateInvocationRequest(ctx context.Context, req *domain.CustomerRequest) (int64, error)
 	// CreateDuePeriodicRequest is CreateInvocationRequest gated by the periodic guards (no
 	// non-terminal request in flight, last terminal completion at least minGap ago). Returns
 	// created=false (no error) when a guard rejects. One atomic statement.
-	CreateDuePeriodicRequest(ctx context.Context, req *domain.CustomerRequest, minGap time.Duration, invalidStates []domain.LifecycleState) (int64, bool, error)
+	CreateDuePeriodicRequest(ctx context.Context, req *domain.CustomerRequest, minGap time.Duration) (int64, bool, error)
 	Get(ctx context.Context, id string) (*domain.CustomerRequest, error)
 	UpdateStatus(ctx context.Context, workflowID, id string, status domain.CustomerRequestStatus) error
 	// AbandonUnscheduledRequests fails every unscheduled request for the workflow.

@@ -13,6 +13,8 @@ from boundflow import (
     Complete,
     InvalidArgumentError,
     MockLlmClient,
+    NotFoundError,
+    RunStatus,
     Tool,
     WorkflowConfig,
     WorkflowMetric,
@@ -27,6 +29,7 @@ from .conftest import (
     HAIKU,
     WORKER_ADDRESS,
     create_isolated_tenant,
+    dummy_mock,
     run_worker,
     wait_for_completion,
     wait_for_workflow_state,
@@ -138,6 +141,59 @@ async def test_periodic_workflow_does_not_fire_during_cooldown(cp, api_key):
                 f"got {cooldown_duration:.1f}s"
         finally:
             await cp.delete_workflow(workflow.id)
+
+
+async def test_periodic_workflow_does_not_fire_after_delete(cp):
+    """DeleteWorkflow disables workflow_state immediately; CreateDuePeriodicRequest's
+    guard must block any further periodic firing from that point on, even while the
+    workflow stays visible (not yet finalized) waiting on its in-flight run."""
+    worker = BoundFlowWorker(WORKER_ADDRESS, dummy_mock())
+
+    @worker.workflow("periodic_del", version=1)
+    async def _entry(ctx):
+        await asyncio.sleep(5)
+        return Complete()
+
+    async with run_worker(worker):
+        tenant = await create_isolated_tenant(cp, "periodic-del")
+        wf = await cp.create_workflow(
+            "periodic_del", tenant.id,
+            config=WorkflowConfig(version=1, invoke_timeout_seconds=30,
+                                  repeat_every_seconds=REPEAT_EVERY))
+        await cp.activate_workflow(wf.id)
+
+        # A manual run keeps the workflow visible (something in flight) once deleted.
+        # The scheduler's own scheduling tick runs on a fixed ~30s cadence independent
+        # of repeat_every_seconds, so poll for the run to actually go in-flight rather
+        # than guessing a fixed sleep - otherwise this races the tick and flakes.
+        request_id = await cp.invoke_workflow(wf.id)
+        deadline = asyncio.get_event_loop().time() + 40
+        while True:
+            info = await cp.get_request_info(request_id)
+            if info.status in (RunStatus.SCHEDULED, RunStatus.IN_PROGRESS):
+                break
+            assert asyncio.get_event_loop().time() < deadline, \
+                f"run never left status={info.status} to become scheduled/in_progress"
+            await asyncio.sleep(0.5)
+
+        await cp.delete_workflow(wf.id)
+        await wait_for_completion(cp, request_id)
+
+        # Poll run count until the workflow is fully finalized (reconciler deletes it)
+        # or one periodic tick's worth of time has passed, whichever comes first. At
+        # every successful check only the original manual run should exist - a
+        # periodic firing sneaking in after delete would show up as a second run.
+        deadline = asyncio.get_event_loop().time() + REPEAT_EVERY + 10
+        while True:
+            try:
+                runs = await cp.list_workflow_runs(wf.id)
+            except NotFoundError:
+                break  # fully finalized - never saw more than 1 run along the way
+            assert len(runs) == 1, \
+                f"expected only the manual run, got {len(runs)} - periodic firing wasn't blocked after delete"
+            if asyncio.get_event_loop().time() >= deadline:
+                break
+            await asyncio.sleep(1)
 
 
 async def test_repeat_every_below_the_minimum_is_rejected(cp):

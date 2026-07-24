@@ -61,9 +61,14 @@ type Job struct {
 
 // CompletedJob is the lightweight view the completeJobs sweeper needs: the request to
 // complete plus the run result the rpcworker recorded on the job, which it transfers
-// onto the request's run_outcome and result.
+// onto the request's run_outcome and result. WorkflowID/Version/RequestType come from
+// the jobs row itself (copied from the request at scheduling time) so CompleteRequest
+// doesn't need a separate read to get them.
 type CompletedJob struct {
 	RequestID     string
+	WorkflowID    string
+	Version       int64
+	RequestType   CustomerRequestType
 	ResultType    RunOutcome
 	FailureReason string
 	Result        map[string]any
@@ -74,6 +79,8 @@ type CompletedJob struct {
 // real cause even when the rpcworker died before failing the request itself.
 type FailedJob struct {
 	RequestID     string
+	WorkflowID    string
+	Version       int64
 	FailureReason string
 }
 

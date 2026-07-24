@@ -144,9 +144,8 @@ func TestInvokeWorkflow(t *testing.T) {
 		Return(nil, nil)
 
 	customerRequestRepo.EXPECT().
-		CreateInvocationRequest(gomock.Any(), gomock.Any(),
-			[]domain.LifecycleState{domain.LifecycleStateDeleting, domain.LifecycleStateDeleted}).
-		DoAndReturn(func(_ context.Context, r *domain.CustomerRequest, _ []domain.LifecycleState) (int64, error) {
+		CreateInvocationRequest(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, r *domain.CustomerRequest) (int64, error) {
 			if r.RequestType != domain.CustomerRequestTypeInvoke {
 				t.Errorf("expected request_type invoke, got %s", r.RequestType)
 			}

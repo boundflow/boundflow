@@ -78,7 +78,6 @@ class LifecycleState(str, Enum):
     INVOKING = "invoking"
     AWAITING_APPROVAL = "awaiting_approval"
     AWAITING_INPUT = "awaiting_input"
-    DELETING = "deleting"
     DELETED = "deleted"
     INTERRUPTED = "interrupted"
 
@@ -99,9 +98,10 @@ class RunStatus(str, Enum):
     FAILED = "failed"
     COMPLETED = "completed"
     SUPERCEDED = "superceded"
+    ABANDONED = "abandoned"
 
     def is_terminal(self) -> bool:
-        return self in (RunStatus.COMPLETED, RunStatus.FAILED, RunStatus.SUPERCEDED)
+        return self in (RunStatus.COMPLETED, RunStatus.FAILED, RunStatus.SUPERCEDED, RunStatus.ABANDONED)
 
 
 class RunOutcome(str, Enum):
@@ -176,6 +176,7 @@ class WorkflowInfo:
     workflow_state: WorkflowState
     version: int
     last_interrupted_request_id: str
+    deletion_requested_at: datetime | None = None
     pending_approval: PendingApproval | None = None
     pending_input: PendingInput | None = None
 
@@ -203,6 +204,7 @@ def _workflow_info(w) -> WorkflowInfo:
         workflow_state=_WF_STATE.get(w.workflow_state, WorkflowState.UNSPECIFIED),
         version=w.workflow_config.version,
         last_interrupted_request_id=w.last_interrupted_request_id,
+        deletion_requested_at=_ts(w, "deletion_requested_at"),
         pending_approval=_pending_approval(w) if w.HasField("pending_approval") else None,
         pending_input=_pending_input(w) if w.HasField("pending_input") else None,
     )
@@ -448,7 +450,6 @@ _LIFECYCLE = {
     "invoking": LifecycleState.INVOKING,
     "awaiting_approval": LifecycleState.AWAITING_APPROVAL,
     "awaiting_input": LifecycleState.AWAITING_INPUT,
-    "deleting": LifecycleState.DELETING,
     "deleted": LifecycleState.DELETED,
     "interrupted": LifecycleState.INTERRUPTED,
 }

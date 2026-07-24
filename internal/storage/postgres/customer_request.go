@@ -45,26 +45,26 @@ func (r *CustomerRequestRepo) Create(ctx context.Context, req *domain.CustomerRe
 // with ErrInvalidLifecycleState if the workflow is in one of invalidStates. Sets req.Version
 // and returns the allocated version. (The lifecycle_state -> invoking transition happens
 // best-effort in ScheduleRequest, once the job actually lands on the jobs table.)
-func (r *CustomerRequestRepo) CreateInvocationRequest(ctx context.Context, req *domain.CustomerRequest, invalidStates []domain.LifecycleState) (int64, error) {
+func (r *CustomerRequestRepo) CreateInvocationRequest(ctx context.Context, req *domain.CustomerRequest) (int64, error) {
 	requestInfo, err := json.Marshal(req.RequestInfo)
 	if err != nil {
 		return 0, fmt.Errorf("marshal request info: %w", err)
 	}
-	invalid := lifecycleStateStrings(invalidStates)
 
 	var version int64
 	err = r.pool.QueryRow(ctx,
 		`WITH bumped AS (
 		     UPDATE workflows
 		     SET target_version = target_version + 1
-		     WHERE id = $2 AND NOT (lifecycle_state = ANY($6::lifecycle_state[]))
+		     WHERE id = $2
+		       AND workflow_state = 'active'
 		     RETURNING target_version
 		 )
 		 INSERT INTO customer_requests (id, workflow_id, status, request_type, request_info, version, created_at)
 		 SELECT $1, $2, $3, $4, $5, b.target_version, now()
 		 FROM bumped b
 		 RETURNING version`,
-		req.ID, req.WorkflowID, req.Status, req.RequestType, requestInfo, invalid,
+		req.ID, req.WorkflowID, req.Status, req.RequestType, requestInfo,
 	).Scan(&version)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -77,16 +77,15 @@ func (r *CustomerRequestRepo) CreateInvocationRequest(ctx context.Context, req *
 }
 
 // CreateDuePeriodicRequest is CreateInvocationRequest gated by the periodic guards: it only
-// allocates+inserts if the workflow is not in invalidStates, has no non-terminal request in
-// flight, and its most recent terminal request completed at least minGap ago. Returns
-// created=false (no error) when any guard rejects. The whole thing is one atomic statement, so
-// the version bump only happens when the request is actually created.
-func (r *CustomerRequestRepo) CreateDuePeriodicRequest(ctx context.Context, req *domain.CustomerRequest, minGap time.Duration, invalidStates []domain.LifecycleState) (int64, bool, error) {
+// allocates+inserts if the workflow is active, has no non-terminal request in flight, and
+// its most recent terminal request completed at least minGap ago. Returns created=false
+// (no error) when any guard rejects. The whole thing is one atomic statement, so the
+// version bump only happens when the request is actually created.
+func (r *CustomerRequestRepo) CreateDuePeriodicRequest(ctx context.Context, req *domain.CustomerRequest, minGap time.Duration) (int64, bool, error) {
 	requestInfo, err := json.Marshal(req.RequestInfo)
 	if err != nil {
 		return 0, false, fmt.Errorf("marshal request info: %w", err)
 	}
-	invalid := lifecycleStateStrings(invalidStates)
 
 	var version int64
 	err = r.pool.QueryRow(ctx,
@@ -94,23 +93,23 @@ func (r *CustomerRequestRepo) CreateDuePeriodicRequest(ctx context.Context, req 
 		     UPDATE workflows ri
 		     SET target_version = target_version + 1
 		     WHERE ri.id = $2
-		       AND NOT (ri.lifecycle_state = ANY($6::lifecycle_state[]))
+		       AND ri.workflow_state = 'active'
 		       AND NOT EXISTS (
 		           SELECT 1 FROM customer_requests cr
 		           WHERE cr.workflow_id = ri.id
-		             AND cr.status NOT IN ('completed', 'failed', 'superceded')
+		             AND cr.status NOT IN ('completed', 'failed', 'superceded', 'abandoned')
 		       )
 		       AND COALESCE(
 		               (SELECT max(cr.completed_at) FROM customer_requests cr WHERE cr.workflow_id = ri.id),
 		               'epoch'::timestamptz
-		           ) + make_interval(secs => $7) < now()
+		           ) + make_interval(secs => $6) < now()
 		     RETURNING target_version
 		 )
 		 INSERT INTO customer_requests (id, workflow_id, status, request_type, request_info, version, created_at)
 		 SELECT $1, $2, $3, $4, $5, b.target_version, now()
 		 FROM bumped b
 		 RETURNING version`,
-		req.ID, req.WorkflowID, req.Status, req.RequestType, requestInfo, invalid, minGap.Seconds(),
+		req.ID, req.WorkflowID, req.Status, req.RequestType, requestInfo, minGap.Seconds(),
 	).Scan(&version)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -120,14 +119,6 @@ func (r *CustomerRequestRepo) CreateDuePeriodicRequest(ctx context.Context, req 
 	}
 	req.Version = version
 	return version, true, nil
-}
-
-func lifecycleStateStrings(states []domain.LifecycleState) []string {
-	out := make([]string, len(states))
-	for i, s := range states {
-		out[i] = string(s)
-	}
-	return out
 }
 
 // AbandonUnscheduledRequests fails every unscheduled request for the workflow. Safe to

@@ -104,11 +104,10 @@ func (r *PeriodicWorkflowHandler) createPeriodicRequest(ctx context.Context, wor
 		RequestInfo: requestInfo,
 	}
 
-	// Atomically guards (gap + no in-flight request + valid state), allocates the version,
-	// flips to invoking, and inserts — all-or-nothing.
+	// Atomically guards (gap + no in-flight request + workflow active), allocates the
+	// version, flips to invoking, and inserts — all-or-nothing.
 	ver, created, err := r.requests.CreateDuePeriodicRequest(ctx, &request,
-		time.Duration(workflow.WorkflowConfig.RepeatEverySeconds)*time.Second,
-		[]domain.LifecycleState{domain.LifecycleStateDeleting, domain.LifecycleStateDeleted})
+		time.Duration(workflow.WorkflowConfig.RepeatEverySeconds)*time.Second)
 	if err != nil {
 		r.log.Error("failed to create periodic request", "correlation_id", correlationID, "workflow_id", workflow.ID, "error", err)
 		return err

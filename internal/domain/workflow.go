@@ -12,7 +12,6 @@ const (
 	LifecycleStateInvoking         LifecycleState = "invoking"
 	LifecycleStateAwaitingApproval LifecycleState = "awaiting_approval"
 	LifecycleStateAwaitingInput    LifecycleState = "awaiting_input"
-	LifecycleStateDeleting         LifecycleState = "deleting"
 	LifecycleStateDeleted          LifecycleState = "deleted"
 	LifecycleStateInterrupted      LifecycleState = "interrupted"
 )
@@ -63,6 +62,7 @@ type Workflow struct {
 	TargetVersion          int64
 	CurrentVersion         int64
 	CreatedAt              time.Time
+	DeletionRequestedAt    *time.Time
 }
 
 // LifecycleInfo groups a workflow's current lifecycle state with the raw gate log
