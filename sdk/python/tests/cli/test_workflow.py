@@ -186,7 +186,54 @@ def test_delete_workflow_removes_it(runner, boundflow_api_key):
     result = run(runner, boundflow_api_key, ["workflow", "delete", wf_id, "--yes"])
     assert result["status"] == "ok"
 
+    # Idle workflow (nothing in flight): DeleteWorkflow finalizes synchronously,
+    # so it's gone by the time the call returns.
     run_expect_fail(runner, boundflow_api_key, ["workflow", "get", wf_id])
+
+
+def test_get_workflow_deletion_requested_at_is_null_before_delete(runner, boundflow_api_key):
+    tenant_id = make_tenant(runner, boundflow_api_key, "wf-del-null")
+    wf_id = make_workflow(runner, boundflow_api_key, tenant_id)
+
+    data = run(runner, boundflow_api_key, ["workflow", "get", wf_id])
+    assert data["deletion_requested_at"] in (None, "")
+
+
+def test_delete_workflow_with_in_flight_request_stays_visible(runner, boundflow_api_key):
+    # No worker connected: the invoke sits in 'scheduled' forever, so deletion
+    # can't finalize synchronously — the workflow should stay gettable with
+    # deletion_requested_at set, not yet lifecycle_state 'deleted'.
+    tenant_id = make_tenant(runner, boundflow_api_key, "wf-del-inflight")
+    wf_id = make_workflow(runner, boundflow_api_key, tenant_id)
+    run(runner, boundflow_api_key, ["workflow", "activate", wf_id])
+    run(runner, boundflow_api_key, ["workflow", "invoke", wf_id])
+
+    result = run(runner, boundflow_api_key, ["workflow", "delete", wf_id, "--yes"])
+    assert result["status"] == "ok"
+
+    data = run(runner, boundflow_api_key, ["workflow", "get", wf_id])
+    assert data["deletion_requested_at"]
+    assert data["lifecycle_state"] != "deleted"
+
+
+def test_delete_workflow_abandons_queued_requests(runner, boundflow_api_key):
+    # queue mode + no worker: the first invoke occupies the one job slot and sits
+    # scheduled forever; later invokes stay unscheduled behind it. Deleting should
+    # abandon those still-unscheduled runs.
+    tenant_id = make_tenant(runner, boundflow_api_key, "wf-del-queue")
+    uid = "queue-del"
+    data = run(runner, boundflow_api_key,
+               ["workflow", "create", uid, tenant_id, "--invoke-mode", "queue"])
+    wf_id = data["id"]
+    run(runner, boundflow_api_key, ["workflow", "activate", wf_id])
+
+    run(runner, boundflow_api_key, ["workflow", "invoke", wf_id])
+    queued_request_id = run(runner, boundflow_api_key, ["workflow", "invoke", wf_id])["request_id"]
+
+    run(runner, boundflow_api_key, ["workflow", "delete", wf_id, "--yes"])
+
+    info = run(runner, boundflow_api_key, ["workflow", "request", queued_request_id])
+    assert info["status"] == "abandoned"
 
 
 # ── Set config ───────────────────────────────────────────────────────────────

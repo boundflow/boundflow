@@ -42,6 +42,9 @@ func WorkflowToProto(r *domain.Workflow) *boundflowv1.Workflow {
 	if pi := r.Lifecycle.PendingInput(); pi != nil {
 		w.PendingInput = pendingInputToProto(pi)
 	}
+	if r.DeletionRequestedAt != nil {
+		w.DeletionRequestedAt = timestamppb.New(*r.DeletionRequestedAt)
+	}
 	return w
 }
 

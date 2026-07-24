@@ -222,15 +222,6 @@ func TestCompleteRequest_Create_TransitionsToActive(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	s, _, schedulerRepo, requests, workflow, _ := newTestScheduler(ctrl)
 
-	requests.EXPECT().
-		CompleteRequest(gomock.Any(), "req-1", gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(&domain.CustomerRequest{
-			ID:                 "req-1",
-			WorkflowID: "workflow-1",
-			RequestType:        domain.CustomerRequestTypeCreate,
-						Version:            1,
-		}, nil)
-
 	workflow.EXPECT().
 		ApplyCompletedJob(gomock.Any(), "workflow-1", domain.LifecycleStateActive, int64(1)).
 		Return(true, nil)
@@ -239,37 +230,11 @@ func TestCompleteRequest_Create_TransitionsToActive(t *testing.T) {
 		DeleteTerminalJob(gomock.Any(), "workflow-1", "req-1").
 		Return(true, nil)
 
-	applied, err := s.CompleteRequest(context.Background(), "req-1", domain.RunOutcomeSuccessful, "", nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !applied {
-		t.Error("expected applied=true")
-	}
-}
-
-func TestCompleteRequest_Delete_TransitionsToDeleted(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	s, _, schedulerRepo, requests, workflow, _ := newTestScheduler(ctrl)
-
 	requests.EXPECT().
 		CompleteRequest(gomock.Any(), "req-1", gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(&domain.CustomerRequest{
-			ID:                 "req-1",
-			WorkflowID: "workflow-1",
-			RequestType:        domain.CustomerRequestTypeDelete,
-			Version:            2,
-		}, nil)
+		Return(&domain.CustomerRequest{ID: "req-1"}, nil)
 
-	workflow.EXPECT().
-		ApplyCompletedJob(gomock.Any(), "workflow-1", domain.LifecycleStateDeleted, int64(2)).
-		Return(true, nil)
-
-	schedulerRepo.EXPECT().
-		DeleteTerminalJob(gomock.Any(), "workflow-1", "req-1").
-		Return(true, nil)
-
-	applied, err := s.CompleteRequest(context.Background(), "req-1", domain.RunOutcomeSuccessful, "", nil)
+	applied, err := s.CompleteRequest(context.Background(), "req-1", "workflow-1", 1, domain.CustomerRequestTypeCreate, domain.RunOutcomeSuccessful, "", nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -277,19 +242,11 @@ func TestCompleteRequest_Delete_TransitionsToDeleted(t *testing.T) {
 		t.Error("expected applied=true")
 	}
 }
+
 
 func TestCompleteRequest_VersionSkipped_ReturnsFalse(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	s, _, schedulerRepo, requests, workflow, _ := newTestScheduler(ctrl)
-
-	requests.EXPECT().
-		CompleteRequest(gomock.Any(), "req-1", gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(&domain.CustomerRequest{
-			ID:                 "req-1",
-			WorkflowID: "workflow-1",
-			RequestType:        domain.CustomerRequestTypeInvoke,
-						Version:            1,
-		}, nil)
 
 	workflow.EXPECT().
 		ApplyCompletedJob(gomock.Any(), "workflow-1", domain.LifecycleStateActive, int64(1)).
@@ -299,7 +256,11 @@ func TestCompleteRequest_VersionSkipped_ReturnsFalse(t *testing.T) {
 		DeleteTerminalJob(gomock.Any(), "workflow-1", "req-1").
 		Return(true, nil)
 
-	applied, err := s.CompleteRequest(context.Background(), "req-1", domain.RunOutcomeSuccessful, "", nil)
+	requests.EXPECT().
+		CompleteRequest(gomock.Any(), "req-1", gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(&domain.CustomerRequest{ID: "req-1"}, nil)
+
+	applied, err := s.CompleteRequest(context.Background(), "req-1", "workflow-1", 1, domain.CustomerRequestTypeInvoke, domain.RunOutcomeSuccessful, "", nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -310,13 +271,21 @@ func TestCompleteRequest_VersionSkipped_ReturnsFalse(t *testing.T) {
 
 func TestCompleteRequest_FailRequestError(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, _, requests, _, _ := newTestScheduler(ctrl)
+	s, _, schedulerRepo, requests, workflow, _ := newTestScheduler(ctrl)
+
+	workflow.EXPECT().
+		ApplyCompletedJob(gomock.Any(), "workflow-1", domain.LifecycleStateActive, int64(1)).
+		Return(true, nil)
+
+	schedulerRepo.EXPECT().
+		DeleteTerminalJob(gomock.Any(), "workflow-1", "req-1").
+		Return(true, nil)
 
 	requests.EXPECT().
 		CompleteRequest(gomock.Any(), "req-1", gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil, errors.New("db error"))
 
-	if _, err := s.CompleteRequest(context.Background(), "req-1", domain.RunOutcomeSuccessful, "", nil); err == nil {
+	if _, err := s.CompleteRequest(context.Background(), "req-1", "workflow-1", 1, domain.CustomerRequestTypeInvoke, domain.RunOutcomeSuccessful, "", nil); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }
@@ -327,14 +296,6 @@ func TestFailRequest_AppliesFailedState(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	s, _, schedulerRepo, requests, workflow, _ := newTestScheduler(ctrl)
 
-	requests.EXPECT().
-		FailRequest(gomock.Any(), "req-1", gomock.Any()).
-		Return(&domain.CustomerRequest{
-			ID:                 "req-1",
-			WorkflowID: "workflow-1",
-						Version:            2,
-		}, nil)
-
 	workflow.EXPECT().
 		ApplyFailedJob(gomock.Any(), "workflow-1", "req-1", domain.LifecycleStateInterrupted, domain.WorkflowStateDisabled, int64(2)).
 		Return(true, nil)
@@ -343,7 +304,11 @@ func TestFailRequest_AppliesFailedState(t *testing.T) {
 		DeleteTerminalJob(gomock.Any(), "workflow-1", "req-1").
 		Return(true, nil)
 
-	applied, err := s.FailRequest(context.Background(), "req-1", "")
+	requests.EXPECT().
+		FailRequest(gomock.Any(), "req-1", gomock.Any()).
+		Return(&domain.CustomerRequest{ID: "req-1"}, nil)
+
+	applied, err := s.FailRequest(context.Background(), "req-1", "workflow-1", 2, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -356,14 +321,6 @@ func TestFailRequest_VersionSkipped_ReturnsFalse(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	s, _, schedulerRepo, requests, workflow, _ := newTestScheduler(ctrl)
 
-	requests.EXPECT().
-		FailRequest(gomock.Any(), "req-1", gomock.Any()).
-		Return(&domain.CustomerRequest{
-			ID:                 "req-1",
-			WorkflowID: "workflow-1",
-						Version:            1,
-		}, nil)
-
 	workflow.EXPECT().
 		ApplyFailedJob(gomock.Any(), "workflow-1", "req-1", domain.LifecycleStateInterrupted, domain.WorkflowStateDisabled, int64(1)).
 		Return(false, nil)
@@ -372,7 +329,11 @@ func TestFailRequest_VersionSkipped_ReturnsFalse(t *testing.T) {
 		DeleteTerminalJob(gomock.Any(), "workflow-1", "req-1").
 		Return(true, nil)
 
-	applied, err := s.FailRequest(context.Background(), "req-1", "")
+	requests.EXPECT().
+		FailRequest(gomock.Any(), "req-1", gomock.Any()).
+		Return(&domain.CustomerRequest{ID: "req-1"}, nil)
+
+	applied, err := s.FailRequest(context.Background(), "req-1", "workflow-1", 1, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -383,13 +344,21 @@ func TestFailRequest_VersionSkipped_ReturnsFalse(t *testing.T) {
 
 func TestFailRequest_RepoError(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	s, _, _, requests, _, _ := newTestScheduler(ctrl)
+	s, _, schedulerRepo, requests, workflow, _ := newTestScheduler(ctrl)
+
+	workflow.EXPECT().
+		ApplyFailedJob(gomock.Any(), "workflow-1", "req-1", domain.LifecycleStateInterrupted, domain.WorkflowStateDisabled, int64(1)).
+		Return(true, nil)
+
+	schedulerRepo.EXPECT().
+		DeleteTerminalJob(gomock.Any(), "workflow-1", "req-1").
+		Return(true, nil)
 
 	requests.EXPECT().
 		FailRequest(gomock.Any(), "req-1", gomock.Any()).
 		Return(nil, errors.New("db error"))
 
-	if _, err := s.FailRequest(context.Background(), "req-1", ""); err == nil {
+	if _, err := s.FailRequest(context.Background(), "req-1", "workflow-1", 1, ""); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }

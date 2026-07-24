@@ -18,7 +18,6 @@ type CustomerRequestType string
 const (
 	CustomerRequestTypeCreate      CustomerRequestType = "create"
 	CustomerRequestTypeInvoke      CustomerRequestType = "invoke"
-	CustomerRequestTypeDelete      CustomerRequestType = "delete"
 	CusomterRequestTypeHealthCheck CustomerRequestType = "healthcheck"
 )
 

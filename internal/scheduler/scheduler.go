@@ -258,7 +258,7 @@ func (s *Scheduler) failJobs(ctx context.Context, partitionID string) error {
 		wg.Add(1)
 		go func(job domain.FailedJob) {
 			defer wg.Done()
-			if _, err := s.FailRequest(ctx, job.RequestID, job.FailureReason); err != nil {
+			if _, err := s.FailRequest(ctx, job.RequestID, job.WorkflowID, job.Version, job.FailureReason); err != nil {
 				s.log.Error("failed to process failed request", "request_id", job.RequestID, "error", err)
 			}
 		}(job)
@@ -272,30 +272,33 @@ func (s *Scheduler) failJobs(ctx context.Context, partitionID string) error {
 // internal error occurred, etc.); customer-domain failures complete instead.
 const interruptedReason = "the run was interrupted before it could complete (platform failure)"
 
-func (s *Scheduler) FailRequest(ctx context.Context, req string, reason string) (bool, error) {
+func (s *Scheduler) FailRequest(ctx context.Context, req string, workflowID string, version int64, reason string) (bool, error) {
 	s.log.Debug("marking request as failed", "request_id", req)
 
 	if reason == "" {
 		reason = interruptedReason
 	}
-	request, err := s.requests.FailRequest(ctx, req, reason)
-	if err != nil {
-		return false, fmt.Errorf("error failing request %s: %w", req, err)
-	}
 
-	applied, err := s.workflow.ApplyFailedJob(ctx, request.WorkflowID, req, domain.LifecycleStateInterrupted, domain.WorkflowStateDisabled, request.Version)
+	applied, err := s.workflow.ApplyFailedJob(ctx, workflowID, req, domain.LifecycleStateInterrupted, domain.WorkflowStateDisabled, version)
 	if err != nil {
-		s.log.Error("failed to apply failed job to workflow", "request_id", req, "workflow_id", request.WorkflowID, "error", err)
+		s.log.Error("failed to apply failed job to workflow", "request_id", req, "workflow_id", workflowID, "error", err)
 		return false, err
 	}
 	if applied {
-		s.log.Info("request failed, workflow updated", "request_id", req, "workflow_id", request.WorkflowID, "version", request.Version)
+		s.log.Info("request failed, workflow updated", "request_id", req, "workflow_id", workflowID, "version", version)
 	} else {
-		s.log.Warn("request failed but workflow version check skipped update (newer version already applied)", "request_id", req, "workflow_id", request.WorkflowID, "version", request.Version)
+		s.log.Warn("request failed but workflow version check skipped update (newer version already applied)", "request_id", req, "workflow_id", workflowID, "version", version)
 	}
 
-	if _, err := s.scheduler.DeleteTerminalJob(ctx, request.WorkflowID, req); err != nil {
-		s.log.Error("failed to delete terminal job", "request_id", req, "workflow_id", request.WorkflowID, "error", err)
+	if _, err := s.scheduler.DeleteTerminalJob(ctx, workflowID, req); err != nil {
+		s.log.Error("failed to delete terminal job", "request_id", req, "workflow_id", workflowID, "error", err)
+	}
+
+	// Mark the request terminal last: by the time an outside reader sees this request as
+	// failed, everything about it (lifecycle_state, job cleanup) has already landed.
+	if _, err := s.requests.FailRequest(ctx, req, reason); err != nil {
+		s.log.Error("failed to mark request failed", "request_id", req, "workflow_id", workflowID, "error", err)
+		return false, fmt.Errorf("error failing request %s: %w", req, err)
 	}
 	return applied, nil
 }
@@ -319,7 +322,7 @@ func (s *Scheduler) completeJobs(ctx context.Context, partitionID string) error 
 		go func(job domain.CompletedJob) {
 			defer wg.Done()
 			// Transfer the run result the worker recorded on the job onto the request.
-			if _, err := s.CompleteRequest(ctx, job.RequestID, job.ResultType, job.FailureReason, job.Result); err != nil {
+			if _, err := s.CompleteRequest(ctx, job.RequestID, job.WorkflowID, job.Version, job.RequestType, job.ResultType, job.FailureReason, job.Result); err != nil {
 				s.log.Error("failed to process completed request", "request_id", job.RequestID, "error", err)
 			}
 		}(job)
@@ -329,45 +332,38 @@ func (s *Scheduler) completeJobs(ctx context.Context, partitionID string) error 
 }
 
 // For now this is idempotent, in the future we can have more fine grained lifecycle states to avoid redundant stuff
-func (s *Scheduler) CompleteRequest(ctx context.Context, req string, outcome domain.RunOutcome, reason string, result map[string]any) (bool, error) {
+func (s *Scheduler) CompleteRequest(ctx context.Context, req string, workflowID string, version int64, requestType domain.CustomerRequestType, outcome domain.RunOutcome, reason string, result map[string]any) (bool, error) {
 	s.log.Debug("marking request as completed", "request_id", req, "outcome", outcome)
 
-	request, err := s.requests.CompleteRequest(ctx, req, outcome, reason, result)
-	if err != nil {
-		return false, fmt.Errorf("error completing request %s: %w", req, err)
-	}
-
 	var lifecycleState domain.LifecycleState
-	switch request.RequestType {
+	switch requestType {
 	case domain.CustomerRequestTypeCreate:
 		lifecycleState = domain.LifecycleStateActive
 	case domain.CustomerRequestTypeInvoke:
 		lifecycleState = domain.LifecycleStateActive
-	case domain.CustomerRequestTypeDelete:
-		lifecycleState = domain.LifecycleStateDeleted
 	}
 
-	applied, err := s.workflow.ApplyCompletedJob(ctx, request.WorkflowID, lifecycleState, request.Version)
+	applied, err := s.workflow.ApplyCompletedJob(ctx, workflowID, lifecycleState, version)
 	if err != nil {
-		s.log.Error("failed to apply completed job to workflow", "request_id", req, "workflow_id", request.WorkflowID, "error", err)
+		s.log.Error("failed to apply completed job to workflow", "request_id", req, "workflow_id", workflowID, "error", err)
 		return false, err
 	}
 	if applied {
-		s.log.Info("request completed, workflow updated", "request_id", req, "workflow_id", request.WorkflowID, "request_type", request.RequestType, "lifecycle_state", lifecycleState, "version", request.Version)
+		s.log.Info("request completed, workflow updated", "request_id", req, "workflow_id", workflowID, "request_type", requestType, "lifecycle_state", lifecycleState, "version", version)
 	} else {
-		s.log.Warn("request completed but workflow version check skipped update (newer version already applied)", "request_id", req, "workflow_id", request.WorkflowID, "version", request.Version)
+		s.log.Warn("request completed but workflow version check skipped update (newer version already applied)", "request_id", req, "workflow_id", workflowID, "version", version)
 	}
 
 	// get the accumulated metrics for this job
-	metrics, workflowMetrics, err := s.jobs.GetJobMetrics(ctx, request.WorkflowID, request.ID)
+	metrics, workflowMetrics, err := s.jobs.GetJobMetrics(ctx, workflowID, req)
 	if err != nil {
-		s.log.Error("failed to get job metrics", "request_id", req, "workflow_id", request.WorkflowID, "error", err)
+		s.log.Error("failed to get job metrics", "request_id", req, "workflow_id", workflowID, "error", err)
 		return false, err
 	}
 
-	workflow, err := s.workflow.Get(ctx, request.WorkflowID)
+	workflow, err := s.workflow.Get(ctx, workflowID)
 	if err != nil {
-		s.log.Error("failed to get workflow instance for metrics handling", "request_id", req, "workflow_id", request.WorkflowID, "error", err)
+		s.log.Error("failed to get workflow instance for metrics handling", "request_id", req, "workflow_id", workflowID, "error", err)
 		return false, err
 	}
 
@@ -375,22 +371,30 @@ func (s *Scheduler) CompleteRequest(ctx context.Context, req string, outcome dom
 	var versionMetrics *domain.WorkflowVersionMetrics
 	err, versionMetrics = s.metricsHandler.HandleAgentMetrics(ctx, req, metrics, workflowMetrics, workflow)
 	if err != nil {
-		s.log.Error("failed to handle agent metrics", "request_id", req, "workflow_id", request.WorkflowID, "error", err)
+		s.log.Error("failed to handle agent metrics", "request_id", req, "workflow_id", workflowID, "error", err)
 		return false, err
 	}
 
 	// resolve policy
 	policyAction, err := s.policyResolver.ResolveLifecyclePolicy(ctx, workflow, versionMetrics)
 	if err != nil {
-		s.log.Error("failed to resolve lifecycle policy", "request_id", req, "workflow_id", request.WorkflowID, "error", err)
+		s.log.Error("failed to resolve lifecycle policy", "request_id", req, "workflow_id", workflowID, "error", err)
 		return false, err
 	}
 	if policyAction != nil {
 		s.recordPolicyAction(ctx, workflow, req, policyAction)
 	}
 
-	if _, err := s.scheduler.DeleteTerminalJob(ctx, request.WorkflowID, req); err != nil {
-		s.log.Error("failed to delete terminal job", "request_id", req, "workflow_id", request.WorkflowID, "error", err)
+	if _, err := s.scheduler.DeleteTerminalJob(ctx, workflowID, req); err != nil {
+		s.log.Error("failed to delete terminal job", "request_id", req, "workflow_id", workflowID, "error", err)
+	}
+
+	// Mark the request terminal last: by the time an outside reader sees status=completed,
+	// everything about this completion (lifecycle_state, metrics, policy resolution, job
+	// cleanup) has already landed - nothing is left pending behind it.
+	if _, err := s.requests.CompleteRequest(ctx, req, outcome, reason, result); err != nil {
+		s.log.Error("failed to mark request completed", "request_id", req, "workflow_id", workflowID, "error", err)
+		return false, fmt.Errorf("error completing request %s: %w", req, err)
 	}
 	return applied, nil
 }

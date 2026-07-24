@@ -185,6 +185,9 @@ func (h *WorkflowServiceHandler) DeleteWorkflow(ctx context.Context, req *boundf
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Errorf(codes.NotFound, "workflow instance not found")
 		}
+		if errors.Is(err, storage.ErrDeletionAlreadyRequested) {
+			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
+		}
 		return nil, status.Errorf(codes.Internal, "delete workflow: %v", err)
 	}
 

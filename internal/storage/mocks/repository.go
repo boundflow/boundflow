@@ -281,18 +281,48 @@ func (mr *MockWorkflowRepositoryMockRecorder) ListForTenantGroup(ctx, tenantGrou
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForTenantGroup", reflect.TypeOf((*MockWorkflowRepository)(nil).ListForTenantGroup), ctx, tenantGroupID)
 }
 
-// MarkDeleted mocks base method.
-func (m *MockWorkflowRepository) MarkDeleted(ctx context.Context, id string) error {
+// MarkDeletionRequested mocks base method.
+func (m *MockWorkflowRepository) MarkDeletionRequested(ctx context.Context, id string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MarkDeleted", ctx, id)
+	ret := m.ctrl.Call(m, "MarkDeletionRequested", ctx, id)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// MarkDeleted indicates an expected call of MarkDeleted.
-func (mr *MockWorkflowRepositoryMockRecorder) MarkDeleted(ctx, id any) *gomock.Call {
+// MarkDeletionRequested indicates an expected call of MarkDeletionRequested.
+func (mr *MockWorkflowRepositoryMockRecorder) MarkDeletionRequested(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkDeleted", reflect.TypeOf((*MockWorkflowRepository)(nil).MarkDeleted), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkDeletionRequested", reflect.TypeOf((*MockWorkflowRepository)(nil).MarkDeletionRequested), ctx, id)
+}
+
+
+// FinalizeDeleted mocks base method.
+func (m *MockWorkflowRepository) FinalizeDeleted(ctx context.Context, id string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FinalizeDeleted", ctx, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// FinalizeDeleted indicates an expected call of FinalizeDeleted.
+func (mr *MockWorkflowRepositoryMockRecorder) FinalizeDeleted(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeDeleted", reflect.TypeOf((*MockWorkflowRepository)(nil).FinalizeDeleted), ctx, id)
+}
+
+// ListPendingDeletion mocks base method.
+func (m *MockWorkflowRepository) ListPendingDeletion(ctx context.Context, partitionID string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPendingDeletion", ctx, partitionID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPendingDeletion indicates an expected call of ListPendingDeletion.
+func (mr *MockWorkflowRepositoryMockRecorder) ListPendingDeletion(ctx, partitionID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPendingDeletion", reflect.TypeOf((*MockWorkflowRepository)(nil).ListPendingDeletion), ctx, partitionID)
 }
 
 // ResolveInterruptedWorkflow mocks base method.
@@ -1541,6 +1571,35 @@ func (mr *MockCustomerRequestRepositoryMockRecorder) CompleteRequest(ctx, id, ou
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompleteRequest", reflect.TypeOf((*MockCustomerRequestRepository)(nil).CompleteRequest), ctx, id, outcome, failureReason, result)
 }
 
+// AbandonUnscheduledRequests mocks base method.
+func (m *MockCustomerRequestRepository) AbandonUnscheduledRequests(ctx context.Context, workflowID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AbandonUnscheduledRequests", ctx, workflowID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AbandonUnscheduledRequests indicates an expected call of AbandonUnscheduledRequests.
+func (mr *MockCustomerRequestRepositoryMockRecorder) AbandonUnscheduledRequests(ctx, workflowID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AbandonUnscheduledRequests", reflect.TypeOf((*MockCustomerRequestRepository)(nil).AbandonUnscheduledRequests), ctx, workflowID)
+}
+
+// HasRunningRequest mocks base method.
+func (m *MockCustomerRequestRepository) HasRunningRequest(ctx context.Context, workflowID string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasRunningRequest", ctx, workflowID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// HasRunningRequest indicates an expected call of HasRunningRequest.
+func (mr *MockCustomerRequestRepositoryMockRecorder) HasRunningRequest(ctx, workflowID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasRunningRequest", reflect.TypeOf((*MockCustomerRequestRepository)(nil).HasRunningRequest), ctx, workflowID)
+}
+
 // CountUnscheduledRequests mocks base method.
 func (m *MockCustomerRequestRepository) CountUnscheduledRequests(ctx context.Context, workflowID string) (int, error) {
 	m.ctrl.T.Helper()
@@ -1571,9 +1630,9 @@ func (mr *MockCustomerRequestRepositoryMockRecorder) Create(ctx, req any) *gomoc
 }
 
 // CreateDuePeriodicRequest mocks base method.
-func (m *MockCustomerRequestRepository) CreateDuePeriodicRequest(ctx context.Context, req *domain.CustomerRequest, minGap time.Duration, invalidStates []domain.LifecycleState) (int64, bool, error) {
+func (m *MockCustomerRequestRepository) CreateDuePeriodicRequest(ctx context.Context, req *domain.CustomerRequest, minGap time.Duration) (int64, bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateDuePeriodicRequest", ctx, req, minGap, invalidStates)
+	ret := m.ctrl.Call(m, "CreateDuePeriodicRequest", ctx, req, minGap)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(bool)
 	ret2, _ := ret[2].(error)
@@ -1581,24 +1640,24 @@ func (m *MockCustomerRequestRepository) CreateDuePeriodicRequest(ctx context.Con
 }
 
 // CreateDuePeriodicRequest indicates an expected call of CreateDuePeriodicRequest.
-func (mr *MockCustomerRequestRepositoryMockRecorder) CreateDuePeriodicRequest(ctx, req, minGap, invalidStates any) *gomock.Call {
+func (mr *MockCustomerRequestRepositoryMockRecorder) CreateDuePeriodicRequest(ctx, req, minGap any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDuePeriodicRequest", reflect.TypeOf((*MockCustomerRequestRepository)(nil).CreateDuePeriodicRequest), ctx, req, minGap, invalidStates)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDuePeriodicRequest", reflect.TypeOf((*MockCustomerRequestRepository)(nil).CreateDuePeriodicRequest), ctx, req, minGap)
 }
 
 // CreateInvocationRequest mocks base method.
-func (m *MockCustomerRequestRepository) CreateInvocationRequest(ctx context.Context, req *domain.CustomerRequest, invalidStates []domain.LifecycleState) (int64, error) {
+func (m *MockCustomerRequestRepository) CreateInvocationRequest(ctx context.Context, req *domain.CustomerRequest) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateInvocationRequest", ctx, req, invalidStates)
+	ret := m.ctrl.Call(m, "CreateInvocationRequest", ctx, req)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateInvocationRequest indicates an expected call of CreateInvocationRequest.
-func (mr *MockCustomerRequestRepositoryMockRecorder) CreateInvocationRequest(ctx, req, invalidStates any) *gomock.Call {
+func (mr *MockCustomerRequestRepositoryMockRecorder) CreateInvocationRequest(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInvocationRequest", reflect.TypeOf((*MockCustomerRequestRepository)(nil).CreateInvocationRequest), ctx, req, invalidStates)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInvocationRequest", reflect.TypeOf((*MockCustomerRequestRepository)(nil).CreateInvocationRequest), ctx, req)
 }
 
 // FailRequest mocks base method.
