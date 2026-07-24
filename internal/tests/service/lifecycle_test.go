@@ -167,14 +167,26 @@ func TestInvokeWorkflow(t *testing.T) {
 
 func TestDeleteWorkflow(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	svc, workflowRepo, _, _, _, _ := newSvc(ctrl)
+	svc, workflowRepo, requestRepo, _, _, _ := newSvc(ctrl)
 
 	workflowRepo.EXPECT().
 		Get(gomock.Any(), "instance-1").
 		Return(&domain.Workflow{ID: "instance-1", TenantID: "tenant-1"}, nil)
 
 	workflowRepo.EXPECT().
-		MarkDeleted(gomock.Any(), "instance-1").
+		MarkDeletionRequested(gomock.Any(), "instance-1").
+		Return(nil)
+
+	requestRepo.EXPECT().
+		AbandonUnscheduledRequests(gomock.Any(), "instance-1").
+		Return(nil)
+
+	requestRepo.EXPECT().
+		HasRunningRequest(gomock.Any(), "instance-1").
+		Return(false, nil)
+
+	workflowRepo.EXPECT().
+		FinalizeDeleted(gomock.Any(), "instance-1").
 		Return(nil)
 
 	if err := svc.DeleteWorkflow(context.Background(), "corr-3", "instance-1"); err != nil {

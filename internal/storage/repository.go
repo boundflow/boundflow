@@ -29,7 +29,8 @@ type WorkflowRepository interface {
 	ListForTenantGroup(ctx context.Context, tenantGroupID string) ([]*domain.Workflow, error)
 	UpdateLifecycleState(ctx context.Context, id string, state domain.LifecycleState) error
 	UpdateWorkflowState(ctx context.Context, id string, state domain.WorkflowState) error
-	MarkDeleted(ctx context.Context, id string) error
+	MarkDeletionRequested(ctx context.Context, id string) error
+	FinalizeDeleted(ctx context.Context, id string) error
 	UpdateLifecyclePolicy(ctx context.Context, id string, policy domain.WorkflowLifecyclePolicy) error
 	// UpdateConfig replaces a workflow's operational config and current version wholesale.
 	UpdateConfig(ctx context.Context, id string, cfg domain.WorkflowConfig, version int) error
@@ -286,6 +287,10 @@ type CustomerRequestRepository interface {
 	CreateDuePeriodicRequest(ctx context.Context, req *domain.CustomerRequest, minGap time.Duration, invalidStates []domain.LifecycleState) (int64, bool, error)
 	Get(ctx context.Context, id string) (*domain.CustomerRequest, error)
 	UpdateStatus(ctx context.Context, workflowID, id string, status domain.CustomerRequestStatus) error
+	// AbandonUnscheduledRequests fails every unscheduled request for the workflow.
+	AbandonUnscheduledRequests(ctx context.Context, workflowID string) error
+	// HasRunningRequest reports whether the workflow currently has a scheduled or in-progress request.
+	HasRunningRequest(ctx context.Context, workflowID string) (bool, error)
 	// CompleteRequest sets the request status to completed, records the run outcome,
 	// reason, and published result (nil if the workflow didn't call Complete(result=...)),
 	// and returns the full updated request.

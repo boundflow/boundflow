@@ -130,6 +130,34 @@ func lifecycleStateStrings(states []domain.LifecycleState) []string {
 	return out
 }
 
+// AbandonUnscheduledRequests fails every unscheduled request for the workflow. Safe to
+// call repeatedly - the periodic reconciler calls it again for any workflow still
+// waiting to finalize deletion.
+func (r *CustomerRequestRepo) AbandonUnscheduledRequests(ctx context.Context, workflowID string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE customer_requests SET status = 'abandoned' WHERE workflow_id = $1 AND status = 'unscheduled'`,
+		workflowID,
+	)
+	if err != nil {
+		return fmt.Errorf("abandon unscheduled requests: %w", err)
+	}
+	return nil
+}
+
+// HasRunningRequest reports whether the workflow currently has a scheduled or
+// in-progress request.
+func (r *CustomerRequestRepo) HasRunningRequest(ctx context.Context, workflowID string) (bool, error) {
+	var running bool
+	err := r.pool.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM customer_requests WHERE workflow_id = $1 AND status IN ('scheduled', 'in_progress'))`,
+		workflowID,
+	).Scan(&running)
+	if err != nil {
+		return false, fmt.Errorf("check for running request: %w", err)
+	}
+	return running, nil
+}
+
 func (r *CustomerRequestRepo) CountUnscheduledRequests(ctx context.Context, workflowID string) (int, error) {
 	var n int
 	err := r.pool.QueryRow(ctx,

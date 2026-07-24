@@ -278,12 +278,29 @@ func (s *LifecycleService) DeleteWorkflow(ctx context.Context, correlationID, wo
 		return fmt.Errorf("get workflow instance: %w", err)
 	}
 
-	if err := s.workflows.MarkDeleted(ctx, workflowID); err != nil {
-		s.log.Error("failed to delete workflow", "correlation_id", correlationID, "workflow_id", workflowID, "error", err)
-		return fmt.Errorf("delete workflow: %w", err)
+	if err := s.workflows.MarkDeletionRequested(ctx, workflowID); err != nil {
+		s.log.Error("failed to mark deletion requested", "correlation_id", correlationID, "workflow_id", workflowID, "error", err)
+		return fmt.Errorf("mark deletion requested: %w", err)
 	}
 
-	s.log.Info("workflow deleted", "correlation_id", correlationID, "workflow_id", workflowID)
+	if err := s.customerRequests.AbandonUnscheduledRequests(ctx, workflowID); err != nil {
+		s.log.Error("failed to abandon unscheduled requests", "correlation_id", correlationID, "workflow_id", workflowID, "error", err)
+		return fmt.Errorf("abandon unscheduled requests: %w", err)
+	}
+
+	running, err := s.customerRequests.HasRunningRequest(ctx, workflowID)
+	if err != nil {
+		s.log.Error("failed to check for running request", "correlation_id", correlationID, "workflow_id", workflowID, "error", err)
+		return fmt.Errorf("check for running request: %w", err)
+	}
+	if !running {
+		if err := s.workflows.FinalizeDeleted(ctx, workflowID); err != nil {
+			s.log.Error("failed to finalize deletion", "correlation_id", correlationID, "workflow_id", workflowID, "error", err)
+			return fmt.Errorf("finalize deletion: %w", err)
+		}
+	}
+
+	s.log.Info("workflow deletion requested", "correlation_id", correlationID, "workflow_id", workflowID)
 	return nil
 }
 

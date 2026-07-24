@@ -4,7 +4,8 @@ CREATE TYPE customer_request_status AS ENUM (
     'in_progress',
     'failed',
     'completed',
-    'superceded'
+    'superceded',
+    'abandoned'
 );
 
 -- Customer-facing outcome of a request, set once it is terminal (the in-flight state is

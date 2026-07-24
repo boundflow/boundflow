@@ -224,13 +224,30 @@ func startNewMetricsEpoch(ctx context.Context, tx pgx.Tx, workflowID string, ver
 	return nil
 }
 
-func (r *WorkflowRepo) MarkDeleted(ctx context.Context, id string) error {
+// MarkDeletionRequested disables the workflow for new work and records when deletion
+// was requested. Idle work still in flight is left alone; AbandonUnscheduledRequests
+// and FinalizeDeleted (called after this, and again periodically by the reconciler)
+// bring the workflow the rest of the way to lifecycle_state = deleted.
+func (r *WorkflowRepo) MarkDeletionRequested(ctx context.Context, id string) error {
 	_, err := r.pool.Exec(ctx,
-		`UPDATE workflows SET lifecycle_state = $1, workflow_state = $2 WHERE id = $3`,
-		domain.LifecycleStateDeleted, domain.WorkflowStateDisabled, id,
+		`UPDATE workflows SET workflow_state = $1, deletion_requested_at = now() WHERE id = $2`,
+		domain.WorkflowStateDisabled, id,
 	)
 	if err != nil {
-		return fmt.Errorf("mark deleted: %w", err)
+		return fmt.Errorf("mark deletion requested: %w", err)
+	}
+	return nil
+}
+
+// FinalizeDeleted marks the workflow deleted. Only call after
+// CustomerRequestRepo.HasRunningRequest reports nothing running.
+func (r *WorkflowRepo) FinalizeDeleted(ctx context.Context, id string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE workflows SET lifecycle_state = $1 WHERE id = $2`,
+		domain.LifecycleStateDeleted, id,
+	)
+	if err != nil {
+		return fmt.Errorf("finalize deleted: %w", err)
 	}
 	return nil
 }

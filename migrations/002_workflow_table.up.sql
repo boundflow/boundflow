@@ -45,5 +45,6 @@ CREATE TABLE workflows (
     last_gate_metadata     JSONB,
     last_gate_opened_at    TIMESTAMPTZ,
     last_gate_timeout_at   TIMESTAMPTZ,
-    created_at                TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at                TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deletion_requested_at     TIMESTAMPTZ
 );
