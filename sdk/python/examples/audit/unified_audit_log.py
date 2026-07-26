@@ -39,17 +39,21 @@ approvals: dict[str, str] = {}
 
 
 async def wait_lifecycle(cp, wid, target):
-    while await cp.get_workflow_lifecycle_state(wid) != target:
+    while (await cp.get_workflow(wid)).lifecycle_state != target:
         await asyncio.sleep(0.3)
 
 
 async def wait_wf_state(cp, wid, target):
-    while await cp.get_workflow_state(wid) != target:
+    while (await cp.get_workflow(wid)).workflow_state != target:
         await asyncio.sleep(0.3)
 
 
-async def wait_active(cp, wid):
-    while await cp.get_workflow_lifecycle_state(wid) == LifecycleState.INVOKING:
+async def wait_run_complete(cp, request_id):
+    # Poll the run's own terminal status, not the workflow's lifecycle_state: the
+    # scheduler's job-pickup runs on its own cadence, so a lifecycle_state check
+    # right after invoke can land before the run has even started (still
+    # 'scheduled', not yet 'invoking') and return prematurely.
+    while (await cp.get_request_info(request_id)).status not in ("completed", "failed"):
         await asyncio.sleep(0.3)
 
 
@@ -117,8 +121,8 @@ async def main():
                       action=SetModel(value=HAIKU))])
         await cp.activate_workflow(wf.id)
         for _ in range(2):
-            await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
-            await wait_active(cp, wf.id)
+            request_id = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
+            await wait_run_complete(cp, request_id)
 
         await asyncio.sleep(2)  # let the scheduler/worker write the async policy rows
 
