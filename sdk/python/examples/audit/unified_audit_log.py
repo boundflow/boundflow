@@ -49,10 +49,6 @@ async def wait_wf_state(cp, wid, target):
 
 
 async def wait_run_complete(cp, request_id):
-    # Poll the run's own terminal status, not the workflow's lifecycle_state: the
-    # scheduler's job-pickup runs on its own cadence, so a lifecycle_state check
-    # right after invoke can land before the run has even started (still
-    # 'scheduled', not yet 'invoking') and return prematurely.
     while (await cp.get_request_info(request_id)).status not in ("completed", "failed"):
         await asyncio.sleep(0.3)
 

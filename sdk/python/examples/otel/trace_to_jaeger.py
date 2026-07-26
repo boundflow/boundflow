@@ -161,11 +161,7 @@ async def main() -> None:
         print(f"invoking otel-demo ({model}) …")
         request_id = await cp.invoke_workflow(wf.id, operation_timeout_seconds=60)
 
-        # Wait for the run itself to go terminal (entry → finalize → complete). Polling
-        # the workflow's lifecycle_state instead would race the scheduler's own pickup
-        # cadence: the first check can land before the run has even started (still
-        # 'scheduled', not yet 'invoking'), exiting the loop immediately and deleting
-        # the workflow before the run - and its trace - ever happened.
+        # Wait for the run itself to go terminal (entry → finalize → complete).
         while (await cp.get_request_info(request_id)).status not in ("completed", "failed"):
             await asyncio.sleep(0.5)
 
