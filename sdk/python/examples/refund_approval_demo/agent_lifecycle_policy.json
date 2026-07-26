@@ -1,0 +1,16 @@
+[
+  {
+    "metric": "cost_usd",
+    "op": "greater_than",
+    "threshold": 0.08,
+    "window": 5,
+    "action": {"field": "model", "value": "claude-haiku-4-5"}
+  },
+  {
+    "metric": "llm_calls",
+    "op": "greater_than_or_equal",
+    "threshold": 6,
+    "window": 3,
+    "action": {"field": "max_llm_calls", "value": 4}
+  }
+]

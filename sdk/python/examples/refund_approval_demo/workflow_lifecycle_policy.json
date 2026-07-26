@@ -1,0 +1,7 @@
+[
+  {
+    "metric": "approval_rejections",
+    "threshold": 1,
+    "action": {"kind": "set_version", "target": 1}
+  }
+]

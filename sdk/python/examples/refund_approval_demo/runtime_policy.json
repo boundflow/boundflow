@@ -1,0 +1,7 @@
+{
+  "max_llm_calls": 8,
+  "max_cost_usd": 0.10,
+  "max_tokens_per_call": 2000,
+  "max_call_seconds": 30,
+  "tool_call_limits": []
+}
