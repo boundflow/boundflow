@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # json_scripting.sh — using boundflow --json for automation and scripting
 #
-# The --json flag makes every boundflowcommand emit machine-readable JSON.
+# The --json flag makes every boundflow command emit machine-readable JSON.
 # Combine it with python -c, jq, or any JSON tool for chaining and filtering.
 #
 # Prerequisites: BOUNDFLOW_API_KEY and BOUNDFLOW_SERVER_ADDRESS must be set.
@@ -24,7 +24,7 @@ WF_JSON=$(boundflow --json workflow create data-pipeline "$TENANT_ID" --version 
 WF_ID=$(echo "$WF_JSON" | py "print(json.load(sys.stdin)['id'])")
 WF_VER=$(echo "$WF_JSON" | py "print(json.load(sys.stdin)['config']['version'])")
 echo "workflow_id=$WF_ID  version=$WF_VER"
-boundflowworkflow activate "$WF_ID"
+boundflow workflow activate "$WF_ID"
 
 # ── 3. Filter list output ────────────────────────────────────────────────────
 echo
@@ -79,5 +79,5 @@ fi
 
 # ── Clean up ──────────────────────────────────────────────────────────────────
 echo
-boundflowworkflow delete "$WF_ID" --yes
+boundflow workflow delete "$WF_ID" --yes
 echo "=== done ==="

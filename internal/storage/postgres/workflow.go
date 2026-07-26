@@ -28,10 +28,6 @@ func (r *WorkflowRepo) Create(ctx context.Context, instance *domain.Workflow) er
 	if err != nil {
 		return fmt.Errorf("marshal lifecycle policy: %w", err)
 	}
-	invokeMode := instance.WorkflowConfig.InvokeMode
-	if invokeMode == "" {
-		invokeMode = domain.InvokeModeCoalesce
-	}
 	_, err = r.pool.Exec(ctx,
 		`INSERT INTO workflows
 		   (id, tenant_id, workflow_type,
@@ -45,7 +41,7 @@ func (r *WorkflowRepo) Create(ctx context.Context, instance *domain.Workflow) er
 		instance.WorkflowConfig.InvokeTimeoutSeconds,
 		instance.WorkflowConfig.RepeatEverySeconds,
 		instance.WorkflowConfig.Triggerable,
-		string(invokeMode), instance.WorkflowConfig.MaxQueueDepth,
+		string(instance.WorkflowConfig.InvokeMode), instance.WorkflowConfig.MaxQueueDepth,
 		instance.Lifecycle.State, instance.WorkflowState, lifecyclePolicyJSON, instance.SchedulerPartitionID,
 		instance.Lifecycle.LastCompletedRequestAt, instance.CreatedAt,
 	)
@@ -63,7 +59,7 @@ func (r *WorkflowRepo) ListForTenantGroup(ctx context.Context, tenantGroupID str
 	rows, err := r.pool.Query(ctx,
 		`SELECT w.id, w.tenant_id, w.workflow_type, w.current_workflow_version,
 		        w.lifecycle_state, w.workflow_state, w.last_completed_request_at,
-		        w.last_interrupted_request_id, w.created_at
+		        w.last_interrupted_request_id, w.created_at, w.deletion_requested_at
 		 FROM workflows w
 		 JOIN tenants t ON w.tenant_id = t.id
 		 WHERE t.tenant_group_id = $1
@@ -80,7 +76,7 @@ func (r *WorkflowRepo) ListForTenantGroup(ctx context.Context, tenantGroupID str
 		if err := rows.Scan(
 			&w.ID, &w.TenantID, &w.WorkflowType, &w.CurrentWorkflowVersion,
 			&w.Lifecycle.State, &w.WorkflowState, &w.Lifecycle.LastCompletedRequestAt,
-			&w.Lifecycle.LastInterruptedRequestID, &w.CreatedAt,
+			&w.Lifecycle.LastInterruptedRequestID, &w.CreatedAt, &w.DeletionRequestedAt,
 		); err != nil {
 			return nil, handleError(err, "workflow instance")
 		}
@@ -107,7 +103,7 @@ func (r *WorkflowRepo) Get(ctx context.Context, id string) (*domain.Workflow, er
 		        w.target_version, w.current_version, w.last_completed_request_at,
 		        w.last_interrupted_request_id, w.created_at,
 		        w.last_gate_id, w.last_gate_detail, w.last_gate_metadata,
-		        w.last_gate_opened_at, w.last_gate_timeout_at
+		        w.last_gate_opened_at, w.last_gate_timeout_at, w.deletion_requested_at
 		 FROM workflows w
 		 WHERE w.id = $1`, id,
 	).Scan(
@@ -122,7 +118,7 @@ func (r *WorkflowRepo) Get(ctx context.Context, id string) (*domain.Workflow, er
 		&instance.TargetVersion, &instance.CurrentVersion,
 		&instance.Lifecycle.LastCompletedRequestAt, &instance.Lifecycle.LastInterruptedRequestID, &instance.CreatedAt,
 		&instance.Lifecycle.LastGateID, &gateDetail, &gateMetadataJSON,
-		&instance.Lifecycle.LastGateOpenedAt, &instance.Lifecycle.LastGateTimeoutAt,
+		&instance.Lifecycle.LastGateOpenedAt, &instance.Lifecycle.LastGateTimeoutAt, &instance.DeletionRequestedAt,
 	)
 	if err != nil {
 		return nil, handleError(err, "workflow instance")
@@ -176,15 +172,117 @@ func (r *WorkflowRepo) UpdateLifecyclePolicy(ctx context.Context, id string, pol
 	return nil
 }
 
-func (r *WorkflowRepo) MarkDeleted(ctx context.Context, id string) error {
-	_, err := r.pool.Exec(ctx,
-		`UPDATE workflows SET lifecycle_state = $1, workflow_state = $2 WHERE id = $3`,
-		domain.LifecycleStateDeleted, domain.WorkflowStateDisabled, id,
-	)
+func (r *WorkflowRepo) UpdateConfig(ctx context.Context, id string, cfg domain.WorkflowConfig, version int) error {
+	tx, err := r.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("mark deleted: %w", err)
+		return fmt.Errorf("begin update config tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var oldVersion int
+	if err := tx.QueryRow(ctx,
+		`SELECT current_workflow_version FROM workflows WHERE id = $1 FOR UPDATE`, id,
+	).Scan(&oldVersion); err != nil {
+		return fmt.Errorf("lock workflow for config update: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx,
+		`UPDATE workflows
+		   SET current_workflow_version = $1, invoke_timeout_seconds = $2, repeat_every_seconds = $3,
+		       triggerable = $4, invoke_mode = $5, max_queue_depth = $6
+		 WHERE id = $7`,
+		version, cfg.InvokeTimeoutSeconds, cfg.RepeatEverySeconds, cfg.Triggerable,
+		string(cfg.InvokeMode), cfg.MaxQueueDepth, id,
+	); err != nil {
+		return fmt.Errorf("update workflow config: %w", err)
+	}
+
+	if oldVersion != version {
+		if err := startNewMetricsEpoch(ctx, tx, id, version); err != nil {
+			return err
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit update config tx: %w", err)
 	}
 	return nil
+}
+
+// startNewMetricsEpoch starts a fresh workflow_version_metrics row for the given
+// version. Must be called within the same transaction as the version change.
+func startNewMetricsEpoch(ctx context.Context, tx pgx.Tx, workflowID string, version int) error {
+	_, err := tx.Exec(ctx,
+		`INSERT INTO workflow_version_metrics (workflow_id, version, epoch)
+		 SELECT $1, $2, COALESCE(MAX(epoch), 0) + 1
+		 FROM workflow_version_metrics WHERE workflow_id = $1 AND version = $2`,
+		workflowID, version,
+	)
+	if err != nil {
+		return fmt.Errorf("start new metrics epoch: %w", err)
+	}
+	return nil
+}
+
+// MarkDeletionRequested disables the workflow for new work and records when deletion
+// was requested. Idle work still in flight is left alone; AbandonUnscheduledRequests
+// and FinalizeDeleted (called after this, and again periodically by the reconciler)
+// bring the workflow the rest of the way to lifecycle_state = deleted. Fails with
+// ErrDeletionAlreadyRequested if deletion was already requested for this workflow.
+func (r *WorkflowRepo) MarkDeletionRequested(ctx context.Context, id string) error {
+	var updatedID string
+	err := r.pool.QueryRow(ctx,
+		`UPDATE workflows SET workflow_state = $1, deletion_requested_at = now()
+		 WHERE id = $2 AND deletion_requested_at IS NULL
+		 RETURNING id`,
+		domain.WorkflowStateDisabled, id,
+	).Scan(&updatedID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return storage.ErrDeletionAlreadyRequested
+		}
+		return fmt.Errorf("mark deletion requested: %w", err)
+	}
+	return nil
+}
+
+// FinalizeDeleted marks the workflow deleted. Only call after
+// CustomerRequestRepo.HasRunningRequest reports nothing running.
+func (r *WorkflowRepo) FinalizeDeleted(ctx context.Context, id string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE workflows SET lifecycle_state = $1 WHERE id = $2`,
+		domain.LifecycleStateDeleted, id,
+	)
+	if err != nil {
+		return fmt.Errorf("finalize deleted: %w", err)
+	}
+	return nil
+}
+
+// ListPendingDeletion returns IDs of workflows in the partition where deletion has been
+// requested but not yet finalized - stragglers for the periodic reconciler to retry.
+func (r *WorkflowRepo) ListPendingDeletion(ctx context.Context, partitionID string) ([]string, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT id FROM workflows
+		 WHERE scheduler_partition_id = $1
+		   AND deletion_requested_at IS NOT NULL
+		   AND lifecycle_state != $2`,
+		partitionID, domain.LifecycleStateDeleted,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list pending deletion: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan pending deletion id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
 }
 
 func (r *WorkflowRepo) UpdateWorkflowState(ctx context.Context, id string, state domain.WorkflowState) error {

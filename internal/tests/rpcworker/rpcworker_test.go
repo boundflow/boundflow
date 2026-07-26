@@ -108,12 +108,12 @@ func newMockScheduler() *mockScheduler {
 	}
 }
 
-func (m *mockScheduler) CompleteRequest(_ context.Context, req string, _ domain.RunOutcome, _ string, _ map[string]any) (bool, error) {
+func (m *mockScheduler) CompleteRequest(_ context.Context, req string, _ string, _ int64, _ domain.CustomerRequestType, _ domain.RunOutcome, _ string, _ map[string]any) (bool, error) {
 	m.completeCh <- req
 	return true, nil
 }
 
-func (m *mockScheduler) FailRequest(_ context.Context, req string, _ string) (bool, error) {
+func (m *mockScheduler) FailRequest(_ context.Context, req string, _ string, _ int64, _ string) (bool, error) {
 	m.failCh <- req
 	return true, nil
 }

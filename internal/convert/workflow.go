@@ -42,6 +42,9 @@ func WorkflowToProto(r *domain.Workflow) *boundflowv1.Workflow {
 	if pi := r.Lifecycle.PendingInput(); pi != nil {
 		w.PendingInput = pendingInputToProto(pi)
 	}
+	if r.DeletionRequestedAt != nil {
+		w.DeletionRequestedAt = timestamppb.New(*r.DeletionRequestedAt)
+	}
 	return w
 }
 
@@ -256,7 +259,7 @@ func WorkflowRuleToProto(r domain.WorkflowLifecyclePolicyRule) *boundflowv1.Work
 
 func WorkflowConfigFromProto(p *boundflowv1.WorkflowConfig) domain.WorkflowConfig {
 	if p == nil {
-		return domain.WorkflowConfig{Triggerable: true}
+		return domain.WorkflowConfig{Triggerable: true, InvokeMode: domain.InvokeModeCoalesce}
 	}
 	return domain.WorkflowConfig{
 		InvokeTimeoutSeconds: p.InvokeTimeoutSeconds,

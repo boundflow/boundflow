@@ -274,3 +274,36 @@ func TestGetWorkflowMetrics_ReturnsConvertedTotals(t *testing.T) {
 		t.Errorf("expected tool_failure_counts to carry through, got %+v", resp.ToolFailureCounts)
 	}
 }
+
+func TestSetWorkflowConfig_RequiresWorkflowId(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	h, _, _, _ := newHandler(ctrl)
+
+	_, err := h.SetWorkflowConfig(authedCtx(), &boundflowv1.SetWorkflowConfigRequest{})
+	requireInvalidArgument(t, err)
+}
+
+func TestSetWorkflowConfig_ReturnsUpdatedWorkflow(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	h, workflowRepo, _, _ := newHandler(ctrl)
+
+	cfg := domain.WorkflowConfig{
+		InvokeTimeoutSeconds: 45, RepeatEverySeconds: 60, Triggerable: true, InvokeMode: domain.InvokeModeCoalesce,
+	}
+	workflowRepo.EXPECT().UpdateConfig(gomock.Any(), "wf-1", cfg, 2).Return(nil)
+	workflowRepo.EXPECT().Get(gomock.Any(), "wf-1").
+		Return(&domain.Workflow{ID: "wf-1", CurrentWorkflowVersion: 2, WorkflowConfig: cfg}, nil)
+
+	resp, err := h.SetWorkflowConfig(authedCtx(), &boundflowv1.SetWorkflowConfigRequest{
+		WorkflowId: "wf-1",
+		Config: &boundflowv1.WorkflowConfig{
+			Version: 2, InvokeTimeoutSeconds: 45, RepeatEverySeconds: 60, Triggerable: true,
+		},
+	})
+	if err != nil {
+		t.Fatalf("expected nil, got %v", err)
+	}
+	if resp.Workflow.WorkflowConfig.Version != 2 || resp.Workflow.WorkflowConfig.RepeatEverySeconds != 60 {
+		t.Errorf("unexpected response: %+v", resp.Workflow.WorkflowConfig)
+	}
+}

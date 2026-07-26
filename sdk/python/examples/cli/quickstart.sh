@@ -12,17 +12,17 @@
 #   $env:BOUNDFLOW_SERVER_ADDRESS = "http://localhost:50051"
 set -euo pipefail
 
-echo "=== boundflowquickstart ==="
+echo "=== boundflow quickstart ==="
 echo
 
 # ── 1. Explore the CLI ───────────────────────────────────────────────────────
 echo "-- help --"
-boundflow--help
+boundflow --help
 echo
 
 # ── 2. Create a tenant ───────────────────────────────────────────────────────
 echo "-- create tenant --"
-boundflowtenant create acme
+boundflow tenant create acme
 
 TENANT_ID=$(boundflow --json tenant create acme-ops | python -c "import sys,json; print(json.load(sys.stdin)['id'])")
 echo "tenant id: $TENANT_ID"
@@ -30,44 +30,44 @@ echo
 
 # ── 3. Create + activate a workflow ──────────────────────────────────────────
 echo "-- create workflow --"
-boundflowworkflow create ticket-triage "$TENANT_ID" --version 1
+boundflow workflow create ticket-triage "$TENANT_ID" --version 1
 
 WORKFLOW_ID=$(boundflow --json workflow create order-remediation "$TENANT_ID" --version 1 | python -c "import sys,json; print(json.load(sys.stdin)['id'])")
 echo "workflow id: $WORKFLOW_ID"
 
 echo
 echo "-- activate --"
-boundflowworkflow activate "$WORKFLOW_ID"
+boundflow workflow activate "$WORKFLOW_ID"
 
 # ── 4. List and inspect workflows ────────────────────────────────────────────
 echo
 echo "-- list (table) --"
-boundflowworkflow list
+boundflow workflow list
 
 echo
 echo "-- get workflow state --"
-boundflowworkflow get "$WORKFLOW_ID"
+boundflow workflow get "$WORKFLOW_ID"
 
 # ── 5. Invoke (dispatches to a worker if one is connected) ───────────────────
 echo
 echo "-- invoke --"
-boundflowworkflow invoke "$WORKFLOW_ID"
+boundflow workflow invoke "$WORKFLOW_ID"
 
 # ── 6. Set model pricing ─────────────────────────────────────────────────────
 echo
 echo "-- pricing --"
-boundflowpricing set claude-sonnet-4-6 --input 3.00 --output 15.00
-boundflowpricing list
+boundflow pricing set claude-sonnet-4-6 --input 3.00 --output 15.00
+boundflow pricing list
 
 # ── 7. View audit log (empty on a fresh stack without worker runs) ────────────
 echo
 echo "-- audit log --"
-boundflowaudit log "$WORKFLOW_ID"
+boundflow audit log "$WORKFLOW_ID"
 
 # ── 8. Clean up ──────────────────────────────────────────────────────────────
 echo
 echo "-- delete workflow --"
-boundflowworkflow delete "$WORKFLOW_ID" --yes
+boundflow workflow delete "$WORKFLOW_ID" --yes
 
 echo
 echo "=== done ==="

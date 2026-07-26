@@ -78,7 +78,6 @@ class LifecycleState(str, Enum):
     INVOKING = "invoking"
     AWAITING_APPROVAL = "awaiting_approval"
     AWAITING_INPUT = "awaiting_input"
-    DELETING = "deleting"
     DELETED = "deleted"
     INTERRUPTED = "interrupted"
 
@@ -99,9 +98,10 @@ class RunStatus(str, Enum):
     FAILED = "failed"
     COMPLETED = "completed"
     SUPERCEDED = "superceded"
+    ABANDONED = "abandoned"
 
     def is_terminal(self) -> bool:
-        return self in (RunStatus.COMPLETED, RunStatus.FAILED, RunStatus.SUPERCEDED)
+        return self in (RunStatus.COMPLETED, RunStatus.FAILED, RunStatus.SUPERCEDED, RunStatus.ABANDONED)
 
 
 class RunOutcome(str, Enum):
@@ -176,6 +176,7 @@ class WorkflowInfo:
     workflow_state: WorkflowState
     version: int
     last_interrupted_request_id: str
+    deletion_requested_at: datetime | None = None
     pending_approval: PendingApproval | None = None
     pending_input: PendingInput | None = None
 
@@ -203,6 +204,7 @@ def _workflow_info(w) -> WorkflowInfo:
         workflow_state=_WF_STATE.get(w.workflow_state, WorkflowState.UNSPECIFIED),
         version=w.workflow_config.version,
         last_interrupted_request_id=w.last_interrupted_request_id,
+        deletion_requested_at=_ts(w, "deletion_requested_at"),
         pending_approval=_pending_approval(w) if w.HasField("pending_approval") else None,
         pending_input=_pending_input(w) if w.HasField("pending_input") else None,
     )
@@ -448,7 +450,6 @@ _LIFECYCLE = {
     "invoking": LifecycleState.INVOKING,
     "awaiting_approval": LifecycleState.AWAITING_APPROVAL,
     "awaiting_input": LifecycleState.AWAITING_INPUT,
-    "deleting": LifecycleState.DELETING,
     "deleted": LifecycleState.DELETED,
     "interrupted": LifecycleState.INTERRUPTED,
 }
@@ -607,6 +608,27 @@ class ControlPlaneClient:
                 invoke_mode=(ri.INVOKE_MODE_QUEUE if cfg.invoke_mode == InvokeMode.QUEUE
                              else ri.INVOKE_MODE_COALESCE),
                 max_queue_depth=cfg.max_queue_depth,
+            ),
+        ), metadata=self._metadata)
+        inst = resp.workflow
+        wc = inst.workflow_config
+        return Workflow(inst.id, inst.tenant_id, WorkflowConfig(
+            wc.version, wc.invoke_timeout_seconds, wc.repeat_every_seconds, wc.triggerable,
+            InvokeMode.QUEUE if wc.invoke_mode == ri.INVOKE_MODE_QUEUE else InvokeMode.COALESCE,
+            wc.max_queue_depth))
+
+    async def set_workflow_config(self, workflow_id: str, config: WorkflowConfig) -> Workflow:
+        """Update a workflow's config settings. Returns the updated workflow."""
+        resp = await self._lc.SetWorkflowConfig(lc.SetWorkflowConfigRequest(
+            workflow_id=workflow_id,
+            config=ri.WorkflowConfig(
+                version=config.version,
+                invoke_timeout_seconds=config.invoke_timeout_seconds,
+                repeat_every_seconds=config.repeat_every_seconds,
+                triggerable=config.triggerable,
+                invoke_mode=(ri.INVOKE_MODE_QUEUE if config.invoke_mode == InvokeMode.QUEUE
+                             else ri.INVOKE_MODE_COALESCE),
+                max_queue_depth=config.max_queue_depth,
             ),
         ), metadata=self._metadata)
         inst = resp.workflow

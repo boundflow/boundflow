@@ -43,6 +43,7 @@ service WorkflowService {
   rpc ListWorkflowRuns(ListWorkflowRunsRequest) returns (ListWorkflowRunsResponse);
   rpc GetRequestInfo(GetRequestInfoRequest) returns (GetRequestInfoResponse);
   rpc GetWorkflowMetrics(GetWorkflowMetricsRequest) returns (GetWorkflowMetricsResponse);
+  rpc SetWorkflowConfig(SetWorkflowConfigRequest) returns (SetWorkflowConfigResponse);
 }
 
 message CreateWorkflowRequest {
@@ -411,4 +412,14 @@ message GetWorkflowMetricsResponse {
   double total_latency_seconds = 6;
   int32 total_approval_rejections = 7;
   map<string, int32> tool_failure_counts = 8;
+}
+
+// SetWorkflowConfig updates a workflow's config settings.
+message SetWorkflowConfigRequest {
+  string workflow_id = 1;
+  WorkflowConfig config = 2;
+}
+
+message SetWorkflowConfigResponse {
+  Workflow workflow = 1;
 }

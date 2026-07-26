@@ -68,6 +68,33 @@ def get(
     output(result)
 
 
+@app.command("set-config")
+def set_config(
+    workflow_id: str = typer.Argument(..., help="Workflow ID"),
+    version: int = typer.Option(..., "--version", "-v", help="Workflow version to switch to"),
+    timeout: int = typer.Option(60, "--timeout", help="Invoke timeout in seconds"),
+    repeat: int = typer.Option(0, "--repeat", help="Repeat every N seconds (0 = no repeat)"),
+    no_triggerable: bool = typer.Option(False, "--no-triggerable", help="Disable manual triggering"),
+    invoke_mode: InvokeMode = typer.Option(
+        InvokeMode.COALESCE, "--invoke-mode",
+        help="How piled-up invokes are handled: coalesce (latest-wins) or queue (run each, FIFO)"),
+    max_queue_depth: int = typer.Option(
+        0, "--max-queue-depth",
+        help="Queue-mode backlog cap; invokes past it are rejected (0 = server default)"),
+):
+    """Update a workflow's config settings."""
+    config = WorkflowConfig(
+        version=version,
+        invoke_timeout_seconds=timeout,
+        repeat_every_seconds=repeat,
+        triggerable=not no_triggerable,
+        invoke_mode=invoke_mode,
+        max_queue_depth=max_queue_depth,
+    )
+    result = cp_call(lambda cp: cp.set_workflow_config(workflow_id, config))
+    output(result)
+
+
 @app.command("metrics")
 def metrics(
     workflow_id: str = typer.Argument(..., help="Workflow ID"),

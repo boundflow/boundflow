@@ -97,7 +97,12 @@ func (r *LifecycleResolver) ResolveLifecyclePolicy(ctx context.Context, workflow
 		}
 	}
 
-	resolved, err := r.resolver.TryApplyPolicyResolution(ctx, workflowId, workflow.CurrentVersion, version, state, cooldown)
+	var resolved bool
+	if goalState.VersionChange {
+		resolved, err = r.resolver.TryApplyVersionResolution(ctx, workflowId, workflow.CurrentVersion, prevVersion, version)
+	} else {
+		resolved, err = r.resolver.TryApplyStateResolution(ctx, workflowId, workflow.CurrentVersion, state, cooldown)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("Applying resolved policy failed with error %w", err)
 	}

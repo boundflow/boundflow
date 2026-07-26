@@ -163,9 +163,11 @@ func runScheduler(sigCh <-chan os.Signal) {
 		approvalTimeouts := internalscheduler.NewApprovalTimeoutResolver(30, jobRepo, auditRepo, logger)
 		// Input-gate timeouts, same pattern as approval.
 		inputTimeouts := internalscheduler.NewInputTimeoutResolver(30, jobRepo, auditRepo, logger)
+		// Finishes deletions left pending by InitiateDelete once nothing's left in flight.
+		deletionReconciler := internalscheduler.NewDeletionReconciler(30, workflowRepo, customerRequestRepo, logger)
 		// Resolver (cooldown expiry) and periodic handler are partition-scoped: the scheduler
 		// starts them when it acquires a partition and cancels them when it loses it.
-		sched.SetPartitionWorkers(resolver, periodic, approvalTimeouts, inputTimeouts)
+		sched.SetPartitionWorkers(resolver, periodic, approvalTimeouts, inputTimeouts, deletionReconciler)
 		logger.Info("starting scheduler partition worker", "index", i, "scheduler_id", schedulerID)
 		go func() { errCh <- sched.Run(ctx) }()
 	}

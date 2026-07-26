@@ -38,7 +38,6 @@ from boundflow import (
     BoundFlowWorker,
     Complete,
     ControlPlaneClient,
-    LifecycleState,
     MockContext,
     MockLlmClient,
     Next,
@@ -162,8 +161,8 @@ async def main() -> None:
         print(f"invoking otel-demo ({model}) …")
         request_id = await cp.invoke_workflow(wf.id, operation_timeout_seconds=60)
 
-        # Wait until the run leaves INVOKING (entry → finalize → complete).
-        while await cp.get_workflow_lifecycle_state(wf.id) == LifecycleState.INVOKING:
+        # Wait for the run itself to go terminal (entry → finalize → complete).
+        while (await cp.get_request_info(request_id)).status not in ("completed", "failed"):
             await asyncio.sleep(0.5)
 
         await cp.delete_workflow(wf.id)

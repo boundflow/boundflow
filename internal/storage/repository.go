@@ -29,8 +29,14 @@ type WorkflowRepository interface {
 	ListForTenantGroup(ctx context.Context, tenantGroupID string) ([]*domain.Workflow, error)
 	UpdateLifecycleState(ctx context.Context, id string, state domain.LifecycleState) error
 	UpdateWorkflowState(ctx context.Context, id string, state domain.WorkflowState) error
-	MarkDeleted(ctx context.Context, id string) error
+	MarkDeletionRequested(ctx context.Context, id string) error
+	FinalizeDeleted(ctx context.Context, id string) error
+	// ListPendingDeletion returns IDs of workflows in the partition where deletion has been
+	// requested but not yet finalized.
+	ListPendingDeletion(ctx context.Context, partitionID string) ([]string, error)
 	UpdateLifecyclePolicy(ctx context.Context, id string, policy domain.WorkflowLifecyclePolicy) error
+	// UpdateConfig replaces a workflow's operational config and current version wholesale.
+	UpdateConfig(ctx context.Context, id string, cfg domain.WorkflowConfig, version int) error
 	// UpdateLifecycleStateAndIncrementVersion atomically sets the lifecycle state and bumps the target version.
 	// Optionally pass lifecycle states that should cause the call to fail with ErrInvalidLifecycleState.
 	UpdateLifecycleStateAndIncrementVersion(ctx context.Context, id string, state domain.LifecycleState, invalidStates ...domain.LifecycleState) (newTargetVersion int64, err error)
@@ -231,11 +237,13 @@ type LifecycleResolverRepository interface {
 	// ExpireCooldowns atomically flips all expired-cooldown workflows in the partition back to
 	// active and returns the IDs that were resumed.
 	ExpireCooldowns(ctx context.Context, partitionID string) ([]string, error)
-	// TryApplyPolicyResolution atomically updates lifecycle_last_resolved,
-	// current_workflow_version, workflow_state, and cooldown_until only if the stored
-	// lifecycle_last_resolved is less than resolved. Returns true if the update was applied.
-	// cooldownUntil should be non-nil only when workflowState is WorkflowStateCooldown.
-	TryApplyPolicyResolution(ctx context.Context, workflowID string, resolved int64, workflowVersion int, workflowState domain.WorkflowState, cooldownUntil *time.Time) (bool, error)
+	// TryApplyVersionResolution applies a set_version policy resolution, guarded on
+	// lifecycle_last_resolved and on current_workflow_version still equaling
+	// expectedVersion. Starts a fresh metrics epoch when the version actually changes.
+	TryApplyVersionResolution(ctx context.Context, workflowID string, resolved int64, expectedVersion int, targetVersion int) (bool, error)
+	// TryApplyStateResolution applies a pause/cooldown policy resolution, guarded only
+	// on lifecycle_last_resolved. cooldownUntil is non-nil only for WorkflowStateCooldown.
+	TryApplyStateResolution(ctx context.Context, workflowID string, resolved int64, workflowState domain.WorkflowState, cooldownUntil *time.Time) (bool, error)
 }
 
 type MetricsRepository interface {
@@ -274,14 +282,18 @@ type CustomerRequestRepository interface {
 	Create(ctx context.Context, req *domain.CustomerRequest) error
 	// CreateInvocationRequest atomically bumps the workflow's target_version, flips lifecycle_state
 	// to invoking, and inserts req with the allocated version (one statement). Fails with
-	// ErrInvalidLifecycleState if the workflow is in one of invalidStates. Sets req.Version.
-	CreateInvocationRequest(ctx context.Context, req *domain.CustomerRequest, invalidStates []domain.LifecycleState) (int64, error)
+	// ErrInvalidLifecycleState if the workflow isn't active. Sets req.Version.
+	CreateInvocationRequest(ctx context.Context, req *domain.CustomerRequest) (int64, error)
 	// CreateDuePeriodicRequest is CreateInvocationRequest gated by the periodic guards (no
 	// non-terminal request in flight, last terminal completion at least minGap ago). Returns
 	// created=false (no error) when a guard rejects. One atomic statement.
-	CreateDuePeriodicRequest(ctx context.Context, req *domain.CustomerRequest, minGap time.Duration, invalidStates []domain.LifecycleState) (int64, bool, error)
+	CreateDuePeriodicRequest(ctx context.Context, req *domain.CustomerRequest, minGap time.Duration) (int64, bool, error)
 	Get(ctx context.Context, id string) (*domain.CustomerRequest, error)
 	UpdateStatus(ctx context.Context, workflowID, id string, status domain.CustomerRequestStatus) error
+	// AbandonUnscheduledRequests fails every unscheduled request for the workflow.
+	AbandonUnscheduledRequests(ctx context.Context, workflowID string) error
+	// HasRunningRequest reports whether the workflow currently has a scheduled or in-progress request.
+	HasRunningRequest(ctx context.Context, workflowID string) (bool, error)
 	// CompleteRequest sets the request status to completed, records the run outcome,
 	// reason, and published result (nil if the workflow didn't call Complete(result=...)),
 	// and returns the full updated request.
