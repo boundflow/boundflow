@@ -1,6 +1,6 @@
 # BoundFlow
 
-**The operational layer for the LLM agents and workflows you run unattended — cost caps, approval gates, and self-healing policy, enforced by a control plane.**
+**BoundFlow is the open source control plane for running production AI agents and workflows safely, at scale.**
 
 ![status: preview](https://img.shields.io/badge/status-preview-orange)
 ![backend: Apache-2.0](https://img.shields.io/badge/backend-Apache--2.0-blue)
@@ -12,32 +12,36 @@
 > users. APIs — including the gRPC protobufs — may change before 1.0. We're looking
 > for early adopters and design partners: [reach out](mailto:hello@boundflow.dev).
 
-BoundFlow runs long-running, stateful agent workflows and enforces the guardrails
-you'll want before running agents unattended: per-run **cost caps**, automatic **model switching** on
-cost/loop policies, **human approval gates** before sensitive actions, tool-call
-limits, retries, cooldowns, and versioned rollbacks. You write agents and
-workflows against a clean async SDK; the control plane schedules, dispatches, and
-governs them.
+Agents and workflows are written against a Python SDK and run on workers in the
+operator's environment, using the operator's own inference keys. BoundFlow's control
+plane schedules, governs, and audits every run. This separates management (the
+control plane) from execution (the data plane): the backend never sees inference keys
+or traffic, and never pays for tokens. Governance spans the entire workflow —
+scheduling each run, carrying state across steps, and recovering from failures — not
+just the individual model call.
 
-Inference is **bring-your-own** — your agents call Claude with your own Anthropic
-key, running in your worker. The backend never sees it and never pays for tokens.
-Your keys, your data, and your token spend stay on your side of the wire.
+## What BoundFlow does
 
-**In practice:** a support-triage workflow that may spend up to **$0.25/run**, must
-get a **human's sign-off** before issuing a refund, **downgrades to Haiku** when
-costs spike, and **auto-rolls-back** to the last good version if it starts
-failing — none of that logic living in your agent code. You declare it as policy;
-the control plane enforces it and keeps a durable, queryable **audit log** of every
-approval and policy decision.
+Running agents in production means addressing three operational concerns. BoundFlow
+provides a primitive for each:
 
-**Below:** a periodic workflow running unattended under a lifecycle policy. When
-its lifetime cost crosses the configured budget, BoundFlow rolls it back to the
-last good version automatically — no one paged, no manual intervention.
+- **Runtime Governance as Policy** — constrain a run while it executes: per-run cost
+  caps, tool-call limits, token and latency ceilings, and model selection. Enforced in
+  the worker, mid-run.
+- **Operational Lifecycle Management as Policy** — a workflow reacts to its own cost,
+  failure, and approval-rejection signals over time: switch models, cool down, pause,
+  or roll back to a known-good version, without manual intervention.
+- **Durable Execution** — runs are checkpointed and leased; if a worker crashes,
+  another resumes the run without losing progress.
+
+Below: a periodic workflow running under a lifecycle policy. When its lifetime cost
+crosses the configured budget, BoundFlow rolls it back to the last good version
+automatically.
 
 ![A periodic workflow's lifetime cost crossing its budget, and BoundFlow automatically rolling it back to the last good version](demo/periodic_selfheal.gif)
 
-BoundFlow is *not* a prompt framework, an inference provider, or an agent-builder —
-it's the operational layer *around* the agents you build.
+BoundFlow is not a prompt framework, an inference provider, or an agent-builder; it
+is the operational layer around the agents you build.
 
 - **Backend** — open source (Apache-2.0), self-hostable as a container.
 - **Python SDK** — open source (MIT), `pip install boundflow`.
@@ -46,57 +50,14 @@ it's the operational layer *around* the agents you build.
 
 ---
 
-## Why BoundFlow
-
-**Agents that take real actions need a control plane that takes real action when
-they go wrong.** Most tools *watch* your agents; BoundFlow *intervenes* — at both
-levels. On the **agent**: cap its spend, swap its model mid-run. On the
-**workflow**: gate a risky step for human sign-off, cool it down, roll it back to a
-known-good version, or pause it outright. It's **workflow-aware, not just
-agent-aware** — because it runs the whole workflow, not just the model call:
-scheduling each run, carrying state across steps, recovering from failures, and
-driving it through its lifecycle, with the agent as just one operation inside a
-durable, multi-step process it owns end to end.
-
-The moment agents run unattended you need answers to: *What if it loops? What if
-it spends $50? What if it's about to do something irreversible? Which model should
-it use, and when should that change?* BoundFlow makes those **policies** instead of
-code:
-
-| Concern | BoundFlow gives you |
-|---|---|
-| Runaway cost | A hard `max_cost_usd` cap that halts a run the moment its cost crosses budget |
-| Irreversible actions | Approval gates — the workflow parks for a human decision before it acts |
-| Loops & output blowups | Runtime limits: `max_llm_calls`, `max_tokens_per_call`, per-tool call caps |
-| Wrong model for the job | Agent lifecycle policy — react to signals over the agent's entire life (e.g. downgrade a costly model to a cheaper one past a certain budget) |
-| Degrading or failing workflows | Self-healing lifecycle policy — cool down, pause, or auto-roll-back to a known-good version |
-| Flying blind | OpenTelemetry-native run traces shipped to *your* stack (Jaeger, Tempo, Langfuse, …), plus a durable, queryable audit log of every approval and policy decision |
-| Your keys & token spend | Bring-your-own inference — agents call Claude with your key; the backend never sees it or pays for tokens (cache-aware, per-tenant cost) |
-
-Policies are evaluated server-side (lifecycle) and enforced SDK-side (runtime),
-with per-invocation metrics — cost, tokens, LLM calls, per-tool counts/failures —
-collected on every run.
-
----
-
 ## Architecture
 
-The **BoundFlow backend** is the control plane — self-host it, or run it on
-BoundFlow Cloud. Either way, your **worker** connects to it over gRPC and runs the
-actual agents, with your Anthropic key, in your environment; the backend schedules,
-dispatches, governs, and audits, and never sees your key or your inference traffic.
+The BoundFlow backend is the control plane; it is self-hosted or run on BoundFlow
+Cloud. Workers connect to it over gRPC and run the agents — with the operator's own
+inference key, in the operator's environment — while the backend schedules,
+dispatches, governs, and audits, and never sees the key or the inference traffic.
 
-```
-   ┌─────────────────────┐      gRPC        ┌────────────────────────┐
-   │  Your client / SDK  │ ───────────────▶ │                        │
-   └─────────────────────┘  invoke·approve  │   BoundFlow backend    │
-                             ·query         │   (control plane)      │
-   ┌─────────────────────┐   gRPC stream    │                        │
-   │  Your worker        │ ◀──────────────▶ │  schedules·dispatches  │
-   │  runs agents+tools  │  launch/result   │  ·governs·audits       │
-   │  with your API key  │                  └────────────────────────┘
-   └─────────────────────┘
-```
+![BoundFlow's control-plane / data-plane architecture: ad-hoc agent operations, where operational concerns are tangled into workflow logic, versus BoundFlow, where policy lives in the control plane and workers execute under its governance](demo/architecture.png)
 
 Under the hood the backend runs as three process modes (`server`, `scheduler`,
 `worker`) off one binary sharing Postgres — see
@@ -123,10 +84,9 @@ async def triage(ctx):
     return Complete()
 ```
 
-**Bring your own provider via LangChain.** Wrap any tool-calling LangChain chat
-model in `LangChainLlmClient` and the governance is identical — OpenAI, Google,
-Bedrock, and the rest of LangChain's ecosystem run under the same cost caps, model
-policies, and approval gates:
+Any tool-calling LangChain chat model can be wrapped in `LangChainLlmClient`, and
+governance is identical — OpenAI, Google, Bedrock, and the rest of LangChain's
+ecosystem run under the same cost caps, model policies, and approval gates:
 
 ```python
 from langchain_anthropic import ChatAnthropic          # or ChatOpenAI, ChatVertexAI, ...
@@ -139,13 +99,12 @@ Install with `pip install "boundflow[langchain]"`; see
 [`boundflow.examples.langchain_adapter`](sdk/python/boundflow/examples/langchain_adapter.py)
 for a runnable end-to-end example.
 
-**Orchestrate with LangGraph, governed by BoundFlow.** Build a LangGraph agent
-graph *inside* a workflow with its nodes calling `ctx.run_agent`, so LangGraph
-owns the routing while BoundFlow governs every agent step and the workflow as a
-whole. See [Integrations](docs/integrations.md) and the runnable
+A LangGraph agent graph can be built inside a workflow, with its nodes calling
+`ctx.run_agent`: LangGraph owns the routing while BoundFlow governs every agent step
+and the workflow as a whole. See [Integrations](docs/integrations.md) and the runnable
 [`boundflow.examples.langgraph_workflow`](sdk/python/boundflow/examples/langgraph_workflow.py).
 
-Workflows are **multi-step and stateful**: an operation can park for a human
+Workflows are multi-step and stateful: an operation can park for a human
 decision or chain into a follow-on operation, and the workflow resumes where it
 left off — nothing irreversible runs until the branch it's gated behind does.
 
@@ -200,7 +159,7 @@ rolling back. See [`sdk/python/boundflow/examples/`](sdk/python/boundflow/exampl
 
 ## Quick start
 
-Get a governed agent running in a few minutes. Full walkthrough: **[QUICKSTART.md](QUICKSTART.md)**.
+Run a governed agent end to end in a few steps. Full walkthrough: [QUICKSTART.md](QUICKSTART.md).
 
 ```bash
 # 1. Set a database password (any strong secret)
@@ -230,7 +189,7 @@ python -m boundflow.examples.approval_gate   # human-in-the-loop sign-off
 Manage and observe it from the **`boundflow` CLI** (installed with the SDK):
 
 ```bash
-boundflow workflow list            # your workflows and their state
+boundflow workflow list            # workflows and their state
 boundflow workflow runs <id>       # runs and their outcomes  ·  --json for scripting
 ```
 
@@ -238,14 +197,35 @@ boundflow workflow runs <id>       # runs and their outcomes  ·  --json for scr
 
 ## Observability
 
-Observability is first-class and **OpenTelemetry-native** — no proprietary format,
-no lock-in, so it plugs straight into the telemetry stack you already run. Two
-layers: **run traces** (execution telemetry you export to your own backend) and a
-**governance audit log** (decisions, kept server-side and queryable).
+Observability comes in two distinct forms, on opposite sides of the wire: a
+server-side **governance audit log** of the control plane's own decisions, and
+customer-side **run traces** of execution emitted from the worker. Only the run
+traces are OpenTelemetry-based; the audit log is a durable server-side record,
+queried through the SDK.
+
+**Governance audit log.** Every decision the control plane makes is written to a
+durable, queryable audit log, kept separate from execution telemetry — a decision is
+a governance record, not a trace. It records approval and input outcomes (the
+decision, the actor, and open/decide timestamps) and policy actions: which lifecycle
+rule fired and the resulting base → effective policy change, for both agent-lifecycle
+policy (e.g. a model downgrade) and workflow-lifecycle policy (e.g. a version
+rollback).
+
+```python
+# every decision recorded for a workflow
+log = await cp.get_audit_log(workflow_id=wf.id)
+
+# a single approval, resolved by the approval_id its trace span carries
+record = await cp.get_approval_audit_by_id(approval_id="…")
+# -> decision (approved | rejected | timed_out), actor, opened_at, decided_at
+
+# a policy action: which rule fired, and the base -> effective policy it produced
+actions = await cp.get_agent_policy_audit(workflow_id=wf.id, agent_name="analyst")
+```
 
 **Run traces.** Every operation emits an `OperationTrace` — the `operation → agent
 → llm/tool` tree with token usage and full prompt/response content — to a pluggable
-sink you own. Built-ins: `LoggingTraceSink`, `JsonlFileTraceSink`, and
+sink. Built-ins: `LoggingTraceSink`, `JsonlFileTraceSink`, and
 `OTelTraceSink`, which maps onto OpenTelemetry GenAI semantic conventions and ships
 spans over OTLP to any backend (Jaeger, Tempo, Langfuse, Phoenix, …); all operations
 of one run share a `trace_id`.
@@ -259,16 +239,6 @@ worker = BoundFlowWorker(llm=..., trace_sink=OTelTraceSink(tracer))
 
 See [`sdk/python/examples/otel/`](sdk/python/examples/otel/) for a runnable
 OTLP → Jaeger setup.
-
-**Approval audit.** Approval decisions are governance, not telemetry, so the
-decision / actor / timing live in a durable server-side audit log — the trace
-carries only the `approval_id` (on the `await_approval` span) as the correlation
-key. Look the record up by that id:
-
-```python
-records = await cp.get_approval_audit(approval_id="…")
-# -> decision (approved | rejected | timed_out), actor, opened_at, decided_at
-```
 
 **Inventory.** `cp.list_workflows()` returns every workflow with its current
 lifecycle / workflow state for dashboards.
@@ -304,13 +274,13 @@ separate live-LLM suite (real Anthropic calls) runs on demand.
 
 ## Hosted: BoundFlow Cloud (early access)
 
-Don't want to run or manage the control plane yourself? **BoundFlow Cloud** is an
-early-access managed deployment — same gRPC API, same `pip install boundflow` SDK.
-Inference stays bring-your-own, so your Anthropic key and token spend remain yours;
-we just run the control plane.
+BoundFlow Cloud is an early-access managed deployment of the control plane — same
+gRPC API, same `pip install boundflow` SDK. Inference stays bring-your-own, so
+inference keys and token spend remain on the operator's side; only the control plane
+is hosted.
 
-It's early and design-partner–oriented while we onboard the first users —
-**[reach out](mailto:hello@boundflow.dev)** if you'd like in.
+It is early and design-partner-oriented while the first users onboard —
+[reach out](mailto:hello@boundflow.dev) to request access.
 
 ---
 
