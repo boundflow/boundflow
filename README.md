@@ -104,9 +104,19 @@ A LangGraph agent graph can be built inside a workflow, with its nodes calling
 and the workflow as a whole. See [Integrations](docs/integrations.md) and the runnable
 [`boundflow.examples.langgraph_workflow`](sdk/python/boundflow/examples/langgraph_workflow.py).
 
-Workflows are multi-step and stateful: an operation can park for a human
-decision or chain into a follow-on operation, and the workflow resumes where it
-left off — nothing irreversible runs until the branch it's gated behind does.
+Workflows are multi-step and stateful. Each operation returns one of a small, fixed
+set of outcomes, and the control plane drives the workflow accordingly:
+
+- `Complete` — finish the workflow, optionally with a result.
+- `Next` — chain into a follow-on operation, carrying context forward.
+- `AwaitApproval` — park until a human approves or rejects, then take the
+  corresponding branch.
+- `AwaitInput` — park until external input arrives (or the wait times out), then
+  branch.
+
+The gated outcomes (`AwaitApproval`, `AwaitInput`) persist the workflow's state
+server-side and resume it exactly where it left off when the event arrives — so
+nothing irreversible runs until the branch it's gated behind does.
 
 ```python
 from boundflow import AwaitApproval, Next, Complete
