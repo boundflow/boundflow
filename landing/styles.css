@@ -101,7 +101,7 @@ p { margin: 0 0 1em; color: var(--text-dim); }
   color: var(--text-dim);
   white-space: nowrap;
 }
-.pill { background: rgba(124, 157, 255, 0.12); color: var(--accent-strong); border-color: transparent; margin-left: 0.4em; }
+.pill { display: inline-block; background: rgba(124, 157, 255, 0.12); color: var(--accent-strong); border-color: transparent; margin: 0 0 0.8em; }
 
 /* Buttons */
 .btn {
