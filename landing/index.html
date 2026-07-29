@@ -31,10 +31,13 @@
 
     <section class="hero">
       <div class="hero-inner">
+        <p class="hero-eyebrow">Open source · self-hosted or managed</p>
         <h1>The operational control plane for production AI agents.</h1>
         <p class="hero-sub">
-          Cost caps, approval gates, workflow-lifecycle policy, and a durable audit log —
-          enforced by a control plane, not hand-coded into every agent.
+          Think Kubernetes for agents and workflows. BoundFlow
+          schedules, governs, and audits every run, so cost caps, approval gates, and
+          self-healing lifecycle policies are enforced centrally — not hand-coded into
+          every agent you build.
         </p>
         <div class="hero-cta">
           <a class="btn btn-primary" href="docs/quickstart/">Get started</a>
@@ -60,40 +63,36 @@
 
     <section id="what" class="feature-section">
       <div class="section-inner">
-        <p class="eyebrow">Production guardrails</p>
-        <h2>Agents are easy to demo and hard to guardrail in production.</h2>
+        <p class="eyebrow">Why agents need an operational layer</p>
+        <h2>What makes an agent hard to run unattended?</h2>
         <p class="section-sub">
-          The moment an agent runs unattended, you need answers to: what if it loops?
-          What if it spends $50? What if it's about to do something irreversible?
-          Which model should it use, and when should that change? BoundFlow makes
-          those decisions <strong>policy</strong>, not code you scatter across every agent.
+          Non-determinism is what makes agents powerful — and what makes them risky the
+          moment no one is watching every run. BoundFlow turns each of these three
+          operational risks into <strong>policy</strong>, enforced by a control plane
+          instead of exception-handling code scattered across every agent.
         </p>
         <div class="feature-grid">
           <div class="feature-card">
-            <h3>Cost caps</h3>
-            <p>A <code>max_cost_usd</code> runtime cap halts a run the moment its cost crosses budget.</p>
+            <span class="feature-num">01</span>
+            <h3>Runtime Governance</h3>
+            <p>Guardrails enforced live, mid-run: per-run cost caps, tool-call limits, token and latency ceilings, and model selection. Every execution is validated against policy before it proceeds.</p>
           </div>
           <div class="feature-card">
-            <h3>Human approval gates</h3>
-            <p>Park the workflow for a human decision before it takes an irreversible action.</p>
+            <span class="feature-num">02</span>
+            <h3>Lifecycle Management</h3>
+            <p>A workflow reacts to its own cost, failure, and approval-rejection signals over time — switching models, cooling down, pausing, or rolling back to a known-good version, without manual intervention.</p>
           </div>
           <div class="feature-card">
-            <h3>Tool &amp; output limits</h3>
-            <p>Per-tool call limits and token caps stop runaway output and action blowups before they compound.</p>
-          </div>
-          <div class="feature-card">
-            <h3>Pause, cooldown &amp; rollback</h3>
-            <p>Pause a workflow outright, cool it down after repeated failures, or roll it back to the last good version.</p>
-          </div>
-          <div class="feature-card">
-            <h3>Durable audit log</h3>
-            <p>Every approval and policy decision is recorded and queryable — not scattered across logs.</p>
-          </div>
-          <div class="feature-card">
-            <h3>Durable workflow orchestration</h3>
-            <p>BoundFlow schedules, tracks state, and recovers the whole multi-step workflow — the agent is just one operation inside a process it owns end to end.</p>
+            <span class="feature-num">03</span>
+            <h3>Durable Execution</h3>
+            <p>Runs are checkpointed and leased across a fleet of workers. If one crashes, another resumes the run exactly where it left off — no restart, no lost progress.</p>
           </div>
         </div>
+        <p class="feature-footnote">
+          Every runtime decision and lifecycle action — who or what made it, and why —
+          is written to a durable, queryable audit log, not scattered across
+          application logs.
+        </p>
       </div>
     </section>
 
@@ -152,6 +151,7 @@
           drives and observes workflows, your worker executes them. They never talk
           to each other directly.
         </p>
+        <p class="arch-quote">“We're separating what your agent does from how it's operated in production.”</p>
         <div class="arch-notes">
           <div class="arch-note">
             <h3>Backend</h3>

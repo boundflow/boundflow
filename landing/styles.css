@@ -119,8 +119,16 @@ p { margin: 0 0 1em; color: var(--text-dim); }
 
 /* Hero */
 .hero { padding: 96px 0 64px; text-align: center; }
+.hero-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent-strong);
+  margin: 0 0 1em;
+}
 .hero-sub {
-  max-width: 620px;
+  max-width: 640px;
   margin: 0 auto 2em;
   font-size: 1.15rem;
 }
@@ -149,9 +157,29 @@ section { padding: 72px 0; border-top: 1px solid var(--border); }
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 20px;
+  padding: 24px;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.feature-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
 }
 .feature-card p { margin: 0; font-size: 0.92rem; }
+.feature-num {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--accent-strong);
+  margin-bottom: 0.7em;
+}
+.feature-footnote {
+  margin-top: 1.75em;
+  padding-top: 1.5em;
+  border-top: 1px solid var(--border);
+  font-size: 0.9rem;
+  max-width: 720px;
+}
 
 .who-grid {
   display: grid;
@@ -162,7 +190,9 @@ section { padding: 72px 0; border-top: 1px solid var(--border); }
 .who-card {
   border-left: 3px solid var(--accent);
   padding: 4px 0 4px 18px;
+  transition: border-color 0.15s ease;
 }
+.who-card:hover { border-color: var(--accent-strong); }
 .who-card p { color: var(--text); margin: 0; }
 
 .arch-diagram {
@@ -213,6 +243,15 @@ section { padding: 72px 0; border-top: 1px solid var(--border); }
   max-width: 640px;
 }
 
+.arch-quote {
+  font-size: 1.05rem;
+  font-style: italic;
+  color: var(--text);
+  border-left: 3px solid var(--accent);
+  padding: 0.2em 0 0.2em 18px;
+  max-width: 560px;
+}
+
 .arch-notes {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -224,7 +263,9 @@ section { padding: 72px 0; border-top: 1px solid var(--border); }
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 18px;
+  transition: border-color 0.15s ease;
 }
+.arch-note:hover { border-color: var(--accent); }
 .arch-note p { margin: 0; font-size: 0.92rem; }
 
 /* Cloud + Contact: a distinct, centered closing CTA block, set apart from
