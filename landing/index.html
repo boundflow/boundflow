@@ -137,6 +137,31 @@
       </div>
     </section>
 
+    <section id="watch" class="section">
+      <div class="wrap">
+        <p class="label">watch</p>
+        <h2>Overview and technical walkthrough.</h2>
+        <div class="watch">
+          <div class="video">
+            <button class="video-embed" data-id="N4uV7dq110E" type="button" aria-label="Play the BoundFlow overview">
+              <img src="https://i.ytimg.com/vi/N4uV7dq110E/hqdefault.jpg" alt="" loading="lazy" />
+              <span class="play" aria-hidden="true"></span>
+            </button>
+            <h3>Overview <span class="dur">10 min</span></h3>
+            <p>Why AI workflows need a control plane, the architecture, and how governance works while workflows run in your own infrastructure.</p>
+          </div>
+          <div class="video">
+            <button class="video-embed" data-id="fLfj8RdvhjM" type="button" aria-label="Play the BoundFlow technical demo">
+              <img src="https://i.ytimg.com/vi/fLfj8RdvhjM/hqdefault.jpg" alt="" loading="lazy" />
+              <span class="play" aria-hidden="true"></span>
+            </button>
+            <h3>Technical demo <span class="dur">13 min</span></h3>
+            <p>A hands-on walkthrough: building workflows with operations and primitives, then defining, running, and auditing runtime and lifecycle policies.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section id="architecture" class="section">
       <div class="wrap">
         <p class="label">architecture</p>
@@ -223,6 +248,19 @@
       </div>
     </div>
   </footer>
+
+  <script>
+    document.querySelectorAll('.video-embed').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var iframe = document.createElement('iframe');
+        iframe.src = 'https://www.youtube-nocookie.com/embed/' + el.getAttribute('data-id') + '?autoplay=1&rel=0';
+        iframe.title = 'YouTube video player';
+        iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+        iframe.setAttribute('allowfullscreen', '');
+        el.replaceWith(iframe);
+      });
+    });
+  </script>
 
 </body>
 </html>

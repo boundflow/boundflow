@@ -203,6 +203,34 @@ figcaption { font-family: var(--mono); font-size: 0.8rem; color: var(--text-dim)
 .who div { border-top: 2px solid var(--ink); padding-top: 18px; }
 .who p { margin: 0; color: var(--text); font-size: 0.97rem; }
 
+/* Watch (videos) */
+.watch { display: grid; grid-template-columns: repeat(2, 1fr); gap: 32px; margin-top: 2em; }
+.video-embed {
+  display: block; width: 100%; padding: 0; margin: 0;
+  border: 1px solid var(--border-strong); border-radius: 10px; overflow: hidden;
+  position: relative; aspect-ratio: 16 / 9; background: #000; cursor: pointer;
+}
+.video-embed img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0.92; }
+.video-embed:hover img { opacity: 1; }
+.video-embed .play {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 62px; height: 62px; border-radius: 999px;
+  background: rgba(15, 17, 21, 0.72); border: 1px solid rgba(255, 255, 255, 0.28);
+}
+.video-embed .play::after {
+  content: ""; position: absolute; top: 50%; left: 55%; transform: translate(-50%, -50%);
+  border-style: solid; border-width: 10px 0 10px 17px;
+  border-color: transparent transparent transparent #fff;
+}
+.video-embed:hover .play { background: rgba(31, 79, 216, 0.85); }
+.video iframe {
+  width: 100%; aspect-ratio: 16 / 9; display: block;
+  border: 1px solid var(--border-strong); border-radius: 10px;
+}
+.video h3 { margin: 0.9em 0 0.2em; font-size: 1.05rem; }
+.video .dur { font-family: var(--mono); font-size: 0.78rem; color: var(--text-dim); font-weight: 400; margin-left: 0.5em; }
+.video p { color: var(--text-dim); font-size: 0.95rem; margin: 0; }
+
 /* Closing (dark band) */
 .closing { background: var(--ink); border-top: none; }
 .closing h2 { color: #fff; }
@@ -233,5 +261,5 @@ figcaption { font-family: var(--mono); font-size: 0.8rem; color: var(--text-dim)
 @media (max-width: 900px) {
   .nav-links { display: none; }
   .hero-grid { grid-template-columns: 1fr; gap: 34px; }
-  .pillars, .who, .notes { grid-template-columns: 1fr; gap: 28px; }
+  .pillars, .who, .notes, .watch { grid-template-columns: 1fr; gap: 28px; }
 }
