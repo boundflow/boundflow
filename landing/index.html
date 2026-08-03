@@ -30,7 +30,6 @@
     <section class="hero">
       <div class="wrap hero-grid">
         <div>
-          <p class="label">self-hosted or managed</p>
           <h1>The open-source control plane for operating AI workflows in production.</h1>
           <p class="hero-sub">
             Think Kubernetes for agents and workflows. BoundFlow schedules, governs, and
@@ -61,6 +60,18 @@
         action=<span class="tok-type">SetVersion</span>(target=<span class="tok-num">1</span>),
     ),
 ])</pre>
+        </div>
+      </div>
+    </section>
+
+    <section id="overview" class="section alt">
+      <div class="wrap" style="max-width:880px;">
+        <div class="hero-video">
+          <button class="video-embed" data-id="zLUGEs5E4CQ" type="button" aria-label="Play the BoundFlow 3-minute overview">
+            <img src="https://i.ytimg.com/vi/zLUGEs5E4CQ/maxresdefault.jpg" alt="" loading="lazy" />
+            <span class="play" aria-hidden="true"></span>
+          </button>
+          <p class="hero-vid-cap">the 3-minute overview</p>
         </div>
       </div>
     </section>
@@ -253,7 +264,7 @@
     document.querySelectorAll('.video-embed').forEach(function (el) {
       el.addEventListener('click', function () {
         var iframe = document.createElement('iframe');
-        iframe.src = 'https://www.youtube-nocookie.com/embed/' + el.getAttribute('data-id') + '?autoplay=1&rel=0';
+        iframe.src = 'https://www.youtube.com/embed/' + el.getAttribute('data-id') + '?autoplay=1&rel=0';
         iframe.title = 'YouTube video player';
         iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
         iframe.setAttribute('allowfullscreen', '');

@@ -223,13 +223,15 @@ figcaption { font-family: var(--mono); font-size: 0.8rem; color: var(--text-dim)
   border-color: transparent transparent transparent #fff;
 }
 .video-embed:hover .play { background: rgba(31, 79, 216, 0.85); }
-.video iframe {
+.video iframe, .hero-video iframe {
   width: 100%; aspect-ratio: 16 / 9; display: block;
   border: 1px solid var(--border-strong); border-radius: 10px;
 }
 .video h3 { margin: 0.9em 0 0.2em; font-size: 1.05rem; }
 .video .dur { font-family: var(--mono); font-size: 0.78rem; color: var(--text-dim); font-weight: 400; margin-left: 0.5em; }
 .video p { color: var(--text-dim); font-size: 0.95rem; margin: 0; }
+.hero-video .video-embed { box-shadow: 0 2px 12px rgba(15, 17, 21, 0.09); }
+.hero-vid-cap { font-family: var(--mono); font-size: 0.78rem; color: var(--text-dim); margin: 0.7em 0 0; text-align: center; }
 
 /* Closing (dark band) */
 .closing { background: var(--ink); border-top: none; }
