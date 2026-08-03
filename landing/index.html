@@ -30,7 +30,6 @@
     <section class="hero">
       <div class="wrap hero-grid">
         <div>
-          <p class="label">self-hosted or managed</p>
           <h1>The open-source control plane for operating AI workflows in production.</h1>
           <p class="hero-sub">
             Think Kubernetes for agents and workflows. BoundFlow schedules, governs, and
@@ -61,6 +60,18 @@
         action=<span class="tok-type">SetVersion</span>(target=<span class="tok-num">1</span>),
     ),
 ])</pre>
+        </div>
+      </div>
+    </section>
+
+    <section id="overview" class="section alt">
+      <div class="wrap" style="max-width:880px;">
+        <div class="hero-video">
+          <button class="video-embed" data-id="zLUGEs5E4CQ" type="button" aria-label="Play the BoundFlow 3-minute overview">
+            <img src="https://i.ytimg.com/vi/zLUGEs5E4CQ/maxresdefault.jpg" alt="" loading="lazy" />
+            <span class="play" aria-hidden="true"></span>
+          </button>
+          <p class="hero-vid-cap">the 3-minute overview</p>
         </div>
       </div>
     </section>
@@ -134,6 +145,31 @@
           </div>
           <figcaption>example: a periodic workflow's lifetime cost crosses its budget → automatic rollback to the last good version</figcaption>
         </figure>
+      </div>
+    </section>
+
+    <section id="watch" class="section">
+      <div class="wrap">
+        <p class="label">watch</p>
+        <h2>Overview and technical walkthrough.</h2>
+        <div class="watch">
+          <div class="video">
+            <button class="video-embed" data-id="N4uV7dq110E" type="button" aria-label="Play the BoundFlow overview">
+              <img src="https://i.ytimg.com/vi/N4uV7dq110E/hqdefault.jpg" alt="" loading="lazy" />
+              <span class="play" aria-hidden="true"></span>
+            </button>
+            <h3>Overview <span class="dur">10 min</span></h3>
+            <p>Why AI workflows need a control plane, the architecture, and how governance works while workflows run in your own infrastructure.</p>
+          </div>
+          <div class="video">
+            <button class="video-embed" data-id="fLfj8RdvhjM" type="button" aria-label="Play the BoundFlow technical demo">
+              <img src="https://i.ytimg.com/vi/fLfj8RdvhjM/hqdefault.jpg" alt="" loading="lazy" />
+              <span class="play" aria-hidden="true"></span>
+            </button>
+            <h3>Technical demo <span class="dur">13 min</span></h3>
+            <p>A hands-on walkthrough: building workflows with operations and primitives, then defining, running, and auditing runtime and lifecycle policies.</p>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -223,6 +259,19 @@
       </div>
     </div>
   </footer>
+
+  <script>
+    document.querySelectorAll('.video-embed').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var iframe = document.createElement('iframe');
+        iframe.src = 'https://www.youtube.com/embed/' + el.getAttribute('data-id') + '?autoplay=1&rel=0';
+        iframe.title = 'YouTube video player';
+        iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+        iframe.setAttribute('allowfullscreen', '');
+        el.replaceWith(iframe);
+      });
+    });
+  </script>
 
 </body>
 </html>
