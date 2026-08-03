@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/boundflow/boundflow/internal/domain"
+	"github.com/boundflow/boundflow/internal/storage"
 )
 
 type TenantRepo struct {
@@ -95,9 +96,51 @@ func (r *TenantRepo) ListForTenantGroup(ctx context.Context, tenantGroupID strin
 	return out, nil
 }
 
+// Delete removes a tenant and purges the operational rows of its workflows. Workflow
+// deletion is a permanent soft-delete (lifecycle_state = 'deleted'), so those rows
+// would otherwise hold the tenant's foreign key forever; this drops them once they are
+// deleted. Audit events carry no foreign key and are intentionally left intact, so the
+// record of what ran survives the tenant. Refuses while any workflow is still live.
 func (r *TenantRepo) Delete(ctx context.Context, id string) error {
-	_, err := r.pool.Exec(ctx, `DELETE FROM tenants WHERE id = $1`, id)
+	tx, err := r.pool.Begin(ctx)
 	if err != nil {
+		return fmt.Errorf("delete tenant: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var live int
+	err = tx.QueryRow(ctx,
+		`SELECT count(*) FROM workflows WHERE tenant_id = $1 AND lifecycle_state != $2`,
+		id, domain.LifecycleStateDeleted,
+	).Scan(&live)
+	if err != nil {
+		return fmt.Errorf("count live workflows: %w", err)
+	}
+	if live > 0 {
+		return fmt.Errorf("%w: %d remaining", storage.ErrTenantHasWorkflows, live)
+	}
+
+	// Ordered children-first; agent_states cascades with the workflow row.
+	for _, q := range []string{
+		`DELETE FROM jobs WHERE workflow_id IN (SELECT id FROM workflows WHERE tenant_id = $1)`,
+		`DELETE FROM customer_requests WHERE workflow_id IN (SELECT id FROM workflows WHERE tenant_id = $1)`,
+		`DELETE FROM workflow_version_metrics WHERE workflow_id IN (SELECT id FROM workflows WHERE tenant_id = $1)`,
+		`DELETE FROM workflows WHERE tenant_id = $1`,
+	} {
+		if _, err := tx.Exec(ctx, q, id); err != nil {
+			return fmt.Errorf("purge tenant workflows: %w", err)
+		}
+	}
+
+	tag, err := tx.Exec(ctx, `DELETE FROM tenants WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete tenant: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return storage.ErrNotFound
+	}
+
+	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("delete tenant: %w", err)
 	}
 	return nil

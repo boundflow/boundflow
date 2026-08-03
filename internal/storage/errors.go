@@ -7,4 +7,5 @@ var (
 	ErrNotFound                 = errors.New("not found")
 	ErrInvalidLifecycleState    = errors.New("invalid lifecycle state")
 	ErrDeletionAlreadyRequested = errors.New("deletion already requested")
+	ErrTenantHasWorkflows       = errors.New("tenant still has workflows that are not deleted")
 )
