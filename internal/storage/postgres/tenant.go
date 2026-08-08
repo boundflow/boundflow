@@ -135,13 +135,13 @@ func (r *TenantRepo) PurgeIfEmpty(ctx context.Context, id string) (bool, error) 
 	return tag.RowsAffected() > 0, nil
 }
 
-// ListPurgeable returns soft-deleted tenant IDs in the partition with no live workflows
-// left (workflow_count = 0) — a cheap candidate filter; PurgeIfEmpty does the
-// authoritative ground-truth check before actually deleting.
+// ListPurgeable returns soft-deleted tenant IDs in the partition. MarkDeleted only sets
+// deleted_at when workflow_count = 0, and nothing can increment it afterward (Create is
+// guarded on deleted_at IS NULL), so workflow_count is always 0 once a tenant is
+// soft-deleted — no need to filter on it here.
 func (r *TenantRepo) ListPurgeable(ctx context.Context, partitionID string) ([]string, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT id FROM tenants
-		 WHERE scheduler_partition_id = $1 AND deleted_at IS NOT NULL AND workflow_count = 0`,
+		`SELECT id FROM tenants WHERE scheduler_partition_id = $1 AND deleted_at IS NOT NULL`,
 		partitionID,
 	)
 	if err != nil {

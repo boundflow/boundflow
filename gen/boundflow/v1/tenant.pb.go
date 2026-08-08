@@ -29,6 +29,7 @@ type Tenant struct {
 	TenantGroupId   *string                `protobuf:"bytes,3,opt,name=tenant_group_id,json=tenantGroupId,proto3,oneof" json:"tenant_group_id,omitempty"`
 	PolicyOverrides *PolicySet             `protobuf:"bytes,4,opt,name=policy_overrides,json=policyOverrides,proto3" json:"policy_overrides,omitempty"`
 	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	DeletedAt       *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=deleted_at,json=deletedAt,proto3,oneof" json:"deleted_at,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -98,19 +99,29 @@ func (x *Tenant) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *Tenant) GetDeletedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DeletedAt
+	}
+	return nil
+}
+
 var File_boundflow_v1_tenant_proto protoreflect.FileDescriptor
 
 const file_boundflow_v1_tenant_proto_rawDesc = "" +
 	"\n" +
-	"\x19boundflow/v1/tenant.proto\x12\fboundflow.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x19boundflow/v1/policy.proto\"\xec\x01\n" +
+	"\x19boundflow/v1/tenant.proto\x12\fboundflow.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x19boundflow/v1/policy.proto\"\xbb\x02\n" +
 	"\x06Tenant\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12+\n" +
 	"\x0ftenant_group_id\x18\x03 \x01(\tH\x00R\rtenantGroupId\x88\x01\x01\x12B\n" +
 	"\x10policy_overrides\x18\x04 \x01(\v2\x17.boundflow.v1.PolicySetR\x0fpolicyOverrides\x129\n" +
 	"\n" +
-	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAtB\x12\n" +
-	"\x10_tenant_group_idB=Z;github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1b\x06proto3"
+	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12>\n" +
+	"\n" +
+	"deleted_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\tdeletedAt\x88\x01\x01B\x12\n" +
+	"\x10_tenant_group_idB\r\n" +
+	"\v_deleted_atB=Z;github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1b\x06proto3"
 
 var (
 	file_boundflow_v1_tenant_proto_rawDescOnce sync.Once
@@ -133,11 +144,12 @@ var file_boundflow_v1_tenant_proto_goTypes = []any{
 var file_boundflow_v1_tenant_proto_depIdxs = []int32{
 	1, // 0: boundflow.v1.Tenant.policy_overrides:type_name -> boundflow.v1.PolicySet
 	2, // 1: boundflow.v1.Tenant.created_at:type_name -> google.protobuf.Timestamp
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	2, // 2: boundflow.v1.Tenant.deleted_at:type_name -> google.protobuf.Timestamp
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_boundflow_v1_tenant_proto_init() }
