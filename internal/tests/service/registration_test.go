@@ -16,7 +16,7 @@ func TestCreateTenantGroup(t *testing.T) {
 	tenantGroupRepo := mocks.NewMockTenantGroupRepository(ctrl)
 	tenantRepo := mocks.NewMockTenantRepository(ctrl)
 	modelPricingRepo := mocks.NewMockModelPricingRepository(ctrl)
-	svc := service.NewRegistrationService(tenantGroupRepo, tenantRepo, modelPricingRepo)
+	svc := service.NewRegistrationService(tenantGroupRepo, tenantRepo, modelPricingRepo, 10, discardLogger)
 
 	tenantGroupRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any()).
@@ -49,7 +49,7 @@ func TestCreateTenant(t *testing.T) {
 	tenantGroupRepo := mocks.NewMockTenantGroupRepository(ctrl)
 	tenantRepo := mocks.NewMockTenantRepository(ctrl)
 	modelPricingRepo := mocks.NewMockModelPricingRepository(ctrl)
-	svc := service.NewRegistrationService(tenantGroupRepo, tenantRepo, modelPricingRepo)
+	svc := service.NewRegistrationService(tenantGroupRepo, tenantRepo, modelPricingRepo, 10, discardLogger)
 
 	t.Run("with explicit tenant_group_id", func(t *testing.T) {
 		tenantRepo.EXPECT().
@@ -97,7 +97,7 @@ func TestGetTenantGroup(t *testing.T) {
 	tenantGroupRepo := mocks.NewMockTenantGroupRepository(ctrl)
 	tenantRepo := mocks.NewMockTenantRepository(ctrl)
 	modelPricingRepo := mocks.NewMockModelPricingRepository(ctrl)
-	svc := service.NewRegistrationService(tenantGroupRepo, tenantRepo, modelPricingRepo)
+	svc := service.NewRegistrationService(tenantGroupRepo, tenantRepo, modelPricingRepo, 10, discardLogger)
 
 	tenantGroupRepo.EXPECT().
 		Get(gomock.Any(), "group-1").
@@ -117,7 +117,7 @@ func TestGetTenant(t *testing.T) {
 	tenantGroupRepo := mocks.NewMockTenantGroupRepository(ctrl)
 	tenantRepo := mocks.NewMockTenantRepository(ctrl)
 	modelPricingRepo := mocks.NewMockModelPricingRepository(ctrl)
-	svc := service.NewRegistrationService(tenantGroupRepo, tenantRepo, modelPricingRepo)
+	svc := service.NewRegistrationService(tenantGroupRepo, tenantRepo, modelPricingRepo, 10, discardLogger)
 
 	tenantRepo.EXPECT().
 		Get(gomock.Any(), "tenant-1").

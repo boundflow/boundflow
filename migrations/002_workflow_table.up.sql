@@ -45,5 +45,8 @@ CREATE TABLE workflows (
     last_gate_opened_at    TIMESTAMPTZ,
     last_gate_timeout_at   TIMESTAMPTZ,
     created_at                TIMESTAMPTZ NOT NULL DEFAULT now(),
-    deletion_requested_at     TIMESTAMPTZ
+    deletion_requested_at     TIMESTAMPTZ,
+    deletion_finalized_at     TIMESTAMPTZ
 );
+
+CREATE INDEX idx_workflows_purgeable ON workflows (scheduler_partition_id, deletion_finalized_at) WHERE lifecycle_state = 'deleted';

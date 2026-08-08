@@ -88,6 +88,12 @@ func (h *WorkflowServiceHandler) CreateWorkflow(ctx context.Context, req *boundf
 		if errors.Is(err, storage.ErrAlreadyExists) {
 			return nil, status.Errorf(codes.AlreadyExists, "workflow instance already exists")
 		}
+		if errors.Is(err, storage.ErrTenantDeleted) {
+			return nil, status.Errorf(codes.FailedPrecondition, "tenant has been deleted")
+		}
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Errorf(codes.NotFound, "tenant not found")
+		}
 		if errors.Is(err, service.ErrInvalidRepeatInterval) {
 			return nil, status.Errorf(codes.InvalidArgument, "%v", err)
 		}

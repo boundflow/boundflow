@@ -50,3 +50,11 @@ func (r *VersionMetricsRepo) GetCurrentVersionMetrics(ctx context.Context, workf
 
 	return &m, nil
 }
+
+func (r *VersionMetricsRepo) DeleteForWorkflow(ctx context.Context, workflowID string) error {
+	_, err := r.pool.Exec(ctx, `DELETE FROM workflow_version_metrics WHERE workflow_id = $1`, workflowID)
+	if err != nil {
+		return fmt.Errorf("delete version metrics for workflow: %w", err)
+	}
+	return nil
+}
