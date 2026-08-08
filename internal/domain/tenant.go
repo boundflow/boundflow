@@ -11,9 +11,11 @@ type TenantGroup struct {
 }
 
 type Tenant struct {
-	ID              string
-	Name            string
-	TenantGroupID   string // defaults to "default" if unset
-	PolicyOverrides *PolicySet
-	CreatedAt       time.Time
+	ID                   string
+	Name                 string
+	TenantGroupID        string
+	PolicyOverrides      *PolicySet
+	CreatedAt            time.Time
+	DeletedAt            *time.Time
+	SchedulerPartitionID string
 }

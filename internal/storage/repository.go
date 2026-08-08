@@ -18,7 +18,14 @@ type TenantRepository interface {
 	Create(ctx context.Context, tenant *domain.Tenant) error
 	Get(ctx context.Context, id string) (*domain.Tenant, error)
 	ListForTenantGroup(ctx context.Context, tenantGroupID string) ([]*domain.Tenant, error)
-	Delete(ctx context.Context, id string) error
+	// MarkDeleted soft-deletes a tenant. Guarded on workflow_count = 0; any guard
+	// failure (missing, already deleted, or still has workflows) returns ErrTenantHasWorkflows.
+	MarkDeleted(ctx context.Context, id string) error
+	// PurgeIfEmpty hard-deletes a soft-deleted tenant if it has no workflow rows left.
+	// Returns purged=false, nil if not yet eligible.
+	PurgeIfEmpty(ctx context.Context, id string) (purged bool, err error)
+	// ListPurgeable returns soft-deleted tenant IDs in the partition with workflow_count = 0.
+	ListPurgeable(ctx context.Context, partitionID string) ([]string, error)
 }
 
 type WorkflowRepository interface {
@@ -62,9 +69,16 @@ type WorkflowRepository interface {
 	ResolveInterruptedWorkflow(ctx context.Context, id string, requestID string) (bool, error)
 	UpdateSchedulerPartition(ctx context.Context, id string, partitionID string) error
 	UpdateLastCompletedRequestAt(ctx context.Context, id string, t time.Time) error
-	// TenantGroupIDForWorkflow returns the tenant_group_id for a workflow via a single JOIN.
-	// Used for ownership checks. Returns ErrNotFound if the workflow does not exist.
+	// TenantGroupIDForWorkflow returns the tenant_group_id for a workflow via a single JOIN,
+	// regardless of lifecycle state (including soft-deleted). Used for ownership checks.
+	// Returns ErrNotFound if the workflow does not exist.
 	TenantGroupIDForWorkflow(ctx context.Context, workflowID string) (string, error)
+	// PurgeDeleted deletes the workflows row itself. Only call once every child table has
+	// already been cleared for this workflow. Returns purged=true if the row was removed.
+	PurgeDeleted(ctx context.Context, id string) (purged bool, err error)
+	// ListPurgeable returns finalized (lifecycle_state = deleted) workflow IDs in the
+	// partition older than olderThan.
+	ListPurgeable(ctx context.Context, partitionID string, olderThan time.Duration) ([]string, error)
 }
 
 type SchedulerPartitionRepository interface {
@@ -257,6 +271,8 @@ type VersionMetricsRepository interface {
 	// GetCurrentVersionMetrics returns the metrics row with the highest epoch for the
 	// given workflow instance and version. Returns nil if no row exists yet.
 	GetCurrentVersionMetrics(ctx context.Context, workflowID string, version int) (*domain.WorkflowVersionMetrics, error)
+	// DeleteForWorkflow removes all workflow_version_metrics rows for the given workflow.
+	DeleteForWorkflow(ctx context.Context, workflowID string) error
 }
 
 type ApiKeyRepository interface {
@@ -306,4 +322,6 @@ type CustomerRequestRepository interface {
 	// CountUnscheduledRequests returns how many requests are queued (status unscheduled)
 	// for a workflow — the backlog depth used to enforce max_queue_depth in queue mode.
 	CountUnscheduledRequests(ctx context.Context, workflowID string) (int, error)
+	// DeleteForWorkflow removes all customer_requests rows for the given workflow.
+	DeleteForWorkflow(ctx context.Context, workflowID string) error
 }

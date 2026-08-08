@@ -21,6 +21,7 @@ type ServerConfig struct {
 
 type SchedulerConfig struct {
 	BaseConfig
+	WorkflowPurgeAgeSeconds int
 }
 
 type WorkerConfig struct {
@@ -52,7 +53,10 @@ func LoadServer() *ServerConfig {
 }
 
 func LoadScheduler() *SchedulerConfig {
-	return &SchedulerConfig{BaseConfig: loadBase()}
+	return &SchedulerConfig{
+		BaseConfig:              loadBase(),
+		WorkflowPurgeAgeSeconds: envInt("BOUNDFLOW_WORKFLOW_PURGE_AGE_SECONDS"),
+	}
 }
 
 func LoadWorker() *WorkerConfig {

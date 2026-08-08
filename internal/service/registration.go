@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,20 +16,26 @@ import (
 const DefaultTenantGroupID = "default"
 
 type RegistrationService struct {
-	tenantGroups storage.TenantGroupRepository
-	tenants      storage.TenantRepository
-	modelPricing storage.ModelPricingRepository
+	tenantGroups  storage.TenantGroupRepository
+	tenants       storage.TenantRepository
+	modelPricing  storage.ModelPricingRepository
+	numPartitions int
+	log           *slog.Logger
 }
 
 func NewRegistrationService(
 	tenantGroups storage.TenantGroupRepository,
 	tenants storage.TenantRepository,
 	modelPricing storage.ModelPricingRepository,
+	numPartitions int,
+	log *slog.Logger,
 ) *RegistrationService {
 	return &RegistrationService{
-		tenantGroups: tenantGroups,
-		tenants:      tenants,
-		modelPricing: modelPricing,
+		tenantGroups:  tenantGroups,
+		tenants:       tenants,
+		modelPricing:  modelPricing,
+		numPartitions: numPartitions,
+		log:           log.With("component", "registration_service"),
 	}
 }
 
@@ -88,6 +95,7 @@ func (s *RegistrationService) DeleteTenantGroup(ctx context.Context, id string) 
 func (s *RegistrationService) CreateTenant(ctx context.Context, tenant *domain.Tenant) (*domain.Tenant, error) {
 	tenant.ID = uuid.New().String()
 	tenant.CreatedAt = time.Now()
+	tenant.SchedulerPartitionID = partitionForID(tenant.ID, s.numPartitions)
 
 	if tenant.TenantGroupID == "" {
 		tenant.TenantGroupID = DefaultTenantGroupID
@@ -117,8 +125,13 @@ func (s *RegistrationService) ListTenants(ctx context.Context, tenantGroupID str
 }
 
 func (s *RegistrationService) DeleteTenant(ctx context.Context, id string) error {
-	if err := s.tenants.Delete(ctx, id); err != nil {
+	if err := s.tenants.MarkDeleted(ctx, id); err != nil {
 		return fmt.Errorf("delete tenant: %w", err)
 	}
+
+	if _, err := s.tenants.PurgeIfEmpty(ctx, id); err != nil {
+		s.log.Error("best-effort tenant purge failed, periodic reconciler will retry", "tenant_id", id, "error", err)
+	}
+
 	return nil
 }

@@ -124,6 +124,14 @@ func (r *CustomerRequestRepo) CreateDuePeriodicRequest(ctx context.Context, req 
 // AbandonUnscheduledRequests fails every unscheduled request for the workflow. Safe to
 // call repeatedly - the periodic reconciler calls it again for any workflow still
 // waiting to finalize deletion.
+func (r *CustomerRequestRepo) DeleteForWorkflow(ctx context.Context, workflowID string) error {
+	_, err := r.pool.Exec(ctx, `DELETE FROM customer_requests WHERE workflow_id = $1`, workflowID)
+	if err != nil {
+		return fmt.Errorf("delete customer requests for workflow: %w", err)
+	}
+	return nil
+}
+
 func (r *CustomerRequestRepo) AbandonUnscheduledRequests(ctx context.Context, workflowID string) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE customer_requests SET status = 'abandoned' WHERE workflow_id = $1 AND status = 'unscheduled'`,

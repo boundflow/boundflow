@@ -13,4 +13,5 @@ message Tenant {
   optional string tenant_group_id = 3;
   PolicySet policy_overrides = 4;
   google.protobuf.Timestamp created_at = 5;
+  optional google.protobuf.Timestamp deleted_at = 6;
 }

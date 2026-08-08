@@ -52,6 +52,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Shorten the workflow purge-age on this ephemeral checkout only, so
+      # purge-reconciler tests don't have to wait the production default (1h).
+      - name: Shorten purge age for tests
+        run: |
+          sed -i 's/BOUNDFLOW_WORKFLOW_PURGE_AGE_SECONDS: "3600"/BOUNDFLOW_WORKFLOW_PURGE_AGE_SECONDS: "5"/' docker-compose.yml
+
       # Build + start the backend (postgres + server + scheduler + worker).
       # --wait blocks until postgres is healthy and migrate has completed.
       - name: Start backend

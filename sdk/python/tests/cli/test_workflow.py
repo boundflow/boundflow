@@ -187,8 +187,10 @@ def test_delete_workflow_removes_it(runner, boundflow_api_key):
     assert result["status"] == "ok"
 
     # Idle workflow (nothing in flight): DeleteWorkflow finalizes synchronously,
-    # so it's gone by the time the call returns.
-    run_expect_fail(runner, boundflow_api_key, ["workflow", "get", wf_id])
+    # but the workflow stays gettable (soft-deleted, not purged) until the
+    # WorkflowPurgeReconciler physically removes it later.
+    data = run(runner, boundflow_api_key, ["workflow", "get", wf_id])
+    assert data["lifecycle_state"] == "deleted"
 
 
 def test_get_workflow_deletion_requested_at_is_null_before_delete(runner, boundflow_api_key):

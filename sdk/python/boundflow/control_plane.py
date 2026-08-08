@@ -42,6 +42,7 @@ class Tenant:
     id: str
     name: str
     tenant_group_id: str
+    deleted_at: datetime | None = None
 
 
 class InvokeMode(str, Enum):
@@ -544,7 +545,8 @@ class ControlPlaneClient:
         resp = await self._reg.CreateTenant(
             reg.CreateTenantRequest(tenant=tn_pb.Tenant(name=name)),
             metadata=self._metadata)
-        return Tenant(resp.tenant.id, resp.tenant.name, resp.tenant.tenant_group_id)
+        return Tenant(resp.tenant.id, resp.tenant.name, resp.tenant.tenant_group_id,
+                      _ts(resp.tenant, "deleted_at"))
 
     async def get_tenant_group(self, tenant_group_id: str) -> TenantGroup:
         resp = await self._reg.GetTenantGroup(
@@ -561,7 +563,8 @@ class ControlPlaneClient:
         resp = await self._reg.GetTenant(
             reg.GetTenantRequest(id=tenant_id),
             metadata=self._metadata)
-        return Tenant(resp.tenant.id, resp.tenant.name, resp.tenant.tenant_group_id)
+        return Tenant(resp.tenant.id, resp.tenant.name, resp.tenant.tenant_group_id,
+                      _ts(resp.tenant, "deleted_at"))
 
     async def delete_tenant(self, tenant_id: str) -> None:
         await self._reg.DeleteTenant(
@@ -572,7 +575,7 @@ class ControlPlaneClient:
         """The caller's tenants, scoped to their tenant group (resolved from the API key)."""
         resp = await self._reg.ListTenants(
             reg.ListTenantsRequest(), metadata=self._metadata)
-        return [Tenant(t.id, t.name, t.tenant_group_id) for t in resp.tenants]
+        return [Tenant(t.id, t.name, t.tenant_group_id, _ts(t, "deleted_at")) for t in resp.tenants]
 
     # ── Pricing ──────────────────────────────────────────────────────────────
 

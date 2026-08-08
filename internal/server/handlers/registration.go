@@ -211,6 +211,9 @@ func (h *RegistrationHandler) DeleteTenant(ctx context.Context, req *boundflowv1
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Errorf(codes.NotFound, "tenant not found")
 		}
+		if errors.Is(err, storage.ErrTenantHasWorkflows) {
+			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
+		}
 		return nil, status.Errorf(codes.Internal, "delete tenant: %v", err)
 	}
 

@@ -48,5 +48,9 @@ func TenantToProto(t *domain.Tenant) *boundflowv1.Tenant {
 		pb.PolicyOverrides = PolicySetToProto(*t.PolicyOverrides)
 	}
 
+	if t.DeletedAt != nil {
+		pb.DeletedAt = timestamppb.New(*t.DeletedAt)
+	}
+
 	return pb
 }

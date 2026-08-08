@@ -8,9 +8,14 @@ CREATE TABLE tenant_groups (
 INSERT INTO tenant_groups (id, name) VALUES ('default', 'Default');
 
 CREATE TABLE tenants (
-    id               TEXT PRIMARY KEY,
-    tenant_group_id  TEXT NOT NULL DEFAULT 'default' REFERENCES tenant_groups(id),
-    name             TEXT NOT NULL,
-    policy_overrides JSONB,
-    created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+    id                      TEXT PRIMARY KEY,
+    tenant_group_id         TEXT NOT NULL DEFAULT 'default' REFERENCES tenant_groups(id),
+    name                    TEXT NOT NULL,
+    policy_overrides        JSONB,
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at              TIMESTAMPTZ,
+    workflow_count          INTEGER NOT NULL DEFAULT 0,
+    scheduler_partition_id  TEXT
 );
+
+CREATE INDEX idx_tenants_purgeable ON tenants (scheduler_partition_id) WHERE deleted_at IS NOT NULL;

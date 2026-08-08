@@ -10,9 +10,7 @@ from __future__ import annotations
 
 import asyncio
 
-import pytest
-
-from boundflow import BoundFlowWorker, Complete, InvokeMode, NotFoundError, WorkflowConfig
+from boundflow import BoundFlowWorker, Complete, InvokeMode, WorkflowConfig
 
 from .conftest import WORKER_ADDRESS, create_isolated_tenant, dummy_mock, run_worker
 
@@ -23,8 +21,11 @@ async def test_delete_idle_workflow_finalizes_immediately(cp):
 
     await cp.delete_workflow(wf.id)
 
-    with pytest.raises(NotFoundError):
-        await cp.get_workflow(wf.id)
+    # Idle workflow: DeleteWorkflow finalizes synchronously, but the workflow
+    # stays gettable (soft-deleted, not purged) until WorkflowPurgeReconciler
+    # physically removes it later.
+    info = await cp.get_workflow(wf.id)
+    assert info.lifecycle_state.value == "deleted"
 
 
 async def test_delete_mid_flight_stays_visible_then_reconciler_finalizes(cp):
@@ -54,11 +55,12 @@ async def test_delete_mid_flight_stays_visible_then_reconciler_finalizes(cp):
 
         # The reconciler sweeps on a fixed interval (30s server-side); poll well
         # past that for it to notice the run finished and finalize the delete.
+        # The workflow stays gettable throughout (soft-deleted, not purged) —
+        # only lifecycle_state flips to deleted, it never 404s from this alone.
         deadline = asyncio.get_event_loop().time() + 60
         while True:
-            try:
-                await cp.get_workflow(wf.id)
-            except NotFoundError:
+            info = await cp.get_workflow(wf.id)
+            if info.lifecycle_state.value == "deleted":
                 break
             assert asyncio.get_event_loop().time() < deadline, \
                 "workflow was never finalized as deleted"

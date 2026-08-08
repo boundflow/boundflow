@@ -28,15 +28,22 @@ func (r *WorkflowRepo) Create(ctx context.Context, instance *domain.Workflow) er
 	if err != nil {
 		return fmt.Errorf("marshal lifecycle policy: %w", err)
 	}
-	_, err = r.pool.Exec(ctx,
-		`INSERT INTO workflows
+
+	tag, err := r.pool.Exec(ctx,
+		`WITH reserved AS (
+		     UPDATE tenants SET workflow_count = workflow_count + 1
+		     WHERE id = $1 AND deleted_at IS NULL
+		     RETURNING id
+		 )
+		 INSERT INTO workflows
 		   (id, tenant_id, workflow_type,
 		    current_workflow_version, invoke_timeout_seconds, repeat_every_seconds, triggerable,
 		    invoke_mode, max_queue_depth,
 		    lifecycle_state, workflow_state, lifecycle_policy, scheduler_partition_id,
 		    last_completed_request_at, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
-		instance.ID, instance.TenantID, instance.WorkflowType,
+		 SELECT $2, $1, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
+		 WHERE EXISTS (SELECT 1 FROM reserved)`,
+		instance.TenantID, instance.ID, instance.WorkflowType,
 		instance.CurrentWorkflowVersion,
 		instance.WorkflowConfig.InvokeTimeoutSeconds,
 		instance.WorkflowConfig.RepeatEverySeconds,
@@ -47,6 +54,17 @@ func (r *WorkflowRepo) Create(ctx context.Context, instance *domain.Workflow) er
 	)
 	if err != nil {
 		return handleError(err, "workflow instance")
+	}
+	if tag.RowsAffected() == 0 {
+		var deletedAt *time.Time
+		lookupErr := r.pool.QueryRow(ctx, `SELECT deleted_at FROM tenants WHERE id = $1`, instance.TenantID).Scan(&deletedAt)
+		if errors.Is(lookupErr, pgx.ErrNoRows) {
+			return storage.ErrNotFound
+		}
+		if lookupErr != nil {
+			return fmt.Errorf("lookup tenant for create workflow: %w", lookupErr)
+		}
+		return storage.ErrTenantDeleted
 	}
 	return nil
 }
@@ -246,17 +264,64 @@ func (r *WorkflowRepo) MarkDeletionRequested(ctx context.Context, id string) err
 	return nil
 }
 
-// FinalizeDeleted marks the workflow deleted. Only call after
-// CustomerRequestRepo.HasRunningRequest reports nothing running.
+// FinalizeDeleted marks the workflow deleted and decrements its tenant's workflow_count
+// in one statement. Only call after CustomerRequestRepo.HasRunningRequest reports nothing
+// running. Idempotent: a workflow already lifecycle_state = deleted is a no-op.
 func (r *WorkflowRepo) FinalizeDeleted(ctx context.Context, id string) error {
 	_, err := r.pool.Exec(ctx,
-		`UPDATE workflows SET lifecycle_state = $1 WHERE id = $2`,
+		`WITH deleted_workflow AS (
+		     UPDATE workflows SET lifecycle_state = $1, deletion_finalized_at = now()
+		     WHERE id = $2 AND lifecycle_state != $1
+		     RETURNING tenant_id
+		 )
+		 UPDATE tenants SET workflow_count = workflow_count - 1
+		 WHERE id = (SELECT tenant_id FROM deleted_workflow) AND workflow_count > 0`,
 		domain.LifecycleStateDeleted, id,
 	)
 	if err != nil {
 		return fmt.Errorf("finalize deleted: %w", err)
 	}
 	return nil
+}
+
+// PurgeDeleted deletes the workflows row itself. Only call once every child table
+// (customer_requests, workflow_version_metrics; agent_state cascades automatically) has
+// already been cleared for this workflow by WorkflowPurgeReconciler.
+func (r *WorkflowRepo) PurgeDeleted(ctx context.Context, id string) (bool, error) {
+	tag, err := r.pool.Exec(ctx,
+		`DELETE FROM workflows WHERE id = $1 AND lifecycle_state = $2`,
+		id, domain.LifecycleStateDeleted,
+	)
+	if err != nil {
+		return false, fmt.Errorf("purge workflow: %w", err)
+	}
+	return tag.RowsAffected() > 0, nil
+}
+
+// ListPurgeable returns finalized (lifecycle_state = deleted) workflow IDs in the
+// partition whose deletion_finalized_at is older than olderThan.
+func (r *WorkflowRepo) ListPurgeable(ctx context.Context, partitionID string, olderThan time.Duration) ([]string, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT id FROM workflows
+		 WHERE scheduler_partition_id = $1
+		   AND lifecycle_state = $2
+		   AND deletion_finalized_at < now() - ($3 * interval '1 second')`,
+		partitionID, domain.LifecycleStateDeleted, olderThan.Seconds(),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list purgeable workflows: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan purgeable workflow id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
 }
 
 // ListPendingDeletion returns IDs of workflows in the partition where deletion has been
@@ -461,13 +526,16 @@ func (r *WorkflowRepo) UpdateLastCompletedRequestAt(ctx context.Context, id stri
 	return nil
 }
 
+// TenantGroupIDForWorkflow resolves ownership regardless of lifecycle state, including
+// soft-deleted (lifecycle_state = deleted) workflows — a soft-deleted workflow should
+// still be readable by its owner until it's actually purged.
 func (r *WorkflowRepo) TenantGroupIDForWorkflow(ctx context.Context, workflowID string) (string, error) {
 	var groupID string
 	err := r.pool.QueryRow(ctx,
 		`SELECT t.tenant_group_id
 		 FROM workflows ri
 		 JOIN tenants t ON t.id = ri.tenant_id
-		 WHERE ri.id = $1 AND ri.lifecycle_state != 'deleted'`,
+		 WHERE ri.id = $1`,
 		workflowID,
 	).Scan(&groupID)
 	if err != nil {

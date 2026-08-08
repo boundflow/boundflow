@@ -102,7 +102,7 @@ func runServer(sigCh <-chan os.Signal) {
 	sched := internalscheduler.NewScheduler("server", 30, 25, partitionRepo, schedulerRepo, customerRequestRepo, workflowRepo, agentStateRepo, jobRepo, metricsHandler, policyResolver, auditRepo, logger)
 
 	modelPricingRepo := postgres.NewModelPricingRepo(pool)
-	regSvc := service.NewRegistrationService(tenantGroupRepo, tenantRepo, modelPricingRepo)
+	regSvc := service.NewRegistrationService(tenantGroupRepo, tenantRepo, modelPricingRepo, cfg.NumPartitions, logger)
 	lifecycleSvc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, versionMetricsRepo, sched, sched, sched, auditRepo, cfg.NumPartitions, cfg.PeriodicPollSeconds, logger)
 
 	authn := auth.NewAuthenticator(postgres.NewApiKeyRepo(pool))
@@ -128,6 +128,7 @@ func runScheduler(sigCh <-chan os.Signal) {
 	requirePositive("BOUNDFLOW_NUM_PARTITIONS", cfg.NumPartitions)
 	requirePositive("BOUNDFLOW_MAX_PARTITIONS_PER_SCHEDULER", cfg.MaxPartitionsPerScheduler)
 	requirePositive("BOUNDFLOW_PERIODIC_POLL_SECONDS", cfg.PeriodicPollSeconds)
+	requirePositive("BOUNDFLOW_WORKFLOW_PURGE_AGE_SECONDS", cfg.WorkflowPurgeAgeSeconds)
 
 	pool := mustConnectDB(cfg.DatabaseURL, logger)
 	defer pool.Close()
@@ -165,9 +166,13 @@ func runScheduler(sigCh <-chan os.Signal) {
 		inputTimeouts := internalscheduler.NewInputTimeoutResolver(30, jobRepo, auditRepo, logger)
 		// Finishes deletions left pending by InitiateDelete once nothing's left in flight.
 		deletionReconciler := internalscheduler.NewDeletionReconciler(30, workflowRepo, customerRequestRepo, logger)
+		// Purges finalized workflows' operational rows once they're past the retention window.
+		workflowPurgeReconciler := internalscheduler.NewWorkflowPurgeReconciler(30, cfg.WorkflowPurgeAgeSeconds, workflowRepo, customerRequestRepo, versionMetricsRepo, logger)
+		// Hard-deletes soft-deleted tenants once their workflows have all been purged.
+		tenantPurgeReconciler := internalscheduler.NewTenantPurgeReconciler(30, tenantRepo, logger)
 		// Resolver (cooldown expiry) and periodic handler are partition-scoped: the scheduler
 		// starts them when it acquires a partition and cancels them when it loses it.
-		sched.SetPartitionWorkers(resolver, periodic, approvalTimeouts, inputTimeouts, deletionReconciler)
+		sched.SetPartitionWorkers(resolver, periodic, approvalTimeouts, inputTimeouts, deletionReconciler, workflowPurgeReconciler, tenantPurgeReconciler)
 		logger.Info("starting scheduler partition worker", "index", i, "scheduler_id", schedulerID)
 		go func() { errCh <- sched.Run(ctx) }()
 	}
