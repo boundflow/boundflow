@@ -70,11 +70,17 @@ def _table(rows: list[dict]) -> None:
     if not rows:
         console.print("[dim]No results.[/dim]")
         return
+    columns = list(dict.fromkeys(key for row in rows for key in row))
     t = Table(show_header=True, header_style="bold cyan")
-    for key in rows[0]:
+    for key in columns:
         t.add_column(str(key))
     for row in rows:
-        t.add_row(*[str(v) if v is not None else "" for v in row.values()])
+        t.add_row(
+            *[
+                str(row[key]) if key in row and row[key] is not None else ""
+                for key in columns
+            ]
+        )
     console.print(t)
 
 

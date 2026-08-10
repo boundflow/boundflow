@@ -7,6 +7,11 @@ test_policy_audit.py, etc.) since those require a live worker run.
 """
 from __future__ import annotations
 
+import re
+from types import SimpleNamespace
+
+from boundflow.cli.commands import audit
+
 from .conftest import make_tenant, make_workflow, run
 
 
@@ -58,3 +63,24 @@ def test_audit_log_scoped_to_workflow(runner, boundflow_api_key):
 
     results = run(runner, boundflow_api_key, ["audit", "log", wf_id])
     assert isinstance(results, list)
+
+
+def test_audit_log_table_aligns_heterogeneous_records(runner, monkeypatch):
+    """The real non-JSON CLI path projects mixed audit rows by column key."""
+    records = [
+        SimpleNamespace(approval_id="approval-1", actor="alice"),
+        SimpleNamespace(metric="failures", action="pause", actor="system"),
+    ]
+    monkeypatch.setattr(audit, "cp_call", lambda _call: records)
+
+    result = run(runner, "test-key", ["audit", "log"], json_out=False)
+
+    table_lines = [line.strip() for line in result.stdout.splitlines()]
+    cells = [
+        [cell.strip() for cell in re.split("[│┃]", line)[1:-1]]
+        for line in table_lines
+        if line[:1] in "│┃" and line[-1:] in "│┃"
+    ]
+    assert ["approval_id", "actor", "metric", "action"] in cells
+    assert ["approval-1", "alice", "", ""] in cells
+    assert ["", "system", "failures", "pause"] in cells
