@@ -16,7 +16,7 @@ from typer.testing import CliRunner
 
 from boundflow.cli import app
 
-SERVER_ADDRESS = "http://localhost:50051"
+SERVER_ADDRESS = os.environ.get("BOUNDFLOW_SERVER_ADDRESS", "http://localhost:50051")
 
 
 @pytest.fixture

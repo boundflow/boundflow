@@ -9,6 +9,7 @@ which runs it in a threadpool with no active loop while the worker runs in ours.
 from __future__ import annotations
 
 import asyncio
+import os
 import uuid
 from contextlib import asynccontextmanager
 
@@ -26,7 +27,7 @@ from boundflow import (
 
 from .conftest import SERVER_ADDRESS, run
 
-WORKER_ADDRESS = "http://localhost:50052"
+WORKER_ADDRESS = os.environ.get("BOUNDFLOW_WORKER_ADDRESS", "http://localhost:50052")
 
 
 def _dummy_mock():

@@ -17,8 +17,8 @@ from boundflow import (
     submit,
 )
 
-WORKER_ADDRESS = "http://localhost:50052"
-SERVER_ADDRESS = "http://localhost:50051"
+WORKER_ADDRESS = os.environ.get("BOUNDFLOW_WORKER_ADDRESS", "http://localhost:50052")
+SERVER_ADDRESS = os.environ.get("BOUNDFLOW_SERVER_ADDRESS", "http://localhost:50051")
 SONNET = "claude-sonnet-4-6"
 HAIKU = "claude-haiku-4-5-20251001"
 
