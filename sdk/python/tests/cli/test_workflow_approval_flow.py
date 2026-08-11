@@ -27,7 +27,7 @@ from boundflow import (
 
 from .conftest import SERVER_ADDRESS, run
 
-WORKER_ADDRESS = os.environ.get("BOUNDFLOW_WORKER_ADDRESS", "http://localhost:50052")
+WORKER_ADDRESS = os.environ.get("BOUNDFLOW_WORKER_ADDRESS") or "http://localhost:50052"
 
 
 def _dummy_mock():
