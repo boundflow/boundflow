@@ -136,6 +136,13 @@ class AgentCallTimeout(Exception):
     (marked failed) and the workflow stays active."""
 
 
+class AgentPolicyLimitExceeded(Exception):
+    """Raised when the model doesn't call submit_result on the forced finalize
+    call (the one made once max_llm_calls/max_cost_usd is reached). A customer-
+    domain failure like any other callback exception — the operation completes
+    (marked failed) and the workflow stays active."""
+
+
 # ── Scripted mock ─────────────────────────────────────────────────────────────
 
 
@@ -290,8 +297,9 @@ class Orchestrator:
 
     async def run_step(self, cfg: AgentStepConfig) -> StepResult:
         """Run the agentic loop to completion. The model may call allowed tools
-        freely and calls submit_result when done; if a policy limit is hit first,
-        one final forced submit_result is made."""
+        freely and calls submit_result when done. If a policy limit is hit first,
+        the *last* allowed call is forced to submit_result; if the model still
+        doesn't comply, raises AgentPolicyLimitExceeded."""
         callbacks = {t.name: t for t in cfg.tools}
         tools = [ToolSpec(t.name, t.description or t.name, _wrap_schema(t.input_schema)) for t in cfg.tools]
         tools.append(ToolSpec(SUBMIT_RESULT, "Call this when done to submit your final result.",
@@ -312,7 +320,8 @@ class Orchestrator:
                   cfg.objective, cfg.model, max_llm_calls, tool_limits)
 
         while True:
-            limit_reached = max_llm_calls > 0 and llm_calls >= max_llm_calls
+            # Force the last allowed call to submit_result.
+            limit_reached = max_llm_calls > 0 and llm_calls >= max_llm_calls - 1
             req = LlmRequest(
                 model=cfg.model,
                 max_tokens=max_tokens,
@@ -360,8 +369,14 @@ class Orchestrator:
             ))
 
             if resp.stop_reason == "end_turn":
+                if limit_reached:
+                    # Already forced to submit_result and still didn't comply
+                    # (or got truncated — anthropic_client.py maps max_tokens to
+                    # end_turn). Raise instead of granting another call.
+                    raise AgentPolicyLimitExceeded(
+                        "model did not call submit_result on the forced finalize call "
+                        f"(llm_calls={llm_calls}, max_llm_calls={cfg.policy.max_llm_calls})")
                 messages.append(Message("user", [TextBlock("Please call submit_result with your findings.")]))
-                max_llm_calls = llm_calls + 1
                 continue
             if resp.stop_reason != "tool_use":
                 raise RuntimeError(f"Unexpected stop reason: {resp.stop_reason}")
@@ -416,7 +431,7 @@ class Orchestrator:
                 messages.append(Message("user", tool_results))
 
             if cfg.policy.max_cost_usd > 0 and cost > cfg.policy.max_cost_usd:
-                max_llm_calls = llm_calls  # force submit on the next turn
+                max_llm_calls = llm_calls + 1  # force submit_result on the next call
 
 
 def _user_content(cfg: AgentStepConfig) -> str:
