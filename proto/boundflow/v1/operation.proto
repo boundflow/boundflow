@@ -18,6 +18,7 @@ message AtomicOperation {
   int32 timeout_seconds = 7;
   string workflow_type = 8;
   int32 workflow_version = 9;
+  int32 delay_seconds = 10;
 }
 
 message ApprovalGate {

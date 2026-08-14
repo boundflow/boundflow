@@ -158,7 +158,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 		if result.NextOperation != nil {
 			log.Info("operation completed with next operation, advancing job", "request_id", job.RequestID, "next_operation", result.NextOperation.Name)
 			_, err := s.jobs.UpdateJobWithMetrics(ctx, job.WorkflowID, sessionID, domain.JobStatusAwaitingNext,
-				result.NextOperation.Name, int(result.NextOperation.TimeoutSeconds), result.NextOperation.Context.AsMap(), job.AgentMetrics, job.WorkflowMetrics)
+				result.NextOperation.Name, int(result.NextOperation.TimeoutSeconds), int(result.NextOperation.DelaySeconds), result.NextOperation.Context.AsMap(), job.AgentMetrics, job.WorkflowMetrics)
 
 			if err != nil {
 				return err

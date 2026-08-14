@@ -1117,18 +1117,18 @@ func (mr *MockJobRepositoryMockRecorder) UpdateJobStatusWithReason(ctx, workflow
 }
 
 // UpdateJobWithMetrics mocks base method.
-func (m *MockJobRepository) UpdateJobWithMetrics(ctx context.Context, workflowID, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
+func (m *MockJobRepository) UpdateJobWithMetrics(ctx context.Context, workflowID, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds, delaySeconds int, jobContext map[string]any, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateJobWithMetrics", ctx, workflowID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, jobContext, agentMetrics, workflowMetrics)
+	ret := m.ctrl.Call(m, "UpdateJobWithMetrics", ctx, workflowID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, delaySeconds, jobContext, agentMetrics, workflowMetrics)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UpdateJobWithMetrics indicates an expected call of UpdateJobWithMetrics.
-func (mr *MockJobRepositoryMockRecorder) UpdateJobWithMetrics(ctx, workflowID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, jobContext, agentMetrics, workflowMetrics any) *gomock.Call {
+func (mr *MockJobRepositoryMockRecorder) UpdateJobWithMetrics(ctx, workflowID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, delaySeconds, jobContext, agentMetrics, workflowMetrics any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateJobWithMetrics", reflect.TypeOf((*MockJobRepository)(nil).UpdateJobWithMetrics), ctx, workflowID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, jobContext, agentMetrics, workflowMetrics)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateJobWithMetrics", reflect.TypeOf((*MockJobRepository)(nil).UpdateJobWithMetrics), ctx, workflowID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, delaySeconds, jobContext, agentMetrics, workflowMetrics)
 }
 
 // MockAuditRepository is a mock of AuditRepository interface.

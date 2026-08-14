@@ -99,6 +99,15 @@ class Next:
     operation: str
     context: dict
     timeout: int
+    delay_seconds: int = 0
+
+
+def _reject_delay_on_branch(branch: "OperationResult") -> None:
+    if isinstance(branch, Next) and branch.delay_seconds:
+        raise ValueError(
+            "Next.delay_seconds is not supported on approval/input gate branches "
+            "(on_approve/on_reject/on_answer/on_timeout); use it on a plain Next "
+            "returned directly from an operation instead.")
 
 
 @dataclass
@@ -113,6 +122,10 @@ class AwaitApproval:
     justification: str | None = None
     metadata: dict | None = None
 
+    def __post_init__(self):
+        _reject_delay_on_branch(self.on_approve)
+        _reject_delay_on_branch(self.on_reject)
+
 
 @dataclass
 class AwaitInput:
@@ -126,6 +139,10 @@ class AwaitInput:
     timeout: int
     prompt: str | None = None
     metadata: dict | None = None
+
+    def __post_init__(self):
+        _reject_delay_on_branch(self.on_answer)
+        _reject_delay_on_branch(self.on_timeout)
 
 
 OperationResult = Union[Complete, Next, AwaitApproval, AwaitInput]
@@ -439,6 +456,8 @@ class BoundFlowWorker:
 
         def branch(r: OperationResult):
             # A Next branch becomes an AtomicOperation; Complete becomes None.
+            # delay_seconds is rejected at AwaitApproval/AwaitInput construction
+            # time, so r.delay_seconds is always 0 here.
             if isinstance(r, Next):
                 return op_pb.AtomicOperation(
                     name=r.operation, timeout_seconds=r.timeout, context=carry(r.context))
@@ -453,7 +472,7 @@ class BoundFlowWorker:
                 status=completed,
                 next_operation=op_pb.AtomicOperation(
                     name=result.operation, timeout_seconds=result.timeout,
-                    context=carry(result.context)))
+                    context=carry(result.context), delay_seconds=result.delay_seconds))
 
         if isinstance(result, AwaitApproval):
             if approval_id is None:
