@@ -32,6 +32,11 @@ from .trace import (
 
 log = logging.getLogger("boundflow.worker")
 
+# The operation name the entry handler (@worker.workflow) is dispatched under.
+# Reserved — an @worker.operation registered under this name would collide with
+# entry dispatch. Pass this to Next(operation=...) to loop back to the start.
+ENTRY_OPERATION = "invoke_entry"
+
 # ── Tools ────────────────────────────────────────────────────────────────────
 
 ToolHandler = Callable[[dict], Awaitable[Any]]
@@ -344,11 +349,9 @@ class BoundFlowWorker:
         from . import _transport as t
         from boundflow.v1 import operation_pb2 as op_pb
 
-        ENTRY = "invoke_entry"
-
         async def dispatch(op):  # op: AtomicOperation proto
             rtype = op.workflow_type
-            if op.name == ENTRY:
+            if op.name == ENTRY_OPERATION:
                 handler = self._workflows.get((rtype, op.workflow_version))
             else:
                 handler = self._operations.get((rtype, op.name))
