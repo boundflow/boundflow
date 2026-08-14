@@ -28,6 +28,7 @@ func (r *JobRepo) GetAvailableJob(ctx context.Context, tenantGroupID string, wor
 		`SELECT workflow_id FROM jobs
 		 WHERE status IN ('pending', 'awaiting_next', 'approved', 'rejected', 'answered', 'input_timed_out')
 		   AND (owner IS NULL OR lease_expires_at < now())
+		   AND (dispatch_at IS NULL OR dispatch_at <= now())
 		   AND tenant_group_id = $1
 		   AND (workflow_type, workflow_version) IN (
 		       SELECT rt, wv FROM unnest($2::text[], $3::int[]) AS cap(rt, wv)
@@ -54,6 +55,7 @@ func (r *JobRepo) AcquireJob(ctx context.Context, workflowID string, ownerID str
 		 WHERE workflow_id = $1
 		   AND status IN ('pending', 'awaiting_next', 'approved', 'rejected', 'answered', 'input_timed_out')
 		   AND (owner IS NULL OR lease_expires_at < now())
+		   AND (dispatch_at IS NULL OR dispatch_at <= now())
 		   AND tenant_group_id = $4
 		 RETURNING workflow_id, request_id, version, current_atomic_operation, context, status,
 		           job_type, workflow_type, timeout_seconds, workflow_version, agent_metrics, workflow_metrics,
@@ -467,7 +469,7 @@ func (r *JobRepo) UpdateJob(ctx context.Context, workflowID string, ownerID stri
 	return tag.RowsAffected() == 1, nil
 }
 
-func (r *JobRepo) UpdateJobWithMetrics(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
+func (r *JobRepo) UpdateJobWithMetrics(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, delaySeconds int, jobContext map[string]any, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
 	contextJSON, err := json.Marshal(jobContext)
 	if err != nil {
 		return false, fmt.Errorf("marshal job context: %w", err)
@@ -484,11 +486,12 @@ func (r *JobRepo) UpdateJobWithMetrics(ctx context.Context, workflowID string, o
 	tag, err := r.pool.Exec(ctx,
 		`UPDATE jobs
 		 SET status = $3, current_atomic_operation = $4, timeout_seconds = $5, context = $6, agent_metrics = $7, workflow_metrics = $8,
+		     dispatch_at = CASE WHEN $9::int > 0 THEN now() + make_interval(secs => $9::int) ELSE NULL END,
 		     approval_id = NULL, approval_timeout_at = NULL, approval_justification = '', approval_metadata = NULL,
 		     input_id = NULL, input_timeout_at = NULL, input_prompt = '', input_metadata = NULL, input_answer = NULL,
 		     job_metadata = '{}'
 		 WHERE workflow_id = $1 AND owner = $2`,
-		workflowID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, contextJSON, agentMetricsJSON, workflowMetricsJSON,
+		workflowID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, contextJSON, agentMetricsJSON, workflowMetricsJSON, delaySeconds,
 	)
 	if err != nil {
 		return false, fmt.Errorf("update job with metrics: %w", err)

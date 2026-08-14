@@ -174,8 +174,9 @@ type JobRepository interface {
 	// Returns false if the ownership check failed (job taken by another worker or released).
 	UpdateJob(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any) (bool, error)
 	// UpdateJobWithMetrics is UpdateJob plus an atomic write of the accumulated per-agent
-	// and workflow-level metrics. Used when advancing to the next operation.
-	UpdateJobWithMetrics(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error)
+	// and workflow-level metrics. Used when advancing to the next operation. delaySeconds
+	// > 0 holds the job's dispatch_at that many seconds out; 0 dispatches as soon as eligible.
+	UpdateJobWithMetrics(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, delaySeconds int, jobContext map[string]any, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error)
 	// GetJobMetrics returns the accumulated per-agent and workflow-level metrics stored on the
 	// job for the given workflow and request. Returns zero values if no such job exists.
 	GetJobMetrics(ctx context.Context, workflowID string, requestID string) (map[string]*boundflowv1.AgentInvocationMetrics, domain.WorkflowJobMetrics, error)
