@@ -29,6 +29,8 @@ class FakeChat(BaseChatModel):
     model_name: str = "fake-model-1"
     calls: list = []
     with_tool_call: bool = True
+    tool_name: str = "ping"
+    tool_args: dict = {}
 
     @property
     def _llm_type(self) -> str:
@@ -39,7 +41,8 @@ class FakeChat(BaseChatModel):
 
     async def _agenerate(self, messages, stop=None, run_manager=None, **kwargs):
         self.calls.append(kwargs)
-        tool_calls = ([{"name": "ping", "args": {}, "id": f"tc{len(self.calls)}"}]
+        tool_calls = ([{"name": self.tool_name, "args": dict(self.tool_args),
+                        "id": f"tc{len(self.calls)}"}]
                       if self.with_tool_call else [])
         msg = AIMessage(
             content="ok",
@@ -100,15 +103,6 @@ def test_recording_twice_is_a_bug_and_raises():
     call.record(Usage(10, 10))
     with pytest.raises(RuntimeError, match="twice"):
         call.record(Usage(10, 10))
-
-
-def test_tool_call_limits_warn_because_they_cannot_be_enforced(caplog):
-    """BoundFlow doesn't dispatch tools in this mode, so a per-tool cap silently
-    wouldn't apply — the caller has to be told rather than left assuming."""
-    with caplog.at_level("WARNING"):
-        _governor(RuntimePolicy(tool_call_limits=[ToolCallLimit(tool="ping", max_calls=1)]))
-    assert "tool_call_limits" in caplog.text
-    assert "cannot be enforced" in caplog.text
 
 
 def test_snapshot_reports_observed_usage():
@@ -221,3 +215,138 @@ async def test_langgraph_runaway_loop_is_stopped_by_the_cap():
     assert gov.llm_calls == 3, f"expected the cap to stop it at 3, got {gov.llm_calls}"
     assert gov.cost_usd > 0, "spend burned before the cap must still be recorded"
     assert len(gov.spans) == 3
+
+
+# ── governed tools (ctx.agent_tools) ─────────────────────────────────────────
+
+
+@pytest.fixture
+def search_tool():
+    """(tool, runs) — `runs` records every actual execution, so a test can tell
+    'the model asked' apart from 'the tool ran'. Returned as a tuple because
+    StructuredTool is a pydantic model and won't take an extra attribute."""
+    from langchain_core.tools import tool
+
+    runs: list[str] = []
+
+    @tool
+    def search(query: str) -> str:
+        """Search for something."""
+        runs.append(query)
+        return f"results for {query}"
+
+    return search, runs
+
+
+def _wrap(gov, tools):
+    from boundflow.langchain_client import governed_tools
+    return governed_tools(gov, tools)
+
+
+async def test_governed_tool_preserves_the_models_view_of_the_tool(search_tool):
+    tool, _ = search_tool
+    gov = _governor(RuntimePolicy())
+    wrapped = _wrap(gov, [tool])[0]
+    assert wrapped.name == tool.name
+    assert wrapped.description == tool.description
+    assert wrapped.args_schema is tool.args_schema
+
+
+async def test_tool_call_limit_is_enforced_and_the_model_is_told(search_tool):
+    tool, runs = search_tool
+    gov = _governor(RuntimePolicy(tool_call_limits=[ToolCallLimit(tool="search", max_calls=2)]))
+    wrapped = _wrap(gov, [tool])[0]
+
+    outs = [await wrapped.ainvoke({"query": f"q{i}"}) for i in range(4)]
+
+    assert len(runs) == 2, "the underlying tool must stop running at the cap"
+    assert "Call limit reached for 'search' (max 2)" in outs[2]
+    assert outs[2] == outs[3]
+    # Same refusal run_agent gives, so the model reacts the same way.
+    from boundflow.llm import tool_limit_message
+    assert outs[2] == tool_limit_message("search", 2)
+
+
+async def test_tool_failures_are_counted_and_re_raised(search_tool):
+    from langchain_core.tools import tool
+
+    @tool
+    def broken(query: str) -> str:
+        """Always fails."""
+        raise RuntimeError("boom")
+
+    gov = _governor(RuntimePolicy())
+    wrapped = _wrap(gov, [broken])[0]
+    with pytest.raises(Exception):
+        await wrapped.ainvoke({"query": "x"})
+    assert gov.tool_failure_counts == {"broken": 1}
+    assert gov.snapshot()["tool_failure_counts"] == {"broken": 1}
+
+
+async def test_governed_tools_emit_tool_spans(search_tool):
+    tool, _ = search_tool
+    gov = _governor(RuntimePolicy())
+    wrapped = _wrap(gov, [tool])[0]
+    await wrapped.ainvoke({"query": "x"})
+
+    tool_spans = [s for s in gov.spans if s.kind == "tool"]
+    assert len(tool_spans) == 1
+    assert tool_spans[0].name == "search"
+    assert tool_spans[0].attributes["gen_ai.tool.name"] == "search"
+
+
+async def test_tool_calls_are_not_double_counted(search_tool):
+    """The model asking for a tool and the tool running must count once, not twice."""
+    tool, _ = search_tool
+    gov = _governor(RuntimePolicy())
+    wrapped = _wrap(gov, [tool])[0]
+
+    # The model asks for it (observed on the LLM response)...
+    gov.begin_call().record(Usage(10, 10), tool_calls=["search"])
+    # ...and then it actually runs.
+    await wrapped.ainvoke({"query": "x"})
+
+    assert gov.calls_per_tool == {"search": 1}, \
+        f"governed tools count at execution only, got {gov.calls_per_tool}"
+
+
+async def test_ungoverned_tool_limits_warn_at_flush(caplog):
+    gov = _governor(RuntimePolicy(tool_call_limits=[ToolCallLimit(tool="search", max_calls=1)]))
+    with caplog.at_level("WARNING"):
+        gov.warn_if_tool_limits_unenforced()
+    assert "were NOT enforced" in caplog.text
+    assert "agent_tools" in caplog.text
+
+
+async def test_no_warning_once_the_tool_is_governed(search_tool, caplog):
+    tool, _ = search_tool
+    gov = _governor(RuntimePolicy(tool_call_limits=[ToolCallLimit(tool="search", max_calls=1)]))
+    _wrap(gov, [tool])
+    with caplog.at_level("WARNING"):
+        gov.warn_if_tool_limits_unenforced()
+    assert "NOT enforced" not in caplog.text
+
+
+async def test_langgraph_respects_a_per_tool_cap_and_keeps_going(search_tool):
+    """The end-to-end shape: LangGraph drives, the tool cap trips mid-graph, and the
+    model is told rather than the run being killed."""
+    from langgraph.prebuilt import create_react_agent
+
+    tool, runs = search_tool
+    gov = _governor(RuntimePolicy(
+        max_llm_calls=4,
+        tool_call_limits=[ToolCallLimit(tool="search", max_calls=1)],
+    ))
+    model = GovernedChatModel(
+        governor=gov, chat_model=FakeChat(calls=[], tool_name="search",
+                                          tool_args={"query": "x"}))
+    agent = create_react_agent(model, _wrap(gov, [tool]))
+
+    # The model keeps asking for `search`, so the LLM cap is what finally stops it —
+    # but the per-tool cap has already stopped the tool from actually running.
+    with pytest.raises(AgentPolicyLimitExceeded, match="max_llm_calls"):
+        await agent.ainvoke({"messages": [HumanMessage(content="go")]})
+
+    assert gov.llm_calls == 4
+    assert len(runs) == 1, f"per-tool cap of 1 should have held, tool ran {len(runs)}x"
+    assert gov.calls_per_tool == {"search": 1}

@@ -7,16 +7,20 @@ LangGraph-shaped: a real ReAct loop with a tool node and message state, where
 LangGraph owns the loop and BoundFlow governs every model call underneath.
 
     model = ctx.agent_model("researcher", ChatAnthropic(model=MODEL))
-    agent = create_react_agent(model, [search])
+    tools = ctx.agent_tools("researcher", [word_count])
+    agent = create_react_agent(model, tools)
     await agent.ainvoke({"messages": [...]})
 
-Everything the graph does still lands on the run's receipt — cost, tokens, spans,
-per-agent metrics for lifecycle policy — and the agent's runtime policy still
-applies. The agent below is deliberately given a tiny `max_llm_calls`, so a loop
-that would keep calling its tool gets stopped by policy rather than by luck.
+Hand BoundFlow the model you want governed and the tools you want governed; it
+governs those and stays out of everything else. Everything the graph does still
+lands on the run's receipt — cost, tokens, LLM *and* tool spans, per-agent metrics
+for lifecycle policy — and the agent's runtime policy still applies, including
+per-tool caps for the tools you passed through `agent_tools()`.
 
-What you give up versus `run_agent`: per-tool caps (`tool_call_limits`) can't be
-enforced when your framework dispatches the tools, and hitting a cap raises rather
+The agent below gets a tiny `max_llm_calls`, so a loop that keeps calling its tool
+is stopped by policy rather than by luck.
+
+What you still give up versus `run_agent`: hitting an LLM/cost cap raises rather
 than asking the model for a graceful final answer. See `boundflow.governed`.
 
 Prerequisites: a running backend (`docker compose up -d`) and:
@@ -66,7 +70,9 @@ async def main() -> None:
         # A governed BaseChatModel. LangGraph drives it; BoundFlow meters it and
         # enforces the agent's runtime policy on every call.
         model = ctx.agent_model(AGENT, ChatAnthropic(model=MODEL, api_key=api_key))
-        agent = create_react_agent(model, [word_count])
+        # Governed too: per-tool caps apply, failures are counted, tool spans recorded.
+        tools = ctx.agent_tools(AGENT, [word_count])
+        agent = create_react_agent(model, tools)
 
         try:
             result = await agent.ainvoke({"messages": [

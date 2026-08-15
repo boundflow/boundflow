@@ -360,3 +360,60 @@ def _build_governed_cls():
     _GovernedChatModel.__name__ = "GovernedChatModel"
     _GovernedChatModel.__qualname__ = "GovernedChatModel"
     return _GovernedChatModel
+
+
+_governed_tool_cls = None
+
+
+def governed_tools(governor: Any, tools: list) -> list:
+    """Wrap LangChain tools so BoundFlow dispatches them: per-tool caps enforced,
+    failures counted, tool spans recorded. Prefer `ctx.agent_tools(...)`.
+
+    Each wrapper keeps the original's name, description and args schema, so the
+    model sees exactly the same tool it would have.
+    """
+    global _governed_tool_cls
+    if _governed_tool_cls is None:
+        _governed_tool_cls = _build_governed_tool_cls()
+    governor.register_governed_tools([t.name for t in tools])
+    return [
+        _governed_tool_cls(
+            name=t.name,
+            description=t.description,
+            args_schema=t.args_schema,
+            governor=governor,
+            inner=t,
+        )
+        for t in tools
+    ]
+
+
+def _build_governed_tool_cls():
+    from langchain_core.tools import BaseTool
+
+    class _GovernedTool(BaseTool):
+        governor: Any = None
+        inner: Any = None
+
+        def _run(self, *args, **kwargs):
+            raise NotImplementedError(
+                "governed tools are async-only — BoundFlow workflow handlers are async.")
+
+        async def _arun(self, *args, **kwargs):
+            call = self.governor.begin_tool_call(self.name)
+            if call.denied:
+                # Not an error for the run: the model is told the tool is spent and
+                # continues without it, exactly as it would under run_agent.
+                return call.denial_message
+            tool_input = kwargs if kwargs else (args[0] if args else {})
+            try:
+                output = await self.inner.ainvoke(tool_input)
+            except Exception as exc:  # noqa: BLE001 — reported to the model, and counted
+                call.record(input=tool_input, error=exc)
+                raise
+            call.record(input=tool_input, output=output)
+            return output
+
+    _GovernedTool.__name__ = "GovernedTool"
+    _GovernedTool.__qualname__ = "GovernedTool"
+    return _GovernedTool

@@ -275,7 +275,7 @@ class OperationContext:
             ))
         return result
 
-    def agent_governor(self, agent_name: str, *, model: str) -> AgentGovernor:
+    def agent_governor(self, agent_name: str, *, model: str = "") -> AgentGovernor:
         """The agent's governor — the framework-agnostic half of `agent_model()`.
 
         Use this to govern a framework BoundFlow has no adapter for (CrewAI's
@@ -287,6 +287,10 @@ class OperationContext:
         metrics accumulate across every call the loop makes this operation."""
         existing = self._governors.get(agent_name)
         if existing is not None:
+            # agent_tools() can create the governor before agent_model() supplies a
+            # model, so fill it in late rather than depending on call order.
+            if model and not existing.model:
+                existing.model = existing.policy.model or model
             return existing
         governor = AgentGovernor(
             agent_name=agent_name,
@@ -315,9 +319,8 @@ class OperationContext:
         `model` is the model id used for pricing and as the `SetModel` default;
         derived from `chat_model` when omitted, and required for a factory.
 
-        Note: `tool_call_limits` can't be enforced here (your framework dispatches
-        tools, not BoundFlow) — it warns if a policy sets one. Use `run_agent()` if
-        you need per-tool caps enforced."""
+        Note: to have `tool_call_limits` enforced too, pass your tools through
+        `agent_tools()` — BoundFlow can only stop a tool it dispatches."""
         from .langchain_client import GovernedChatModel
 
         is_factory = callable(chat_model) and not hasattr(chat_model, "ainvoke")
@@ -332,11 +335,32 @@ class OperationContext:
         governor = self.agent_governor(agent_name, model=model)
         return GovernedChatModel(governor=governor, chat_model=chat_model)
 
+    def agent_tools(self, agent_name: str, tools: list) -> list:
+        """Governed LangChain tools — hand BoundFlow the tools you want governed, the
+        way `agent_model()` hands it the model you want governed.
+
+            model = ctx.agent_model("researcher", ChatAnthropic(model=MODEL))
+            tools = ctx.agent_tools("researcher", [search, calculator])
+            agent = create_react_agent(model, tools)
+
+        BoundFlow then dispatches these tools, which is what makes `tool_call_limits`
+        enforceable: a tool whose cap is spent isn't run, and the model is told so —
+        the same refusal `run_agent` returns, so it adapts instead of failing. Tool
+        failures and per-tool spans get recorded too, which they can't be for tools
+        BoundFlow never sees.
+
+        Wrappers keep the original name, description, and args schema, so the model
+        sees exactly the tools you defined."""
+        from .langchain_client import governed_tools
+
+        return governed_tools(self.agent_governor(agent_name), tools)
+
     def _flush_governors(self) -> None:
         """Fold governed-loop metrics into the operation result. Called once the
         handler returns, since a customer-driven loop has no completion point of
         its own for us to hook."""
         for name, governor in self._governors.items():
+            governor.warn_if_tool_limits_unenforced()
             if governor.llm_calls == 0:
                 continue  # a model that was never called shouldn't emit a run
             self.agent_state_updates[name] = governor.snapshot()

@@ -31,10 +31,12 @@ and let the failure propagate to the workflow handler. So:
 - `max_llm_calls`, `max_cost_usd`: enforced, but as a hard stop, and `max_cost_usd`
   is checked against spend already recorded, so the call that crosses the line
   still completes (same post-hoc limitation `run_agent` has today)
-- `tool_call_limits`: **not enforceable** — tool dispatch belongs to the caller's
-  framework, so BoundFlow never sees the execution. Tool calls are still
-  *observed* (so the `calls_per_tool` metric and lifecycle rules keep working);
-  they just can't be blocked. Callers are warned when a policy sets one.
+- `tool_call_limits`: enforced **only for tools passed through `ctx.agent_tools()`**,
+  since BoundFlow can only stop a tool it dispatches. Hand it the tools and a spent
+  cap blocks execution and tells the model, exactly as `run_agent` does; keep the
+  tools to yourself and the cap can't apply — tool calls are still *observed* from
+  the model's requests (so `calls_per_tool` keeps feeding lifecycle rules), but
+  nothing is blocked, and the caller is warned at the end of the operation.
 """
 
 from __future__ import annotations
@@ -44,12 +46,22 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-from .llm import AgentPolicyLimitExceeded, Usage, _estimate_cost, _gen_ai_system
+from .llm import (
+    AgentPolicyLimitExceeded,
+    Usage,
+    _estimate_cost,
+    _gen_ai_system,
+    tool_limit_message,
+)
 from .policies import RuntimePolicy
 from .trace import (
     BF_COST_USD,
     GEN_AI_OP_CHAT,
+    GEN_AI_OP_EXECUTE_TOOL,
     GEN_AI_OPERATION_NAME,
+    GEN_AI_TOOL_DESCRIPTION,
+    GEN_AI_TOOL_NAME,
+    SPAN_KIND_TOOL,
     GEN_AI_REQUEST_MAX_TOKENS,
     GEN_AI_REQUEST_MODEL,
     GEN_AI_SYSTEM,
@@ -102,6 +114,27 @@ class GovernedCall:
             self, usage, tool_calls or [], input_messages, output_message)
 
 
+@dataclass
+class GovernedToolCall:
+    """One tool invocation. `denied` means the per-tool cap is spent and the tool
+    must NOT run — hand `denial_message` back to the model as the tool's result,
+    the same refusal `run_agent` returns."""
+
+    tool: str
+    denied: bool
+    denial_message: str
+    _governor: "AgentGovernor"
+    _start_ms: int = field(default_factory=now_ms)
+    _recorded: bool = False
+
+    def record(self, *, input: Any = None, output: Any = None, error: BaseException | None = None) -> None:
+        """Close the tool call: count a failure if it raised, and emit the tool span."""
+        if self._recorded or self.denied:
+            return
+        self._recorded = True
+        self._governor._record_tool(self, input, output, error)
+
+
 class AgentGovernor:
     """Per-agent governance for a customer-driven loop: enforces the agent's
     runtime policy across the model calls the loop makes, and accumulates the
@@ -131,17 +164,18 @@ class AgentGovernor:
         self.cost_usd = 0.0
         self.tokens_used = 0
         self.calls_per_tool: dict[str, int] = {}
+        self.tool_failure_counts: dict[str, int] = {}
         self.spans: list[Span] = []
         self._start_ms = now_ms()
 
-        if policy.tool_call_limits:
-            tools = ", ".join(l.tool for l in policy.tool_call_limits)
-            log.warning(
-                "agent %r has tool_call_limits (%s) but is running under a governed "
-                "model, where BoundFlow doesn't dispatch tools — the limits cannot be "
-                "enforced. Tool calls are still counted for metrics and lifecycle "
-                "rules. Use ctx.run_agent() if you need per-tool caps enforced.",
-                agent_name, tools)
+        self._tool_limits = {l.tool: l.max_calls for l in policy.tool_call_limits}
+        # Tools handed to us via agent_tools(): we dispatch these, so their caps are
+        # enforceable and their calls are counted at execution rather than inferred
+        # from what the model asked for.
+        self._governed_tools: set[str] = set()
+
+    def register_governed_tools(self, names: list[str]) -> None:
+        self._governed_tools.update(names)
 
     @property
     def max_tokens(self) -> int:
@@ -182,7 +216,11 @@ class AgentGovernor:
         self.cost_usd += cost
         self.tokens_used += usage.total_tokens()
         for name in tool_calls:
-            self.calls_per_tool[name] = self.calls_per_tool.get(name, 0) + 1
+            # A governed tool counts itself when it actually runs — counting the
+            # model's *request* here too would double it, and would also count calls
+            # that were denied by a cap or never dispatched.
+            if name not in self._governed_tools:
+                self.calls_per_tool[name] = self.calls_per_tool.get(name, 0) + 1
 
         if self._collect_spans:
             self.spans.append(Span(
@@ -209,6 +247,57 @@ class AgentGovernor:
                   self.agent_name, self.model, self.llm_calls, self.cost_usd, self.tokens_used)
         return cost
 
+    def begin_tool_call(self, tool: str) -> GovernedToolCall:
+        """Authorise one tool invocation against `tool_call_limits`.
+
+        Unlike a model cap this doesn't raise: a spent per-tool cap is a signal to
+        the *model*, not a failure of the run, so the caller returns
+        `denial_message` as the tool's result and the model carries on without that
+        tool — matching what `run_agent` does today."""
+        cap = self._tool_limits.get(tool, 0)
+        used = self.calls_per_tool.get(tool, 0)
+        if cap > 0 and used >= cap:
+            log.debug("tool_limit hit: agent=%s tool=%s count=%d cap=%d",
+                      self.agent_name, tool, used, cap)
+            return GovernedToolCall(tool=tool, denied=True,
+                                    denial_message=tool_limit_message(tool, cap),
+                                    _governor=self)
+        self.calls_per_tool[tool] = used + 1
+        return GovernedToolCall(tool=tool, denied=False, denial_message="", _governor=self)
+
+    def _record_tool(self, call: GovernedToolCall, input: Any,
+                     output: Any, error: BaseException | None) -> None:
+        if error is not None:
+            self.tool_failure_counts[call.tool] = self.tool_failure_counts.get(call.tool, 0) + 1
+        if self._collect_spans:
+            self.spans.append(Span(
+                kind=SPAN_KIND_TOOL,
+                name=call.tool,
+                start_ms=call._start_ms,
+                end_ms=now_ms(),
+                input=input,
+                output=None if error is not None else output,
+                error=str(error) if error is not None else None,
+                attributes={
+                    GEN_AI_OPERATION_NAME: GEN_AI_OP_EXECUTE_TOOL,
+                    GEN_AI_TOOL_NAME: call.tool,
+                    GEN_AI_TOOL_DESCRIPTION: call.tool,
+                },
+            ))
+
+    def warn_if_tool_limits_unenforced(self) -> None:
+        """Called when the operation ends: a per-tool cap that was set but never had
+        a governed tool to enforce it against did nothing, and the caller should hear
+        about that rather than assume it applied."""
+        unenforced = sorted(set(self._tool_limits) - self._governed_tools)
+        if unenforced:
+            log.warning(
+                "agent %r set tool_call_limits for %s, but those tools weren't passed "
+                "through ctx.agent_tools() — BoundFlow never dispatched them, so the "
+                "limits were NOT enforced. Wrap them with ctx.agent_tools() (or use "
+                "ctx.run_agent()) to enforce per-tool caps.",
+                self.agent_name, ", ".join(unenforced))
+
     def snapshot(self) -> dict:
         """This agent's metrics for the operation, in the shape the server appends
         to invocation_metrics (mirrors what run_agent writes)."""
@@ -217,8 +306,9 @@ class AgentGovernor:
             "llm_calls": self.llm_calls,
             "tokens_used": self.tokens_used,
             "calls_per_tool": dict(self.calls_per_tool),
-            # Tool execution isn't ours here, so failures aren't observable.
-            "tool_failure_counts": {},
+            # Only populated for tools passed through agent_tools() — we can't see a
+            # failure in a tool we didn't dispatch.
+            "tool_failure_counts": dict(self.tool_failure_counts),
             "latency_seconds": (now_ms() - self._start_ms) / 1000.0,
             "ran_at": int(time.time() * 1000),
         }

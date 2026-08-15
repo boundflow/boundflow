@@ -291,6 +291,13 @@ def _wrap_schema(props: dict | None) -> dict:
     return {"type": "object", "properties": props or {}}
 
 
+def tool_limit_message(tool: str, cap: int) -> str:
+    """What the model is told when a per-tool cap is spent. Shared so the two
+    enforcement paths (this loop, and governed tools in a customer-driven loop)
+    can't drift apart."""
+    return f"Call limit reached for '{tool}' (max {cap}). Do not call it again."
+
+
 class Orchestrator:
     def __init__(self, client: LlmClient) -> None:
         self._client = client
@@ -400,7 +407,7 @@ class Orchestrator:
                 if cap > 0 and current_count >= cap:
                     log.debug("tool_limit hit: tool=%s count=%d cap=%d", block.name, current_count, cap)
                     tool_results.append(ToolResultBlock(
-                        block.id, f"Call limit reached for '{block.name}' (max {cap}). Do not call it again.",
+                        block.id, tool_limit_message(block.name, cap),
                         is_error=True))
                     continue
                 call_counts[block.name] = current_count + 1

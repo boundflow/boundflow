@@ -115,3 +115,48 @@ async def test_server_side_policy_caps_a_governed_loop(cp):
                 "spend burned before the cap tripped must still be reported"
         finally:
             await cp.delete_workflow(wf.id)
+
+
+async def test_server_side_tool_call_limit_is_enforced_on_governed_tools(cp):
+    """The gap ctx.agent_tools() closes: a per-tool cap set on the server actually
+    stops the tool from running in a loop BoundFlow doesn't drive."""
+    from langchain_core.tools import tool
+
+    from boundflow import ToolCallLimit
+
+    runs: list[str] = []
+
+    @tool
+    def search(query: str) -> str:
+        """Search for something."""
+        runs.append(query)
+        return "results"
+
+    worker = BoundFlowWorker(WORKER_ADDRESS, dummy_mock())
+
+    @worker.workflow("governed_tools_wf", version=1)
+    async def _entry(ctx):
+        tools = ctx.agent_tools(AGENT_NAME, [search])
+        ctx.agent_model(AGENT_NAME, FakeChat())  # so the agent reports a run
+        # The "loop" calls the tool 5 times; the server-side cap of 2 must hold.
+        for i in range(5):
+            await tools[0].ainvoke({"query": f"q{i}"})
+        return Complete(result={"ok": True})
+
+    async with run_worker(worker):
+        tenant = await create_isolated_tenant(cp, "governed-tools")
+        wf = await cp.create_workflow("governed_tools_wf", tenant.id,
+                                      config=WorkflowConfig(version=1))
+        try:
+            await cp.set_agent_runtime_policy(
+                wf.id, AGENT_NAME,
+                RuntimePolicy(tool_call_limits=[ToolCallLimit(tool="search", max_calls=2)]))
+            await cp.activate_workflow(wf.id)
+            rid = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
+            info = await wait_for_completion(cp, rid, timeout=60)
+
+            assert info.status == "completed"
+            assert len(runs) == 2, \
+                f"server-side per-tool cap should have stopped it at 2, tool ran {len(runs)}x"
+        finally:
+            await cp.delete_workflow(wf.id)
