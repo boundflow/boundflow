@@ -1,4 +1,13 @@
-"""LangChain adapter — run BoundFlow agents through any LangChain chat model.
+"""LangChain adapter — both directions between BoundFlow and LangChain.
+
+Inbound (`LangChainLlmClient`): BoundFlow drives the agent loop and calls a
+LangChain model for each step. Use with `ctx.run_agent()`.
+
+Outbound (`GovernedChatModel`, via `ctx.agent_model()`): *you* drive the loop —
+LangGraph, a chain, anything taking a `BaseChatModel` — and BoundFlow governs
+each call underneath. Use when you want your own agent architecture with
+BoundFlow's caps, metering, and receipts. See `boundflow.governed` for the
+framework-agnostic core this is built on.
 
 `LangChainLlmClient` implements the `LlmClient` protocol by delegating to a
 LangChain chat model (a `langchain_core.language_models.BaseChatModel`), so a
@@ -90,6 +99,22 @@ def _to_openai_tools(request: LlmRequest) -> list:
     ]
 
 
+def _usage_from_message(msg: Any, model: Any) -> Usage:
+    """Token usage off a LangChain AIMessage. No usage means BoundFlow can't price
+    the call or enforce cost caps, so fail loud rather than run ungoverned
+    (PlatformError interrupts the workflow)."""
+    um = getattr(msg, "usage_metadata", None) or {}
+    input_tokens = int(um.get("input_tokens", 0) or 0)
+    output_tokens = int(um.get("output_tokens", 0) or 0)
+    if input_tokens == 0 and output_tokens == 0:
+        raise PlatformError(
+            f"LangChain model {type(model).__name__!r} returned no token usage "
+            "(usage_metadata); BoundFlow cannot enforce cost governance for this run. "
+            "Use a provider/model that reports usage, or a native BoundFlow client."
+        )
+    return Usage(input_tokens=input_tokens, output_tokens=output_tokens)
+
+
 def _extract_text(content: Any) -> str:
     """AIMessage.content may be a string or a list of content parts."""
     if isinstance(content, str):
@@ -147,18 +172,191 @@ class LangChainLlmClient:
                 input=tc.get("args") or {},
             ))
 
-        um = getattr(msg, "usage_metadata", None) or {}
-        input_tokens = int(um.get("input_tokens", 0) or 0)
-        output_tokens = int(um.get("output_tokens", 0) or 0)
-        # No usage means BoundFlow can't price the run or enforce cost caps, so fail loud
-        # rather than run ungoverned (PlatformError interrupts the workflow).
-        if input_tokens == 0 and output_tokens == 0:
-            raise PlatformError(
-                f"LangChain model {type(model).__name__!r} returned no token usage "
-                "(usage_metadata); BoundFlow cannot enforce cost governance for this run. "
-                "Use a provider/model that reports usage, or a native BoundFlow client."
-            )
-        usage = Usage(input_tokens=input_tokens, output_tokens=output_tokens)
+        usage = _usage_from_message(msg, model)
         # The loop only understands tool_use / end_turn (mirrors AnthropicLlmClient).
         stop_reason = "tool_use" if tool_calls else "end_turn"
         return LlmResponse(content=content, stop_reason=stop_reason, usage=usage)
+
+
+# ── Outbound: a governed model the caller's own loop drives ──────────────────
+
+
+def _lc_to_gen_ai_messages(messages: list) -> list:
+    """LangChain messages -> canonical GenAI messages, for the trace span. Mirrors
+    `llm._gen_ai_input_messages`, but reading LangChain's types instead of
+    BoundFlow's block protocol."""
+    from .trace import (
+        PART_TEXT,
+        PART_TOOL_CALL,
+        PART_TOOL_CALL_RESPONSE,
+        ROLE_ASSISTANT,
+        ROLE_SYSTEM,
+        ROLE_TOOL,
+        ROLE_USER,
+    )
+
+    role_by_type = {
+        "system": ROLE_SYSTEM,
+        "human": ROLE_USER,
+        "ai": ROLE_ASSISTANT,
+        "tool": ROLE_TOOL,
+    }
+
+    out = []
+    for m in messages:
+        role = role_by_type.get(getattr(m, "type", ""), ROLE_USER)
+        parts: list[dict] = []
+        text = _extract_text(getattr(m, "content", ""))
+        if text:
+            parts.append({"type": PART_TEXT, "content": text})
+        for tc in getattr(m, "tool_calls", None) or []:
+            parts.append({
+                "type": PART_TOOL_CALL,
+                "id": tc.get("id", ""),
+                "name": tc.get("name", ""),
+                "arguments": tc.get("args") or {},
+            })
+        if role == ROLE_TOOL:
+            parts.append({
+                "type": PART_TOOL_CALL_RESPONSE,
+                "id": getattr(m, "tool_call_id", ""),
+                "result": text,
+                "is_error": getattr(m, "status", "") == "error",
+            })
+        out.append({"role": role, "parts": parts})
+    return out
+
+
+def _tool_call_names(msg: Any) -> list[str]:
+    return [tc.get("name", "") for tc in (getattr(msg, "tool_calls", None) or [])]
+
+
+_governed_cls = None
+_stream_warned = False
+
+
+def GovernedChatModel(*, governor: Any, chat_model: Any):
+    """A `BaseChatModel` that runs every call through an `AgentGovernor` — caps
+    enforced, cost and tokens metered, spans recorded — while behaving like an
+    ordinary LangChain model to whatever drives it.
+
+    Prefer `ctx.agent_model(...)`, which resolves the agent's policy and wires the
+    governor for you.
+
+    The class is built on first use so `langchain_core` stays an optional import,
+    matching the rest of this module.
+    """
+    global _governed_cls
+    if _governed_cls is None:
+        _governed_cls = _build_governed_cls()
+    return _governed_cls(governor=governor, chat_model=chat_model)
+
+
+def _build_governed_cls():
+    import asyncio
+    import logging
+
+    from langchain_core.language_models.chat_models import BaseChatModel
+    from langchain_core.messages import AIMessageChunk
+    from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
+
+    from .llm import AgentCallTimeout
+
+    log = logging.getLogger("boundflow.governed")
+
+    class _GovernedChatModel(BaseChatModel):
+        # `Any` keeps pydantic from trying to validate/copy the governor or the
+        # customer's model (which may not be a pydantic type at all).
+        governor: Any
+        chat_model: Any
+
+        @property
+        def _llm_type(self) -> str:
+            return "boundflow_governed"
+
+        def _resolve(self, model_name: str):
+            m = self.chat_model
+            # A factory is callable but has no `ainvoke`; a chat model has `ainvoke`.
+            if callable(m) and not hasattr(m, "ainvoke"):
+                return m(model_name)
+            return m
+
+        def bind_tools(self, tools, **kwargs):
+            """Bind tools while keeping governance in the call path.
+
+            This has to be implemented, not inherited: `BaseChatModel.bind_tools`
+            raises NotImplementedError, and LangGraph calls it for every tool-calling
+            agent. Formatting is delegated to the wrapped model (so provider-specific
+            tool schemas still work), but the formatted kwargs are then bound to
+            *self* — so calls route through `_agenerate` and stay metered, instead of
+            binding to the inner model and silently escaping governance.
+            """
+            inner = self._resolve(self.governor.model)
+            try:
+                formatted = inner.bind_tools(tools, **kwargs)
+                bound_kwargs = getattr(formatted, "kwargs", None) or {"tools": tools, **kwargs}
+            except NotImplementedError:
+                # Minimal/custom models may not implement bind_tools; pass the tools
+                # through unformatted rather than failing outright.
+                bound_kwargs = {"tools": tools, **kwargs}
+            return self.bind(**bound_kwargs)
+
+        async def _agenerate(self, messages, stop=None, run_manager=None, **kwargs) -> ChatResult:
+            # begin_call enforces the caps and hands back the policy-resolved model —
+            # so a call can't be made without first passing the check.
+            call = self.governor.begin_call()
+
+            model = self._resolve(call.model)
+            if call.max_tokens:
+                model = model.bind(max_tokens=call.max_tokens)
+
+            invoke = model.ainvoke(messages, stop=stop, **kwargs)
+            if call.timeout_seconds > 0:
+                try:
+                    msg = await asyncio.wait_for(invoke, timeout=call.timeout_seconds)
+                except asyncio.TimeoutError:
+                    raise AgentCallTimeout(
+                        f"LLM call exceeded max_call_seconds={call.timeout_seconds}") from None
+            else:
+                msg = await invoke
+
+            call.record(
+                _usage_from_message(msg, model),
+                tool_calls=_tool_call_names(msg),
+                input_messages=_lc_to_gen_ai_messages(messages),
+                output_message=_lc_to_gen_ai_messages([msg])[0],
+            )
+            return ChatResult(generations=[ChatGeneration(message=msg)])
+
+        def _generate(self, messages, stop=None, run_manager=None, **kwargs) -> ChatResult:
+            raise NotImplementedError(
+                "governed models are async-only — use ainvoke()/astream() (BoundFlow "
+                "workflow handlers are async).")
+
+        async def _astream(self, messages, stop=None, run_manager=None, **kwargs):
+            # Streaming isn't governed yet: token usage typically only lands on the
+            # final chunk and providers disagree about where, so metering a stream
+            # isn't reliable enough to run cost caps against. Fall back to a single
+            # non-streamed chunk — the LangChain default — but say so, since silently
+            # not streaming is a confusing way to find out.
+            global _stream_warned
+            if not _stream_warned:
+                _stream_warned = True
+                log.warning(
+                    "streaming through a governed model is not supported yet; "
+                    "returning the full response as a single chunk. Cost governance "
+                    "requires token usage, which streams don't reliably report.")
+            result = await self._agenerate(messages, stop=stop, run_manager=run_manager, **kwargs)
+            msg = result.generations[0].message
+            yield ChatGenerationChunk(
+                message=AIMessageChunk(
+                    content=msg.content,
+                    tool_calls=getattr(msg, "tool_calls", None) or [],
+                    usage_metadata=getattr(msg, "usage_metadata", None),
+                )
+            )
+
+    # Keep the public name on the built class, not the factory function.
+    _GovernedChatModel.__name__ = "GovernedChatModel"
+    _GovernedChatModel.__qualname__ = "GovernedChatModel"
+    return _GovernedChatModel
