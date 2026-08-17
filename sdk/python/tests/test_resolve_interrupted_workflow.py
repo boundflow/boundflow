@@ -68,6 +68,12 @@ async def test_resolve_interrupted_workflow_requires_matching_request_id(cp):
     # last_interrupted_request_id is exactly the request that was interrupted.
     assert await _last_interrupted_request_id(cp, workflow.id) == request_id
 
+    # ActivateWorkflow must never resurrect a disabled workflow — only
+    # ResolveInterruptedWorkflow's explicit acknowledgement can.
+    with pytest.raises(FailedPreconditionError):
+        await cp.activate_workflow(workflow.id, request_id)
+    assert (await cp.get_workflow(workflow.id)).workflow_state == WorkflowState.DISABLED
+
     # Resolving with a wrong id is rejected, and the workflow stays interrupted.
     with pytest.raises(FailedPreconditionError):
         await cp.resolve_interrupted_workflow(workflow.id, "not-the-right-id")

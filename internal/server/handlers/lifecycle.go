@@ -443,9 +443,9 @@ func (h *WorkflowServiceHandler) ActivateWorkflow(ctx context.Context, req *boun
 		return nil, err
 	}
 
-	if err := h.svc.ActivateWorkflow(ctx, req.WorkflowId); err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Errorf(codes.NotFound, "workflow instance not found")
+	if err := h.svc.ActivateWorkflow(ctx, req.WorkflowId, req.RequestId); err != nil {
+		if errors.Is(err, service.ErrActivateMismatch) {
+			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
 		}
 		return nil, status.Errorf(codes.Internal, "activate workflow: %v", err)
 	}

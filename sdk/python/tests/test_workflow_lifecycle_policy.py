@@ -169,8 +169,17 @@ async def test_workflow_pauses_and_does_not_schedule_until_activated(cp, api_key
             with pytest.raises(FailedPreconditionError):
                 await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
 
-            # Activate — invoke should now succeed and complete.
-            await cp.activate_workflow(workflow.id)
+            # Resuming requires the id of the run whose pause decision we're clearing.
+            decision_request_id = (await cp.get_workflow(workflow.id)).last_policy_decision_request_id
+            assert decision_request_id == request_id
+
+            # Wrong id is rejected — the workflow stays paused.
+            with pytest.raises(FailedPreconditionError):
+                await cp.activate_workflow(workflow.id, "not-the-right-id")
+            assert (await cp.get_workflow(workflow.id)).workflow_state == WorkflowState.PAUSED
+
+            # Activate with the matching id — invoke should now succeed and complete.
+            await cp.activate_workflow(workflow.id, decision_request_id)
             request_id = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
             await wait_for_completion(cp, request_id)
 

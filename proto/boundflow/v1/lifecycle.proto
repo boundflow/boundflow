@@ -343,6 +343,9 @@ message RejectWorkflowResponse {}
 
 message ActivateWorkflowRequest {
   string workflow_id = 1;
+  // Must match the workflow's last_policy_decision_request_id. "" for a workflow
+  // that has never had one (e.g. freshly created).
+  string request_id = 2;
 }
 
 message ActivateWorkflowResponse {}
