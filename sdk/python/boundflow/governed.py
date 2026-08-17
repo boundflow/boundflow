@@ -48,6 +48,7 @@ from typing import Any
 
 from .llm import (
     AgentPolicyLimitExceeded,
+    ToolFailureLimitExceeded,
     Usage,
     _estimate_cost,
     _gen_ai_system,
@@ -169,6 +170,7 @@ class AgentGovernor:
         self._start_ms = now_ms()
 
         self._tool_limits = {l.tool: l.max_calls for l in policy.tool_call_limits}
+        self._tool_failure_limits = {l.tool: l.max_failures for l in policy.tool_failure_limits}
         # Tools handed to us via agent_tools(): we dispatch these, so their caps are
         # enforceable and their calls are counted at execution rather than inferred
         # from what the model asked for.
@@ -254,9 +256,9 @@ class AgentGovernor:
         the *model*, not a failure of the run, so the caller returns
         `denial_message` as the tool's result and the model carries on without that
         tool — matching what `run_agent` does today."""
-        cap = self._tool_limits.get(tool, 0)
+        cap = self._tool_limits.get(tool)
         used = self.calls_per_tool.get(tool, 0)
-        if cap > 0 and used >= cap:
+        if cap is not None and used >= cap:
             log.debug("tool_limit hit: agent=%s tool=%s count=%d cap=%d",
                       self.agent_name, tool, used, cap)
             return GovernedToolCall(tool=tool, denied=True,
@@ -267,8 +269,10 @@ class AgentGovernor:
 
     def _record_tool(self, call: GovernedToolCall, input: Any,
                      output: Any, error: BaseException | None) -> None:
+        failures = None
         if error is not None:
-            self.tool_failure_counts[call.tool] = self.tool_failure_counts.get(call.tool, 0) + 1
+            failures = self.tool_failure_counts.get(call.tool, 0) + 1
+            self.tool_failure_counts[call.tool] = failures
         if self._collect_spans:
             self.spans.append(Span(
                 kind=SPAN_KIND_TOOL,
@@ -285,11 +289,19 @@ class AgentGovernor:
                 },
             ))
 
+        # Same rule as run_step: a repeatedly-failing tool ends the run rather than
+        # being routed around.
+        if failures is not None:
+            cap = self._tool_failure_limits.get(call.tool)
+            if cap is not None and failures > cap:
+                raise ToolFailureLimitExceeded(call.tool, failures, cap) from error
+
     def warn_if_tool_limits_unenforced(self) -> None:
         """Called when the operation ends: a per-tool cap that was set but never had
         a governed tool to enforce it against did nothing, and the caller should hear
         about that rather than assume it applied."""
-        unenforced = sorted(set(self._tool_limits) - self._governed_tools)
+        unenforced = sorted(
+            (set(self._tool_limits) | set(self._tool_failure_limits)) - self._governed_tools)
         if unenforced:
             log.warning(
                 "agent %r set tool_call_limits for %s, but those tools weren't passed "

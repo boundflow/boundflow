@@ -389,3 +389,43 @@ def test_merge_with_nothing_existing_is_a_passthrough():
     incoming = {"cost_usd": 0.01, "llm_calls": 1}
     assert _merge_agent_metrics(None, incoming) is incoming
     assert _merge_agent_metrics({}, incoming) is incoming
+
+
+async def test_governed_tools_enforce_tool_failure_limits_like_run_agent(search_tool):
+    """Parity check: tool_failure_limits ends the run in the governed path too. It
+    used to be enforced only when BoundFlow owned the loop, so a policy set on a
+    governed agent silently did nothing."""
+    from boundflow import ToolFailureLimit, ToolFailureLimitExceeded
+    from langchain_core.tools import tool as lc_tool
+
+    @lc_tool
+    def broken(query: str) -> str:
+        """Always fails."""
+        raise RuntimeError("upstream 500")
+
+    gov = _governor(RuntimePolicy(
+        tool_failure_limits=[ToolFailureLimit(tool="broken", max_failures=1)]))
+    wrapped = _wrap(gov, [broken])[0]
+
+    await_err = None
+    try:
+        await wrapped.ainvoke({"query": "a"})   # first failure: tolerated
+    except Exception as e:
+        await_err = e
+    assert not isinstance(await_err, ToolFailureLimitExceeded), "one failure is under the cap"
+
+    with pytest.raises(ToolFailureLimitExceeded) as exc:
+        await wrapped.ainvoke({"query": "b"})   # second: over the cap
+    assert exc.value.tool == "broken"
+    assert isinstance(exc.value.__cause__, RuntimeError)
+
+
+async def test_governed_zero_tool_cap_blocks_rather_than_uncapping(search_tool):
+    """Same landmine as run_step: a remaining budget of 0 must block, not uncap."""
+    tool, runs = search_tool
+    gov = _governor(RuntimePolicy(tool_call_limits=[ToolCallLimit(tool="search", max_calls=0)]))
+    wrapped = _wrap(gov, [tool])[0]
+
+    out = await wrapped.ainvoke({"query": "x"})
+    assert len(runs) == 0, "max_calls=0 must block the tool"
+    assert "Call limit reached" in out
