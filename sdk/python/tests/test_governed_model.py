@@ -426,3 +426,38 @@ async def test_governance_holds_through_deepagents(search_tool):
     assert gov.cost_usd > 0, "calls through the harness must still be priced"
     assert inner.calls[-1]["max_tokens"] == 444, "policy max_tokens must reach the provider"
     assert [s.kind for s in gov.spans].count("tool") == 1, "tool spans recorded through the harness"
+
+
+async def test_structured_output_works_through_the_governed_model():
+    """`output_schema` has no equivalent in the governed path — there's no
+    AgentDefinition — so customers get typed results from the harness's own API
+    instead. It has to stay metered, or they'd be trading governance for types."""
+    from pydantic import BaseModel, Field
+
+    class Verdict(BaseModel):
+        answer: str = Field(description="the answer")
+        confident: bool = Field(description="whether the agent is confident")
+
+    class SchemaAwareChat(FakeChat):
+        async def _agenerate(self, messages, stop=None, run_manager=None, **kwargs):
+            self.calls.append(kwargs)
+            tools = kwargs.get("tools") or []
+            name = "Verdict"
+            if tools and isinstance(tools[0], dict):
+                name = tools[0].get("function", {}).get("name") or name
+            msg = AIMessage(
+                content="",
+                tool_calls=[{"name": name, "args": {"answer": "42", "confident": True}, "id": "t1"}],
+                usage_metadata={"input_tokens": 50, "output_tokens": 10, "total_tokens": 60})
+            return ChatResult(generations=[ChatGeneration(message=msg)])
+
+    gov = _governor(RuntimePolicy(max_llm_calls=5))
+    inner = SchemaAwareChat(calls=[])
+    model = GovernedChatModel(governor=gov, chat_model=inner)
+
+    out = await model.with_structured_output(Verdict).ainvoke([HumanMessage(content="q")])
+
+    assert isinstance(out, Verdict) and out.answer == "42"
+    assert inner.calls[-1].get("tools"), "the schema has to reach the provider"
+    assert gov.llm_calls == 1, "a structured call is still a governed call"
+    assert gov.cost_usd > 0 and len(gov.spans) == 1
