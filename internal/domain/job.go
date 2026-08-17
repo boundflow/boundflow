@@ -49,8 +49,11 @@ type Job struct {
 	// Server-internal metadata for this job.
 	JobMetadata JobMetadata
 	// Approval gate — only populated when Status == JobStatusAwaitingApproval/Approved/Rejected.
+	// ApprovalReason is the decider's reason, set by ResolveApproval and merged into
+	// the resumed branch's context, mirroring InputAnswer.
 	ApprovalID        *string
 	ApprovalTimeoutAt *time.Time
+	ApprovalReason    string
 	// Input gate — only populated when Status == JobStatusAwaitingInput/Answered/InputTimedOut.
 	// InputAnswer is the submitted answer, set by ResolveInput and merged into the
 	// on_answer branch's context when the dispatch loop resumes it.
@@ -142,6 +145,9 @@ type ResolvedApproval struct {
 	RequestID     string
 	TenantGroupID string
 	OpenedAt      *time.Time
+	// Justification is the gate's own justification, read before the resolution
+	// clears it — so the audit event can carry what was being asked for.
+	Justification string
 }
 
 // ExpiredApproval is a gate the scheduler resolved by timeout; carries everything
@@ -153,6 +159,7 @@ type ExpiredApproval struct {
 	ApprovalID    string
 	OpenedAt      *time.Time
 	TimedOutAt    time.Time // approval_timeout_at — the decided_at for a timeout
+	Justification string
 }
 
 // ResolvedInput carries the job bits an input resolution needs to write its
@@ -161,6 +168,8 @@ type ResolvedInput struct {
 	RequestID     string
 	TenantGroupID string
 	OpenedAt      *time.Time
+	// Prompt is the gate's question, read before the resolution clears it.
+	Prompt string
 }
 
 // ExpiredInput is a gate the scheduler resolved by timeout; carries everything
@@ -172,4 +181,5 @@ type ExpiredInput struct {
 	InputID       string
 	OpenedAt      *time.Time
 	TimedOutAt    time.Time // input_timeout_at — the decided_at for a timeout
+	Prompt        string
 }

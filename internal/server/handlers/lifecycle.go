@@ -561,7 +561,7 @@ func (h *WorkflowServiceHandler) ApproveWorkflow(ctx context.Context, req *bound
 		return nil, err
 	}
 
-	if err := h.svc.ApproveWorkflow(ctx, req.WorkflowId, req.ApprovalId, req.Actor); err != nil {
+	if err := h.svc.ApproveWorkflow(ctx, req.WorkflowId, req.ApprovalId, req.Actor, req.Reason); err != nil {
 		if errors.Is(err, service.ErrInvalidWorkflowState) {
 			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
 		}
@@ -582,7 +582,7 @@ func (h *WorkflowServiceHandler) RejectWorkflow(ctx context.Context, req *boundf
 		return nil, err
 	}
 
-	if err := h.svc.RejectWorkflow(ctx, req.WorkflowId, req.ApprovalId, req.Actor); err != nil {
+	if err := h.svc.RejectWorkflow(ctx, req.WorkflowId, req.ApprovalId, req.Actor, req.Reason); err != nil {
 		if errors.Is(err, service.ErrInvalidWorkflowState) {
 			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
 		}

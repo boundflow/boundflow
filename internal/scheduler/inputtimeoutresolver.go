@@ -59,6 +59,8 @@ func (r *InputTimeoutResolver) sweep(ctx context.Context, partitionID string) {
 			OpenedAt:  e.OpenedAt,
 			DecidedAt: &decidedAt,
 			Decision:  domain.InputTimedOut,
+			// No answer on a timeout, but the record should still say what was asked.
+			Prompt: e.Prompt,
 		})
 		if err != nil {
 			r.log.Error("failed to marshal timed_out audit details", "input_id", e.InputID, "error", err)

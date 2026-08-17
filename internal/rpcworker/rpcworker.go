@@ -441,7 +441,22 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 
 						resolveBranch := func(branch domain.ApprovalBranch, label string) bool {
 							if branch.Next != nil {
-								job.Context = branch.Next.Context
+								ctx := branch.Next.Context
+								// The decider's reason comes from outside the workflow, so the
+								// branch can only get it from us — merged in the same way an
+								// input gate's answer reaches ctx.input_answer.
+								if job.ApprovalReason != "" {
+									if ctx == nil {
+										ctx = map[string]any{}
+									}
+									inputLane, _ := ctx["input"].(map[string]any)
+									if inputLane == nil {
+										inputLane = map[string]any{}
+									}
+									inputLane["approval_reason"] = job.ApprovalReason
+									ctx["input"] = inputLane
+								}
+								job.Context = ctx
 								job.RuntimeParams.OperationTimeoutSeconds = branch.Next.TimeoutSeconds
 								job.CurrentAtomicOperation = branch.Next.OperationName
 								return true

@@ -59,14 +59,16 @@ func (r *JobRepo) AcquireJob(ctx context.Context, workflowID string, ownerID str
 		   AND tenant_group_id = $4
 		 RETURNING workflow_id, request_id, version, current_atomic_operation, context, status,
 		           job_type, workflow_type, timeout_seconds, workflow_version, agent_metrics, workflow_metrics,
-		           job_metadata, approval_id, approval_timeout_at, input_id, input_timeout_at, input_answer,
+		           job_metadata, approval_id, approval_timeout_at, approval_reason,
+		           input_id, input_timeout_at, input_answer,
 		           owner, lease_expires_at, created_at`,
 		workflowID, ownerID, leaseDuration.String(), tenantGroupID,
 	).Scan(
 		&job.WorkflowID, &job.RequestID, &job.Version,
 		&job.CurrentAtomicOperation, &contextJSON, &job.Status,
 		&job.JobType, &job.WorkflowType, &job.RuntimeParams.OperationTimeoutSeconds, &job.WorkflowVersion, &agentMetricsJSON, &workflowMetricsJSON,
-		&jobMetadataJSON, &job.ApprovalID, &job.ApprovalTimeoutAt, &job.InputID, &job.InputTimeoutAt, &inputAnswerJSON,
+		&jobMetadataJSON, &job.ApprovalID, &job.ApprovalTimeoutAt, &job.ApprovalReason,
+		&job.InputID, &job.InputTimeoutAt, &inputAnswerJSON,
 		&job.Owner, &job.LeaseExpiresAt, &job.CreatedAt,
 	)
 	if err != nil {
@@ -186,25 +188,27 @@ func (r *JobRepo) GetJobMetrics(ctx context.Context, workflowID string, requestI
 	return agentMetrics, workflowMetrics, nil
 }
 
-func (r *JobRepo) ResolveApproval(ctx context.Context, workflowID string, approvalID string, status domain.JobStatus) (bool, domain.ResolvedApproval, error) {
+func (r *JobRepo) ResolveApproval(ctx context.Context, workflowID string, approvalID string, status domain.JobStatus, reason string) (bool, domain.ResolvedApproval, error) {
 	var info domain.ResolvedApproval
 	err := r.pool.QueryRow(ctx,
 		`WITH job_update AS (
 		     UPDATE jobs
-		     SET status = $3
+		     SET status = $3, approval_reason = $4
 		     WHERE workflow_id = $1
 		       AND approval_id = $2
 		       AND status = 'awaiting_approval'
-		     RETURNING workflow_id, request_id, tenant_group_id, approval_opened_at
+		     RETURNING workflow_id, request_id, tenant_group_id, approval_opened_at,
+		               approval_justification
 		 ),
 		 wf AS (
 		     UPDATE workflows
 		     SET lifecycle_state = 'invoking'
 		     WHERE id IN (SELECT workflow_id FROM job_update)
 		 )
-		 SELECT request_id, tenant_group_id, approval_opened_at FROM job_update`,
-		workflowID, approvalID, status,
-	).Scan(&info.RequestID, &info.TenantGroupID, &info.OpenedAt)
+		 SELECT request_id, tenant_group_id, approval_opened_at, approval_justification
+		 FROM job_update`,
+		workflowID, approvalID, status, reason,
+	).Scan(&info.RequestID, &info.TenantGroupID, &info.OpenedAt, &info.Justification)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, domain.ResolvedApproval{}, nil
@@ -228,14 +232,16 @@ func (r *JobRepo) SweepExpiredApprovals(ctx context.Context, partitionID string)
 		       AND status = 'awaiting_approval'
 		       AND approval_timeout_at <= now()
 		     RETURNING workflow_id, request_id, tenant_group_id, approval_id,
-		               approval_timeout_at, approval_opened_at
+		               approval_timeout_at, approval_opened_at, approval_justification
 		 ),
 		 wf AS (
 		     UPDATE workflows
 		     SET lifecycle_state = 'invoking'
 		     WHERE id IN (SELECT workflow_id FROM expired)
 		 )
-		 SELECT workflow_id, request_id, tenant_group_id, approval_id, approval_timeout_at, approval_opened_at FROM expired`,
+		 SELECT workflow_id, request_id, tenant_group_id, approval_id, approval_timeout_at,
+		        approval_opened_at, approval_justification
+		 FROM expired`,
 		partitionID,
 	)
 	if err != nil {
@@ -246,7 +252,7 @@ func (r *JobRepo) SweepExpiredApprovals(ctx context.Context, partitionID string)
 	var out []domain.ExpiredApproval
 	for rows.Next() {
 		var e domain.ExpiredApproval
-		if err := rows.Scan(&e.WorkflowID, &e.RequestID, &e.TenantGroupID, &e.ApprovalID, &e.TimedOutAt, &e.OpenedAt); err != nil {
+		if err := rows.Scan(&e.WorkflowID, &e.RequestID, &e.TenantGroupID, &e.ApprovalID, &e.TimedOutAt, &e.OpenedAt, &e.Justification); err != nil {
 			return nil, fmt.Errorf("scan expired approval: %w", err)
 		}
 		out = append(out, e)
@@ -309,16 +315,16 @@ func (r *JobRepo) ResolveInput(ctx context.Context, workflowID string, inputID s
 		     WHERE workflow_id = $1
 		       AND input_id = $2
 		       AND status = 'awaiting_input'
-		     RETURNING workflow_id, request_id, tenant_group_id, input_opened_at
+		     RETURNING workflow_id, request_id, tenant_group_id, input_opened_at, input_prompt
 		 ),
 		 wf AS (
 		     UPDATE workflows
 		     SET lifecycle_state = 'invoking'
 		     WHERE id IN (SELECT workflow_id FROM job_update)
 		 )
-		 SELECT request_id, tenant_group_id, input_opened_at FROM job_update`,
+		 SELECT request_id, tenant_group_id, input_opened_at, input_prompt FROM job_update`,
 		workflowID, inputID, domain.JobStatusAnswered, answerParam,
-	).Scan(&info.RequestID, &info.TenantGroupID, &info.OpenedAt)
+	).Scan(&info.RequestID, &info.TenantGroupID, &info.OpenedAt, &info.Prompt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, domain.ResolvedInput{}, nil
@@ -343,14 +349,16 @@ func (r *JobRepo) SweepExpiredInputs(ctx context.Context, partitionID string) ([
 		       AND status = 'awaiting_input'
 		       AND input_timeout_at <= now()
 		     RETURNING workflow_id, request_id, tenant_group_id, input_id,
-		               input_timeout_at, input_opened_at
+		               input_timeout_at, input_opened_at, input_prompt
 		 ),
 		 wf AS (
 		     UPDATE workflows
 		     SET lifecycle_state = 'invoking'
 		     WHERE id IN (SELECT workflow_id FROM expired)
 		 )
-		 SELECT workflow_id, request_id, tenant_group_id, input_id, input_timeout_at, input_opened_at FROM expired`,
+		 SELECT workflow_id, request_id, tenant_group_id, input_id, input_timeout_at,
+		        input_opened_at, input_prompt
+		 FROM expired`,
 		partitionID,
 	)
 	if err != nil {
@@ -361,7 +369,7 @@ func (r *JobRepo) SweepExpiredInputs(ctx context.Context, partitionID string) ([
 	var out []domain.ExpiredInput
 	for rows.Next() {
 		var e domain.ExpiredInput
-		if err := rows.Scan(&e.WorkflowID, &e.RequestID, &e.TenantGroupID, &e.InputID, &e.TimedOutAt, &e.OpenedAt); err != nil {
+		if err := rows.Scan(&e.WorkflowID, &e.RequestID, &e.TenantGroupID, &e.InputID, &e.TimedOutAt, &e.OpenedAt, &e.Prompt); err != nil {
 			return nil, fmt.Errorf("scan expired input: %w", err)
 		}
 		out = append(out, e)
@@ -457,7 +465,7 @@ func (r *JobRepo) UpdateJob(ctx context.Context, workflowID string, ownerID stri
 	tag, err := r.pool.Exec(ctx,
 		`UPDATE jobs
 		 SET status = $3, current_atomic_operation = $4, timeout_seconds = $5, context = $6,
-		     approval_id = NULL, approval_timeout_at = NULL, approval_justification = '', approval_metadata = NULL,
+		     approval_id = NULL, approval_timeout_at = NULL, approval_justification = '', approval_metadata = NULL, approval_reason = '',
 		     input_id = NULL, input_timeout_at = NULL, input_prompt = '', input_metadata = NULL, input_answer = NULL,
 		     job_metadata = '{}'
 		 WHERE workflow_id = $1 AND owner = $2`,
@@ -487,7 +495,7 @@ func (r *JobRepo) UpdateJobWithMetrics(ctx context.Context, workflowID string, o
 		`UPDATE jobs
 		 SET status = $3, current_atomic_operation = $4, timeout_seconds = $5, context = $6, agent_metrics = $7, workflow_metrics = $8,
 		     dispatch_at = CASE WHEN $9::int > 0 THEN now() + make_interval(secs => $9::int) ELSE NULL END,
-		     approval_id = NULL, approval_timeout_at = NULL, approval_justification = '', approval_metadata = NULL,
+		     approval_id = NULL, approval_timeout_at = NULL, approval_justification = '', approval_metadata = NULL, approval_reason = '',
 		     input_id = NULL, input_timeout_at = NULL, input_prompt = '', input_metadata = NULL, input_answer = NULL,
 		     job_metadata = '{}'
 		 WHERE workflow_id = $1 AND owner = $2`,

@@ -20,9 +20,11 @@ func ApprovalAuditRecord(e domain.AuditEvent) (*boundflowv1.ApprovalAuditRecord,
 		ApprovalId: d.ApprovalID,
 		WorkflowId: e.WorkflowID,
 		RequestId:  e.RequestID,
-		Decision:   approvalDecisionToProto(d.Decision),
-		Actor:      e.Actor,
-		OccurredAt: timestamppb.New(e.OccurredAt),
+		Decision:      approvalDecisionToProto(d.Decision),
+		Actor:         e.Actor,
+		OccurredAt:    timestamppb.New(e.OccurredAt),
+		Justification: d.Justification,
+		Reason:        d.Reason,
 	}
 	if d.OpenedAt != nil {
 		rec.OpenedAt = timestamppb.New(*d.OpenedAt)
@@ -80,6 +82,7 @@ func InputAuditRecord(e domain.AuditEvent) (*boundflowv1.InputAuditRecord, error
 		Decision:   inputDecisionToProto(d.Decision),
 		Actor:      e.Actor,
 		OccurredAt: timestamppb.New(e.OccurredAt),
+		Prompt:     d.Prompt,
 	}
 	if d.OpenedAt != nil {
 		rec.OpenedAt = timestamppb.New(*d.OpenedAt)
