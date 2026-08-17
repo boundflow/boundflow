@@ -18,7 +18,8 @@ from .lifecycle import (
     load_lifecycle_rules,
     load_runtime_policy,
 )
-from .llm import AgentStepConfig, LlmClient, Orchestrator, StepResult
+from .llm import AgentPolicyLimitExceeded, AgentStepConfig, LlmClient, Orchestrator, StepResult
+from .policies import RuntimePolicy
 from .trace import (
     OUTCOME_AWAIT_APPROVAL,
     OUTCOME_AWAIT_INPUT,
@@ -153,6 +154,59 @@ class AwaitInput:
 OperationResult = Union[Complete, Next, AwaitApproval, AwaitInput]
 
 
+@dataclass
+class Budget:
+    """What's left to spend on one `run_agent` call — a caller-side tightening of
+    the agent's runtime policy, for budgets that span more than one agent step.
+
+    BoundFlow's runtime policy caps a *single* agent step, so a workflow that calls
+    `run_agent` several times (a loop, or several operations in one run) gets a
+    fresh cap each time. Track the remaining budget yourself and pass it here, and
+    the step is capped at whichever is smaller:
+
+        spent = ctx.context.get("_cost", 0.0)
+        await ctx.run_agent(agent, budget=Budget(max_cost_usd=TOTAL - spent))
+
+    It can only ever *narrow* what policy already allows — the server-side policy
+    stays the ceiling, since this is called from workflow code.
+
+    Unlike `RuntimePolicy`, where 0 means "unset", here a field is:
+      * None -> no additional constraint
+      * 0 or less -> the budget is spent; `run_agent` raises
+        `AgentPolicyLimitExceeded` without making a call
+      * > 0 -> cap this step at min(policy, this)
+    """
+
+    max_llm_calls: int | None = None
+    max_cost_usd: float | None = None
+
+
+def _apply_budget(policy: RuntimePolicy, budget: Budget | None, agent_name: str) -> RuntimePolicy:
+    """Tighten `policy` with `budget`. Never loosens: workflow code can spend less
+    than policy allows, never more."""
+    if budget is None:
+        return policy
+
+    for label, remaining in (("max_llm_calls", budget.max_llm_calls),
+                             ("max_cost_usd", budget.max_cost_usd)):
+        # A computed remaining budget lands on 0 exactly when it's spent. Refusing
+        # here matters because 0 means "unlimited" in RuntimePolicy — passing it
+        # through would remove the cap at the very moment it should bite.
+        if remaining is not None and remaining <= 0:
+            raise AgentPolicyLimitExceeded(
+                f"agent {agent_name!r} has no {label} budget left "
+                f"(remaining: {remaining}); not making a call")
+
+    tightened = policy.model_copy()
+    if budget.max_llm_calls is not None:
+        tightened.max_llm_calls = (min(policy.max_llm_calls, budget.max_llm_calls)
+                                   if policy.max_llm_calls > 0 else budget.max_llm_calls)
+    if budget.max_cost_usd is not None:
+        tightened.max_cost_usd = (min(policy.max_cost_usd, budget.max_cost_usd)
+                                  if policy.max_cost_usd > 0 else budget.max_cost_usd)
+    return tightened
+
+
 # ── Operation context (handed to every handler) ──────────────────────────────
 
 
@@ -215,11 +269,15 @@ class OperationContext:
         """Flag this run as a customer-side failure (increments num_failures)."""
         self.failed = True
 
-    async def run_agent(self, agent: AgentDefinition) -> StepResult:
+    async def run_agent(self, agent: AgentDefinition, *, budget: Budget | None = None) -> StepResult:
         """Run an agent step. Runtime policy is snapshotted at request-creation
         time; lifecycle policy + metrics history are injected by the scheduler.
         Lifecycle rules are evaluated before the run; metrics are written back on
-        completion."""
+        completion.
+
+        `budget` narrows this step's caps to what's left of a budget spanning more
+        than one step — see `Budget`. It's applied last, after lifecycle rules, and
+        can only tighten, so the server-side policy stays the ceiling."""
         runtime_node = (self._op.context.get("agentRuntimePolicies") or {}).get(agent.name)
         state_node = (self._op.context.get("agentStates") or {}).get(agent.name)
 
@@ -237,6 +295,9 @@ class OperationContext:
                 "effective_policy": runtime_policy,
                 "fired_rules": fired,
             }
+
+        # Last, so a caller-side budget narrows whatever policy + lifecycle settled on.
+        runtime_policy = _apply_budget(runtime_policy, budget, agent.name)
 
         effective_model = runtime_policy.model or agent.model
 
