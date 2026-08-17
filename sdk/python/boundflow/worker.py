@@ -19,7 +19,7 @@ from .lifecycle import (
     load_runtime_policy,
 )
 from .llm import AgentPolicyLimitExceeded, AgentStepConfig, LlmClient, Orchestrator, StepResult
-from .policies import RuntimePolicy
+from .policies import RuntimePolicy, ToolCallLimit, ToolFailureLimit
 from .trace import (
     OUTCOME_AWAIT_APPROVAL,
     OUTCOME_AWAIT_INPUT,
@@ -156,29 +156,23 @@ OperationResult = Union[Complete, Next, AwaitApproval, AwaitInput]
 
 @dataclass
 class Budget:
-    """What's left to spend on one `run_agent` call — a caller-side tightening of
-    the agent's runtime policy, for budgets that span more than one agent step.
+    """What's left to spend on one `run_agent` call, for budgets spanning several
+    steps — RuntimePolicy caps a single step, so a loop gets a fresh cap each time.
 
-    BoundFlow's runtime policy caps a *single* agent step, so a workflow that calls
-    `run_agent` several times (a loop, or several operations in one run) gets a
-    fresh cap each time. Track the remaining budget yourself and pass it here, and
-    the step is capped at whichever is smaller:
-
-        spent = ctx.context.get("_cost", 0.0)
         await ctx.run_agent(agent, budget=Budget(max_cost_usd=TOTAL - spent))
 
-    It can only ever *narrow* what policy already allows — the server-side policy
-    stays the ceiling, since this is called from workflow code.
-
-    Unlike `RuntimePolicy`, where 0 means "unset", here a field is:
-      * None -> no additional constraint
-      * 0 or less -> the budget is spent; `run_agent` raises
-        `AgentPolicyLimitExceeded` without making a call
-      * > 0 -> cap this step at min(policy, this)
+    Only ever narrows what policy allows: this is called from workflow code, so
+    policy stays the ceiling. Fields are None (no constraint) / <= 0 (spent) /
+    > 0 (cap at min(policy, this)). Unlike RuntimePolicy, 0 here isn't "unset".
     """
 
     max_llm_calls: int | None = None
     max_cost_usd: float | None = None
+    # Remaining per tool. These don't raise when spent — one exhausted tool doesn't
+    # stop the step, it just gets blocked (or, for failures, ends the run when it
+    # next fails).
+    tool_call_limits: dict[str, int] | None = None
+    tool_failure_limits: dict[str, int] | None = None
 
 
 def _apply_budget(policy: RuntimePolicy, budget: Budget | None, agent_name: str) -> RuntimePolicy:
@@ -189,9 +183,8 @@ def _apply_budget(policy: RuntimePolicy, budget: Budget | None, agent_name: str)
 
     for label, remaining in (("max_llm_calls", budget.max_llm_calls),
                              ("max_cost_usd", budget.max_cost_usd)):
-        # A computed remaining budget lands on 0 exactly when it's spent. Refusing
-        # here matters because 0 means "unlimited" in RuntimePolicy — passing it
-        # through would remove the cap at the very moment it should bite.
+        # 0 means "unlimited" in RuntimePolicy, so a spent budget must refuse here
+        # rather than pass through and remove the cap.
         if remaining is not None and remaining <= 0:
             raise AgentPolicyLimitExceeded(
                 f"agent {agent_name!r} has no {label} budget left "
@@ -204,7 +197,31 @@ def _apply_budget(policy: RuntimePolicy, budget: Budget | None, agent_name: str)
     if budget.max_cost_usd is not None:
         tightened.max_cost_usd = (min(policy.max_cost_usd, budget.max_cost_usd)
                                   if policy.max_cost_usd > 0 else budget.max_cost_usd)
+
+    if budget.tool_call_limits is not None:
+        tightened.tool_call_limits = [
+            ToolCallLimit(tool=tool, max_calls=max(0, remaining))
+            for tool, remaining in _tighten_per_tool(
+                {l.tool: l.max_calls for l in policy.tool_call_limits},
+                budget.tool_call_limits).items()
+        ]
+    if budget.tool_failure_limits is not None:
+        tightened.tool_failure_limits = [
+            ToolFailureLimit(tool=tool, max_failures=max(0, remaining))
+            for tool, remaining in _tighten_per_tool(
+                {l.tool: l.max_failures for l in policy.tool_failure_limits},
+                budget.tool_failure_limits).items()
+        ]
     return tightened
+
+
+def _tighten_per_tool(policy_caps: dict[str, int], remaining: dict[str, int]) -> dict[str, int]:
+    """Per tool: the smaller of policy and remaining. Never loosens."""
+    out = dict(policy_caps)
+    for tool, left in remaining.items():
+        existing = out.get(tool)
+        out[tool] = left if existing is None else min(existing, left)
+    return out
 
 
 # ── Operation context (handed to every handler) ──────────────────────────────
@@ -275,9 +292,8 @@ class OperationContext:
         Lifecycle rules are evaluated before the run; metrics are written back on
         completion.
 
-        `budget` narrows this step's caps to what's left of a budget spanning more
-        than one step — see `Budget`. It's applied last, after lifecycle rules, and
-        can only tighten, so the server-side policy stays the ceiling."""
+        `budget` narrows this step to what's left of a longer budget (see `Budget`);
+        applied after lifecycle rules, and only ever tightens."""
         runtime_node = (self._op.context.get("agentRuntimePolicies") or {}).get(agent.name)
         state_node = (self._op.context.get("agentStates") or {}).get(agent.name)
 
@@ -296,7 +312,6 @@ class OperationContext:
                 "fired_rules": fired,
             }
 
-        # Last, so a caller-side budget narrows whatever policy + lifecycle settled on.
         runtime_policy = _apply_budget(runtime_policy, budget, agent.name)
 
         effective_model = runtime_policy.model or agent.model

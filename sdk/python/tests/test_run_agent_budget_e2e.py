@@ -107,3 +107,52 @@ async def test_policy_still_caps_a_generous_budget(cp):
             assert used == [2], f"policy cap of 2 must win over a budget of 99, got {used}"
         finally:
             await cp.delete_workflow(wf.id)
+
+
+async def test_tool_failure_limit_fails_the_run_through_the_worker(cp):
+    """The raise has to land as a customer-domain failure: the operation completes,
+    the run is marked failed, and num_failures moves for lifecycle rules."""
+    from boundflow import Tool, ToolFailureLimit
+
+    attempts: list[int] = []
+
+    async def broken(_):
+        attempts.append(1)
+        raise RuntimeError("upstream 500")
+
+    def _broken_agent() -> AgentDefinition:
+        return AgentDefinition(
+            name=AGENT, system_prompt="mock", model="mock-model",
+            tools=[Tool("flaky", "always fails", broken)],
+            output_schema={"done": {"type": "boolean"}})
+
+    worker = BoundFlowWorker(WORKER_ADDRESS, MockLlmClient(lambda _: turn(10, 5, "flaky")))
+
+    @worker.workflow("tool_failure_wf", version=1)
+    async def _entry(ctx):
+        await ctx.run_agent(_broken_agent())   # raises; deliberately not caught
+        return Complete(result={"unreachable": True})
+
+    async with run_worker(worker):
+        tenant = await create_isolated_tenant(cp, "tool-failure")
+        wf = await cp.create_workflow("tool_failure_wf", tenant.id,
+                                      config=WorkflowConfig(version=1))
+        try:
+            await cp.set_agent_runtime_policy(wf.id, AGENT, RuntimePolicy(
+                max_llm_calls=20,
+                tool_failure_limits=[ToolFailureLimit(tool="flaky", max_failures=1)]))
+            await cp.activate_workflow(wf.id)
+            rid = await cp.invoke_workflow(wf.id, operation_timeout_seconds=60)
+            info = await wait_for_completion(cp, rid, timeout=60)
+
+            assert len(attempts) == 2, f"one failure tolerated, the second ends it; got {len(attempts)}"
+            # Completes (not a platform interrupt) but reports as a failed run.
+            assert info.status in ("completed", "failed")
+            assert info.run_outcome is not None
+            assert "flaky" in (info.failure_reason or ""), \
+                f"the reason should name the broken tool, got {info.failure_reason!r}"
+
+            metrics = await cp.get_workflow_metrics(wf.id)
+            assert metrics.total_failures == 1, "the run must count as a failure"
+        finally:
+            await cp.delete_workflow(wf.id)

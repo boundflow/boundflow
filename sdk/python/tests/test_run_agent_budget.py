@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import pytest
 
-from boundflow import AgentPolicyLimitExceeded, Budget, RuntimePolicy
+from boundflow import (
+    AgentPolicyLimitExceeded, Budget, RuntimePolicy, ToolCallLimit, ToolFailureLimit,
+)
 from boundflow.worker import _apply_budget
 
 AGENT = "responder"
@@ -85,3 +87,48 @@ def test_refusal_happens_before_any_call_is_made():
         _apply(RuntimePolicy(), Budget(max_llm_calls=0))
     assert "not making a call" in str(exc.value)
     assert AGENT in str(exc.value)
+
+
+# ── per-tool budgets ─────────────────────────────────────────────────────────
+
+
+def test_tool_call_budget_tightens_per_tool():
+    policy = RuntimePolicy(tool_call_limits=[ToolCallLimit(tool="search", max_calls=5)])
+    out = _apply(policy, Budget(tool_call_limits={"search": 2}))
+    assert {l.tool: l.max_calls for l in out.tool_call_limits} == {"search": 2}
+
+
+def test_tool_call_budget_cannot_loosen():
+    policy = RuntimePolicy(tool_call_limits=[ToolCallLimit(tool="search", max_calls=2)])
+    out = _apply(policy, Budget(tool_call_limits={"search": 99}))
+    assert {l.tool: l.max_calls for l in out.tool_call_limits} == {"search": 2}
+
+
+def test_tool_budget_can_cap_a_tool_policy_left_uncapped():
+    out = _apply(RuntimePolicy(), Budget(tool_call_limits={"search": 3}))
+    assert {l.tool: l.max_calls for l in out.tool_call_limits} == {"search": 3}
+
+
+def test_tool_budget_keeps_policy_caps_it_doesnt_mention():
+    policy = RuntimePolicy(tool_call_limits=[
+        ToolCallLimit(tool="search", max_calls=5), ToolCallLimit(tool="write", max_calls=1)])
+    out = _apply(policy, Budget(tool_call_limits={"search": 2}))
+    assert {l.tool: l.max_calls for l in out.tool_call_limits} == {"search": 2, "write": 1}
+
+
+def test_spent_tool_budget_blocks_that_tool_without_failing_the_step():
+    """Unlike max_llm_calls, an exhausted tool doesn't stop the step — the tool is
+    capped at 0 (blocked) and the agent carries on with everything else."""
+    out = _apply(RuntimePolicy(), Budget(tool_call_limits={"search": 0}))
+    assert {l.tool: l.max_calls for l in out.tool_call_limits} == {"search": 0}
+
+
+def test_negative_tool_remaining_clamps_to_blocked():
+    out = _apply(RuntimePolicy(), Budget(tool_call_limits={"search": -3}))
+    assert out.tool_call_limits[0].max_calls == 0
+
+
+def test_tool_failure_budget_tightens_the_same_way():
+    policy = RuntimePolicy(tool_failure_limits=[ToolFailureLimit(tool="stripe", max_failures=5)])
+    out = _apply(policy, Budget(tool_failure_limits={"stripe": 1}))
+    assert {l.tool: l.max_failures for l in out.tool_failure_limits} == {"stripe": 1}
