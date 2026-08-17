@@ -137,10 +137,25 @@ class AgentCallTimeout(Exception):
 
 
 class AgentPolicyLimitExceeded(Exception):
-    """Raised when the model doesn't call submit_result on the forced finalize
-    call (the one made once max_llm_calls/max_cost_usd is reached). A customer-
-    domain failure like any other callback exception — the operation completes
-    (marked failed) and the workflow stays active."""
+    """A runtime policy limit stopped the agent step. A customer-domain failure like
+    any other callback exception — the operation completes (marked failed) and the
+    workflow stays active."""
+
+
+class ToolFailureLimitExceeded(AgentPolicyLimitExceeded):
+    """One tool failed past its `ToolFailureLimit`. A repeatedly-failing tool is a
+    broken dependency, so the run ends rather than producing an answer built on a
+    capability that isn't there; the original error is chained as the cause.
+
+    Subclasses AgentPolicyLimitExceeded so callers can catch either both or just
+    this — "budget gone" and "tool broken" need different fixes."""
+
+    def __init__(self, tool: str, failures: int, cap: int) -> None:
+        self.tool = tool
+        self.failures = failures
+        self.cap = cap
+        super().__init__(
+            f"tool {tool!r} failed {failures} time(s), over its max_failures cap of {cap}")
 
 
 # ── Scripted mock ─────────────────────────────────────────────────────────────
@@ -291,6 +306,8 @@ def _wrap_schema(props: dict | None) -> dict:
     return {"type": "object", "properties": props or {}}
 
 
+
+
 class Orchestrator:
     def __init__(self, client: LlmClient) -> None:
         self._client = client
@@ -314,6 +331,7 @@ class Orchestrator:
         call_counts: dict[str, int] = {}
         failure_counts: dict[str, int] = {}
         tool_limits = {l.tool: l.max_calls for l in cfg.policy.tool_call_limits}
+        tool_failure_limits = {l.tool: l.max_failures for l in cfg.policy.tool_failure_limits}
         spans: list[Span] = []  # ordered LLM + tool spans, captured for the run trace
 
         log.debug("run_step start: objective=%s model=%s max_llm_calls=%s tool_limits=%s",
@@ -395,16 +413,19 @@ class Orchestrator:
                     tool_results.append(ToolResultBlock(block.id, f"Unknown callback: {block.name}", is_error=True))
                     continue
 
-                cap = tool_limits.get(block.name, 0)
+                # Absent is the only "no cap": an explicit 0 blocks, so a spent
+                # remaining-budget of 0 doesn't read as unlimited.
+                cap = tool_limits.get(block.name)
                 current_count = call_counts.get(block.name, 0)
-                if cap > 0 and current_count >= cap:
+                if cap is not None and current_count >= cap:
                     log.debug("tool_limit hit: tool=%s count=%d cap=%d", block.name, current_count, cap)
                     tool_results.append(ToolResultBlock(
                         block.id, f"Call limit reached for '{block.name}' (max {cap}). Do not call it again.",
                         is_error=True))
                     continue
                 call_counts[block.name] = current_count + 1
-                log.debug("tool_call: tool=%s count_after=%d cap=%s", block.name, current_count + 1, cap or "unlimited")
+                log.debug("tool_call: tool=%s count_after=%d cap=%s", block.name, current_count + 1,
+                          "unlimited" if cap is None else cap)
 
                 _tool_start = now_ms()
                 _tool_attrs = {
@@ -416,9 +437,15 @@ class Orchestrator:
                 try:
                     out = await callbacks[block.name].handler(block.input)
                 except Exception as ex:  # noqa: BLE001 — report tool failure to the model
-                    failure_counts[block.name] = failure_counts.get(block.name, 0) + 1
+                    failures = failure_counts.get(block.name, 0) + 1
+                    failure_counts[block.name] = failures
                     spans.append(Span(kind=SPAN_KIND_TOOL, name=block.name, start_ms=_tool_start, end_ms=now_ms(),
                                       input=block.input, error=str(ex), attributes=_tool_attrs))
+                    # Here rather than before the next call, so the run stops when the
+                    # cap is crossed, not when the model retries.
+                    failure_cap = tool_failure_limits.get(block.name)
+                    if failure_cap is not None and failures > failure_cap:
+                        raise ToolFailureLimitExceeded(block.name, failures, failure_cap) from ex
                     tool_results.append(ToolResultBlock(block.id, str(ex), is_error=True))
                     continue
 

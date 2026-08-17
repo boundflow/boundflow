@@ -18,7 +18,8 @@ from .lifecycle import (
     load_lifecycle_rules,
     load_runtime_policy,
 )
-from .llm import AgentStepConfig, LlmClient, Orchestrator, StepResult
+from .llm import AgentPolicyLimitExceeded, AgentStepConfig, LlmClient, Orchestrator, StepResult
+from .policies import RuntimePolicy, ToolCallLimit, ToolFailureLimit
 from .trace import (
     OUTCOME_AWAIT_APPROVAL,
     OUTCOME_AWAIT_INPUT,
@@ -153,6 +154,76 @@ class AwaitInput:
 OperationResult = Union[Complete, Next, AwaitApproval, AwaitInput]
 
 
+@dataclass
+class Budget:
+    """What's left to spend on one `run_agent` call, for budgets spanning several
+    steps — RuntimePolicy caps a single step, so a loop gets a fresh cap each time.
+
+        await ctx.run_agent(agent, budget=Budget(max_cost_usd=TOTAL - spent))
+
+    Only ever narrows what policy allows: this is called from workflow code, so
+    policy stays the ceiling. Fields are None (no constraint) / <= 0 (spent) /
+    > 0 (cap at min(policy, this)). Unlike RuntimePolicy, 0 here isn't "unset".
+    """
+
+    max_llm_calls: int | None = None
+    max_cost_usd: float | None = None
+    # Remaining per tool. These don't raise when spent — one exhausted tool doesn't
+    # stop the step, it just gets blocked (or, for failures, ends the run when it
+    # next fails).
+    tool_call_limits: dict[str, int] | None = None
+    tool_failure_limits: dict[str, int] | None = None
+
+
+def _apply_budget(policy: RuntimePolicy, budget: Budget | None, agent_name: str) -> RuntimePolicy:
+    """Tighten `policy` with `budget`. Never loosens: workflow code can spend less
+    than policy allows, never more."""
+    if budget is None:
+        return policy
+
+    for label, remaining in (("max_llm_calls", budget.max_llm_calls),
+                             ("max_cost_usd", budget.max_cost_usd)):
+        # 0 means "unlimited" in RuntimePolicy, so a spent budget must refuse here
+        # rather than pass through and remove the cap.
+        if remaining is not None and remaining <= 0:
+            raise AgentPolicyLimitExceeded(
+                f"agent {agent_name!r} has no {label} budget left "
+                f"(remaining: {remaining}); not making a call")
+
+    tightened = policy.model_copy()
+    if budget.max_llm_calls is not None:
+        tightened.max_llm_calls = (min(policy.max_llm_calls, budget.max_llm_calls)
+                                   if policy.max_llm_calls > 0 else budget.max_llm_calls)
+    if budget.max_cost_usd is not None:
+        tightened.max_cost_usd = (min(policy.max_cost_usd, budget.max_cost_usd)
+                                  if policy.max_cost_usd > 0 else budget.max_cost_usd)
+
+    if budget.tool_call_limits is not None:
+        tightened.tool_call_limits = [
+            ToolCallLimit(tool=tool, max_calls=max(0, remaining))
+            for tool, remaining in _tighten_per_tool(
+                {l.tool: l.max_calls for l in policy.tool_call_limits},
+                budget.tool_call_limits).items()
+        ]
+    if budget.tool_failure_limits is not None:
+        tightened.tool_failure_limits = [
+            ToolFailureLimit(tool=tool, max_failures=max(0, remaining))
+            for tool, remaining in _tighten_per_tool(
+                {l.tool: l.max_failures for l in policy.tool_failure_limits},
+                budget.tool_failure_limits).items()
+        ]
+    return tightened
+
+
+def _tighten_per_tool(policy_caps: dict[str, int], remaining: dict[str, int]) -> dict[str, int]:
+    """Per tool: the smaller of policy and remaining. Never loosens."""
+    out = dict(policy_caps)
+    for tool, left in remaining.items():
+        existing = out.get(tool)
+        out[tool] = left if existing is None else min(existing, left)
+    return out
+
+
 # ── Operation context (handed to every handler) ──────────────────────────────
 
 
@@ -215,11 +286,14 @@ class OperationContext:
         """Flag this run as a customer-side failure (increments num_failures)."""
         self.failed = True
 
-    async def run_agent(self, agent: AgentDefinition) -> StepResult:
+    async def run_agent(self, agent: AgentDefinition, *, budget: Budget | None = None) -> StepResult:
         """Run an agent step. Runtime policy is snapshotted at request-creation
         time; lifecycle policy + metrics history are injected by the scheduler.
         Lifecycle rules are evaluated before the run; metrics are written back on
-        completion."""
+        completion.
+
+        `budget` narrows this step to what's left of a longer budget (see `Budget`);
+        applied after lifecycle rules, and only ever tightens."""
         runtime_node = (self._op.context.get("agentRuntimePolicies") or {}).get(agent.name)
         state_node = (self._op.context.get("agentStates") or {}).get(agent.name)
 
@@ -237,6 +311,8 @@ class OperationContext:
                 "effective_policy": runtime_policy,
                 "fired_rules": fired,
             }
+
+        runtime_policy = _apply_budget(runtime_policy, budget, agent.name)
 
         effective_model = runtime_policy.model or agent.model
 

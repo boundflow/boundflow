@@ -38,7 +38,7 @@ from .errors import (
     UnauthenticatedError,
     UnavailableError,
 )
-from .llm import AgentCallTimeout, AgentPolicyLimitExceeded, MockLlmClient, MockContext, Turn, turn, submit
+from .llm import AgentCallTimeout, AgentPolicyLimitExceeded, ToolFailureLimitExceeded, MockLlmClient, MockContext, Turn, turn, submit
 from .trace import (
     AgentRunTrace,
     JsonlFileTraceSink,
@@ -61,6 +61,7 @@ from .policies import (
     SetModel,
     SetVersion,
     ToolCallLimit,
+    ToolFailureLimit,
     WorkflowMetric,
     WorkflowRule,
 )
@@ -70,6 +71,7 @@ from .worker import (
     AwaitApproval,
     AwaitInput,
     BoundFlowWorker,
+    Budget,
     Complete,
     ENTRY_OPERATION,
     InputRequest,
@@ -87,9 +89,9 @@ __all__ = [
     "WorkflowConfig", "WorkflowState", "WorkflowInfo", "WorkflowMetrics", "PendingApproval", "PendingInput", "InvokeMode", "ApprovalAuditRecord", "ApprovalDecision", "InputAuditRecord", "InputDecision", "PolicyActionRecord", "WorkflowPolicyAction", "AgentPolicyActionRecord", "AgentCallTimeout", "AgentPolicyLimitExceeded", "MockLlmClient", "MockContext", "Turn",
     "turn", "submit", "AgentMetric", "AgentRule", "Cooldown", "Op", "Pause",
     "RuntimePolicy", "SetMaxCostUsd", "SetMaxLlmCalls", "SetMaxTokensPerCall",
-    "SetModel", "SetVersion", "ToolCallLimit", "WorkflowMetric", "WorkflowRule",
+    "SetModel", "SetVersion", "ToolCallLimit", "ToolFailureLimit", "ToolFailureLimitExceeded", "WorkflowMetric", "WorkflowRule",
     "AgentDefinition", "ApprovalRequest", "AwaitApproval", "AwaitInput", "InputRequest", "BoundFlowWorker",
-    "Complete", "ENTRY_OPERATION", "Next", "OperationContext", "OperationResult", "Tool", "tool",
+    "Budget", "Complete", "ENTRY_OPERATION", "Next", "OperationContext", "OperationResult", "Tool", "tool",
     "AgentRunTrace", "OperationTrace", "Span", "TraceSink", "LoggingTraceSink",
     "JsonlFileTraceSink", "OTelTraceSink",
     "BoundflowError", "NotFoundError", "AlreadyExistsError", "InvalidArgumentError",

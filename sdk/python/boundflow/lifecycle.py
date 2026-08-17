@@ -20,6 +20,7 @@ from .policies import (
     SetMaxTokensPerCall,
     SetModel,
     ToolCallLimit,
+    ToolFailureLimit,
 )
 
 
@@ -43,12 +44,18 @@ def load_runtime_policy(node: dict | None) -> RuntimePolicy:
         for l in node.get("tool_call_limits", [])
         if l.get("tool")
     ]
+    failure_limits = [
+        ToolFailureLimit(tool=l["tool"], max_failures=l.get("max_failures", 0))
+        for l in node.get("tool_failure_limits", [])
+        if l.get("tool")
+    ]
     return RuntimePolicy(
         max_llm_calls=node.get("max_llm_calls", 0),
         max_cost_usd=node.get("max_cost_usd", 0),
         max_tokens_per_call=node.get("max_tokens_per_call", 0),
         max_call_seconds=node.get("max_call_seconds", 0),
         tool_call_limits=limits,
+        tool_failure_limits=failure_limits,
         model=node.get("model"),
     )
 
