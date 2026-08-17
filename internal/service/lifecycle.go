@@ -478,7 +478,7 @@ func (s *LifecycleService) ResolveInterruptedWorkflow(ctx context.Context, workf
 	return nil
 }
 
-func (s *LifecycleService) ApproveWorkflow(ctx context.Context, workflowID string, approvalID string, actor string) error {
+func (s *LifecycleService) ApproveWorkflow(ctx context.Context, workflowID string, approvalID string, actor string, reason string) error {
 	s.log.Info("approving workflow", "workflow_id", workflowID, "approval_id", approvalID, "actor", actor)
 	resolved, info, err := s.approvalResolver.ApproveJob(ctx, workflowID, approvalID)
 	if err != nil {
@@ -487,11 +487,11 @@ func (s *LifecycleService) ApproveWorkflow(ctx context.Context, workflowID strin
 	if !resolved {
 		return fmt.Errorf("%w: approval ID did not match or workflow is not awaiting approval", ErrInvalidWorkflowState)
 	}
-	s.recordApprovalDecision(ctx, workflowID, approvalID, actor, domain.ApprovalApproved, info)
+	s.recordApprovalDecision(ctx, workflowID, approvalID, actor, reason, domain.ApprovalApproved, info)
 	return nil
 }
 
-func (s *LifecycleService) RejectWorkflow(ctx context.Context, workflowID string, approvalID string, actor string) error {
+func (s *LifecycleService) RejectWorkflow(ctx context.Context, workflowID string, approvalID string, actor string, reason string) error {
 	s.log.Info("rejecting workflow", "workflow_id", workflowID, "approval_id", approvalID, "actor", actor)
 	resolved, info, err := s.approvalResolver.RejectJob(ctx, workflowID, approvalID)
 	if err != nil {
@@ -500,20 +500,24 @@ func (s *LifecycleService) RejectWorkflow(ctx context.Context, workflowID string
 	if !resolved {
 		return fmt.Errorf("%w: approval ID did not match or workflow is not awaiting approval", ErrInvalidWorkflowState)
 	}
-	s.recordApprovalDecision(ctx, workflowID, approvalID, actor, domain.ApprovalRejected, info)
+	s.recordApprovalDecision(ctx, workflowID, approvalID, actor, reason, domain.ApprovalRejected, info)
 	return nil
 }
 
 // recordApprovalDecision appends the approval audit row after an explicit decision.
 // Best-effort: the decision already committed, so a failed audit write is logged,
 // not surfaced as an error (matches the timeout sweep's behavior).
-func (s *LifecycleService) recordApprovalDecision(ctx context.Context, workflowID, approvalID, actor string, decision domain.ApprovalDecision, info domain.ResolvedApproval) {
+func (s *LifecycleService) recordApprovalDecision(ctx context.Context, workflowID, approvalID, actor, reason string, decision domain.ApprovalDecision, info domain.ResolvedApproval) {
 	now := time.Now()
 	details, err := json.Marshal(domain.ApprovalAuditDetails{
 		ApprovalID: approvalID,
 		OpenedAt:   info.OpenedAt,
 		DecidedAt:  &now,
 		Decision:   decision,
+		// Copied off the job row before the run advances and clears it, so the
+		// event says what was asked for as well as how it was answered.
+		Justification: info.Justification,
+		Reason:        reason,
 	})
 	if err != nil {
 		s.log.Error("failed to marshal approval audit details", "approval_id", approvalID, "error", err)

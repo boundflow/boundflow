@@ -195,16 +195,18 @@ func (r *JobRepo) ResolveApproval(ctx context.Context, workflowID string, approv
 		     WHERE workflow_id = $1
 		       AND approval_id = $2
 		       AND status = 'awaiting_approval'
-		     RETURNING workflow_id, request_id, tenant_group_id, approval_opened_at
+		     RETURNING workflow_id, request_id, tenant_group_id, approval_opened_at,
+		               approval_justification
 		 ),
 		 wf AS (
 		     UPDATE workflows
 		     SET lifecycle_state = 'invoking'
 		     WHERE id IN (SELECT workflow_id FROM job_update)
 		 )
-		 SELECT request_id, tenant_group_id, approval_opened_at FROM job_update`,
+		 SELECT request_id, tenant_group_id, approval_opened_at, approval_justification
+		 FROM job_update`,
 		workflowID, approvalID, status,
-	).Scan(&info.RequestID, &info.TenantGroupID, &info.OpenedAt)
+	).Scan(&info.RequestID, &info.TenantGroupID, &info.OpenedAt, &info.Justification)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, domain.ResolvedApproval{}, nil
@@ -228,14 +230,16 @@ func (r *JobRepo) SweepExpiredApprovals(ctx context.Context, partitionID string)
 		       AND status = 'awaiting_approval'
 		       AND approval_timeout_at <= now()
 		     RETURNING workflow_id, request_id, tenant_group_id, approval_id,
-		               approval_timeout_at, approval_opened_at
+		               approval_timeout_at, approval_opened_at, approval_justification
 		 ),
 		 wf AS (
 		     UPDATE workflows
 		     SET lifecycle_state = 'invoking'
 		     WHERE id IN (SELECT workflow_id FROM expired)
 		 )
-		 SELECT workflow_id, request_id, tenant_group_id, approval_id, approval_timeout_at, approval_opened_at FROM expired`,
+		 SELECT workflow_id, request_id, tenant_group_id, approval_id, approval_timeout_at,
+		        approval_opened_at, approval_justification
+		 FROM expired`,
 		partitionID,
 	)
 	if err != nil {
@@ -246,7 +250,7 @@ func (r *JobRepo) SweepExpiredApprovals(ctx context.Context, partitionID string)
 	var out []domain.ExpiredApproval
 	for rows.Next() {
 		var e domain.ExpiredApproval
-		if err := rows.Scan(&e.WorkflowID, &e.RequestID, &e.TenantGroupID, &e.ApprovalID, &e.TimedOutAt, &e.OpenedAt); err != nil {
+		if err := rows.Scan(&e.WorkflowID, &e.RequestID, &e.TenantGroupID, &e.ApprovalID, &e.TimedOutAt, &e.OpenedAt, &e.Justification); err != nil {
 			return nil, fmt.Errorf("scan expired approval: %w", err)
 		}
 		out = append(out, e)

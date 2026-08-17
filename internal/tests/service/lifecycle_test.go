@@ -436,7 +436,7 @@ func TestApproveWorkflow_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	svc, _, _, _, _, _ := newSvcWithApproval(ctrl, &mockApprovalResolver{approveResult: true})
 
-	if err := svc.ApproveWorkflow(context.Background(), "instance-1", "approval-id-1", "tester"); err != nil {
+	if err := svc.ApproveWorkflow(context.Background(), "instance-1", "approval-id-1", "tester", ""); err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
 }
@@ -445,7 +445,7 @@ func TestApproveWorkflow_IdMismatch_ReturnsInvalidWorkflowState(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	svc, _, _, _, _, _ := newSvcWithApproval(ctrl, &mockApprovalResolver{approveResult: false})
 
-	err := svc.ApproveWorkflow(context.Background(), "instance-1", "wrong-id", "tester")
+	err := svc.ApproveWorkflow(context.Background(), "instance-1", "wrong-id", "tester", "")
 	if !errors.Is(err, service.ErrInvalidWorkflowState) {
 		t.Fatalf("expected ErrInvalidWorkflowState, got %v", err)
 	}
@@ -456,7 +456,7 @@ func TestApproveWorkflow_StorageError_ReturnsError(t *testing.T) {
 	storageErr := errors.New("db error")
 	svc, _, _, _, _, _ := newSvcWithApproval(ctrl, &mockApprovalResolver{approveErr: storageErr})
 
-	if err := svc.ApproveWorkflow(context.Background(), "instance-1", "approval-id-1", "tester"); err == nil {
+	if err := svc.ApproveWorkflow(context.Background(), "instance-1", "approval-id-1", "tester", ""); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }
@@ -465,7 +465,7 @@ func TestRejectWorkflow_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	svc, _, _, _, _, _ := newSvcWithApproval(ctrl, &mockApprovalResolver{rejectResult: true})
 
-	if err := svc.RejectWorkflow(context.Background(), "instance-1", "approval-id-1", "tester"); err != nil {
+	if err := svc.RejectWorkflow(context.Background(), "instance-1", "approval-id-1", "tester", ""); err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
 }
@@ -474,7 +474,7 @@ func TestRejectWorkflow_IdMismatch_ReturnsInvalidWorkflowState(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	svc, _, _, _, _, _ := newSvcWithApproval(ctrl, &mockApprovalResolver{rejectResult: false})
 
-	err := svc.RejectWorkflow(context.Background(), "instance-1", "wrong-id", "tester")
+	err := svc.RejectWorkflow(context.Background(), "instance-1", "wrong-id", "tester", "")
 	if !errors.Is(err, service.ErrInvalidWorkflowState) {
 		t.Fatalf("expected ErrInvalidWorkflowState, got %v", err)
 	}
@@ -485,7 +485,7 @@ func TestRejectWorkflow_StorageError_ReturnsError(t *testing.T) {
 	storageErr := errors.New("db error")
 	svc, _, _, _, _, _ := newSvcWithApproval(ctrl, &mockApprovalResolver{rejectErr: storageErr})
 
-	if err := svc.RejectWorkflow(context.Background(), "instance-1", "approval-id-1", "tester"); err == nil {
+	if err := svc.RejectWorkflow(context.Background(), "instance-1", "approval-id-1", "tester", ""); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }

@@ -142,6 +142,9 @@ type ResolvedApproval struct {
 	RequestID     string
 	TenantGroupID string
 	OpenedAt      *time.Time
+	// Justification is the gate's own justification, read before the resolution
+	// clears it — so the audit event can carry what was being asked for.
+	Justification string
 }
 
 // ExpiredApproval is a gate the scheduler resolved by timeout; carries everything
@@ -153,6 +156,7 @@ type ExpiredApproval struct {
 	ApprovalID    string
 	OpenedAt      *time.Time
 	TimedOutAt    time.Time // approval_timeout_at — the decided_at for a timeout
+	Justification string
 }
 
 // ResolvedInput carries the job bits an input resolution needs to write its

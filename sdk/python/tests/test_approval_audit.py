@@ -152,3 +152,120 @@ async def test_timeout_audits_as_timed_out(cp):
             assert r.opened_at is not None
         finally:
             await cp.delete_workflow(wf.id)
+
+
+async def test_decision_records_justification_and_reason(cp):
+    """get_audit_log alone should answer what was proposed, who rejected it, and why —
+    with no reconstruction from the run's context."""
+    captured: list[ApprovalRequest] = []
+    worker = BoundFlowWorker(WORKER_ADDRESS, dummy_mock())
+
+    @worker.workflow("audit_reason", version=1)
+    async def _entry(ctx):
+        return AwaitApproval(
+            on_approve=Complete(), on_reject=Complete(), timeout=60,
+            justification="Refund $250 to customer T-42",
+        )
+
+    @worker.on_approval_requested
+    async def _on(req: ApprovalRequest):
+        captured.append(req)
+
+    async with run_worker(worker):
+        tenant = await create_isolated_tenant(cp, "audit-reason")
+        wf = await cp.create_workflow("audit_reason", tenant.id, config=WorkflowConfig(version=1))
+        try:
+            await cp.activate_workflow(wf.id)
+            rid = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
+            await wait_for_lifecycle_state(cp, wf.id, LifecycleState.AWAITING_APPROVAL, timeout=30)
+
+            approval_id = captured[0].approval_id
+            await cp.reject_workflow(wf.id, approval_id, actor="arjun@example.com",
+                                     reason="Refund exceeds the $100 auto-approve threshold")
+            await wait_for_completion(cp, rid, timeout=60)
+
+            rec = await _wait_for_audit(cp, approval_id)
+            # What was asked for — copied off the job row before the run cleared it.
+            assert rec.justification == "Refund $250 to customer T-42"
+            # Who, and why — captured in the same call as the decision.
+            assert rec.actor == "arjun@example.com"
+            assert rec.reason == "Refund exceeds the $100 auto-approve threshold"
+            assert rec.decision.value == "rejected"
+
+            # The same content has to be on the unified log, since that's the corpus.
+            entries = await cp.get_audit_log(wf.id)
+            approvals = [e for e in entries if getattr(e, "approval_id", None) == approval_id]
+            assert approvals, "approval decision missing from the unified audit log"
+            assert approvals[0].justification == "Refund $250 to customer T-42"
+            assert approvals[0].reason == "Refund exceeds the $100 auto-approve threshold"
+        finally:
+            await cp.delete_workflow(wf.id)
+
+
+async def test_reason_is_optional_and_approve_carries_it_too(cp):
+    captured: list[ApprovalRequest] = []
+    worker = BoundFlowWorker(WORKER_ADDRESS, dummy_mock())
+
+    @worker.workflow("audit_reason_approve", version=1)
+    async def _entry(ctx):
+        return AwaitApproval(on_approve=Complete(), on_reject=Complete(), timeout=60,
+                             justification="Deploy v2 to prod")
+
+    @worker.on_approval_requested
+    async def _on(req: ApprovalRequest):
+        captured.append(req)
+
+    async with run_worker(worker):
+        tenant = await create_isolated_tenant(cp, "audit-reason-approve")
+        wf = await cp.create_workflow("audit_reason_approve", tenant.id,
+                                      config=WorkflowConfig(version=1))
+        try:
+            await cp.activate_workflow(wf.id)
+            rid = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
+            await wait_for_lifecycle_state(cp, wf.id, LifecycleState.AWAITING_APPROVAL, timeout=30)
+
+            approval_id = captured[0].approval_id
+            await cp.approve_workflow(wf.id, approval_id, actor="ops",
+                                      reason="Canary looked clean for 24h")
+            await wait_for_completion(cp, rid, timeout=60)
+
+            rec = await _wait_for_audit(cp, approval_id)
+            assert rec.decision.value == "approved"
+            assert rec.reason == "Canary looked clean for 24h"
+            assert rec.justification == "Deploy v2 to prod"
+        finally:
+            await cp.delete_workflow(wf.id)
+
+
+async def test_timeout_still_records_what_went_unanswered(cp):
+    """A timeout has no decider and so no reason, but the audit row should still say
+    what was being asked."""
+    captured: list[ApprovalRequest] = []
+    worker = BoundFlowWorker(WORKER_ADDRESS, dummy_mock())
+
+    @worker.workflow("audit_timeout_just", version=1)
+    async def _entry(ctx):
+        return AwaitApproval(on_approve=Complete(), on_reject=Complete(), timeout=8,
+                             justification="Waive the late fee for account 991")
+
+    @worker.on_approval_requested
+    async def _on(req: ApprovalRequest):
+        captured.append(req)
+
+    async with run_worker(worker):
+        tenant = await create_isolated_tenant(cp, "audit-timeout-just")
+        wf = await cp.create_workflow("audit_timeout_just", tenant.id,
+                                      config=WorkflowConfig(version=1))
+        try:
+            await cp.activate_workflow(wf.id)
+            await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
+            await wait_for_lifecycle_state(cp, wf.id, LifecycleState.AWAITING_APPROVAL, timeout=30)
+
+            # Let it expire — nobody decides.
+            rec = await _wait_for_audit(cp, captured[0].approval_id, timeout=60)
+            assert rec.decision.value == "timed_out"
+            assert rec.justification == "Waive the late fee for account 991"
+            assert rec.reason == "", "a timeout has no decider, so no reason"
+            assert rec.actor == ""
+        finally:
+            await cp.delete_workflow(wf.id)

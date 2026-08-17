@@ -284,6 +284,12 @@ class ApprovalAuditRecord:
     decided_at: datetime | None
     actor: str                     # customer-supplied; empty for timeouts
     occurred_at: datetime | None   # when the decision was recorded
+    # What the gate asked for (AwaitApproval.justification), captured when the
+    # decision landed — the job row clears it as the run advances, so this is what
+    # keeps an old decision readable without reconstructing it.
+    justification: str = ""
+    # Why the decider decided, if they gave a reason. Empty for timeouts.
+    reason: str = ""
 
 
 @dataclass
@@ -389,7 +395,8 @@ def _approval_record(r) -> ApprovalAuditRecord:
         workflow_id=r.workflow_id, request_id=r.request_id, approval_id=r.approval_id,
         decision=_APPROVAL_DECISION.get(r.decision, ApprovalDecision.UNSPECIFIED),
         opened_at=_ts(r, "opened_at"), decided_at=_ts(r, "decided_at"),
-        actor=r.actor, occurred_at=_ts(r, "occurred_at"))
+        actor=r.actor, occurred_at=_ts(r, "occurred_at"),
+        justification=r.justification, reason=r.reason)
 
 
 def _input_record(r) -> InputAuditRecord:
@@ -737,16 +744,25 @@ class ControlPlaneClient:
             agent_runtime_policies=MessageToDict(r.agent_runtime_policies) if r.HasField("agent_runtime_policies") else None,
         )
 
-    async def approve_workflow(self, workflow_id: str, approval_id: str, actor: str = "") -> None:
+    async def approve_workflow(self, workflow_id: str, approval_id: str, actor: str = "",
+                               reason: str = "") -> None:
         """Approve a parked gate. `actor` identifies the approver (e.g. an email or
-        user id) and is recorded in the approval audit log."""
+        user id); `reason` is an optional free-form rationale. Both are recorded on
+        the approval audit event, so the "why" is captured at the moment of judgment
+        rather than collected in a follow-up round-trip."""
         await self._lc.ApproveWorkflow(
-            lc.ApproveWorkflowRequest(workflow_id=workflow_id, approval_id=approval_id, actor=actor),
+            lc.ApproveWorkflowRequest(workflow_id=workflow_id, approval_id=approval_id,
+                                      actor=actor, reason=reason),
             metadata=self._metadata)
 
-    async def reject_workflow(self, workflow_id: str, approval_id: str, actor: str = "") -> None:
+    async def reject_workflow(self, workflow_id: str, approval_id: str, actor: str = "",
+                              reason: str = "") -> None:
+        """Reject a parked gate. `reason` records why, alongside the gate's own
+        justification — so get_audit_log alone answers what was proposed, who
+        rejected it, and why."""
         await self._lc.RejectWorkflow(
-            lc.RejectWorkflowRequest(workflow_id=workflow_id, approval_id=approval_id, actor=actor),
+            lc.RejectWorkflowRequest(workflow_id=workflow_id, approval_id=approval_id,
+                                     actor=actor, reason=reason),
             metadata=self._metadata)
 
     async def get_approval_audit(self, workflow_id: str) -> list[ApprovalAuditRecord]:
