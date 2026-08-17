@@ -60,6 +60,7 @@ from .trace import (
     GEN_AI_OP_CHAT,
     GEN_AI_OP_EXECUTE_TOOL,
     GEN_AI_OPERATION_NAME,
+    GEN_AI_TOOL_CALL_ID,
     GEN_AI_TOOL_DESCRIPTION,
     GEN_AI_TOOL_NAME,
     SPAN_KIND_TOOL,
@@ -81,6 +82,19 @@ log = logging.getLogger("boundflow.governed")
 DEFAULT_MAX_TOKENS = 4096
 
 
+class AgentFinalized(Exception):
+    """Raised by the injected `submit_result` tool to end a governed harness with a
+    structured answer.
+
+    BoundFlow's own loop can just return when the model submits; someone else's
+    loop can't be returned from, so the only way out is to raise. `ctx.run_governed`
+    catches this and hands back a StepResult, so callers don't see the exception."""
+
+    def __init__(self, output: dict) -> None:
+        self.output = output
+        super().__init__("agent submitted its final result")
+
+
 @dataclass
 class GovernedCall:
     """One permitted model call. Returned by `AgentGovernor.begin_call()` with the
@@ -89,7 +103,12 @@ class GovernedCall:
     model: str
     max_tokens: int
     timeout_seconds: float  # 0 = unset (no per-call timeout)
-    _governor: "AgentGovernor"
+    # True when this is the last call the policy allows. How a harness expresses
+    # that is its own business: BoundFlow's loop forces submit_result, a governed
+    # harness forces its injected equivalent. Either way the agent gets one real
+    # chance to finish instead of being cut off.
+    finalize: bool = False
+    _governor: "AgentGovernor" = None  # type: ignore[assignment]
     _start_ms: int = field(default_factory=now_ms)
     _recorded: bool = False
 
@@ -100,6 +119,7 @@ class GovernedCall:
         tool_calls: list[str] | None = None,
         input_messages: list | None = None,
         output_message: dict | None = None,
+        extra_attributes: dict | None = None,
     ) -> float:
         """Close the call: accumulate cost/tokens, count any tool calls the model
         asked for, and emit the LLM span. Returns this call's cost in USD.
@@ -112,7 +132,8 @@ class GovernedCall:
             raise RuntimeError("GovernedCall.record() called twice for one call")
         self._recorded = True
         return self._governor._record(
-            self, usage, tool_calls or [], input_messages, output_message)
+            self, usage, tool_calls or [], input_messages, output_message,
+            extra_attributes or {})
 
 
 @dataclass
@@ -124,7 +145,9 @@ class GovernedToolCall:
     tool: str
     denied: bool
     denial_message: str
-    _governor: "AgentGovernor"
+    call_id: str = ""
+    description: str = ""
+    _governor: "AgentGovernor" = None  # type: ignore[assignment]
     _start_ms: int = field(default_factory=now_ms)
     _recorded: bool = False
 
@@ -153,6 +176,7 @@ class AgentGovernor:
         pricing: dict | None = None,
         *,
         collect_spans: bool = True,
+        can_finalize: bool = False,
     ) -> None:
         self.agent_name = agent_name
         self.policy = policy
@@ -160,6 +184,12 @@ class AgentGovernor:
         self.model = policy.model or default_model
         self._pricing = pricing or {}
         self._collect_spans = collect_spans
+        # Whether this harness can act on a finalize call (has a submit_result-shaped
+        # terminator). Without one, a spent cap has to raise.
+        self.can_finalize = can_finalize
+        # Set by agent_tools(output_schema=...) once a submit_result tool exists.
+        self.finalize_tool: str | None = None
+        self.final_output: dict | None = None
 
         self.llm_calls = 0
         self.cost_usd = 0.0
@@ -169,6 +199,9 @@ class AgentGovernor:
         self.spans: list[Span] = []
         self._start_ms = now_ms()
 
+        # Set once a finalize call has been handed out, so the next begin_call()
+        # raises rather than offering a second one.
+        self._finalize_offered = False
         self._tool_limits = {l.tool: l.max_calls for l in policy.tool_call_limits}
         self._tool_failure_limits = {l.tool: l.max_failures for l in policy.tool_failure_limits}
         # Tools handed to us via agent_tools(): we dispatch these, so their caps are
@@ -179,27 +212,51 @@ class AgentGovernor:
     def register_governed_tools(self, names: list[str]) -> None:
         self._governed_tools.update(names)
 
+    def register_finalizer(self, tool: str) -> None:
+        """A submit_result-shaped tool exists, so a spent cap can ask for a final
+        answer instead of raising."""
+        self.finalize_tool = tool
+        self.can_finalize = True
+
     @property
     def max_tokens(self) -> int:
         return self.policy.max_tokens_per_call or DEFAULT_MAX_TOKENS
 
     def begin_call(self) -> GovernedCall:
-        """Authorise one model call. Raises `AgentPolicyLimitExceeded` if a cap is
-        already spent — the caller's framework sees the exception and the workflow
-        handler fails the run (a customer-domain failure, so the workflow stays
-        active and the receipt records why)."""
-        if self.policy.max_llm_calls > 0 and self.llm_calls >= self.policy.max_llm_calls:
-            raise AgentPolicyLimitExceeded(
-                f"agent {self.agent_name!r} reached max_llm_calls="
-                f"{self.policy.max_llm_calls} (calls used: {self.llm_calls})")
-        if self.policy.max_cost_usd > 0 and self.cost_usd >= self.policy.max_cost_usd:
-            raise AgentPolicyLimitExceeded(
-                f"agent {self.agent_name!r} reached max_cost_usd="
-                f"{self.policy.max_cost_usd} (spent: ${self.cost_usd:.4f})")
+        """Authorise one model call.
+
+        Returns a call with `finalize=True` when this is the last one the policy
+        allows, so the harness can ask for a final answer instead of being cut off.
+        Raises `AgentPolicyLimitExceeded` once that chance has been used, or
+        immediately when the harness can't express a finalize (`can_finalize=False`)
+        — a customer-domain failure, so the operation completes marked failed.
+        """
+        calls_spent = (self.policy.max_llm_calls > 0
+                       and self.llm_calls >= self.policy.max_llm_calls)
+        cost_spent = (self.policy.max_cost_usd > 0
+                      and self.cost_usd >= self.policy.max_cost_usd)
+
+        if calls_spent or cost_spent:
+            if self._finalize_offered or not self.can_finalize:
+                which = "max_llm_calls" if calls_spent else "max_cost_usd"
+                spent = (self.llm_calls if calls_spent else round(self.cost_usd, 4))
+                cap = (self.policy.max_llm_calls if calls_spent else self.policy.max_cost_usd)
+                raise AgentPolicyLimitExceeded(
+                    f"agent {self.agent_name!r} reached {which}={cap} (used: {spent})")
+            finalize = True
+        else:
+            # The last call the cap allows — offered as a finalize so the answer
+            # lands cleanly rather than the next call raising.
+            finalize = (self.can_finalize and self.policy.max_llm_calls > 0
+                        and self.llm_calls == self.policy.max_llm_calls - 1)
+
+        if finalize:
+            self._finalize_offered = True
         return GovernedCall(
             model=self.model,
             max_tokens=self.max_tokens,
             timeout_seconds=self.policy.max_call_seconds,
+            finalize=finalize,
             _governor=self,
         )
 
@@ -210,6 +267,7 @@ class AgentGovernor:
         tool_calls: list[str],
         input_messages: list | None,
         output_message: dict | None,
+        extra_attributes: dict,
     ) -> float:
         end_ms = now_ms()
         cost = _estimate_cost(usage, self.model, self._pricing)
@@ -242,6 +300,7 @@ class AgentGovernor:
                     GEN_AI_USAGE_CACHE_CREATION_INPUT_TOKENS: usage.cache_creation_input_tokens,
                     GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS: usage.cache_read_input_tokens,
                     BF_COST_USD: cost,
+                    **extra_attributes,
                 },
             ))
 
@@ -249,7 +308,8 @@ class AgentGovernor:
                   self.agent_name, self.model, self.llm_calls, self.cost_usd, self.tokens_used)
         return cost
 
-    def begin_tool_call(self, tool: str) -> GovernedToolCall:
+    def begin_tool_call(self, tool: str, *, call_id: str = "",
+                        description: str = "") -> GovernedToolCall:
         """Authorise one tool invocation against `tool_call_limits`.
 
         Unlike a model cap this doesn't raise: a spent per-tool cap is a signal to
@@ -263,9 +323,10 @@ class AgentGovernor:
                       self.agent_name, tool, used, cap)
             return GovernedToolCall(tool=tool, denied=True,
                                     denial_message=tool_limit_message(tool, cap),
-                                    _governor=self)
+                                    call_id=call_id, description=description, _governor=self)
         self.calls_per_tool[tool] = used + 1
-        return GovernedToolCall(tool=tool, denied=False, denial_message="", _governor=self)
+        return GovernedToolCall(tool=tool, denied=False, denial_message="",
+                                call_id=call_id, description=description, _governor=self)
 
     def _record_tool(self, call: GovernedToolCall, input: Any,
                      output: Any, error: BaseException | None) -> None:
@@ -285,7 +346,8 @@ class AgentGovernor:
                 attributes={
                     GEN_AI_OPERATION_NAME: GEN_AI_OP_EXECUTE_TOOL,
                     GEN_AI_TOOL_NAME: call.tool,
-                    GEN_AI_TOOL_DESCRIPTION: call.tool,
+                    GEN_AI_TOOL_CALL_ID: call.call_id,
+                    GEN_AI_TOOL_DESCRIPTION: call.description or call.tool,
                 },
             ))
 

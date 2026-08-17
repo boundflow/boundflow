@@ -46,6 +46,7 @@ from typing import Any
 
 from .errors import PlatformError
 from .llm import (
+    SUBMIT_RESULT,
     LlmRequest,
     LlmResponse,
     TextBlock,
@@ -310,6 +311,11 @@ def _build_governed_cls():
             if call.max_tokens:
                 model = model.bind(max_tokens=call.max_tokens)
 
+            # The last call policy allows: make the terminator the only option, so
+            # the agent finishes with a structured answer instead of being cut off.
+            if call.finalize and self.governor.finalize_tool:
+                kwargs = {**kwargs, "tool_choice": self.governor.finalize_tool}
+
             invoke = model.ainvoke(messages, stop=stop, **kwargs)
             if call.timeout_seconds > 0:
                 try:
@@ -365,7 +371,27 @@ def _build_governed_cls():
 _governed_tool_cls = None
 
 
-def governed_tools(governor: Any, tools: list) -> list:
+def _finalizer_tool(governor: Any, output_schema: dict | None):
+    """A `submit_result` tool for a harness that has no terminator of its own.
+    Calling it raises AgentFinalized, which is the only way to stop a loop we
+    don't own."""
+    from langchain_core.tools import StructuredTool
+
+    from .governed import AgentFinalized
+
+    async def _submit(**kwargs):
+        governor.final_output = kwargs
+        raise AgentFinalized(kwargs)
+
+    return StructuredTool.from_function(
+        coroutine=_submit,
+        name=SUBMIT_RESULT,
+        description="Call this when you have completed your objective, to submit your final result.",
+        args_schema={"type": "object", "properties": output_schema or {}},
+    )
+
+
+def governed_tools(governor: Any, tools: list, *, output_schema: dict | None = None) -> list:
     """Wrap LangChain tools so BoundFlow dispatches them: per-tool caps enforced,
     failures counted, tool spans recorded. Prefer `ctx.agent_tools(...)`.
 
@@ -375,6 +401,10 @@ def governed_tools(governor: Any, tools: list) -> list:
     global _governed_tool_cls
     if _governed_tool_cls is None:
         _governed_tool_cls = _build_governed_tool_cls()
+    tools = list(tools)
+    if output_schema is not None:
+        tools.append(_finalizer_tool(governor, output_schema))
+        governor.register_finalizer(SUBMIT_RESULT)
     governor.register_governed_tools([t.name for t in tools])
     return [
         _governed_tool_cls(

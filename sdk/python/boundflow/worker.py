@@ -421,7 +421,8 @@ class OperationContext:
         governor = self.agent_governor(agent_name, model=model, budget=budget)
         return GovernedChatModel(governor=governor, chat_model=chat_model)
 
-    def agent_tools(self, agent_name: str, tools: list, *, budget: Budget | None = None) -> list:
+    def agent_tools(self, agent_name: str, tools: list, *, budget: Budget | None = None,
+                    output_schema: dict | None = None) -> list:
         """Governed LangChain tools — hand BoundFlow the tools you want governed, the
         way `agent_model()` hands it the model you want governed.
 
@@ -439,7 +440,46 @@ class OperationContext:
         sees exactly the tools you defined."""
         from .langchain_client import governed_tools
 
-        return governed_tools(self.agent_governor(agent_name, budget=budget), tools)
+        return governed_tools(self.agent_governor(agent_name, budget=budget), tools,
+                              output_schema=output_schema)
+
+    async def run_governed(self, agent_name: str, invoke, *, chat_model: Any,
+                           tools: list | None = None, model: str | None = None,
+                           output_schema: dict | None = None,
+                           budget: Budget | None = None) -> StepResult:
+        """Run someone else's agent harness under governance and get a StepResult back.
+
+        `invoke(model, tools)` builds and runs the harness; BoundFlow owns the call to
+        it, so it can catch the finalize and return rather than making you handle an
+        exception on the happy path:
+
+            result = await ctx.run_governed(
+                "researcher",
+                lambda m, t: create_deep_agent(model=m, tools=t).ainvoke({"messages": [...]}),
+                chat_model=ChatAnthropic(model=MODEL),
+                output_schema={"answer": {"type": "string"}},
+            )
+            result.output   # {"answer": ...}
+
+        With an `output_schema`, a spent cap forces the injected submit_result instead
+        of raising — the same graceful ending `run_agent` gives. Without one, the cap
+        raises, since there's no terminator to force."""
+        governor = self.agent_governor(agent_name, model=model or "", budget=budget)
+        governed = self.agent_model(agent_name, chat_model, model=model, budget=budget)
+        governed_tool_list = self.agent_tools(
+            agent_name, tools or [], budget=budget, output_schema=output_schema)
+
+        from .governed import AgentFinalized
+        output = None
+        try:
+            await invoke(governed, governed_tool_list)
+        except AgentFinalized as finished:
+            output = finished.output
+
+        return StepResult(
+            output, governor.llm_calls, governor.cost_usd, governor.tokens_used,
+            dict(governor.calls_per_tool), dict(governor.tool_failure_counts),
+            governor.model, governor.spans)
 
     def _flush_governors(self) -> None:
         """Fold governed-loop metrics into the operation result. Called once the
