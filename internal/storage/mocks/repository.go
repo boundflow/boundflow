@@ -980,9 +980,9 @@ func (mr *MockJobRepositoryMockRecorder) RenewJobLease(ctx, workflowID, ownerID,
 }
 
 // ResolveApproval mocks base method.
-func (m *MockJobRepository) ResolveApproval(ctx context.Context, workflowID, approvalID string, status domain.JobStatus) (bool, domain.ResolvedApproval, error) {
+func (m *MockJobRepository) ResolveApproval(ctx context.Context, workflowID, approvalID string, status domain.JobStatus, reason string) (bool, domain.ResolvedApproval, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ResolveApproval", ctx, workflowID, approvalID, status)
+	ret := m.ctrl.Call(m, "ResolveApproval", ctx, workflowID, approvalID, status, reason)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(domain.ResolvedApproval)
 	ret2, _ := ret[2].(error)
@@ -990,9 +990,9 @@ func (m *MockJobRepository) ResolveApproval(ctx context.Context, workflowID, app
 }
 
 // ResolveApproval indicates an expected call of ResolveApproval.
-func (mr *MockJobRepositoryMockRecorder) ResolveApproval(ctx, workflowID, approvalID, status any) *gomock.Call {
+func (mr *MockJobRepositoryMockRecorder) ResolveApproval(ctx, workflowID, approvalID, status, reason any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveApproval", reflect.TypeOf((*MockJobRepository)(nil).ResolveApproval), ctx, workflowID, approvalID, status)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveApproval", reflect.TypeOf((*MockJobRepository)(nil).ResolveApproval), ctx, workflowID, approvalID, status, reason)
 }
 
 // ResolveInput mocks base method.

@@ -200,3 +200,94 @@ async def test_pending_input_cleared_once_workflow_moves_to_a_different_gate(cp)
             assert info_after.pending_input is None
         finally:
             await cp.delete_workflow(wf.id)
+
+
+async def test_input_audit_records_the_question_not_just_the_answer(cp):
+    """An answer on its own doesn't say what it was answering — the audit row has to
+    carry the prompt, which the job row clears once the run advances."""
+    import asyncio
+
+    captured: list[InputRequest] = []
+    worker = BoundFlowWorker(WORKER_ADDRESS, dummy_mock())
+
+    @worker.workflow("input_audit_prompt", version=1)
+    async def _entry(ctx):
+        return AwaitInput(
+            on_answer=Complete(result={"ok": True}),
+            on_timeout=Complete(result={"ok": False}),
+            timeout=60,
+            prompt="Which vendor should we use for the T-42 refund?",
+        )
+
+    @worker.on_input_requested
+    async def _on(req: InputRequest):
+        captured.append(req)
+
+    async with run_worker(worker):
+        tenant = await create_isolated_tenant(cp, "input-audit-prompt")
+        wf = await cp.create_workflow("input_audit_prompt", tenant.id,
+                                      config=WorkflowConfig(version=1))
+        try:
+            await cp.activate_workflow(wf.id)
+            rid = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
+            await wait_for_lifecycle_state(cp, wf.id, LifecycleState.AWAITING_INPUT, timeout=30)
+
+            await cp.submit_input(wf.id, captured[0].input_id, {"vendor": "acme"}, actor="ops")
+            await wait_for_completion(cp, rid, timeout=60)
+
+            deadline = asyncio.get_event_loop().time() + 15
+            while True:
+                records = await cp.get_input_audit(wf.id)
+                if records:
+                    break
+                assert asyncio.get_event_loop().time() < deadline, "input audit row never appeared"
+                await asyncio.sleep(0.3)
+
+            rec = records[0]
+            assert rec.answer == {"vendor": "acme"}
+            assert rec.prompt == "Which vendor should we use for the T-42 refund?"
+            assert rec.actor == "ops"
+        finally:
+            await cp.delete_workflow(wf.id)
+
+
+async def test_input_timeout_audit_still_records_the_question(cp):
+    import asyncio
+
+    captured: list[InputRequest] = []
+    worker = BoundFlowWorker(WORKER_ADDRESS, dummy_mock())
+
+    @worker.workflow("input_audit_timeout_prompt", version=1)
+    async def _entry(ctx):
+        return AwaitInput(
+            on_answer=Complete(), on_timeout=Complete(), timeout=8,
+            prompt="Do we escalate ticket T-99?",
+        )
+
+    @worker.on_input_requested
+    async def _on(req: InputRequest):
+        captured.append(req)
+
+    async with run_worker(worker):
+        tenant = await create_isolated_tenant(cp, "input-audit-timeout")
+        wf = await cp.create_workflow("input_audit_timeout_prompt", tenant.id,
+                                      config=WorkflowConfig(version=1))
+        try:
+            await cp.activate_workflow(wf.id)
+            await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
+            await wait_for_lifecycle_state(cp, wf.id, LifecycleState.AWAITING_INPUT, timeout=30)
+
+            deadline = asyncio.get_event_loop().time() + 60
+            while True:
+                records = await cp.get_input_audit(wf.id)
+                if records:
+                    break
+                assert asyncio.get_event_loop().time() < deadline, "timed-out input audit never appeared"
+                await asyncio.sleep(0.5)
+
+            rec = records[0]
+            assert rec.decision.value == "timed_out"
+            assert rec.answer is None
+            assert rec.prompt == "Do we escalate ticket T-99?"
+        finally:
+            await cp.delete_workflow(wf.id)

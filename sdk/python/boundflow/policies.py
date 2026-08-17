@@ -14,10 +14,23 @@ from pydantic import BaseModel, Field
 
 
 class ToolCallLimit(BaseModel):
-    """A cap on how many times one tool may be called during an agent run."""
+    """A cap on how many times one tool may be called during an agent run.
+    `max_calls=0` blocks it outright; omit the entry for no cap."""
 
     tool: str
     max_calls: int
+
+
+class ToolFailureLimit(BaseModel):
+    """A cap on how many times one tool may *fail* during an agent run. Exceeding it
+    raises `ToolFailureLimitExceeded`, ending the run — a repeatedly-failing tool is
+    a broken dependency, not a soft constraint.
+
+    `max_failures=2` tolerates two failures and raises on the third; 0 raises on the
+    first. Omit the entry for no cap."""
+
+    tool: str
+    max_failures: int
 
 
 class RuntimePolicy(BaseModel):
@@ -28,6 +41,7 @@ class RuntimePolicy(BaseModel):
     max_tokens_per_call: int = 0
     max_call_seconds: float = 0  # 0 = unset (no per-call timeout)
     tool_call_limits: list[ToolCallLimit] = Field(default_factory=list)
+    tool_failure_limits: list[ToolFailureLimit] = Field(default_factory=list)
     model: str | None = None
 
 

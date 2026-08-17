@@ -19,8 +19,8 @@ from .lifecycle import (
     load_lifecycle_rules,
     load_runtime_policy,
 )
-from .llm import AgentStepConfig, LlmClient, Orchestrator, StepResult
-from .policies import RuntimePolicy
+from .llm import AgentPolicyLimitExceeded, AgentStepConfig, LlmClient, Orchestrator, StepResult
+from .policies import RuntimePolicy, ToolCallLimit, ToolFailureLimit
 from .trace import (
     OUTCOME_AWAIT_APPROVAL,
     OUTCOME_AWAIT_INPUT,
@@ -155,6 +155,76 @@ class AwaitInput:
 OperationResult = Union[Complete, Next, AwaitApproval, AwaitInput]
 
 
+@dataclass
+class Budget:
+    """What's left to spend on one `run_agent` call, for budgets spanning several
+    steps — RuntimePolicy caps a single step, so a loop gets a fresh cap each time.
+
+        await ctx.run_agent(agent, budget=Budget(max_cost_usd=TOTAL - spent))
+
+    Only ever narrows what policy allows: this is called from workflow code, so
+    policy stays the ceiling. Fields are None (no constraint) / <= 0 (spent) /
+    > 0 (cap at min(policy, this)). Unlike RuntimePolicy, 0 here isn't "unset".
+    """
+
+    max_llm_calls: int | None = None
+    max_cost_usd: float | None = None
+    # Remaining per tool. These don't raise when spent — one exhausted tool doesn't
+    # stop the step, it just gets blocked (or, for failures, ends the run when it
+    # next fails).
+    tool_call_limits: dict[str, int] | None = None
+    tool_failure_limits: dict[str, int] | None = None
+
+
+def _apply_budget(policy: RuntimePolicy, budget: Budget | None, agent_name: str) -> RuntimePolicy:
+    """Tighten `policy` with `budget`. Never loosens: workflow code can spend less
+    than policy allows, never more."""
+    if budget is None:
+        return policy
+
+    for label, remaining in (("max_llm_calls", budget.max_llm_calls),
+                             ("max_cost_usd", budget.max_cost_usd)):
+        # 0 means "unlimited" in RuntimePolicy, so a spent budget must refuse here
+        # rather than pass through and remove the cap.
+        if remaining is not None and remaining <= 0:
+            raise AgentPolicyLimitExceeded(
+                f"agent {agent_name!r} has no {label} budget left "
+                f"(remaining: {remaining}); not making a call")
+
+    tightened = policy.model_copy()
+    if budget.max_llm_calls is not None:
+        tightened.max_llm_calls = (min(policy.max_llm_calls, budget.max_llm_calls)
+                                   if policy.max_llm_calls > 0 else budget.max_llm_calls)
+    if budget.max_cost_usd is not None:
+        tightened.max_cost_usd = (min(policy.max_cost_usd, budget.max_cost_usd)
+                                  if policy.max_cost_usd > 0 else budget.max_cost_usd)
+
+    if budget.tool_call_limits is not None:
+        tightened.tool_call_limits = [
+            ToolCallLimit(tool=tool, max_calls=max(0, remaining))
+            for tool, remaining in _tighten_per_tool(
+                {l.tool: l.max_calls for l in policy.tool_call_limits},
+                budget.tool_call_limits).items()
+        ]
+    if budget.tool_failure_limits is not None:
+        tightened.tool_failure_limits = [
+            ToolFailureLimit(tool=tool, max_failures=max(0, remaining))
+            for tool, remaining in _tighten_per_tool(
+                {l.tool: l.max_failures for l in policy.tool_failure_limits},
+                budget.tool_failure_limits).items()
+        ]
+    return tightened
+
+
+def _tighten_per_tool(policy_caps: dict[str, int], remaining: dict[str, int]) -> dict[str, int]:
+    """Per tool: the smaller of policy and remaining. Never loosens."""
+    out = dict(policy_caps)
+    for tool, left in remaining.items():
+        existing = out.get(tool)
+        out[tool] = left if existing is None else min(existing, left)
+    return out
+
+
 # ── Operation context (handed to every handler) ──────────────────────────────
 
 
@@ -202,6 +272,17 @@ class OperationContext:
         through an AwaitInput on_answer branch; None otherwise."""
         return self.context.pop("answer", None)
 
+    @property
+    def approval_reason(self) -> str | None:
+        """The reason given to approve_workflow()/reject_workflow(), when this
+        operation was reached through an AwaitApproval branch; None if the decider
+        didn't give one (or on a timeout, which has no decider).
+
+        The gate's own justification isn't here — you wrote that when building the
+        gate, so thread it through the branch's context if the operation needs it.
+        The reason comes from outside the workflow, so only the server can supply it."""
+        return self.context.pop("approval_reason", None)
+
     def add_context(self, metadata: str, payload: Any, *, key: str | None = None) -> "OperationContext":
         self._llm_context.append((key or metadata, metadata, payload))
         return self
@@ -233,10 +314,13 @@ class OperationContext:
             }
         return runtime_policy
 
-    async def run_agent(self, agent: AgentDefinition) -> StepResult:
+    async def run_agent(self, agent: AgentDefinition, *, budget: Budget | None = None) -> StepResult:
         """Run an agent step — BoundFlow drives the loop. Metrics are written back on
-        completion. See `agent_model()` for the inverse (you drive, BoundFlow governs)."""
-        runtime_policy = self._resolve_policy(agent.name)
+        completion. See `agent_model()` for the inverse (you drive, BoundFlow governs).
+
+        `budget` narrows this step to what's left of a longer budget (see `Budget`);
+        applied after lifecycle rules, and only ever tightens."""
+        runtime_policy = _apply_budget(self._resolve_policy(agent.name), budget, agent.name)
         effective_model = runtime_policy.model or agent.model
 
         cfg = AgentStepConfig(
@@ -275,7 +359,8 @@ class OperationContext:
             ))
         return result
 
-    def agent_governor(self, agent_name: str, *, model: str = "") -> AgentGovernor:
+    def agent_governor(self, agent_name: str, *, model: str = "",
+                       budget: Budget | None = None) -> AgentGovernor:
         """The agent's governor — the framework-agnostic half of `agent_model()`.
 
         Use this to govern a framework BoundFlow has no adapter for (CrewAI's
@@ -294,7 +379,7 @@ class OperationContext:
             return existing
         governor = AgentGovernor(
             agent_name=agent_name,
-            policy=self._resolve_policy(agent_name),
+            policy=_apply_budget(self._resolve_policy(agent_name), budget, agent_name),
             default_model=model,
             pricing=(self._op.context.get("modelPricing") or {}),
             collect_spans=self._sink is not None,
@@ -302,7 +387,8 @@ class OperationContext:
         self._governors[agent_name] = governor
         return governor
 
-    def agent_model(self, agent_name: str, chat_model: Any, *, model: str | None = None) -> Any:
+    def agent_model(self, agent_name: str, chat_model: Any, *, model: str | None = None,
+                    budget: Budget | None = None) -> Any:
         """A governed LangChain chat model — the inverse of `run_agent()`. You drive
         the loop (LangGraph, a chain, anything taking a `BaseChatModel`); BoundFlow
         governs each call under `agent_name`'s runtime policy and records its cost,
@@ -332,10 +418,10 @@ class OperationContext:
                     "default model.")
             model = _derive_model_name(chat_model)
 
-        governor = self.agent_governor(agent_name, model=model)
+        governor = self.agent_governor(agent_name, model=model, budget=budget)
         return GovernedChatModel(governor=governor, chat_model=chat_model)
 
-    def agent_tools(self, agent_name: str, tools: list) -> list:
+    def agent_tools(self, agent_name: str, tools: list, *, budget: Budget | None = None) -> list:
         """Governed LangChain tools — hand BoundFlow the tools you want governed, the
         way `agent_model()` hands it the model you want governed.
 
@@ -353,7 +439,7 @@ class OperationContext:
         sees exactly the tools you defined."""
         from .langchain_client import governed_tools
 
-        return governed_tools(self.agent_governor(agent_name), tools)
+        return governed_tools(self.agent_governor(agent_name, budget=budget), tools)
 
     def _flush_governors(self) -> None:
         """Fold governed-loop metrics into the operation result. Called once the

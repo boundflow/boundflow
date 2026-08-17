@@ -188,7 +188,7 @@ type JobRepository interface {
 	// ResolveApproval transitions a job from awaiting_approval to the given status (approved/rejected),
 	// guarded by approvalID match. Returns false if the ID doesn't match or the job isn't awaiting
 	// approval; on success also returns the job bits needed to write the approval audit row.
-	ResolveApproval(ctx context.Context, workflowID string, approvalID string, status domain.JobStatus) (bool, domain.ResolvedApproval, error)
+	ResolveApproval(ctx context.Context, workflowID string, approvalID string, status domain.JobStatus, reason string) (bool, domain.ResolvedApproval, error)
 	// MarkOrphanedJobsFailed atomically sets dispatched or running jobs whose lease
 	// expired more than gracePeriodSeconds ago to failed, scoped to the given partition.
 	// Returns the number of jobs marked failed.

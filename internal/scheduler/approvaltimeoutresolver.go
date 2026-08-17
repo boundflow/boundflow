@@ -59,6 +59,9 @@ func (r *ApprovalTimeoutResolver) sweep(ctx context.Context, partitionID string)
 			OpenedAt:   e.OpenedAt,
 			DecidedAt:  &decidedAt,
 			Decision:   domain.ApprovalTimedOut,
+			// A timeout has no decider and so no reason, but it should still say
+			// what went unanswered.
+			Justification: e.Justification,
 		})
 		if err != nil {
 			r.log.Error("failed to marshal timed_out audit details", "approval_id", e.ApprovalID, "error", err)

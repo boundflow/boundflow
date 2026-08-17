@@ -41,11 +41,18 @@ const (
 )
 
 // ApprovalAuditDetails is the typed payload of an AuditEventApproval event.
+//
+// Justification and Reason are what make a decision self-describing after the fact:
+// the gate's justification lives on the job row and is cleared as the run advances,
+// so it's copied here at decision time; Reason is the decider's rationale, captured
+// in the same call as the decision rather than collected in a follow-up.
 type ApprovalAuditDetails struct {
-	ApprovalID string           `json:"approval_id"`
-	OpenedAt   *time.Time       `json:"opened_at,omitempty"`
-	DecidedAt  *time.Time       `json:"decided_at,omitempty"`
-	Decision   ApprovalDecision `json:"decision"`
+	ApprovalID    string           `json:"approval_id"`
+	OpenedAt      *time.Time       `json:"opened_at,omitempty"`
+	DecidedAt     *time.Time       `json:"decided_at,omitempty"`
+	Decision      ApprovalDecision `json:"decision"`
+	Justification string           `json:"justification,omitempty"`
+	Reason        string           `json:"reason,omitempty"`
 }
 
 // ApprovalDetails resolves the event's Details as an approval record. It errors if
@@ -78,6 +85,9 @@ type InputAuditDetails struct {
 	DecidedAt *time.Time     `json:"decided_at,omitempty"`
 	Decision  InputDecision  `json:"decision"`
 	Answer    map[string]any `json:"answer,omitempty"`
+	// Prompt is the question the gate asked, copied off the job row at resolution
+	// time — an answer on its own doesn't say what it was answering.
+	Prompt string `json:"prompt,omitempty"`
 }
 
 // InputDetails resolves the event's Details as an input record. It errors if the

@@ -37,6 +37,8 @@ dev = [
     "pytest-asyncio",
     "langchain-core>=0.3",
     "langchain-anthropic>=0.3",
+    # Exercises ctx.agent_model against a real agent harness (test_governed_model).
+    "langgraph>=0.2",
     "opentelemetry-sdk",
     "opentelemetry-exporter-otlp",
 ]

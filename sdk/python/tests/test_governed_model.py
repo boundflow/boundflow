@@ -194,6 +194,7 @@ async def test_langgraph_runaway_loop_is_stopped_by_the_cap():
     """The end-to-end promise: someone else's agent loop, running away, stopped by
     BoundFlow's cap — with the spend it burned still recorded."""
     from langchain_core.tools import tool
+    pytest.importorskip("langgraph")
     from langgraph.prebuilt import create_react_agent
 
     runs: list[str] = []
@@ -330,6 +331,7 @@ async def test_no_warning_once_the_tool_is_governed(search_tool, caplog):
 async def test_langgraph_respects_a_per_tool_cap_and_keeps_going(search_tool):
     """The end-to-end shape: LangGraph drives, the tool cap trips mid-graph, and the
     model is told rather than the run being killed."""
+    pytest.importorskip("langgraph")
     from langgraph.prebuilt import create_react_agent
 
     tool, runs = search_tool

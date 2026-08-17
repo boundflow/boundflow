@@ -144,9 +144,10 @@ def approve(
     workflow_id: str = typer.Argument(..., help="Workflow ID"),
     approval_id: str = typer.Argument(..., help="Approval ID (from the approval request)"),
     actor: str = typer.Option("", "--actor", help="Approver identity (e.g. email or user ID)"),
+    reason: str = typer.Option("", "--reason", help="Why it was approved; recorded on the audit event"),
 ):
     """Approve a pending workflow approval gate."""
-    cp_call(lambda cp: cp.approve_workflow(workflow_id, approval_id, actor=actor))
+    cp_call(lambda cp: cp.approve_workflow(workflow_id, approval_id, actor=actor, reason=reason))
     success(f"Approval {approval_id} approved.")
 
 
@@ -155,9 +156,10 @@ def reject(
     workflow_id: str = typer.Argument(..., help="Workflow ID"),
     approval_id: str = typer.Argument(..., help="Approval ID (from the approval request)"),
     actor: str = typer.Option("", "--actor", help="Rejecter identity (e.g. email or user ID)"),
+    reason: str = typer.Option("", "--reason", help="Why it was rejected; recorded on the audit event"),
 ):
     """Reject a pending workflow approval gate."""
-    cp_call(lambda cp: cp.reject_workflow(workflow_id, approval_id, actor=actor))
+    cp_call(lambda cp: cp.reject_workflow(workflow_id, approval_id, actor=actor, reason=reason))
     success(f"Approval {approval_id} rejected.")
 
 
