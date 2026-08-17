@@ -1,12 +1,15 @@
 name: Live tests (real LLM)
 
-# The integration tests that make real Anthropic calls. Runs on PRs, nightly, and
-# on demand; requires the ANTHROPIC_API_KEY repo secret. Fork PRs can't access the
-# secret, so the job below skips gracefully for them.
+# The integration tests that make real Anthropic calls. On PRs this runs against an
+# ephemeral docker-compose backend; on the nightly schedule (and manual dispatch) it
+# runs against the real BoundFlow Cloud test deployment instead, so we catch anything
+# that only shows up against a real, persistent, network-latency backend. Requires the
+# ANTHROPIC_API_KEY repo secret. Fork PRs can't access secrets, so the job below skips
+# gracefully for them.
 on:
   pull_request:
   schedule:
-    - cron: "0 7 * * *" # 07:00 UTC daily
+    - cron: "0 7 * * *" # 07:00 UTC daily -- runs against BoundFlow Cloud, not docker-compose
   workflow_dispatch:
 
 permissions:
@@ -54,16 +57,20 @@ jobs:
       # Shorten the workflow purge-age on this ephemeral checkout only, so
       # purge-reconciler tests don't have to wait the production default (1h).
       - name: Shorten purge age for tests
+        if: github.event_name == 'pull_request'
         run: |
           sed -i 's/BOUNDFLOW_WORKFLOW_PURGE_AGE_SECONDS: "3600"/BOUNDFLOW_WORKFLOW_PURGE_AGE_SECONDS: "5"/' docker-compose.yml
 
       - name: Start backend
+        if: github.event_name == 'pull_request'
         run: docker compose up -d --build --wait
 
       - name: Wait for gRPC ports
+        if: github.event_name == 'pull_request'
         run: timeout 60 bash -c 'until nc -z localhost 50051 && nc -z localhost 50052; do sleep 1; done'
 
       - name: Provision an API key
+        if: github.event_name == 'pull_request'
         id: provision
         run: |
           key=$(docker compose run --rm server -mode=provision -name=ci | awk '/^api_key[[:space:]]+:/{print $NF}')
@@ -79,23 +86,44 @@ jobs:
         working-directory: sdk/python
         run: pip install -e ".[dev]"
 
+      # PRs: docker-compose, purge age shortened to 5s, so the purge-reconciler tests
+      # run for real. Nightly/dispatch: BoundFlow Cloud, purge age is the production
+      # 3600s, so those two are deselected -- they'd only prove the sweep interval,
+      # which is already covered on every PR.
       - name: Run full suite (incl. real-LLM tests)
         working-directory: sdk/python
         env:
-          BOUNDFLOW_API_KEY: ${{ steps.provision.outputs.key }}
+          BOUNDFLOW_API_KEY: ${{ github.event_name == 'pull_request' && steps.provision.outputs.key || secrets.BOUNDFLOW_CLOUD_API_KEY }}
+          BOUNDFLOW_SERVER_ADDRESS: ${{ github.event_name != 'pull_request' && secrets.BOUNDFLOW_CLOUD_SERVER_ADDRESS || '' }}
+          BOUNDFLOW_WORKER_ADDRESS: ${{ github.event_name != 'pull_request' && secrets.BOUNDFLOW_CLOUD_WORKER_ADDRESS || '' }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: python -m pytest -v
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            python -m pytest -v
+          else
+            python -m pytest -v \
+              --deselect tests/test_workflow_purge_reconciler.py::test_deleted_workflow_is_purged_after_age_threshold \
+              --deselect tests/test_tenant_purge_reconciler.py::test_deleted_tenant_is_purged_once_workflows_are_gone
+          fi
+
+      - name: Clean up cloud tenants
+        if: always() && github.event_name != 'pull_request'
+        working-directory: sdk/python
+        env:
+          BOUNDFLOW_API_KEY: ${{ secrets.BOUNDFLOW_CLOUD_API_KEY }}
+          BOUNDFLOW_SERVER_ADDRESS: ${{ secrets.BOUNDFLOW_CLOUD_SERVER_ADDRESS }}
+        run: python tests/cleanup_cloud_tenants.py
 
       - name: Backend logs on failure (last 100 lines, inline)
-        if: failure()
+        if: failure() && github.event_name == 'pull_request'
         run: docker compose logs --tail 100 server scheduler worker
 
       - name: Backend logs on failure (full, as artifact)
-        if: failure()
+        if: failure() && github.event_name == 'pull_request'
         run: docker compose logs --no-color server scheduler worker > backend-logs.txt
 
       - name: Upload full backend logs
-        if: failure()
+        if: failure() && github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: backend-logs-live-${{ github.run_id }}-${{ github.run_attempt }}
