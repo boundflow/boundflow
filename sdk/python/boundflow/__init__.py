@@ -38,7 +38,11 @@ from .errors import (
     UnauthenticatedError,
     UnavailableError,
 )
-from .llm import AgentCallTimeout, AgentPolicyLimitExceeded, ToolFailureLimitExceeded, MockLlmClient, MockContext, Turn, turn, submit
+from .governed import AgentGovernor, GovernedCall
+from .llm import (
+    AgentCallTimeout, AgentPolicyLimitExceeded, ToolFailureLimitExceeded,
+    MockLlmClient, MockContext, Turn, turn, submit,
+)
 from .trace import (
     AgentRunTrace,
     JsonlFileTraceSink,
@@ -86,7 +90,8 @@ __all__ = [
     "AnthropicLlmClient",
     "ControlPlaneClient", "LifecycleState", "RunStatus", "RunOutcome", "Run", "RequestInfo",
     "Tenant", "TenantGroup", "Workflow",
-    "WorkflowConfig", "WorkflowState", "WorkflowInfo", "WorkflowMetrics", "PendingApproval", "PendingInput", "InvokeMode", "ApprovalAuditRecord", "ApprovalDecision", "InputAuditRecord", "InputDecision", "PolicyActionRecord", "WorkflowPolicyAction", "AgentPolicyActionRecord", "AgentCallTimeout", "AgentPolicyLimitExceeded", "MockLlmClient", "MockContext", "Turn",
+    "WorkflowConfig", "WorkflowState", "WorkflowInfo", "WorkflowMetrics", "PendingApproval", "PendingInput", "InvokeMode", "ApprovalAuditRecord", "ApprovalDecision", "InputAuditRecord", "InputDecision", "PolicyActionRecord", "WorkflowPolicyAction", "AgentPolicyActionRecord", "AgentCallTimeout", "AgentPolicyLimitExceeded", "AgentGovernor", "GovernedCall",
+    "MockLlmClient", "MockContext", "Turn",
     "turn", "submit", "AgentMetric", "AgentRule", "Cooldown", "Op", "Pause",
     "RuntimePolicy", "SetMaxCostUsd", "SetMaxLlmCalls", "SetMaxTokensPerCall",
     "SetModel", "SetVersion", "ToolCallLimit", "ToolFailureLimit", "ToolFailureLimitExceeded", "WorkflowMetric", "WorkflowRule",

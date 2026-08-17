@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Union
 
 from .errors import PlatformError
+from .governed import AgentGovernor
 from .lifecycle import (
     apply_lifecycle_rules,
     load_history,
@@ -243,6 +244,10 @@ class OperationContext:
         # rules changed the effective policy). Keyed by agent name; the server audits
         # each. Values: {base_policy, effective_policy, fired_rules:[(rule, value)]}.
         self.agent_policy_actions: dict[str, dict] = {}
+        # Governors for customer-driven agent loops (ctx.agent_model), keyed by agent
+        # name. Flushed into agent_state_updates/_agent_runs when the operation ends,
+        # since a governed loop has no completion point of its own.
+        self._governors: dict[str, AgentGovernor] = {}
 
     @property
     def name(self) -> str:
@@ -286,34 +291,36 @@ class OperationContext:
         """Flag this run as a customer-side failure (increments num_failures)."""
         self.failed = True
 
-    async def run_agent(self, agent: AgentDefinition, *, budget: Budget | None = None) -> StepResult:
-        """Run an agent step. Runtime policy is snapshotted at request-creation
-        time; lifecycle policy + metrics history are injected by the scheduler.
-        Lifecycle rules are evaluated before the run; metrics are written back on
-        completion.
-
-        `budget` narrows this step to what's left of a longer budget (see `Budget`);
-        applied after lifecycle rules, and only ever tightens."""
-        runtime_node = (self._op.context.get("agentRuntimePolicies") or {}).get(agent.name)
-        state_node = (self._op.context.get("agentStates") or {}).get(agent.name)
+    def _resolve_policy(self, agent_name: str) -> RuntimePolicy:
+        """The agent's effective runtime policy for this operation. Runtime policy is
+        snapshotted at request-creation time; lifecycle policy + metrics history are
+        injected by the scheduler. Lifecycle rules are evaluated here and may change
+        the effective policy — when they do, the change is queued for server-side audit."""
+        runtime_node = (self._op.context.get("agentRuntimePolicies") or {}).get(agent_name)
+        state_node = (self._op.context.get("agentStates") or {}).get(agent_name)
 
         base_policy = load_runtime_policy(runtime_node)
         rules = load_lifecycle_rules(state_node)
         history = load_history(state_node)
 
-        # Evaluate lifecycle rules; they may change the effective runtime policy.
         runtime_policy, fired = apply_lifecycle_rules(rules, history, base_policy)
 
         # Audit the firing only when it actually changed the policy (effective != base).
         if fired and runtime_policy != base_policy:
-            self.agent_policy_actions[agent.name] = {
+            self.agent_policy_actions[agent_name] = {
                 "base_policy": base_policy,
                 "effective_policy": runtime_policy,
                 "fired_rules": fired,
             }
+        return runtime_policy
 
-        runtime_policy = _apply_budget(runtime_policy, budget, agent.name)
+    async def run_agent(self, agent: AgentDefinition, *, budget: Budget | None = None) -> StepResult:
+        """Run an agent step — BoundFlow drives the loop. Metrics are written back on
+        completion. See `agent_model()` for the inverse (you drive, BoundFlow governs).
 
+        `budget` narrows this step to what's left of a longer budget (see `Budget`);
+        applied after lifecycle rules, and only ever tightens."""
+        runtime_policy = _apply_budget(self._resolve_policy(agent.name), budget, agent.name)
         effective_model = runtime_policy.model or agent.model
 
         cfg = AgentStepConfig(
@@ -351,6 +358,113 @@ class OperationContext:
                 llm_calls=result.llm_calls_used,
             ))
         return result
+
+    def agent_governor(self, agent_name: str, *, model: str = "",
+                       budget: Budget | None = None) -> AgentGovernor:
+        """The agent's governor — the framework-agnostic half of `agent_model()`.
+
+        Use this to govern a framework BoundFlow has no adapter for (CrewAI's
+        `BaseLLM`, a raw provider client, a hand-rolled loop): call
+        `governor.begin_call()` before each model call and `call.record(usage, ...)`
+        after. See `boundflow.governed` for the full adapter contract.
+
+        Repeated calls for the same agent return the same governor, so caps and
+        metrics accumulate across every call the loop makes this operation."""
+        existing = self._governors.get(agent_name)
+        if existing is not None:
+            # agent_tools() can create the governor before agent_model() supplies a
+            # model, so fill it in late rather than depending on call order.
+            if model and not existing.model:
+                existing.model = existing.policy.model or model
+            return existing
+        governor = AgentGovernor(
+            agent_name=agent_name,
+            policy=_apply_budget(self._resolve_policy(agent_name), budget, agent_name),
+            default_model=model,
+            pricing=(self._op.context.get("modelPricing") or {}),
+            collect_spans=self._sink is not None,
+        )
+        self._governors[agent_name] = governor
+        return governor
+
+    def agent_model(self, agent_name: str, chat_model: Any, *, model: str | None = None,
+                    budget: Budget | None = None) -> Any:
+        """A governed LangChain chat model — the inverse of `run_agent()`. You drive
+        the loop (LangGraph, a chain, anything taking a `BaseChatModel`); BoundFlow
+        governs each call under `agent_name`'s runtime policy and records its cost,
+        tokens, and spans against this operation.
+
+            model = ctx.agent_model("responder", ChatAnthropic(model=HAIKU))
+            graph = build_graph(model)          # LangGraph owns messages/loops/memory
+            await graph.ainvoke({"messages": [...]})
+
+        `chat_model` is a `BaseChatModel`, or a callable `(model_name) -> BaseChatModel`
+        — pass a factory if you want `SetModel` lifecycle policies to take effect,
+        since only a factory can build the policy-chosen model.
+
+        `model` is the model id used for pricing and as the `SetModel` default;
+        derived from `chat_model` when omitted, and required for a factory.
+
+        Note: to have `tool_call_limits` enforced too, pass your tools through
+        `agent_tools()` — BoundFlow can only stop a tool it dispatches."""
+        from .langchain_client import GovernedChatModel
+
+        is_factory = callable(chat_model) and not hasattr(chat_model, "ainvoke")
+        if model is None:
+            if is_factory:
+                raise ValueError(
+                    "agent_model(model=...) is required when passing a factory — "
+                    "BoundFlow needs the model id to price calls and to build the "
+                    "default model.")
+            model = _derive_model_name(chat_model)
+
+        governor = self.agent_governor(agent_name, model=model, budget=budget)
+        return GovernedChatModel(governor=governor, chat_model=chat_model)
+
+    def agent_tools(self, agent_name: str, tools: list, *, budget: Budget | None = None) -> list:
+        """Governed LangChain tools — hand BoundFlow the tools you want governed, the
+        way `agent_model()` hands it the model you want governed.
+
+            model = ctx.agent_model("researcher", ChatAnthropic(model=MODEL))
+            tools = ctx.agent_tools("researcher", [search, calculator])
+            agent = create_react_agent(model, tools)
+
+        BoundFlow then dispatches these tools, which is what makes `tool_call_limits`
+        enforceable: a tool whose cap is spent isn't run, and the model is told so —
+        the same refusal `run_agent` returns, so it adapts instead of failing. Tool
+        failures and per-tool spans get recorded too, which they can't be for tools
+        BoundFlow never sees.
+
+        Wrappers keep the original name, description, and args schema, so the model
+        sees exactly the tools you defined."""
+        from .langchain_client import governed_tools
+
+        return governed_tools(self.agent_governor(agent_name, budget=budget), tools)
+
+    def _flush_governors(self) -> None:
+        """Fold governed-loop metrics into the operation result. Called once the
+        handler returns, since a customer-driven loop has no completion point of
+        its own for us to hook."""
+        for name, governor in self._governors.items():
+            governor.warn_if_tool_limits_unenforced()
+            if governor.llm_calls == 0:
+                continue  # a model that was never called shouldn't emit a run
+            self.agent_state_updates[name] = governor.snapshot()
+            if self._sink is not None:
+                self._agent_runs.append(governor.trace())
+
+
+def _derive_model_name(chat_model: Any) -> str:
+    """LangChain chat models carry their id on `.model_name` or `.model`, depending
+    on the provider."""
+    for attr in ("model_name", "model", "model_id"):
+        value = getattr(chat_model, attr, None)
+        if isinstance(value, str) and value:
+            return value
+    raise ValueError(
+        f"could not derive a model id from {type(chat_model).__name__!r}; "
+        "pass it explicitly as agent_model(..., model='...') so BoundFlow can "
+        "price calls against it.")
 
 
 HandlerFn = Callable[[OperationContext], Awaitable[OperationResult]]
@@ -464,6 +578,9 @@ class BoundFlowWorker:
                 ctx.mark_failed()
                 result = Complete()
                 uncaught_reason = f"{type(ex).__name__}: {ex}"
+            # After the handler either way (including the failure path) — a run that
+            # blew a cap still spent real money, and the receipt has to say so.
+            ctx._flush_governors()
             _op_end = now_ms()
 
             # Mint the approval/input id once when the gate opens, so the trace's
