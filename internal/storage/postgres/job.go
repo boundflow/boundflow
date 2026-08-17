@@ -313,16 +313,16 @@ func (r *JobRepo) ResolveInput(ctx context.Context, workflowID string, inputID s
 		     WHERE workflow_id = $1
 		       AND input_id = $2
 		       AND status = 'awaiting_input'
-		     RETURNING workflow_id, request_id, tenant_group_id, input_opened_at
+		     RETURNING workflow_id, request_id, tenant_group_id, input_opened_at, input_prompt
 		 ),
 		 wf AS (
 		     UPDATE workflows
 		     SET lifecycle_state = 'invoking'
 		     WHERE id IN (SELECT workflow_id FROM job_update)
 		 )
-		 SELECT request_id, tenant_group_id, input_opened_at FROM job_update`,
+		 SELECT request_id, tenant_group_id, input_opened_at, input_prompt FROM job_update`,
 		workflowID, inputID, domain.JobStatusAnswered, answerParam,
-	).Scan(&info.RequestID, &info.TenantGroupID, &info.OpenedAt)
+	).Scan(&info.RequestID, &info.TenantGroupID, &info.OpenedAt, &info.Prompt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, domain.ResolvedInput{}, nil
@@ -347,14 +347,16 @@ func (r *JobRepo) SweepExpiredInputs(ctx context.Context, partitionID string) ([
 		       AND status = 'awaiting_input'
 		       AND input_timeout_at <= now()
 		     RETURNING workflow_id, request_id, tenant_group_id, input_id,
-		               input_timeout_at, input_opened_at
+		               input_timeout_at, input_opened_at, input_prompt
 		 ),
 		 wf AS (
 		     UPDATE workflows
 		     SET lifecycle_state = 'invoking'
 		     WHERE id IN (SELECT workflow_id FROM expired)
 		 )
-		 SELECT workflow_id, request_id, tenant_group_id, input_id, input_timeout_at, input_opened_at FROM expired`,
+		 SELECT workflow_id, request_id, tenant_group_id, input_id, input_timeout_at,
+		        input_opened_at, input_prompt
+		 FROM expired`,
 		partitionID,
 	)
 	if err != nil {
@@ -365,7 +367,7 @@ func (r *JobRepo) SweepExpiredInputs(ctx context.Context, partitionID string) ([
 	var out []domain.ExpiredInput
 	for rows.Next() {
 		var e domain.ExpiredInput
-		if err := rows.Scan(&e.WorkflowID, &e.RequestID, &e.TenantGroupID, &e.InputID, &e.TimedOutAt, &e.OpenedAt); err != nil {
+		if err := rows.Scan(&e.WorkflowID, &e.RequestID, &e.TenantGroupID, &e.InputID, &e.TimedOutAt, &e.OpenedAt, &e.Prompt); err != nil {
 			return nil, fmt.Errorf("scan expired input: %w", err)
 		}
 		out = append(out, e)

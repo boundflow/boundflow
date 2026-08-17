@@ -560,6 +560,9 @@ func (s *LifecycleService) recordInputDecision(ctx context.Context, workflowID, 
 		DecidedAt: &now,
 		Decision:  decision,
 		Answer:    answer,
+		// Copied off the job row before the run advances and clears it — an answer
+		// with no record of the question isn't self-describing.
+		Prompt: info.Prompt,
 	})
 	if err != nil {
 		s.log.Error("failed to marshal input audit details", "input_id", inputID, "error", err)

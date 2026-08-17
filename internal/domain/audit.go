@@ -85,6 +85,9 @@ type InputAuditDetails struct {
 	DecidedAt *time.Time     `json:"decided_at,omitempty"`
 	Decision  InputDecision  `json:"decision"`
 	Answer    map[string]any `json:"answer,omitempty"`
+	// Prompt is the question the gate asked, copied off the job row at resolution
+	// time — an answer on its own doesn't say what it was answering.
+	Prompt string `json:"prompt,omitempty"`
 }
 
 // InputDetails resolves the event's Details as an input record. It errors if the

@@ -82,6 +82,7 @@ func InputAuditRecord(e domain.AuditEvent) (*boundflowv1.InputAuditRecord, error
 		Decision:   inputDecisionToProto(d.Decision),
 		Actor:      e.Actor,
 		OccurredAt: timestamppb.New(e.OccurredAt),
+		Prompt:     d.Prompt,
 	}
 	if d.OpenedAt != nil {
 		rec.OpenedAt = timestamppb.New(*d.OpenedAt)

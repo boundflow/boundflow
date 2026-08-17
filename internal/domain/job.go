@@ -165,6 +165,8 @@ type ResolvedInput struct {
 	RequestID     string
 	TenantGroupID string
 	OpenedAt      *time.Time
+	// Prompt is the gate's question, read before the resolution clears it.
+	Prompt string
 }
 
 // ExpiredInput is a gate the scheduler resolved by timeout; carries everything
@@ -176,4 +178,5 @@ type ExpiredInput struct {
 	InputID       string
 	OpenedAt      *time.Time
 	TimedOutAt    time.Time // input_timeout_at — the decided_at for a timeout
+	Prompt        string
 }

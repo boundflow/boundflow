@@ -306,6 +306,9 @@ class InputAuditRecord:
     actor: str                     # customer-supplied; empty for timeouts
     occurred_at: datetime | None   # when the decision was recorded
     answer: dict | None            # unset on a timeout decision
+    # What was asked (AwaitInput.prompt), captured when the gate resolved — an
+    # answer with no record of the question isn't self-describing.
+    prompt: str = ""
 
 
 @dataclass
@@ -405,7 +408,8 @@ def _input_record(r) -> InputAuditRecord:
         decision=_INPUT_DECISION.get(r.decision, InputDecision.UNSPECIFIED),
         opened_at=_ts(r, "opened_at"), decided_at=_ts(r, "decided_at"),
         actor=r.actor, occurred_at=_ts(r, "occurred_at"),
-        answer=MessageToDict(r.answer) if r.HasField("answer") else None)
+        answer=MessageToDict(r.answer) if r.HasField("answer") else None,
+        prompt=r.prompt)
 
 
 def _workflow_policy_record(r) -> PolicyActionRecord:

@@ -2690,7 +2690,11 @@ type InputAuditRecord struct {
 	// The submitted answer, unset on a timeout decision. Recorded here (not just
 	// threaded into the resumed context) because the answer itself is the governance-
 	// relevant content — same reasoning as auditing an approval decision.
-	Answer        *structpb.Struct `protobuf:"bytes,9,opt,name=answer,proto3" json:"answer,omitempty"`
+	Answer *structpb.Struct `protobuf:"bytes,9,opt,name=answer,proto3" json:"answer,omitempty"`
+	// What was asked (AwaitInput.prompt), copied here when the gate resolves. An
+	// answer without its question isn't self-describing; the job row clears the
+	// prompt as the run advances, so it has to be captured on the event.
+	Prompt        string `protobuf:"bytes,10,opt,name=prompt,proto3" json:"prompt,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2786,6 +2790,13 @@ func (x *InputAuditRecord) GetAnswer() *structpb.Struct {
 		return x.Answer
 	}
 	return nil
+}
+
+func (x *InputAuditRecord) GetPrompt() string {
+	if x != nil {
+		return x.Prompt
+	}
+	return ""
 }
 
 // Self-describing: embeds the rule that fired + the value that crossed + prior state.
@@ -4017,7 +4028,7 @@ const file_boundflow_v1_lifecycle_proto_rawDesc = "" +
 	"occurredAt\x12$\n" +
 	"\rjustification\x18\t \x01(\tR\rjustification\x12\x16\n" +
 	"\x06reason\x18\n" +
-	" \x01(\tR\x06reason\"\x9e\x03\n" +
+	" \x01(\tR\x06reason\"\xb6\x03\n" +
 	"\x10InputAuditRecord\x12\x19\n" +
 	"\binput_id\x18\x01 \x01(\tR\ainputId\x12\x1f\n" +
 	"\vworkflow_id\x18\x02 \x01(\tR\n" +
@@ -4031,7 +4042,9 @@ const file_boundflow_v1_lifecycle_proto_rawDesc = "" +
 	"\x05actor\x18\a \x01(\tR\x05actor\x12;\n" +
 	"\voccurred_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt\x12/\n" +
-	"\x06answer\x18\t \x01(\v2\x17.google.protobuf.StructR\x06answer\"\xe4\x02\n" +
+	"\x06answer\x18\t \x01(\v2\x17.google.protobuf.StructR\x06answer\x12\x16\n" +
+	"\x06prompt\x18\n" +
+	" \x01(\tR\x06prompt\"\xe4\x02\n" +
 	"\x19WorkflowPolicyAuditRecord\x12\x1f\n" +
 	"\vworkflow_id\x18\x01 \x01(\tR\n" +
 	"workflowId\x12\x1d\n" +
