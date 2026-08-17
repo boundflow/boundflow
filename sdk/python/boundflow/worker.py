@@ -363,9 +363,33 @@ class OperationContext:
             governor.warn_if_tool_limits_unenforced()
             if governor.llm_calls == 0:
                 continue  # a model that was never called shouldn't emit a run
-            self.agent_state_updates[name] = governor.snapshot()
+            # Merge rather than assign: the same agent name may already have a
+            # snapshot from run_agent() in this operation, and that work counts too.
+            self.agent_state_updates[name] = _merge_agent_metrics(
+                self.agent_state_updates.get(name), governor.snapshot())
             if self._sink is not None:
                 self._agent_runs.append(governor.trace())
+
+
+def _merge_agent_metrics(existing: dict | None, incoming: dict) -> dict:
+    """Combine two metric snapshots for the same agent in one operation.
+
+    An agent can do work through both `run_agent()` and `agent_model()` in a single
+    operation; keyed only by agent name, the second write would otherwise silently
+    replace the first (see #72, which is the same hazard for two run_agent calls).
+    Counters add, per-tool maps merge, and ran_at takes the later of the two."""
+    if not existing:
+        return incoming
+    merged = dict(existing)
+    for key in ("cost_usd", "llm_calls", "tokens_used", "latency_seconds"):
+        merged[key] = (existing.get(key) or 0) + (incoming.get(key) or 0)
+    for key in ("calls_per_tool", "tool_failure_counts"):
+        combined = dict(existing.get(key) or {})
+        for tool, count in (incoming.get(key) or {}).items():
+            combined[tool] = combined.get(tool, 0) + count
+        merged[key] = combined
+    merged["ran_at"] = max(existing.get("ran_at") or 0, incoming.get("ran_at") or 0)
+    return merged
 
 
 def _derive_model_name(chat_model: Any) -> str:

@@ -350,3 +350,40 @@ async def test_langgraph_respects_a_per_tool_cap_and_keeps_going(search_tool):
     assert gov.llm_calls == 4
     assert len(runs) == 1, f"per-tool cap of 1 should have held, tool ran {len(runs)}x"
     assert gov.calls_per_tool == {"search": 1}
+
+
+# ── one agent, both paths, one operation ─────────────────────────────────────
+
+
+def test_metrics_merge_instead_of_overwriting():
+    """An agent can work through both run_agent() and agent_model() in one
+    operation. Keyed only by name, the second write would silently replace the
+    first — same hazard as #72."""
+    from boundflow.worker import _merge_agent_metrics
+
+    from_run_agent = {
+        "cost_usd": 0.01, "llm_calls": 2, "tokens_used": 100,
+        "calls_per_tool": {"ping": 1}, "tool_failure_counts": {"ping": 1},
+        "latency_seconds": 1.5, "ran_at": 1000,
+    }
+    from_governed = {
+        "cost_usd": 0.02, "llm_calls": 3, "tokens_used": 200,
+        "calls_per_tool": {"ping": 2, "search": 1}, "tool_failure_counts": {},
+        "latency_seconds": 2.5, "ran_at": 2000,
+    }
+    merged = _merge_agent_metrics(from_run_agent, from_governed)
+
+    assert merged["cost_usd"] == pytest.approx(0.03)
+    assert merged["llm_calls"] == 5
+    assert merged["tokens_used"] == 300
+    assert merged["latency_seconds"] == pytest.approx(4.0)
+    assert merged["calls_per_tool"] == {"ping": 3, "search": 1}
+    assert merged["tool_failure_counts"] == {"ping": 1}
+    assert merged["ran_at"] == 2000, "ran_at takes the later of the two"
+
+
+def test_merge_with_nothing_existing_is_a_passthrough():
+    from boundflow.worker import _merge_agent_metrics
+    incoming = {"cost_usd": 0.01, "llm_calls": 1}
+    assert _merge_agent_metrics(None, incoming) is incoming
+    assert _merge_agent_metrics({}, incoming) is incoming
