@@ -244,6 +244,11 @@ def _wrap(gov, tools):
     return governed_tools(gov, tools)
 
 
+def _wrap_with_schema(gov, tools, output_schema):
+    from boundflow.langchain_client import governed_tools
+    return governed_tools(gov, tools, output_schema=output_schema)
+
+
 async def test_governed_tool_preserves_the_models_view_of_the_tool(search_tool):
     tool, _ = search_tool
     gov = _governor(RuntimePolicy())
@@ -461,3 +466,60 @@ async def test_structured_output_works_through_the_governed_model():
     assert inner.calls[-1].get("tools"), "the schema has to reach the provider"
     assert gov.llm_calls == 1, "a structured call is still a governed call"
     assert gov.cost_usd > 0 and len(gov.spans) == 1
+
+
+# ── submit_result in a harness we don't own ──────────────────────────────────
+
+
+async def test_cap_forces_the_finalizer_instead_of_raising(search_tool):
+    """With an output_schema, a spent cap forces the injected submit_result on the
+    last permitted call — so the agent finishes with a structured answer rather
+    than the run dying. That's run_agent's ending, in someone else's loop."""
+    from boundflow.governed import AgentFinalized
+
+    tool, _ = search_tool
+
+    class Runaway(FakeChat):
+        async def _agenerate(self, messages, stop=None, run_manager=None, **kwargs):
+            self.calls.append(kwargs)
+            if kwargs.get("tool_choice") == "submit_result":
+                tc = {"name": "submit_result", "args": {"answer": "partial"}, "id": "s1"}
+            else:
+                tc = {"name": "search", "args": {"query": "x"}, "id": f"l{len(self.calls)}"}
+            msg = AIMessage(content="", tool_calls=[tc],
+                            usage_metadata={"input_tokens": 100, "output_tokens": 20,
+                                            "total_tokens": 120})
+            return ChatResult(generations=[ChatGeneration(message=msg)])
+
+    gov = _governor(RuntimePolicy(max_llm_calls=3))
+    inner = Runaway(calls=[])
+    model = GovernedChatModel(governor=gov, chat_model=inner)
+    tools = _wrap_with_schema(gov, [tool], {"answer": {"type": "string"}})
+
+    assert gov.finalize_tool == "submit_result" and gov.can_finalize
+
+    from langgraph.prebuilt import create_react_agent
+    pytest.importorskip("langgraph")
+    agent = create_react_agent(model, tools)
+
+    with pytest.raises(AgentFinalized) as finished:
+        await agent.ainvoke({"messages": [HumanMessage(content="go")]})
+
+    assert finished.value.output == {"answer": "partial"}
+    assert gov.llm_calls == 3
+    # Only the last permitted call is forced; the earlier ones run free.
+    assert [k.get("tool_choice") for k in inner.calls] == [None, None, "submit_result"]
+
+
+async def test_without_an_output_schema_a_spent_cap_still_raises(search_tool):
+    """No terminator to force means no graceful ending — the cap has to raise, which
+    is the pre-existing behaviour for harnesses that don't opt in."""
+    tool, _ = search_tool
+    gov = _governor(RuntimePolicy(max_llm_calls=1))
+    model = GovernedChatModel(governor=gov, chat_model=FakeChat(calls=[], tool_name="search"))
+    _wrap(gov, [tool])  # no output_schema
+
+    assert gov.finalize_tool is None and not gov.can_finalize
+    await model.ainvoke([HumanMessage(content="one")])
+    with pytest.raises(AgentPolicyLimitExceeded):
+        await model.ainvoke([HumanMessage(content="two")])
