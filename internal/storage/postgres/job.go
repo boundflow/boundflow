@@ -59,14 +59,16 @@ func (r *JobRepo) AcquireJob(ctx context.Context, workflowID string, ownerID str
 		   AND tenant_group_id = $4
 		 RETURNING workflow_id, request_id, version, current_atomic_operation, context, status,
 		           job_type, workflow_type, timeout_seconds, workflow_version, agent_metrics, workflow_metrics,
-		           job_metadata, approval_id, approval_timeout_at, input_id, input_timeout_at, input_answer,
+		           job_metadata, approval_id, approval_timeout_at, approval_reason,
+		           input_id, input_timeout_at, input_answer,
 		           owner, lease_expires_at, created_at`,
 		workflowID, ownerID, leaseDuration.String(), tenantGroupID,
 	).Scan(
 		&job.WorkflowID, &job.RequestID, &job.Version,
 		&job.CurrentAtomicOperation, &contextJSON, &job.Status,
 		&job.JobType, &job.WorkflowType, &job.RuntimeParams.OperationTimeoutSeconds, &job.WorkflowVersion, &agentMetricsJSON, &workflowMetricsJSON,
-		&jobMetadataJSON, &job.ApprovalID, &job.ApprovalTimeoutAt, &job.InputID, &job.InputTimeoutAt, &inputAnswerJSON,
+		&jobMetadataJSON, &job.ApprovalID, &job.ApprovalTimeoutAt, &job.ApprovalReason,
+		&job.InputID, &job.InputTimeoutAt, &inputAnswerJSON,
 		&job.Owner, &job.LeaseExpiresAt, &job.CreatedAt,
 	)
 	if err != nil {
@@ -186,12 +188,12 @@ func (r *JobRepo) GetJobMetrics(ctx context.Context, workflowID string, requestI
 	return agentMetrics, workflowMetrics, nil
 }
 
-func (r *JobRepo) ResolveApproval(ctx context.Context, workflowID string, approvalID string, status domain.JobStatus) (bool, domain.ResolvedApproval, error) {
+func (r *JobRepo) ResolveApproval(ctx context.Context, workflowID string, approvalID string, status domain.JobStatus, reason string) (bool, domain.ResolvedApproval, error) {
 	var info domain.ResolvedApproval
 	err := r.pool.QueryRow(ctx,
 		`WITH job_update AS (
 		     UPDATE jobs
-		     SET status = $3
+		     SET status = $3, approval_reason = $4
 		     WHERE workflow_id = $1
 		       AND approval_id = $2
 		       AND status = 'awaiting_approval'
@@ -205,7 +207,7 @@ func (r *JobRepo) ResolveApproval(ctx context.Context, workflowID string, approv
 		 )
 		 SELECT request_id, tenant_group_id, approval_opened_at, approval_justification
 		 FROM job_update`,
-		workflowID, approvalID, status,
+		workflowID, approvalID, status, reason,
 	).Scan(&info.RequestID, &info.TenantGroupID, &info.OpenedAt, &info.Justification)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -463,7 +465,7 @@ func (r *JobRepo) UpdateJob(ctx context.Context, workflowID string, ownerID stri
 	tag, err := r.pool.Exec(ctx,
 		`UPDATE jobs
 		 SET status = $3, current_atomic_operation = $4, timeout_seconds = $5, context = $6,
-		     approval_id = NULL, approval_timeout_at = NULL, approval_justification = '', approval_metadata = NULL,
+		     approval_id = NULL, approval_timeout_at = NULL, approval_justification = '', approval_metadata = NULL, approval_reason = '',
 		     input_id = NULL, input_timeout_at = NULL, input_prompt = '', input_metadata = NULL, input_answer = NULL,
 		     job_metadata = '{}'
 		 WHERE workflow_id = $1 AND owner = $2`,
@@ -493,7 +495,7 @@ func (r *JobRepo) UpdateJobWithMetrics(ctx context.Context, workflowID string, o
 		`UPDATE jobs
 		 SET status = $3, current_atomic_operation = $4, timeout_seconds = $5, context = $6, agent_metrics = $7, workflow_metrics = $8,
 		     dispatch_at = CASE WHEN $9::int > 0 THEN now() + make_interval(secs => $9::int) ELSE NULL END,
-		     approval_id = NULL, approval_timeout_at = NULL, approval_justification = '', approval_metadata = NULL,
+		     approval_id = NULL, approval_timeout_at = NULL, approval_justification = '', approval_metadata = NULL, approval_reason = '',
 		     input_id = NULL, input_timeout_at = NULL, input_prompt = '', input_metadata = NULL, input_answer = NULL,
 		     job_metadata = '{}'
 		 WHERE workflow_id = $1 AND owner = $2`,

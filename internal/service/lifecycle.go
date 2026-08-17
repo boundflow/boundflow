@@ -32,8 +32,8 @@ type RequestScheduler interface {
 // ApprovalResolver handles approve/reject for jobs awaiting approval.
 // Satisfied by *scheduler.Scheduler.
 type ApprovalResolver interface {
-	ApproveJob(ctx context.Context, workflowID string, approvalID string) (bool, domain.ResolvedApproval, error)
-	RejectJob(ctx context.Context, workflowID string, approvalID string) (bool, domain.ResolvedApproval, error)
+	ApproveJob(ctx context.Context, workflowID string, approvalID string, reason string) (bool, domain.ResolvedApproval, error)
+	RejectJob(ctx context.Context, workflowID string, approvalID string, reason string) (bool, domain.ResolvedApproval, error)
 }
 
 // InputResolver handles answer submission for jobs awaiting input.
@@ -480,7 +480,7 @@ func (s *LifecycleService) ResolveInterruptedWorkflow(ctx context.Context, workf
 
 func (s *LifecycleService) ApproveWorkflow(ctx context.Context, workflowID string, approvalID string, actor string, reason string) error {
 	s.log.Info("approving workflow", "workflow_id", workflowID, "approval_id", approvalID, "actor", actor)
-	resolved, info, err := s.approvalResolver.ApproveJob(ctx, workflowID, approvalID)
+	resolved, info, err := s.approvalResolver.ApproveJob(ctx, workflowID, approvalID, reason)
 	if err != nil {
 		return fmt.Errorf("approve workflow: %w", err)
 	}
@@ -493,7 +493,7 @@ func (s *LifecycleService) ApproveWorkflow(ctx context.Context, workflowID strin
 
 func (s *LifecycleService) RejectWorkflow(ctx context.Context, workflowID string, approvalID string, actor string, reason string) error {
 	s.log.Info("rejecting workflow", "workflow_id", workflowID, "approval_id", approvalID, "actor", actor)
-	resolved, info, err := s.approvalResolver.RejectJob(ctx, workflowID, approvalID)
+	resolved, info, err := s.approvalResolver.RejectJob(ctx, workflowID, approvalID, reason)
 	if err != nil {
 		return fmt.Errorf("reject workflow: %w", err)
 	}

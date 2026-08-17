@@ -49,8 +49,11 @@ type Job struct {
 	// Server-internal metadata for this job.
 	JobMetadata JobMetadata
 	// Approval gate — only populated when Status == JobStatusAwaitingApproval/Approved/Rejected.
+	// ApprovalReason is the decider's reason, set by ResolveApproval and merged into
+	// the resumed branch's context, mirroring InputAnswer.
 	ApprovalID        *string
 	ApprovalTimeoutAt *time.Time
+	ApprovalReason    string
 	// Input gate — only populated when Status == JobStatusAwaitingInput/Answered/InputTimedOut.
 	// InputAnswer is the submitted answer, set by ResolveInput and merged into the
 	// on_answer branch's context when the dispatch loop resumes it.

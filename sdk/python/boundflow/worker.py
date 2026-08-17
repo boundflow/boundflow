@@ -196,6 +196,17 @@ class OperationContext:
         through an AwaitInput on_answer branch; None otherwise."""
         return self.context.pop("answer", None)
 
+    @property
+    def approval_reason(self) -> str | None:
+        """The reason given to approve_workflow()/reject_workflow(), when this
+        operation was reached through an AwaitApproval branch; None if the decider
+        didn't give one (or on a timeout, which has no decider).
+
+        The gate's own justification isn't here — you wrote that when building the
+        gate, so thread it through the branch's context if the operation needs it.
+        The reason comes from outside the workflow, so only the server can supply it."""
+        return self.context.pop("approval_reason", None)
+
     def add_context(self, metadata: str, payload: Any, *, key: str | None = None) -> "OperationContext":
         self._llm_context.append((key or metadata, metadata, payload))
         return self

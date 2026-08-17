@@ -33,11 +33,11 @@ type mockApprovalResolver struct {
 	rejectErr     error
 }
 
-func (m *mockApprovalResolver) ApproveJob(_ context.Context, _ string, _ string) (bool, domain.ResolvedApproval, error) {
+func (m *mockApprovalResolver) ApproveJob(_ context.Context, _ string, _ string, _ string) (bool, domain.ResolvedApproval, error) {
 	return m.approveResult, domain.ResolvedApproval{}, m.approveErr
 }
 
-func (m *mockApprovalResolver) RejectJob(_ context.Context, _ string, _ string) (bool, domain.ResolvedApproval, error) {
+func (m *mockApprovalResolver) RejectJob(_ context.Context, _ string, _ string, _ string) (bool, domain.ResolvedApproval, error) {
 	return m.rejectResult, domain.ResolvedApproval{}, m.rejectErr
 }
 

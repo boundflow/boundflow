@@ -14,6 +14,7 @@ from boundflow import (
     BoundFlowWorker,
     Complete,
     LifecycleState,
+    Next,
     WorkflowConfig,
 )
 from boundflow.trace import OperationTrace
@@ -267,5 +268,88 @@ async def test_timeout_still_records_what_went_unanswered(cp):
             assert rec.justification == "Waive the late fee for account 991"
             assert rec.reason == "", "a timeout has no decider, so no reason"
             assert rec.actor == ""
+        finally:
+            await cp.delete_workflow(wf.id)
+
+
+async def test_reason_reaches_the_resumed_branch(cp):
+    """The point of collapsing AwaitInput("why?") into the rejection: the on_reject
+    operation can still *act* on the reason, not just find it in the audit log."""
+    captured: list[ApprovalRequest] = []
+    seen: dict = {}
+    worker = BoundFlowWorker(WORKER_ADDRESS, dummy_mock())
+
+    @worker.workflow("reason_to_branch", version=1)
+    async def _entry(ctx):
+        return AwaitApproval(
+            on_approve=Complete(),
+            on_reject=Next(operation="handle_rejection", context=ctx.context, timeout=30),
+            timeout=60,
+            justification="Ship v3 on Friday",
+        )
+
+    @worker.operation("reason_to_branch", "handle_rejection")
+    async def _handle(ctx):
+        seen["reason"] = ctx.approval_reason
+        # Popped, so it doesn't leak into whatever this operation passes onward.
+        seen["after_pop"] = ctx.approval_reason
+        return Complete(result={"noted": seen["reason"]})
+
+    @worker.on_approval_requested
+    async def _on(req: ApprovalRequest):
+        captured.append(req)
+
+    async with run_worker(worker):
+        tenant = await create_isolated_tenant(cp, "reason-branch")
+        wf = await cp.create_workflow("reason_to_branch", tenant.id,
+                                      config=WorkflowConfig(version=1))
+        try:
+            await cp.activate_workflow(wf.id)
+            rid = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
+            await wait_for_lifecycle_state(cp, wf.id, LifecycleState.AWAITING_APPROVAL, timeout=30)
+
+            await cp.reject_workflow(wf.id, captured[0].approval_id, actor="lead",
+                                     reason="Freeze window starts Thursday")
+            info = await wait_for_completion(cp, rid, timeout=60)
+
+            assert seen["reason"] == "Freeze window starts Thursday", \
+                f"on_reject branch didn't receive the reason, got {seen.get('reason')!r}"
+            assert seen["after_pop"] is None, "approval_reason should be popped after reading"
+            assert info.result == {"noted": "Freeze window starts Thursday"}
+        finally:
+            await cp.delete_workflow(wf.id)
+
+
+async def test_no_reason_means_branch_sees_none(cp):
+    captured: list[ApprovalRequest] = []
+    seen: dict = {}
+    worker = BoundFlowWorker(WORKER_ADDRESS, dummy_mock())
+
+    @worker.workflow("no_reason_branch", version=1)
+    async def _entry(ctx):
+        return AwaitApproval(
+            on_approve=Next(operation="after", context=ctx.context, timeout=30),
+            on_reject=Complete(), timeout=60)
+
+    @worker.operation("no_reason_branch", "after")
+    async def _after(ctx):
+        seen["reason"] = ctx.approval_reason
+        return Complete()
+
+    @worker.on_approval_requested
+    async def _on(req: ApprovalRequest):
+        captured.append(req)
+
+    async with run_worker(worker):
+        tenant = await create_isolated_tenant(cp, "no-reason-branch")
+        wf = await cp.create_workflow("no_reason_branch", tenant.id,
+                                      config=WorkflowConfig(version=1))
+        try:
+            await cp.activate_workflow(wf.id)
+            rid = await cp.invoke_workflow(wf.id, operation_timeout_seconds=30)
+            await wait_for_lifecycle_state(cp, wf.id, LifecycleState.AWAITING_APPROVAL, timeout=30)
+            await cp.approve_workflow(wf.id, captured[0].approval_id, actor="lead")
+            await wait_for_completion(cp, rid, timeout=60)
+            assert seen["reason"] is None
         finally:
             await cp.delete_workflow(wf.id)
