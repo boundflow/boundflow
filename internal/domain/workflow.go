@@ -56,6 +56,8 @@ type Workflow struct {
 	LifecyclePolicy        WorkflowLifecyclePolicy
 	InvocationMetrics      []WorkflowInvocationSnapshot
 	CooldownUntil          *time.Time
+	// LastPolicyDecisionRequestID is the request_id ActivateWorkflow guards on.
+	LastPolicyDecisionRequestID string
 	LifecycleLastResolved  int64
 	CurrentWorkflowVersion int
 	SchedulerPartitionID   string

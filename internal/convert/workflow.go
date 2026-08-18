@@ -32,9 +32,10 @@ func WorkflowToProto(r *domain.Workflow) *boundflowv1.Workflow {
 			InvokeMode:           invokeModeToProto(r.WorkflowConfig.InvokeMode),
 			MaxQueueDepth:        r.WorkflowConfig.MaxQueueDepth,
 		},
-		LifecycleState:           string(r.Lifecycle.State),
-		WorkflowState:            workflowStateToProto[r.WorkflowState],
-		LastInterruptedRequestId: r.Lifecycle.LastInterruptedRequestID,
+		LifecycleState:              string(r.Lifecycle.State),
+		WorkflowState:               workflowStateToProto[r.WorkflowState],
+		LastInterruptedRequestId:    r.Lifecycle.LastInterruptedRequestID,
+		LastPolicyDecisionRequestId: r.LastPolicyDecisionRequestID,
 	}
 	if pa := r.Lifecycle.PendingApproval(); pa != nil {
 		w.PendingApproval = pendingApprovalToProto(pa)

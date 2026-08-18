@@ -99,7 +99,7 @@ func (r *LifecycleResolverRepo) ExpireCooldowns(ctx context.Context, partitionID
 	return ids, rows.Err()
 }
 
-func (r *LifecycleResolverRepo) TryApplyVersionResolution(ctx context.Context, workflowID string, resolved int64, expectedVersion int, targetVersion int) (bool, error) {
+func (r *LifecycleResolverRepo) TryApplyVersionResolution(ctx context.Context, workflowID string, resolved int64, expectedVersion int, targetVersion int, requestID string) (bool, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return false, fmt.Errorf("begin apply version resolution tx: %w", err)
@@ -109,14 +109,15 @@ func (r *LifecycleResolverRepo) TryApplyVersionResolution(ctx context.Context, w
 	var updatedID string
 	err = tx.QueryRow(ctx, `
 		UPDATE workflows
-		SET lifecycle_last_resolved  = $2,
-		    current_workflow_version = $3
+		SET lifecycle_last_resolved         = $2,
+		    current_workflow_version        = $3,
+		    last_policy_decision_request_id = $5
 		WHERE id = $1
 		  AND lifecycle_last_resolved < $2
 		  AND current_workflow_version = $4
 		  AND workflow_state != 'disabled'
 		RETURNING id
-	`, workflowID, resolved, targetVersion, expectedVersion).Scan(&updatedID)
+	`, workflowID, resolved, targetVersion, expectedVersion, requestID).Scan(&updatedID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil
@@ -136,18 +137,19 @@ func (r *LifecycleResolverRepo) TryApplyVersionResolution(ctx context.Context, w
 	return true, nil
 }
 
-func (r *LifecycleResolverRepo) TryApplyStateResolution(ctx context.Context, workflowID string, resolved int64, workflowState domain.WorkflowState, cooldownUntil *time.Time) (bool, error) {
+func (r *LifecycleResolverRepo) TryApplyStateResolution(ctx context.Context, workflowID string, resolved int64, workflowState domain.WorkflowState, cooldownUntil *time.Time, requestID string) (bool, error) {
 	var updatedID string
 	err := r.pool.QueryRow(ctx, `
 		UPDATE workflows
-		SET lifecycle_last_resolved = $2,
-		    workflow_state          = $3,
-		    cooldown_until          = $4
+		SET lifecycle_last_resolved         = $2,
+		    workflow_state                  = $3,
+		    cooldown_until                  = $4,
+		    last_policy_decision_request_id = $5
 		WHERE id = $1
 		  AND lifecycle_last_resolved < $2
 		  AND workflow_state != 'disabled'
 		RETURNING id
-	`, workflowID, resolved, workflowState, cooldownUntil).Scan(&updatedID)
+	`, workflowID, resolved, workflowState, cooldownUntil, requestID).Scan(&updatedID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil

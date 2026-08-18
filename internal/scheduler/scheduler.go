@@ -19,7 +19,7 @@ type MetricsHandler interface {
 }
 
 type PolicyResolver interface {
-	ResolveLifecyclePolicy(ctx context.Context, workflow *domain.Workflow, versionMetrics *domain.WorkflowVersionMetrics) (*domain.PolicyActionDetails, error)
+	ResolveLifecyclePolicy(ctx context.Context, workflow *domain.Workflow, versionMetrics *domain.WorkflowVersionMetrics, requestID string) (*domain.PolicyActionDetails, error)
 }
 
 // PartitionWorker is a partition-scoped loop the scheduler owns. The scheduler starts each worker
@@ -376,7 +376,7 @@ func (s *Scheduler) CompleteRequest(ctx context.Context, req string, workflowID 
 	}
 
 	// resolve policy
-	policyAction, err := s.policyResolver.ResolveLifecyclePolicy(ctx, workflow, versionMetrics)
+	policyAction, err := s.policyResolver.ResolveLifecyclePolicy(ctx, workflow, versionMetrics, req)
 	if err != nil {
 		s.log.Error("failed to resolve lifecycle policy", "request_id", req, "workflow_id", workflowID, "error", err)
 		return false, err

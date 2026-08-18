@@ -177,6 +177,7 @@ class WorkflowInfo:
     workflow_state: WorkflowState
     version: int
     last_interrupted_request_id: str
+    last_policy_decision_request_id: str
     deletion_requested_at: datetime | None = None
     pending_approval: PendingApproval | None = None
     pending_input: PendingInput | None = None
@@ -205,6 +206,7 @@ def _workflow_info(w) -> WorkflowInfo:
         workflow_state=_WF_STATE.get(w.workflow_state, WorkflowState.UNSPECIFIED),
         version=w.workflow_config.version,
         last_interrupted_request_id=w.last_interrupted_request_id,
+        last_policy_decision_request_id=w.last_policy_decision_request_id,
         deletion_requested_at=_ts(w, "deletion_requested_at"),
         pending_approval=_pending_approval(w) if w.HasField("pending_approval") else None,
         pending_input=_pending_input(w) if w.HasField("pending_input") else None,
@@ -652,9 +654,13 @@ class ControlPlaneClient:
             InvokeMode.QUEUE if wc.invoke_mode == ri.INVOKE_MODE_QUEUE else InvokeMode.COALESCE,
             wc.max_queue_depth))
 
-    async def activate_workflow(self, workflow_id: str) -> None:
+    async def activate_workflow(self, workflow_id: str, request_id: str = "") -> None:
+        """Resume a paused/cooldown workflow. request_id must match the workflow's
+        last_policy_decision_request_id — read it from the workflow's
+        last_policy_decision_request_id field. Defaults to "" for a workflow that has
+        never had a policy decision (e.g. freshly created)."""
         await self._lc.ActivateWorkflow(
-            lc.ActivateWorkflowRequest(workflow_id=workflow_id),
+            lc.ActivateWorkflowRequest(workflow_id=workflow_id, request_id=request_id),
             metadata=self._metadata)
 
     async def resolve_interrupted_workflow(self, workflow_id: str, request_id: str) -> None:

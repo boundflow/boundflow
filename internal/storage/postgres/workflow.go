@@ -77,7 +77,8 @@ func (r *WorkflowRepo) ListForTenantGroup(ctx context.Context, tenantGroupID str
 	rows, err := r.pool.Query(ctx,
 		`SELECT w.id, w.tenant_id, w.workflow_type, w.current_workflow_version,
 		        w.lifecycle_state, w.workflow_state, w.last_completed_request_at,
-		        w.last_interrupted_request_id, w.created_at, w.deletion_requested_at
+		        w.last_interrupted_request_id, w.created_at, w.deletion_requested_at,
+		        w.last_policy_decision_request_id
 		 FROM workflows w
 		 JOIN tenants t ON w.tenant_id = t.id
 		 WHERE t.tenant_group_id = $1
@@ -95,6 +96,7 @@ func (r *WorkflowRepo) ListForTenantGroup(ctx context.Context, tenantGroupID str
 			&w.ID, &w.TenantID, &w.WorkflowType, &w.CurrentWorkflowVersion,
 			&w.Lifecycle.State, &w.WorkflowState, &w.Lifecycle.LastCompletedRequestAt,
 			&w.Lifecycle.LastInterruptedRequestID, &w.CreatedAt, &w.DeletionRequestedAt,
+			&w.LastPolicyDecisionRequestID,
 		); err != nil {
 			return nil, handleError(err, "workflow instance")
 		}
@@ -121,7 +123,8 @@ func (r *WorkflowRepo) Get(ctx context.Context, id string) (*domain.Workflow, er
 		        w.target_version, w.current_version, w.last_completed_request_at,
 		        w.last_interrupted_request_id, w.created_at,
 		        w.last_gate_id, w.last_gate_detail, w.last_gate_metadata,
-		        w.last_gate_opened_at, w.last_gate_timeout_at, w.deletion_requested_at
+		        w.last_gate_opened_at, w.last_gate_timeout_at, w.deletion_requested_at,
+		        w.last_policy_decision_request_id
 		 FROM workflows w
 		 WHERE w.id = $1`, id,
 	).Scan(
@@ -137,6 +140,7 @@ func (r *WorkflowRepo) Get(ctx context.Context, id string) (*domain.Workflow, er
 		&instance.Lifecycle.LastCompletedRequestAt, &instance.Lifecycle.LastInterruptedRequestID, &instance.CreatedAt,
 		&instance.Lifecycle.LastGateID, &gateDetail, &gateMetadataJSON,
 		&instance.Lifecycle.LastGateOpenedAt, &instance.Lifecycle.LastGateTimeoutAt, &instance.DeletionRequestedAt,
+		&instance.LastPolicyDecisionRequestID,
 	)
 	if err != nil {
 		return nil, handleError(err, "workflow instance")
@@ -350,15 +354,27 @@ func (r *WorkflowRepo) ListPendingDeletion(ctx context.Context, partitionID stri
 	return ids, rows.Err()
 }
 
-func (r *WorkflowRepo) UpdateWorkflowState(ctx context.Context, id string, state domain.WorkflowState) error {
-	_, err := r.pool.Exec(ctx,
-		`UPDATE workflows SET workflow_state = $1 WHERE id = $2`,
-		state, id,
-	)
+// TryActivateWorkflow resumes a paused/cooldown workflow, guarded on requestID
+// matching last_policy_decision_request_id. disabled is never touched here —
+// that's ResolveInterruptedWorkflow's guard.
+func (r *WorkflowRepo) TryActivateWorkflow(ctx context.Context, id string, requestID string) (bool, error) {
+	var updatedID string
+	err := r.pool.QueryRow(ctx,
+		`UPDATE workflows
+		 SET workflow_state = 'active', cooldown_until = NULL
+		 WHERE id = $1
+		   AND workflow_state IN ('paused', 'cooldown')
+		   AND last_policy_decision_request_id = $2
+		 RETURNING id`,
+		id, requestID,
+	).Scan(&updatedID)
 	if err != nil {
-		return fmt.Errorf("update workflow state: %w", err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("try activate workflow: %w", err)
 	}
-	return nil
+	return true, nil
 }
 
 func (r *WorkflowRepo) UpdateLifecycleStateAndIncrementVersion(ctx context.Context, id string, state domain.LifecycleState, invalidStates ...domain.LifecycleState) (int64, error) {

@@ -28,7 +28,7 @@ func (noopMetricsHandler) HandleAgentMetrics(_ context.Context, _ string, _ map[
 
 type noopPolicyResolver struct{}
 
-func (noopPolicyResolver) ResolveLifecyclePolicy(_ context.Context, _ *domain.Workflow, _ *domain.WorkflowVersionMetrics) (*domain.PolicyActionDetails, error) {
+func (noopPolicyResolver) ResolveLifecyclePolicy(_ context.Context, _ *domain.Workflow, _ *domain.WorkflowVersionMetrics, _ string) (*domain.PolicyActionDetails, error) {
 	return nil, nil
 }
 
