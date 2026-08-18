@@ -167,9 +167,9 @@ class PendingInput:
 class WorkflowInfo:
     """A read-only view of a workflow — its current version, lifecycle state, and
     workflow state. Returned by `get_workflow` (one) and `list_workflows` (all).
-    pending_approval/pending_input are only populated by `get_workflow` (None from
-    `list_workflows`, which returns a lighter view) and only while lifecycle_state
-    is AWAITING_APPROVAL / AWAITING_INPUT respectively."""
+    config/pending_approval/pending_input are only populated by `get_workflow` (None
+    from `list_workflows`, which returns a lighter view); pending_approval/pending_input
+    are further gated on lifecycle_state being AWAITING_APPROVAL / AWAITING_INPUT."""
     id: str
     workflow_type: str
     tenant_id: str
@@ -178,6 +178,7 @@ class WorkflowInfo:
     version: int
     last_interrupted_request_id: str
     last_policy_decision_request_id: str
+    config: WorkflowConfig | None = None
     deletion_requested_at: datetime | None = None
     pending_approval: PendingApproval | None = None
     pending_input: PendingInput | None = None
@@ -197,7 +198,14 @@ class WorkflowMetrics:
     tool_failure_counts: dict[str, int]
 
 
-def _workflow_info(w) -> WorkflowInfo:
+def _workflow_config(wc) -> WorkflowConfig:
+    return WorkflowConfig(
+        wc.version, wc.invoke_timeout_seconds, wc.repeat_every_seconds, wc.triggerable,
+        InvokeMode.QUEUE if wc.invoke_mode == ri.INVOKE_MODE_QUEUE else InvokeMode.COALESCE,
+        wc.max_queue_depth)
+
+
+def _workflow_info(w, full: bool = False) -> WorkflowInfo:
     return WorkflowInfo(
         id=w.id,
         workflow_type=w.workflow_type,
@@ -207,6 +215,7 @@ def _workflow_info(w) -> WorkflowInfo:
         version=w.workflow_config.version,
         last_interrupted_request_id=w.last_interrupted_request_id,
         last_policy_decision_request_id=w.last_policy_decision_request_id,
+        config=_workflow_config(w.workflow_config) if full else None,
         deletion_requested_at=_ts(w, "deletion_requested_at"),
         pending_approval=_pending_approval(w) if w.HasField("pending_approval") else None,
         pending_input=_pending_input(w) if w.HasField("pending_input") else None,
@@ -691,7 +700,7 @@ class ControlPlaneClient:
         workflow state. The single-resource read; `list_workflows` returns all."""
         resp = await self._lc.GetWorkflow(
             lc.GetWorkflowRequest(workflow_id=workflow_id), metadata=self._metadata)
-        return _workflow_info(resp.workflow)
+        return _workflow_info(resp.workflow, full=True)
 
     async def list_workflows(self) -> list[WorkflowInfo]:
         """List all workflows owned by this API key's tenant group (newest first)."""
