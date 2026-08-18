@@ -9,7 +9,7 @@ from __future__ import annotations
 import pytest
 
 from boundflow import (
-    LifecycleState, NotFoundError, WorkflowConfig, WorkflowInfo, WorkflowState,
+    InvokeMode, LifecycleState, NotFoundError, WorkflowConfig, WorkflowInfo, WorkflowState,
 )
 from .conftest import create_isolated_tenant
 
@@ -47,3 +47,18 @@ async def test_get_workflow_reflects_state_change(cp):
 async def test_get_workflow_unknown_id_raises_not_found(cp):
     with pytest.raises(NotFoundError):
         await cp.get_workflow("00000000-0000-0000-0000-000000000000")
+
+
+async def test_get_workflow_returns_full_config(cp):
+    tenant = await create_isolated_tenant(cp, "get-config")
+    wf = await cp.create_workflow("checkout", tenant.id, config=WorkflowConfig(
+        invoke_timeout_seconds=45, repeat_every_seconds=120,
+        triggerable=True, invoke_mode=InvokeMode.QUEUE, max_queue_depth=7,
+    ))
+
+    info = await cp.get_workflow(wf.id)
+
+    assert info.config == WorkflowConfig(
+        version=0, invoke_timeout_seconds=45, repeat_every_seconds=120,
+        triggerable=True, invoke_mode=InvokeMode.QUEUE, max_queue_depth=7,
+    )
