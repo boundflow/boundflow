@@ -20,6 +20,7 @@ import (
 var ErrMissingRuntimeParams = errors.New("operation_timeout_seconds must be set on the request, tenant policy, or tenant group policy")
 var ErrInvalidWorkflowState = errors.New("workflow cannot be invoked in its current state")
 var ErrNotInterrupted = errors.New("workflow is not interrupted or the request id does not match its last interruption")
+var ErrActivateMismatch = errors.New("workflow is not paused/cooldown, or the request id does not match its last policy decision")
 var ErrInvalidRepeatInterval = errors.New("repeat_every_seconds is below the minimum the scheduler can honor")
 var ErrQueueFull = errors.New("workflow invoke queue is full")
 
@@ -434,13 +435,16 @@ func (s *LifecycleService) GetAgentLifecyclePolicy(ctx context.Context, workflow
 	return nil, nil
 }
 
-func (s *LifecycleService) ActivateWorkflow(ctx context.Context, workflowID string) error {
-	s.log.Info("activating workflow", "workflow_id", workflowID)
-	if err := s.workflows.UpdateWorkflowState(ctx, workflowID, domain.WorkflowStateActive); err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return err
-		}
+// ActivateWorkflow resumes a paused/cooldown workflow, guarded on requestID matching
+// last_policy_decision_request_id. Never touches disabled; use ResolveInterruptedWorkflow.
+func (s *LifecycleService) ActivateWorkflow(ctx context.Context, workflowID string, requestID string) error {
+	s.log.Info("activating workflow", "workflow_id", workflowID, "request_id", requestID)
+	resolved, err := s.workflows.TryActivateWorkflow(ctx, workflowID, requestID)
+	if err != nil {
 		return fmt.Errorf("activate workflow: %w", err)
+	}
+	if !resolved {
+		return ErrActivateMismatch
 	}
 	return nil
 }

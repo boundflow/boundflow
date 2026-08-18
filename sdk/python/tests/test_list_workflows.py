@@ -24,6 +24,8 @@ async def test_list_workflows_returns_created_workflows_with_expected_state(cp):
     assert a.workflow_type == "alpha"
     assert a.tenant_id == tenant.id
     assert a.version == 1
+    # The lightweight list view never fetches config — get_workflow does.
+    assert a.config is None
     # A freshly created workflow is ACTIVE in its lifecycle but PAUSED for dispatch
     # ("created and paused"): assert the exact states, not just truthiness.
     assert a.lifecycle_state == LifecycleState.ACTIVE

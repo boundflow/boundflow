@@ -61,8 +61,10 @@ func (r *LifecycleResolver) Run(ctx context.Context, partitionID string) error {
 // but again this should be an impossible case due to invariant
 // ResolveLifecyclePolicy resolves and applies the workflow's lifecycle policy. When
 // a rule fires and actually changes state, it returns the *PolicyActionDetails for
-// the caller to audit; otherwise it returns nil.
-func (r *LifecycleResolver) ResolveLifecyclePolicy(ctx context.Context, workflow *domain.Workflow, versionMetrics *domain.WorkflowVersionMetrics) (*domain.PolicyActionDetails, error) {
+// the caller to audit; otherwise it returns nil. requestID is the run whose metrics
+// triggered this resolution; state resolutions stamp it as
+// last_policy_decision_request_id, the id ActivateWorkflow requires callers to name.
+func (r *LifecycleResolver) ResolveLifecyclePolicy(ctx context.Context, workflow *domain.Workflow, versionMetrics *domain.WorkflowVersionMetrics, requestID string) (*domain.PolicyActionDetails, error) {
 
 	workflowId := workflow.ID
 
@@ -99,9 +101,9 @@ func (r *LifecycleResolver) ResolveLifecyclePolicy(ctx context.Context, workflow
 
 	var resolved bool
 	if goalState.VersionChange {
-		resolved, err = r.resolver.TryApplyVersionResolution(ctx, workflowId, workflow.CurrentVersion, prevVersion, version)
+		resolved, err = r.resolver.TryApplyVersionResolution(ctx, workflowId, workflow.CurrentVersion, prevVersion, version, requestID)
 	} else {
-		resolved, err = r.resolver.TryApplyStateResolution(ctx, workflowId, workflow.CurrentVersion, state, cooldown)
+		resolved, err = r.resolver.TryApplyStateResolution(ctx, workflowId, workflow.CurrentVersion, state, cooldown, requestID)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("Applying resolved policy failed with error %w", err)

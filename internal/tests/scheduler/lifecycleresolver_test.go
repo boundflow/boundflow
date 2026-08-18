@@ -33,10 +33,10 @@ func TestResolveLifecyclePolicy_SetVersionGuardsOnPreviousVersion(t *testing.T) 
 	// A set_version resolution calls TryApplyVersionResolution, guarded on expectedVersion=2
 	// (the version observed before deciding to fire) -- never TryApplyStateResolution.
 	resolverRepo.EXPECT().
-		TryApplyVersionResolution(gomock.Any(), "wf-1", int64(5), 2, 1).
+		TryApplyVersionResolution(gomock.Any(), "wf-1", int64(5), 2, 1, gomock.Any()).
 		Return(true, nil)
 
-	action, err := resolver.ResolveLifecyclePolicy(context.Background(), workflow, vm)
+	action, err := resolver.ResolveLifecyclePolicy(context.Background(), workflow, vm, "req-1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -66,10 +66,10 @@ func TestResolveLifecyclePolicy_PauseUsesStateResolution(t *testing.T) {
 	// A pause/cooldown resolution calls TryApplyStateResolution -- never TryApplyVersionResolution,
 	// so it structurally can't touch current_workflow_version.
 	resolverRepo.EXPECT().
-		TryApplyStateResolution(gomock.Any(), "wf-1", int64(3), domain.WorkflowStatePaused, gomock.Any()).
+		TryApplyStateResolution(gomock.Any(), "wf-1", int64(3), domain.WorkflowStatePaused, gomock.Any(), gomock.Any()).
 		Return(true, nil)
 
-	action, err := resolver.ResolveLifecyclePolicy(context.Background(), workflow, &domain.WorkflowVersionMetrics{})
+	action, err := resolver.ResolveLifecyclePolicy(context.Background(), workflow, &domain.WorkflowVersionMetrics{}, "req-1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -97,10 +97,10 @@ func TestResolveLifecyclePolicy_NoRuleFiredUsesStateResolution(t *testing.T) {
 	// No rule fires -> still resolves via TryApplyStateResolution (to advance
 	// lifecycle_last_resolved), never TryApplyVersionResolution, and no action is reported.
 	resolverRepo.EXPECT().
-		TryApplyStateResolution(gomock.Any(), "wf-1", int64(3), domain.WorkflowStateActive, gomock.Any()).
+		TryApplyStateResolution(gomock.Any(), "wf-1", int64(3), domain.WorkflowStateActive, gomock.Any(), gomock.Any()).
 		Return(true, nil)
 
-	action, err := resolver.ResolveLifecyclePolicy(context.Background(), workflow, &domain.WorkflowVersionMetrics{})
+	action, err := resolver.ResolveLifecyclePolicy(context.Background(), workflow, &domain.WorkflowVersionMetrics{}, "req-1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

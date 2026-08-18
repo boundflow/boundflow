@@ -3021,8 +3021,11 @@ func (*RejectWorkflowResponse) Descriptor() ([]byte, []int) {
 }
 
 type ActivateWorkflowRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	WorkflowId    string                 `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	WorkflowId string                 `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	// Must match the workflow's last_policy_decision_request_id. "" for a workflow
+	// that has never had one (e.g. freshly created).
+	RequestId     string `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3060,6 +3063,13 @@ func (*ActivateWorkflowRequest) Descriptor() ([]byte, []int) {
 func (x *ActivateWorkflowRequest) GetWorkflowId() string {
 	if x != nil {
 		return x.WorkflowId
+	}
+	return ""
+}
+
+func (x *ActivateWorkflowRequest) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
 	}
 	return ""
 }
@@ -4068,10 +4078,12 @@ const file_boundflow_v1_lifecycle_proto_rawDesc = "" +
 	"\n" +
 	"agent_name\x18\x05 \x01(\tR\tagentName\x127\n" +
 	"\x06action\x18\x06 \x01(\v2\x1f.boundflow.v1.AgentPolicyActionR\x06action\"\x18\n" +
-	"\x16RejectWorkflowResponse\":\n" +
+	"\x16RejectWorkflowResponse\"Y\n" +
 	"\x17ActivateWorkflowRequest\x12\x1f\n" +
 	"\vworkflow_id\x18\x01 \x01(\tR\n" +
-	"workflowId\"\x1a\n" +
+	"workflowId\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x02 \x01(\tR\trequestId\"\x1a\n" +
 	"\x18ActivateWorkflowResponse\"c\n" +
 	"!ResolveInterruptedWorkflowRequest\x12\x1f\n" +
 	"\vworkflow_id\x18\x01 \x01(\tR\n" +

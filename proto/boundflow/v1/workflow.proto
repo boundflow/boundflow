@@ -75,4 +75,6 @@ message Workflow {
   // pending deletion. lifecycle_state only moves to "deleted" once any in-flight
   // work has finished.
   google.protobuf.Timestamp deletion_requested_at = 14;
+  // Pass back as ActivateWorkflowRequest.request_id to resume from paused/cooldown.
+  string last_policy_decision_request_id = 15;
 }

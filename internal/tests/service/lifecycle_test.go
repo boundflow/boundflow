@@ -234,6 +234,62 @@ func TestResolveInterruptedWorkflow_RepoError_Propagates(t *testing.T) {
 	}
 }
 
+func TestActivateWorkflow(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	svc, workflowRepo, _, _, _, _ := newSvc(ctrl)
+
+	workflowRepo.EXPECT().
+		TryActivateWorkflow(gomock.Any(), "instance-1", "req-9").
+		Return(true, nil)
+
+	if err := svc.ActivateWorkflow(context.Background(), "instance-1", "req-9"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// A fresh workflow (never had a policy decision) is activated with the "" sentinel.
+func TestActivateWorkflow_NeverPolicyDecided_UsesEmptySentinel(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	svc, workflowRepo, _, _, _, _ := newSvc(ctrl)
+
+	workflowRepo.EXPECT().
+		TryActivateWorkflow(gomock.Any(), "instance-1", "").
+		Return(true, nil)
+
+	if err := svc.ActivateWorkflow(context.Background(), "instance-1", ""); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// Wrong request id, or workflow not in paused/cooldown (e.g. disabled) → repo reports
+// false, and disabled is never silently resurrected by ActivateWorkflow.
+func TestActivateWorkflow_GuardMismatch_ReturnsErrActivateMismatch(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	svc, workflowRepo, _, _, _, _ := newSvc(ctrl)
+
+	workflowRepo.EXPECT().
+		TryActivateWorkflow(gomock.Any(), "instance-1", "wrong-req").
+		Return(false, nil)
+
+	err := svc.ActivateWorkflow(context.Background(), "instance-1", "wrong-req")
+	if !errors.Is(err, service.ErrActivateMismatch) {
+		t.Fatalf("expected ErrActivateMismatch, got %v", err)
+	}
+}
+
+func TestActivateWorkflow_RepoError_Propagates(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	svc, workflowRepo, _, _, _, _ := newSvc(ctrl)
+
+	workflowRepo.EXPECT().
+		TryActivateWorkflow(gomock.Any(), "instance-1", "req-9").
+		Return(false, errors.New("db down"))
+
+	if err := svc.ActivateWorkflow(context.Background(), "instance-1", "req-9"); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
 func TestGetWorkflow(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	svc, workflowRepo, _, _, _, _ := newSvc(ctrl)

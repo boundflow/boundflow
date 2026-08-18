@@ -35,7 +35,9 @@ type WorkflowRepository interface {
 	// tenant group (newest first), for read-only observability. Heavy fields are unset.
 	ListForTenantGroup(ctx context.Context, tenantGroupID string) ([]*domain.Workflow, error)
 	UpdateLifecycleState(ctx context.Context, id string, state domain.LifecycleState) error
-	UpdateWorkflowState(ctx context.Context, id string, state domain.WorkflowState) error
+	// TryActivateWorkflow resumes a paused/cooldown workflow, guarded on requestID
+	// matching last_policy_decision_request_id. Never touches disabled.
+	TryActivateWorkflow(ctx context.Context, id string, requestID string) (bool, error)
 	MarkDeletionRequested(ctx context.Context, id string) error
 	FinalizeDeleted(ctx context.Context, id string) error
 	// ListPendingDeletion returns IDs of workflows in the partition where deletion has been
@@ -255,10 +257,11 @@ type LifecycleResolverRepository interface {
 	// TryApplyVersionResolution applies a set_version policy resolution, guarded on
 	// lifecycle_last_resolved and on current_workflow_version still equaling
 	// expectedVersion. Starts a fresh metrics epoch when the version actually changes.
-	TryApplyVersionResolution(ctx context.Context, workflowID string, resolved int64, expectedVersion int, targetVersion int) (bool, error)
+	TryApplyVersionResolution(ctx context.Context, workflowID string, resolved int64, expectedVersion int, targetVersion int, requestID string) (bool, error)
 	// TryApplyStateResolution applies a pause/cooldown policy resolution, guarded only
 	// on lifecycle_last_resolved. cooldownUntil is non-nil only for WorkflowStateCooldown.
-	TryApplyStateResolution(ctx context.Context, workflowID string, resolved int64, workflowState domain.WorkflowState, cooldownUntil *time.Time) (bool, error)
+	// requestID is stamped as last_policy_decision_request_id.
+	TryApplyStateResolution(ctx context.Context, workflowID string, resolved int64, workflowState domain.WorkflowState, cooldownUntil *time.Time, requestID string) (bool, error)
 }
 
 type MetricsRepository interface {
