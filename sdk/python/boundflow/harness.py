@@ -74,7 +74,13 @@ async def durable_harness(ctx, agent_name: str, store_url: str, *, resume: Any =
     # The task, not the operation: a resumed operation must land on the same thread and
     # the same filesystem as the one that parked.
     task_id = ctx.context.get("task_id") or ctx._op.request_id
-    namespace = (ctx._op.workflow_type, agent_name, task_id)
+    # The workflow *id*, not its type. Several workflows share a type — they're
+    # instances of the same agent, each an entity with its own state — so keying on
+    # type would interleave their namespaces under one prefix. Nothing collides
+    # today, because task_id is unique, but deleting one instance could then only
+    # be done by walking every task id and working out which belonged to whom.
+    # Keyed on the id, an instance's state is a subtree you can drop.
+    namespace = (ctx._op.workflow_id, agent_name, task_id)
 
     async with (
         AsyncPostgresStore.from_conn_string(store_url) as store,
