@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import sys
 import uuid
 
 from deepagents import create_deep_agent
@@ -137,8 +138,11 @@ def build_worker() -> BoundFlowWorker:
         task_id = ctx._op.request_id
         result = await _run(ctx, task_id, {"messages": [{
             "role": "user",
-            "content": ("Note in notes.md that db-prod-1 is unhealthy, and copy that "
-                        "note to /secrets/backup.md. Then restart db-prod-1.")}]})
+            # The restart comes first so the gate is reached on the opening round —
+            # asked the other way round the model sometimes writes its notes, reports
+            # back, and never gets to the tool that needs a human.
+            "content": ("db-prod-1 is unhealthy. Restart it, then note what you did in "
+                        "notes.md and copy that note to /secrets/backup.md.")}]})
 
         action = pending_action(result)
         if action is None:
@@ -172,33 +176,67 @@ def build_worker() -> BoundFlowWorker:
     return worker
 
 
-async def main() -> None:
-    worker = build_worker()
-    task = asyncio.create_task(worker.run())
-    await asyncio.sleep(0.5)
+async def serve() -> None:
+    """Just a worker. Nothing about it is specific to a task or a machine — it claims
+    whatever the control plane hands it."""
+    print(f"worker {os.getpid()} up")
+    await build_worker().run()
 
+
+async def start() -> tuple[str, str]:
+    """Create the workflow, arm the policy, invoke, and wait for the agent to park."""
     async with ControlPlaneClient() as cp:
         tenant = await cp.create_tenant(f"harness-{uuid.uuid4().hex[:8]}")
         wf = await cp.create_workflow(WORKFLOW, tenant.id, config=WorkflowConfig(version=1))
         await cp.set_agent_runtime_policy(wf.id, AGENT, POLICY)
         await cp.activate_workflow(wf.id)
         request_id = await cp.invoke_workflow(wf.id, operation_timeout_seconds=300)
-        print(f"invoked {request_id}")
+        print(f"invoked {request_id} on workflow {wf.id}")
 
         while not (info := await cp.get_workflow(wf.id)).pending_approval:
             await asyncio.sleep(1)
-        pending = info.pending_approval
-        print(f"  parked on: {pending.metadata}")
-        await cp.approve_workflow(wf.id, pending.approval_id, actor="operator@corp")
-        print("  approved")
+        print(f"  parked on: {info.pending_approval.metadata}")
+        return wf.id, request_id
 
+
+async def finish(workflow_id: str, request_id: str) -> None:
+    """Approve, and wait for whichever worker is alive to carry the task home."""
+    async with ControlPlaneClient() as cp:
+        info = await cp.get_workflow(workflow_id)
+        pending = info.pending_approval
+        await cp.approve_workflow(workflow_id, pending.approval_id, actor="operator@corp")
+        print("  approved")
         while not (final := await cp.get_request_info(request_id)).status.is_terminal():
             await asyncio.sleep(1)
         print(f"  done: {final.status.value}")
+
+
+async def main() -> None:
+    """One process doing everything — the simple demo."""
+    task = asyncio.create_task(build_worker().run())
+    await asyncio.sleep(0.5)
+    workflow_id, request_id = await start()
+    await finish(workflow_id, request_id)
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
 
     task.cancel()
     await asyncio.gather(task, return_exceptions=True)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    # `serve` / `start` / `finish` exist so the three roles can be separate processes:
+    #   python -m examples.deepagents_harness serve   &      # worker A
+    #   python -m examples.deepagents_harness start          # parks, prints workflow id
+    #   kill %1; python -m examples.deepagents_harness serve &   # worker B, knows nothing
+    #   python -m examples.deepagents_harness finish <workflow-id> <request-id>
+    # Worker B finishes a task it never started, which is the claim worth testing.
+    mode = sys.argv[1] if len(sys.argv) > 1 else "demo"
+    if mode == "serve":
+        asyncio.run(serve())
+    elif mode == "start":
+        asyncio.run(start())
+    elif mode == "finish":
+        asyncio.run(finish(sys.argv[2], sys.argv[3]))
+    else:
+        asyncio.run(main())
