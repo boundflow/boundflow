@@ -81,6 +81,11 @@ log = logging.getLogger("boundflow.governed")
 
 DEFAULT_MAX_TOKENS = 4096
 
+# Cost is only known after a call returns, so a concurrent batch can't be checked
+# against the cap the way call count can. Stopping slightly early leaves room for
+# whatever is in flight to land inside the declared budget.
+COST_HEADROOM = 0.9
+
 
 class AgentFinalized(Exception):
     """Raised by the injected `submit_result` tool to end a governed harness with a
@@ -111,6 +116,26 @@ class GovernedCall:
     _governor: "AgentGovernor" = None  # type: ignore[assignment]
     _start_ms: int = field(default_factory=now_ms)
     _recorded: bool = False
+
+    def abandon(self) -> None:
+        """Release this call's reservation — it never reached the model.
+
+        Without this a provider having a bad day drains the budget with calls that
+        were never billed, and the agent gets throttled for work it never did. A
+        no-op after `record()`, which earned the slot.
+        """
+        if self._recorded:
+            return
+        self._recorded = True
+        self._governor.llm_calls -= 1
+
+    async def __aenter__(self) -> "GovernedCall":
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb) -> None:
+        # Releases only when record() never ran, so an adapter has no exception path
+        # to remember and a leak can't be introduced by forgetting one.
+        self.abandon()
 
     def record(
         self,
@@ -284,10 +309,19 @@ class AgentGovernor:
         immediately when the harness can't express a finalize (`can_finalize=False`)
         — a customer-domain failure, so the operation completes marked failed.
         """
+        # `llm_calls` counts calls *reserved*, not calls completed — the reservation
+        # is taken below, before this returns. Concurrent callers (parallel subagents
+        # share one governor) would otherwise all read the same pre-call count and all
+        # pass: a cap of 1 admitted 5 simultaneous calls. Same discipline the harness
+        # uses for tool caps, which it settles synchronously in `after_model` rather
+        # than across the await.
         calls_spent = (self.policy.max_llm_calls > 0
                        and self.llm_calls >= self.policy.max_llm_calls)
+        # Cost can't be reserved — it isn't known until the response lands — so it
+        # keeps headroom instead: trip early enough that calls already in flight land
+        # inside the declared budget rather than past it.
         cost_spent = (self.policy.max_cost_usd > 0
-                      and self.cost_usd >= self.policy.max_cost_usd)
+                      and self.cost_usd >= self.policy.max_cost_usd * COST_HEADROOM)
 
         if calls_spent or cost_spent:
             if self._finalize_offered or not self.can_finalize:
@@ -305,6 +339,7 @@ class AgentGovernor:
 
         if finalize:
             self._finalize_offered = True
+        self.llm_calls += 1  # reserved; released by abandon(), kept by record()
         return GovernedCall(
             model=self.model,
             max_tokens=self.max_tokens,
@@ -325,7 +360,7 @@ class AgentGovernor:
         end_ms = now_ms()
         cost = _estimate_cost(usage, self.model, self._pricing)
 
-        self.llm_calls += 1
+        # llm_calls was incremented at begin_call(); this call held that slot.
         self.cost_usd += cost
         self.tokens_used += usage.total_tokens()
         for name in tool_calls:

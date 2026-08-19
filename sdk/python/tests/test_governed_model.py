@@ -7,6 +7,9 @@ reports are the ones it actually observed.
 """
 from __future__ import annotations
 
+import asyncio
+import contextlib
+
 import pytest
 
 from boundflow import AgentGovernor, AgentPolicyLimitExceeded, RuntimePolicy, ToolCallLimit
@@ -523,3 +526,45 @@ async def test_without_an_output_schema_a_spent_cap_still_raises(search_tool):
     await model.ainvoke([HumanMessage(content="one")])
     with pytest.raises(AgentPolicyLimitExceeded):
         await model.ainvoke([HumanMessage(content="two")])
+
+
+# ── concurrency ──────────────────────────────────────────────────────────────
+# Parallel subagents share one governor, and deepagents runs sibling tool calls
+# concurrently, so several model calls are in flight against the same caps at
+# once. The cap is checked in begin_call and the model call awaits after it, so
+# without a reservation every concurrent caller reads the same pre-call count and
+# every one of them passes: a cap of 1 admitted 5 calls.
+
+
+async def test_concurrent_calls_cannot_exceed_max_llm_calls():
+    from boundflow.governed import AgentGovernor
+
+    gov = AgentGovernor("parallel", RuntimePolicy(max_llm_calls=2), "m",
+                        collect_spans=False)
+
+    async def one():
+        async with gov.begin_call() as call:
+            await asyncio.sleep(0.01)          # where the model call happens
+            call.record(Usage(input_tokens=1, output_tokens=1))
+
+    await asyncio.gather(*(one() for _ in range(8)), return_exceptions=True)
+    assert gov.llm_calls == 2
+
+
+async def test_a_call_that_never_reached_the_model_returns_its_slot():
+    """A provider having a bad day must not drain the budget with calls that were
+    never billed — the agent would be throttled for work it never did."""
+    from boundflow.governed import AgentGovernor
+
+    gov = AgentGovernor("flaky", RuntimePolicy(max_llm_calls=2), "m",
+                        collect_spans=False)
+
+    for _ in range(5):
+        with contextlib.suppress(RuntimeError):
+            async with gov.begin_call():
+                raise RuntimeError("provider 503")   # record() never runs
+    assert gov.llm_calls == 0
+
+    async with gov.begin_call() as call:
+        call.record(Usage(input_tokens=1, output_tokens=1))
+    assert gov.llm_calls == 1
