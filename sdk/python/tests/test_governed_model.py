@@ -568,3 +568,22 @@ async def test_a_call_that_never_reached_the_model_returns_its_slot():
     async with gov.begin_call() as call:
         call.record(Usage(input_tokens=1, output_tokens=1))
     assert gov.llm_calls == 1
+
+
+async def test_finalizing_is_not_a_tool_failure():
+    """submit_result ends a loop we don't own by raising, so the wrapper sees an
+    exception on a run that succeeded. Counting it meant every completed run
+    recorded a failure against `submit_result` — the metric lifecycle rules read,
+    so an agent that always worked looked like one whose tools always broke."""
+    from boundflow.governed import AgentFinalized
+    from boundflow.langchain_client import governed_tools
+
+    gov = AgentGovernor("finisher", RuntimePolicy(), "m", collect_spans=False)
+    tools = governed_tools(gov, [], output_schema={"answer": {"type": "string"}})
+    submit = next(t for t in tools if t.name == "submit_result")
+
+    with pytest.raises(AgentFinalized):
+        await submit.ainvoke({"answer": "done"})
+
+    assert gov.tool_failure_counts == {}
+    assert gov.calls_per_tool["submit_result"] == 1

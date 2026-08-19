@@ -421,6 +421,8 @@ def governed_tools(governor: Any, tools: list, *, output_schema: dict | None = N
 def _build_governed_tool_cls():
     from langchain_core.tools import BaseTool
 
+    from .governed import AgentFinalized
+
     class _GovernedTool(BaseTool):
         governor: Any = None
         inner: Any = None
@@ -438,6 +440,14 @@ def _build_governed_tool_cls():
             tool_input = kwargs if kwargs else (args[0] if args else {})
             try:
                 output = await self.inner.ainvoke(tool_input)
+            except AgentFinalized:
+                # Not a failure: submit_result ends a loop we don't own by raising,
+                # so this is the agent succeeding. Counting it made every completed
+                # run record a tool failure against `submit_result`, which is the
+                # metric lifecycle rules read — an agent that always worked would
+                # have looked like one whose tools always broke.
+                call.record(input=tool_input, output=None)
+                raise
             except Exception as exc:  # noqa: BLE001 — reported to the model, and counted
                 call.record(input=tool_input, error=exc)
                 raise
