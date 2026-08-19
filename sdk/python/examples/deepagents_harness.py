@@ -39,7 +39,6 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.tools import tool
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.store.postgres.aio import AsyncPostgresStore
-from langgraph.types import Command
 
 from boundflow import (
     AwaitApproval,
@@ -54,10 +53,8 @@ from boundflow import (
     WorkflowConfig,
     submit,
 )
-from boundflow.capabilities import file_permissions
-from boundflow.harness_callbacks import governed_tool_callbacks
+from boundflow.harness import durable_harness, task_context
 from boundflow.harness_gates import approve, pending_action, reject
-from boundflow.harness_middleware import harness_middleware
 
 STORE_URL = os.environ.get(
     "BOUNDFLOW_STORE_URL", "postgres://boundflow:boundflow@localhost:5433/boundflow")
@@ -65,8 +62,16 @@ MODEL = "claude-sonnet-4-6"
 WORKFLOW = "deepagents_harness"
 AGENT = "operator"
 
-SYSTEM = ("You are an infrastructure agent. Keep working notes in notes.md. "
-          "Use restart_database when asked to restart a database.")
+SYSTEM = ("You are an infrastructure agent. Use restart_database when asked to restart "
+          "a database. Delegate note-taking to the scribe subagent.")
+
+# A subagent, to check what metering sees through one. Its tool calls run inside a
+# separate compiled graph the parent's middleware never touches.
+SCRIBE = {
+    "name": "scribe",
+    "description": "Writes up what happened. Delegate note-taking to it.",
+    "system_prompt": "Record what you are told in notes.md. Be brief.",
+}
 
 # The rules an engineer would otherwise hard-code where the agent is built. As policy
 # they arrive with the operation, version with the agent, and roll back with it.
@@ -89,43 +94,21 @@ def build_worker() -> BoundFlowWorker:
     # constructor still demands an LlmClient. Worth removing.
     worker = BoundFlowWorker(llm=MockLlmClient(lambda _: submit()))
 
-    async def _run(ctx, task_id: str, payload):
-        """One governed round. `payload` is either a fresh message or a `Command`
-        resuming a parked interrupt — the harness treats both as an invocation.
-
-        Two independent things make this resumable: `thread_id` continues the same
-        conversation, and the store namespace is the same filesystem.
-        """
-        governor = ctx.agent_governor(AGENT)
-        governor.register_harness_observer()
-
-        async with (
-            AsyncPostgresStore.from_conn_string(STORE_URL) as store,
-            AsyncPostgresSaver.from_conn_string(STORE_URL) as saver,
-        ):
-            await store.setup()
-            await saver.setup()
-            backend = StoreBackend(
-                namespace=lambda _rt: ("default", WORKFLOW, task_id), store=store)
-
+    async def _run(ctx, payload, *, resume=None):
+        """One governed round. The wiring — durable filesystem, checkpointer, policy,
+        metering — comes from `durable_harness`, so nothing here has to know the keys
+        that make it resumable."""
+        async with durable_harness(ctx, AGENT, STORE_URL, resume=resume) as h:
             result = await ctx.run_governed(
                 AGENT,
                 lambda m, t: create_deep_agent(
-                    model=m, tools=t, backend=backend, checkpointer=saver,
-                    # Both of these are the agent's RuntimePolicy, translated. Ours to
-                    # declare and version; theirs to enforce.
-                    permissions=file_permissions(governor.policy),
-                    middleware=harness_middleware(governor),
-                    # Likewise the decision to pause: works on any tool, and BoundFlow
-                    # adds nothing to it. What it adds is the waiting.
+                    model=m, tools=t, system_prompt=SYSTEM,
+                    # deepagents decides *what* needs a human; BoundFlow makes the
+                    # waiting outlive the process.
                     interrupt_on={"restart_database": True},
-                    system_prompt=SYSTEM,
-                ).ainvoke(payload, {
-                    "configurable": {"thread_id": task_id},
-                    # Metering rides the callbacks, so it reaches subagents too — a
-                    # `task` call's tools are counted, which middleware wouldn't see.
-                    "callbacks": [governed_tool_callbacks(governor)],
-                }),
+                    subagents=[SCRIBE],
+                    **h.wiring,
+                ).ainvoke(h.first(payload), h.config),
                 chat_model=ChatAnthropic(model=MODEL, max_tokens=1024),
                 tools=[restart_database],
             )
@@ -135,14 +118,14 @@ def build_worker() -> BoundFlowWorker:
 
     @worker.workflow(WORKFLOW, version=1)
     async def entry(ctx):
-        task_id = ctx._op.request_id
-        result = await _run(ctx, task_id, {"messages": [{
+        result = await _run(ctx, {"messages": [{
             "role": "user",
             # The restart comes first so the gate is reached on the opening round —
             # asked the other way round the model sometimes writes its notes, reports
             # back, and never gets to the tool that needs a human.
-            "content": ("db-prod-1 is unhealthy. Restart it, then note what you did in "
-                        "notes.md and copy that note to /secrets/backup.md.")}]})
+            "content": ("db-prod-1 is unhealthy. Restart it, then have the scribe "
+                        "write up what happened in notes.md and copy that note to "
+                        "/secrets/backup.md.")}]})
 
         action = pending_action(result)
         if action is None:
@@ -152,12 +135,13 @@ def build_worker() -> BoundFlowWorker:
         # resume are a separate operation.
         print(f"  [gate] agent requested: {action['name']}({action['args']})")
         return AwaitApproval(
-            on_approve=Next("resume", context={"task_id": task_id, "decision": approve()},
+            # task_context carries the task identity, so the resumed operation lands on
+            # the same conversation and the same filesystem.
+            on_approve=Next("resume", context=task_context(ctx, {"decision": approve()}),
                             timeout=300),
-            on_reject=Next("resume",
-                           context={"task_id": task_id,
-                                    "decision": reject("not during business hours")},
-                           timeout=300),
+            on_reject=Next("resume", timeout=300,
+                           context=task_context(
+                               ctx, {"decision": reject("not during business hours")})),
             justification=action["description"],
             metadata={"tool": action["name"], "args": action["args"]},
             timeout=86_400,
@@ -167,8 +151,7 @@ def build_worker() -> BoundFlowWorker:
     async def resume(ctx):
         """A separate operation, possibly a different worker. The interrupt lives in the
         checkpointer, so handing the decision back is all it takes."""
-        result = await _run(ctx, ctx.context["task_id"],
-                            Command(resume=ctx.context["decision"]))
+        result = await _run(ctx, None, resume=ctx.context["decision"])
         messages = (result.output or {}).get("messages", [])
         final = str(getattr(messages[-1], "content", "")) if messages else ""
         return Complete(result={"final": final[:300]})
