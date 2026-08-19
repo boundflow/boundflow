@@ -84,11 +84,38 @@ So the built thing is three small pieces, not one big one:
 - **`governor.register_harness_observer()`** — stands the request-side inference down so
   the same call isn't counted twice.
 
-**The hole worth knowing.** Caps and allowlists name *tools*, and a harness ships several
+**The hole, and the fix.** Caps and allowlists name *tools*, and a harness ships several
 tools per capability. Capping `write_file` at 1 was enforced correctly and the agent
-promptly used `edit_file` to achieve the same thing. That's not a bug in the cap; it's
-what naming tools instead of capabilities buys. Either enumerate the whole capability or
-sell this as metering, not containment.
+promptly used `edit_file` to achieve the same thing.
+
+deepagents had already solved this for its filesystem: `FilesystemOperation` is a closed
+vocabulary (`read`, `write`) and every filesystem tool is filed under one, so rules are
+written over operations and never over tool names. `capabilities.py` adopts that mapping
+verbatim and extends it only where deepagents stops — `execute` and `task`, the two tools
+it ships but classifies under nothing. Policy now takes `capability_call_limits`,
+`allowed_capabilities` and `file_rules` alongside the per-tool forms.
+
+That makes the pitch neither metering nor containment but **declarative, versioned
+guardrails**: the same rules an engineer would hard-code where the agent is constructed,
+written down where they arrive with the operation and roll back with the workflow.
+
+    capability_call_limits: [{capability: write, max_calls: 3}]
+    file_rules: [{operations: [write], paths: ["/secrets/**"], mode: deny}]
+    allowed_capabilities: [read, write]
+
+**Verified live**: told to copy its notes to `/secrets/backup.md`, the agent wrote
+`notes.md` and nothing else.
+
+**Found on the way**: `load_runtime_policy` parsed the policy field by field, so every new
+field travelled the whole way from the control plane and was silently dropped at the last
+step. The wire is an opaque JSON struct — no proto or server change was needed for any of
+this — which is exactly what made the failure invisible. It validates the node as a whole
+now.
+
+**Doesn't work with a sandbox backend, and says so.** `FilesystemMiddleware` raises
+`NotImplementedError` when given `permissions` alongside a backend with `execute`, because
+path rules mean nothing when the agent can `cat /secrets/keys`. Everything else here is
+backend-agnostic. The containment answer under a sandbox is capping `execute`, not paths.
 
 **Verified**: caller middleware composes outside deepagents' own stack (first in list is
 outermost); a cap on `write_file`, a tool BoundFlow never declared, produced
@@ -127,6 +154,55 @@ bare list raises `TypeError: list indices must be integers`.
 
 **Known limit:** one gate at a time. `jobs.workflow_id` is a primary key, so a turn
 proposing several actions surfaces only the first; the rest are decided on later rounds.
+
+---
+
+## BF-0c — The worker is disposable — **verified**
+
+Worth stating because it's the claim everything else rests on, and it was an assumption
+until tonight.
+
+Worker A parked a task on an approval and was SIGKILLed. Worker B — different process, no
+shared memory, no knowledge of the task — read the agent's file back, ran the approved
+tool, and completed it. Both durable stores are Postgres (`checkpoints` for the
+conversation, `store` for the filesystem) and the resume is an ordinary operation the
+scheduler hands to whoever claims it, so nothing pins a task to a host.
+
+`examples/deepagents_harness.py` runs its three roles (`serve` / `start` / `finish`) as
+separate processes so this stays testable rather than becoming folklore.
+
+**The exception is the backend, not BoundFlow.** With `StoreBackend` there is no sandbox at
+all — the agent's filesystem is rows in Postgres and it has no `execute` tool, since that
+lives on `SandboxBackendProtocol`. With a *remote* sandbox the state still travels (the
+protocol requires an `id`, precisely because the sandbox is addressable independently of
+the process), but two things become ours: persisting that id so a resuming worker
+reattaches, and owning the sandbox's **lifetime**. A task parked on an approval for two
+days is two days of sandbox nobody is using, and the harness has no notion of "alive but
+unattended". Same argument as the gate, one layer down. `LocalShellBackend` is the only
+genuinely host-pinned case, and it is host-pinned by definition.
+
+**Not built:** sandbox id persistence and reaping. It's the natural follow-on to BF-2 and
+the first thing a customer with real infrastructure will hit.
+
+---
+
+## Version boundaries — settled, no work needed
+
+A worry that turned out to be unfounded, recorded so it isn't re-litigated.
+
+The concern was a task starting on v2, parking on an approval, and resuming on v1 after a
+rollback — half the work done by each version. It can't happen. `jobs.workflow_id` is a
+primary key, so there is one run per workflow at a time, and lifecycle policy is evaluated
+on run completion, so no second run can trip a rollback while this one is parked. The job
+row also carries its own `workflow_version`, so a run finishes as whatever it began as.
+
+The rule that follows: **state is scoped to the task.** A task keeps its conversation and
+files across its own operations (keyed by `request_id`); a new run inherits nothing. That
+matters for rollback specifically — an inherited thread would mean rolling back the code
+while keeping its consequences, which defeats having a version to roll back to.
+
+The only remaining path is a human calling update-config to change the version while their
+own task is parked. A foot-gun, not a race, and a minor one.
 
 ---
 
