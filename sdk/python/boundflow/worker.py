@@ -449,31 +449,38 @@ class OperationContext:
                            budget: Budget | None = None) -> StepResult:
         """Run someone else's agent harness under governance and get a StepResult back.
 
-        `invoke(model, tools)` builds and runs the harness; BoundFlow owns the call to
-        it, so it can catch the finalize and return rather than making you handle an
-        exception on the happy path:
+        `invoke(model, tools)` builds and runs the harness. **Its return value is the
+        deliverable** — a harness completing normally ends the way it always does, and
+        we hand back what it produced:
 
             result = await ctx.run_governed(
                 "researcher",
                 lambda m, t: create_deep_agent(model=m, tools=t).ainvoke({"messages": [...]}),
                 chat_model=ChatAnthropic(model=MODEL),
-                output_schema={"answer": {"type": "string"}},
             )
-            result.output   # {"answer": ...}
+            result.output   # whatever the harness returned
 
-        With an `output_schema`, a spent cap forces the injected submit_result instead
-        of raising — the same graceful ending `run_agent` gives. Without one, the cap
-        raises, since there's no terminator to force."""
+        Want a typed deliverable? Declare it the harness's way, not ours —
+        `create_deep_agent(response_format=MyModel)` puts a parsed object in
+        `structured_response`. Injecting our own terminator would change what the agent
+        does, which is the wrong side of the seam: a caller using the harness directly
+        must get the same behaviour.
+
+        `output_schema` is **only** the cap-exhaustion escape hatch. It injects a
+        submit_result tool so a run that spends its budget mid-flight ends gracefully
+        with whatever it had, instead of raising and losing the work. It is not the
+        completion path, and a harness that finishes normally never touches it."""
         governor = self.agent_governor(agent_name, model=model or "", budget=budget)
         governed = self.agent_model(agent_name, chat_model, model=model, budget=budget)
         governed_tool_list = self.agent_tools(
             agent_name, tools or [], budget=budget, output_schema=output_schema)
 
         from .governed import AgentFinalized
-        output = None
         try:
-            await invoke(governed, governed_tool_list)
+            output = await invoke(governed, governed_tool_list)
         except AgentFinalized as finished:
+            # A cap was spent mid-run and the injected terminator fired instead of
+            # raising, so the partial deliverable survives.
             output = finished.output
 
         return StepResult(

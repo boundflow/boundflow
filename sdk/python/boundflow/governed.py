@@ -208,9 +208,54 @@ class AgentGovernor:
         # enforceable and their calls are counted at execution rather than inferred
         # from what the model asked for.
         self._governed_tools: set[str] = set()
+        self._harness_observer_active = False
 
     def register_governed_tools(self, names: list[str]) -> None:
         self._governed_tools.update(names)
+
+    def register_harness_observer(self) -> None:
+        """Hand metering of undeclared tools to the harness's own callbacks.
+
+        Without them we count a harness's tools from the model's *request*, which is all
+        we can see — it tells us a call happened, never how it ended. LangChain's tool
+        callbacks fire around the execution itself, so once installed they count what
+        actually ran and how it ended, and the request-side count stands down rather than
+        double-counting the same call. See `harness_callbacks.py`."""
+        self._harness_observer_active = True
+
+    def is_governed_tool(self, tool: str) -> bool:
+        return tool in self._governed_tools
+
+    def tool_call_cap(self, tool: str) -> int | None:
+        return self._tool_limits.get(tool)
+
+    def tool_call_caps(self) -> dict[str, int]:
+        """Every declared per-tool cap, for a harness that enforces its own.
+
+        deepagents counts tool calls natively (`ToolCallLimitMiddleware`), so when one
+        is running we hand it the policy rather than duplicating the counter — the
+        policy is still ours, versioned and central; the enforcement is the harness's."""
+        return dict(self._tool_limits)
+
+    def record_harness_tool(self, tool: str, *, failed: bool = False) -> None:
+        """Record one harness-injected tool call that actually executed.
+
+        Called *after* execution, by middleware that wrapped it — so unlike the
+        request-side count this reflects what ran, and knows how it ended. Refused
+        calls are never recorded: they didn't run, and counting them would push the
+        number past its own cap in the metric lifecycle rules read.
+
+        Raises `ToolFailureLimitExceeded` on a spent failure budget, matching what a
+        declared tool does — a broken integration should trip its own circuit breaker
+        rather than quietly burning the run's budget."""
+        self.calls_per_tool[tool] = self.calls_per_tool.get(tool, 0) + 1
+        if not failed:
+            return
+        failures = self.tool_failure_counts.get(tool, 0) + 1
+        self.tool_failure_counts[tool] = failures
+        cap = self._tool_failure_limits.get(tool)
+        if cap is not None and failures >= cap:
+            raise ToolFailureLimitExceeded(tool, failures, cap)
 
     def register_finalizer(self, tool: str) -> None:
         """A submit_result-shaped tool exists, so a spent cap can ask for a final
@@ -279,7 +324,7 @@ class AgentGovernor:
             # A governed tool counts itself when it actually runs — counting the
             # model's *request* here too would double it, and would also count calls
             # that were denied by a cap or never dispatched.
-            if name not in self._governed_tools:
+            if name not in self._governed_tools and not self._harness_observer_active:
                 self.calls_per_tool[name] = self.calls_per_tool.get(name, 0) + 1
 
         if self._collect_spans:
@@ -362,6 +407,11 @@ class AgentGovernor:
         """Called when the operation ends: a per-tool cap that was set but never had
         a governed tool to enforce it against did nothing, and the caller should hear
         about that rather than assume it applied."""
+        if self._harness_observer_active:
+            # A harness is running, so its own limiter enforces per-tool caps — see
+            # harness_call_limits(). Failure budgets still ride on the middleware's
+            # post-execution record, which only fires once it's installed.
+            return
         unenforced = sorted(
             (set(self._tool_limits) | set(self._tool_failure_limits)) - self._governed_tools)
         if unenforced:
