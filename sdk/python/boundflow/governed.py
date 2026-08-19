@@ -237,6 +237,14 @@ class AgentGovernor:
         policy is still ours, versioned and central; the enforcement is the harness's."""
         return dict(self._tool_limits)
 
+    def capability_call_caps(self) -> dict[str, int]:
+        """Per-capability caps — how many `write`s, not how many `write_file`s.
+
+        No harness counts these (deepagents' limiter is one tool or all tools, nothing
+        between), so unlike `tool_call_caps` these are enforced by BoundFlow middleware.
+        See `capabilities.py`."""
+        return {l.capability: l.max_calls for l in self.policy.capability_call_limits}
+
     def record_harness_tool(self, tool: str, *, failed: bool = False) -> None:
         """Record one harness-injected tool call that actually executed.
 

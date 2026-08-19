@@ -42,6 +42,9 @@ from langgraph.types import Command
 
 from boundflow import (
     AwaitApproval,
+    CapabilityCallLimit,
+    FileRule,
+    RuntimePolicy,
     BoundFlowWorker,
     Complete,
     ControlPlaneClient,
@@ -50,9 +53,10 @@ from boundflow import (
     WorkflowConfig,
     submit,
 )
+from boundflow.capabilities import file_permissions
 from boundflow.harness_callbacks import governed_tool_callbacks
 from boundflow.harness_gates import approve, pending_action, reject
-from boundflow.harness_middleware import harness_call_limits
+from boundflow.harness_middleware import harness_middleware
 
 STORE_URL = os.environ.get(
     "BOUNDFLOW_STORE_URL", "postgres://boundflow:boundflow@localhost:5433/boundflow")
@@ -62,6 +66,15 @@ AGENT = "operator"
 
 SYSTEM = ("You are an infrastructure agent. Keep working notes in notes.md. "
           "Use restart_database when asked to restart a database.")
+
+# The rules an engineer would otherwise hard-code where the agent is built. As policy
+# they arrive with the operation, version with the agent, and roll back with it.
+POLICY = RuntimePolicy(
+    max_llm_calls=8,
+    # Not `write_file`: cap the capability, or the agent switches to `edit_file`.
+    capability_call_limits=[CapabilityCallLimit(capability="write", max_calls=3)],
+    file_rules=[FileRule(operations=["write"], paths=["/secrets/**"], mode="deny")],
+)
 
 
 @tool
@@ -98,9 +111,10 @@ def build_worker() -> BoundFlowWorker:
                 AGENT,
                 lambda m, t: create_deep_agent(
                     model=m, tools=t, backend=backend, checkpointer=saver,
-                    # Per-tool caps come from BoundFlow policy but are counted by the
-                    # harness's own limiter — ours to decide, theirs to enforce.
-                    middleware=harness_call_limits(governor),
+                    # Both of these are the agent's RuntimePolicy, translated. Ours to
+                    # declare and version; theirs to enforce.
+                    permissions=file_permissions(governor.policy),
+                    middleware=harness_middleware(governor),
                     # Likewise the decision to pause: works on any tool, and BoundFlow
                     # adds nothing to it. What it adds is the waiting.
                     interrupt_on={"restart_database": True},
@@ -123,7 +137,8 @@ def build_worker() -> BoundFlowWorker:
         task_id = ctx._op.request_id
         result = await _run(ctx, task_id, {"messages": [{
             "role": "user",
-            "content": "Note in notes.md that db-prod-1 is unhealthy, then restart it."}]})
+            "content": ("Note in notes.md that db-prod-1 is unhealthy, and copy that "
+                        "note to /secrets/backup.md. Then restart db-prod-1.")}]})
 
         action = pending_action(result)
         if action is None:
@@ -165,6 +180,7 @@ async def main() -> None:
     async with ControlPlaneClient() as cp:
         tenant = await cp.create_tenant(f"harness-{uuid.uuid4().hex[:8]}")
         wf = await cp.create_workflow(WORKFLOW, tenant.id, config=WorkflowConfig(version=1))
+        await cp.set_agent_runtime_policy(wf.id, AGENT, POLICY)
         await cp.activate_workflow(wf.id)
         request_id = await cp.invoke_workflow(wf.id, operation_timeout_seconds=300)
         print(f"invoked {request_id}")
