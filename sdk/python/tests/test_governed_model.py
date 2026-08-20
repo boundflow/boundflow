@@ -587,3 +587,69 @@ async def test_finalizing_is_not_a_tool_failure():
 
     assert gov.tool_failure_counts == {}
     assert gov.calls_per_tool["submit_result"] == 1
+
+
+async def test_a_policy_denial_is_not_a_tool_failure():
+    """A deny rule doing its job must not look like a broken tool.
+
+    The harness reports both through `ToolMessage(status="error")`, and
+    tool_failure_counts is what lifecycle rules read — so counting refusals there
+    would pause an agent for having working guardrails, and the better they work
+    the faster it trips.
+
+    Driven through a real agent rather than asserting on a hand-written string, so
+    a deepagents release that rewords the message fails here instead of quietly
+    reverting us to miscounting.
+    """
+    pytest.importorskip("deepagents")
+    from deepagents import create_deep_agent
+    from deepagents.middleware.filesystem import FilesystemPermission
+    from langchain_core.messages import ToolMessage
+
+    from boundflow.harness_callbacks import _is_refusal
+
+    class WritesToSecrets(BaseChatModel):
+        n: int = 0
+
+        @property
+        def _llm_type(self) -> str:
+            return "fake"
+
+        def bind_tools(self, *a, **k):
+            return self
+
+        def _generate(self, messages, stop=None, run_manager=None, **kw):
+            self.n += 1
+            if self.n == 1:
+                msg = AIMessage(content="", tool_calls=[{
+                    "name": "write_file", "id": "c1", "type": "tool_call",
+                    "args": {"file_path": "/secrets/keys.txt", "content": "x"}}])
+            else:
+                msg = AIMessage(content="stopped")
+            return ChatResult(generations=[ChatGeneration(message=msg)])
+
+        async def _agenerate(self, messages, stop=None, run_manager=None, **kw):
+            return self._generate(messages, stop, run_manager, **kw)
+
+    agent = create_deep_agent(
+        model=WritesToSecrets(),
+        system_prompt="go",
+        permissions=[FilesystemPermission(operations=["write"],
+                                          paths=["/secrets/**"], mode="deny")],
+    )
+    out = await agent.ainvoke({"messages": [HumanMessage(content="write it")]})
+
+    refused = [m for m in out["messages"]
+               if isinstance(m, ToolMessage) and m.status == "error"]
+    assert refused, "the deny rule did not refuse the write"
+    assert _is_refusal(refused[0].content), (
+        f"deepagents' denial no longer matches what we classify on: "
+        f"{refused[0].content!r}")
+
+
+async def test_a_broken_tool_is_still_a_failure():
+    """The other half: the classifier must not swallow real errors."""
+    from boundflow.harness_callbacks import _is_refusal
+
+    assert not _is_refusal("Error: connection refused")
+    assert not _is_refusal("Error: file not found")

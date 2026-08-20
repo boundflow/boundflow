@@ -26,6 +26,36 @@ from __future__ import annotations
 from typing import Any
 
 
+# The harness reports a policy denial and a broken tool through the same field —
+# `ToolMessage(status="error")` — so the only thing separating them is the text.
+# Matching on it is unattractive and still the best option available: the failure
+# mode is that a reword stops matching and denials go back to being counted, which
+# is the behaviour without this. The alternative, re-evaluating the rules
+# ourselves, can misclassify a *real* failure as a refusal — under-reporting, and
+# a broken integration that looks healthy.
+#
+# Pinned to deepagents' wording: `f"Error: permission denied for {op} on {path}"`.
+# `test_a_policy_denial_is_not_a_tool_failure` drives a real denial through the
+# real middleware, so an upgrade that rewords this fails there rather than quietly
+# reverting us.
+_REFUSALS = ("error: permission denied",)
+
+
+def _is_refusal(content) -> bool:
+    """Whether an error result is policy saying no, rather than a tool breaking.
+
+    They are different events and only one of them means anything is wrong.
+    `tool_failure_counts` is what lifecycle rules read, so counting refusals there
+    would pause an agent for having working guardrails — and the better they work,
+    the faster it trips.
+    """
+    if isinstance(content, list):  # some providers return content blocks
+        content = " ".join(str(b.get("text", "")) if isinstance(b, dict) else str(b)
+                           for b in content)
+    text = str(content or "").strip().lower()
+    return any(text.startswith(r) for r in _REFUSALS)
+
+
 def governed_tool_callbacks(governor):
     """A callback handler that records the harness's tool calls into the governor.
 
@@ -53,7 +83,10 @@ def governed_tool_callbacks(governor):
         def on_tool_end(self, output, *, run_id, **kwargs) -> None:
             # A tool that caught its own failure returns an error `ToolMessage` rather
             # than raising, so success isn't implied by ending normally.
-            self._record(run_id, failed=getattr(output, "status", None) == "error")
+            failed = getattr(output, "status", None) == "error"
+            if failed and _is_refusal(getattr(output, "content", "")):
+                failed = False
+            self._record(run_id, failed=failed)
 
         def on_tool_error(self, error, *, run_id, **kwargs) -> None:
             self._record(run_id, failed=True)
