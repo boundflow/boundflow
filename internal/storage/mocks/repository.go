@@ -980,6 +980,21 @@ func (mr *MockJobRepositoryMockRecorder) RenewJobLease(ctx, workflowID, ownerID,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RenewJobLease", reflect.TypeOf((*MockJobRepository)(nil).RenewJobLease), ctx, workflowID, ownerID, leaseDuration)
 }
 
+// RequeueJob mocks base method.
+func (m *MockJobRepository) RequeueJob(ctx context.Context, workflowID, requestID string, maxAttempts int) (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RequeueJob", ctx, workflowID, requestID, maxAttempts)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RequeueJob indicates an expected call of RequeueJob.
+func (mr *MockJobRepositoryMockRecorder) RequeueJob(ctx, workflowID, requestID, maxAttempts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequeueJob", reflect.TypeOf((*MockJobRepository)(nil).RequeueJob), ctx, workflowID, requestID, maxAttempts)
+}
+
 // ResolveApproval mocks base method.
 func (m *MockJobRepository) ResolveApproval(ctx context.Context, workflowID, approvalID string, status domain.JobStatus, reason string) (bool, domain.ResolvedApproval, error) {
 	m.ctrl.T.Helper()

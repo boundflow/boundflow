@@ -57,6 +57,10 @@ async def test_a_dead_workers_spend_is_still_recorded(cp, api_key):
     try:
         await cp.invoke_workflow(wf.id, operation_timeout_seconds=600)
         await asyncio.wait_for(spent.wait(), timeout=120)
+        # Let the post-call report land. Reports aren't acked, so killing the worker
+        # the instant the call returns races delivery — this test is about what
+        # happens to metrics the server *has*, not about closing that window.
+        await asyncio.sleep(2)
     finally:
         # Kill the worker where a crash would: after the money is gone, before the
         # operation ends.

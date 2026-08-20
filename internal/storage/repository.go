@@ -183,6 +183,11 @@ type JobRepository interface {
 	// UpdateJobMetrics writes only the agent metrics, for reports arriving while the
 	// operation is still running. Status, operation and context must not move mid-run.
 	UpdateJobMetrics(ctx context.Context, workflowID string, ownerID string, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics) (bool, error)
+
+	// RequeueJob makes a job claimable again after its worker died, for a resumable
+	// workflow, unless it already has maxAttempts behind it. Returns the attempt count;
+	// 0 means it wasn't requeued — gone, or out of attempts.
+	RequeueJob(ctx context.Context, workflowID string, requestID string, maxAttempts int) (int, error)
 	// GetJobMetrics returns the accumulated per-agent and workflow-level metrics stored on the
 	// job for the given workflow and request. Returns zero values if no such job exists.
 	GetJobMetrics(ctx context.Context, workflowID string, requestID string) (map[string]*boundflowv1.AgentInvocationMetrics, domain.WorkflowJobMetrics, error)

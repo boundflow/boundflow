@@ -421,7 +421,8 @@ func (r *JobRepo) MarkOrphanedJobsFailed(ctx context.Context, partitionID string
 		 SET status = 'failed'
 		 WHERE workflow_id IN (SELECT id FROM workflows WHERE scheduler_partition_id = $1)
 		   AND status IN ('dispatched', 'running')
-		   AND lease_expires_at < now() - make_interval(secs => $2)`,
+		   AND (owner IS NULL
+		        OR lease_expires_at < now() - make_interval(secs => $2))`,
 		partitionID, gracePeriodSeconds,
 	)
 	if err != nil {
@@ -479,17 +480,23 @@ func (r *JobRepo) UpdateJob(ctx context.Context, workflowID string, ownerID stri
 
 // RequeueJob makes a job claimable again after the worker running it died, for a
 // workflow whose config says that is safe. `pending` with no owner is exactly what
-// AcquireJob looks for, so nothing else has to change. Returns the attempt count —
-// always at least 1, so 0 means there was no such job to requeue.
-func (r *JobRepo) RequeueJob(ctx context.Context, workflowID string, requestID string) (int, error) {
+// AcquireJob looks for, so nothing else has to change.
+//
+// maxAttempts is enforced in the statement rather than by the caller: checking after
+// the update would leave an exhausted job briefly claimable, and a worker could start
+// an operation that is about to have its job row deleted.
+//
+// Returns the attempt count, always at least 1. 0 means the job wasn't requeued —
+// either it is gone or it has no attempts left.
+func (r *JobRepo) RequeueJob(ctx context.Context, workflowID string, requestID string, maxAttempts int) (int, error) {
 	var attempts int
 	err := r.pool.QueryRow(ctx,
 		`UPDATE jobs
 		 SET status = 'pending', owner = NULL, lease_expires_at = NULL,
 		     attempts = attempts + 1
-		 WHERE workflow_id = $1 AND request_id = $2
+		 WHERE workflow_id = $1 AND request_id = $2 AND attempts < $3
 		 RETURNING attempts`,
-		workflowID, requestID,
+		workflowID, requestID, maxAttempts,
 	).Scan(&attempts)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

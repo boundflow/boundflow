@@ -38,10 +38,10 @@ func (r *WorkflowRepo) Create(ctx context.Context, instance *domain.Workflow) er
 		 INSERT INTO workflows
 		   (id, tenant_id, workflow_type,
 		    current_workflow_version, invoke_timeout_seconds, repeat_every_seconds, triggerable,
-		    invoke_mode, max_queue_depth,
+		    invoke_mode, max_queue_depth, resumable,
 		    lifecycle_state, workflow_state, lifecycle_policy, scheduler_partition_id,
 		    last_completed_request_at, created_at)
-		 SELECT $2, $1, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
+		 SELECT $2, $1, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
 		 WHERE EXISTS (SELECT 1 FROM reserved)`,
 		instance.TenantID, instance.ID, instance.WorkflowType,
 		instance.CurrentWorkflowVersion,
@@ -49,6 +49,7 @@ func (r *WorkflowRepo) Create(ctx context.Context, instance *domain.Workflow) er
 		instance.WorkflowConfig.RepeatEverySeconds,
 		instance.WorkflowConfig.Triggerable,
 		string(instance.WorkflowConfig.InvokeMode), instance.WorkflowConfig.MaxQueueDepth,
+		instance.WorkflowConfig.Resumable,
 		instance.Lifecycle.State, instance.WorkflowState, lifecyclePolicyJSON, instance.SchedulerPartitionID,
 		instance.Lifecycle.LastCompletedRequestAt, instance.CreatedAt,
 	)
@@ -117,7 +118,7 @@ func (r *WorkflowRepo) Get(ctx context.Context, id string) (*domain.Workflow, er
 
 	err := r.pool.QueryRow(ctx,
 		`SELECT w.id, w.tenant_id, w.workflow_type,
-		        w.invoke_timeout_seconds, w.repeat_every_seconds, w.triggerable, w.invoke_mode, w.max_queue_depth,
+		        w.invoke_timeout_seconds, w.repeat_every_seconds, w.triggerable, w.invoke_mode, w.max_queue_depth, w.resumable,
 		        w.lifecycle_state, w.workflow_state, w.lifecycle_policy, w.invocation_metrics, w.cooldown_until,
 		        w.lifecycle_last_resolved, w.current_workflow_version, w.scheduler_partition_id,
 		        w.target_version, w.current_version, w.last_completed_request_at,
@@ -132,7 +133,7 @@ func (r *WorkflowRepo) Get(ctx context.Context, id string) (*domain.Workflow, er
 		&instance.WorkflowConfig.InvokeTimeoutSeconds,
 		&instance.WorkflowConfig.RepeatEverySeconds,
 		&instance.WorkflowConfig.Triggerable,
-		&invokeMode, &instance.WorkflowConfig.MaxQueueDepth,
+		&invokeMode, &instance.WorkflowConfig.MaxQueueDepth, &instance.WorkflowConfig.Resumable,
 		&instance.Lifecycle.State, &instance.WorkflowState,
 		&lifecyclePolicyJSON, &invocationMetricsJSON, &instance.CooldownUntil,
 		&instance.LifecycleLastResolved, &instance.CurrentWorkflowVersion, &instance.SchedulerPartitionID,
@@ -211,10 +212,10 @@ func (r *WorkflowRepo) UpdateConfig(ctx context.Context, id string, cfg domain.W
 	if _, err := tx.Exec(ctx,
 		`UPDATE workflows
 		   SET current_workflow_version = $1, invoke_timeout_seconds = $2, repeat_every_seconds = $3,
-		       triggerable = $4, invoke_mode = $5, max_queue_depth = $6
-		 WHERE id = $7`,
+		       triggerable = $4, invoke_mode = $5, max_queue_depth = $6, resumable = $7
+		 WHERE id = $8`,
 		version, cfg.InvokeTimeoutSeconds, cfg.RepeatEverySeconds, cfg.Triggerable,
-		string(cfg.InvokeMode), cfg.MaxQueueDepth, id,
+		string(cfg.InvokeMode), cfg.MaxQueueDepth, cfg.Resumable, id,
 	); err != nil {
 		return fmt.Errorf("update workflow config: %w", err)
 	}
