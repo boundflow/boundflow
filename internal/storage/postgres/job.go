@@ -477,6 +477,24 @@ func (r *JobRepo) UpdateJob(ctx context.Context, workflowID string, ownerID stri
 	return tag.RowsAffected() == 1, nil
 }
 
+// UpdateJobMetrics writes the running metrics of an operation that is still going, so
+// a worker that dies loses at most what it spent since the last report.
+func (r *JobRepo) UpdateJobMetrics(ctx context.Context, workflowID string, ownerID string, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics) (bool, error) {
+	agentMetricsJSON, err := json.Marshal(agentMetrics)
+	if err != nil {
+		return false, fmt.Errorf("marshal agent metrics: %w", err)
+	}
+	tag, err := r.pool.Exec(ctx,
+		`UPDATE jobs SET agent_metrics = $3
+		 WHERE workflow_id = $1 AND owner = $2`,
+		workflowID, ownerID, agentMetricsJSON,
+	)
+	if err != nil {
+		return false, fmt.Errorf("update job metrics: %w", err)
+	}
+	return tag.RowsAffected() == 1, nil
+}
+
 func (r *JobRepo) UpdateJobWithMetrics(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, delaySeconds int, jobContext map[string]any, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
 	contextJSON, err := json.Marshal(jobContext)
 	if err != nil {

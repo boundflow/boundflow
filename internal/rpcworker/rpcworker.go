@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -141,6 +142,31 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 		case cancelLease <- true:
 		case <-stream.Context().Done():
 		}
+	}
+
+	// recordInterim persists metrics reported while the operation is still running, so a
+	// worker that dies loses one model call's spend rather than the whole operation's.
+	recordInterim := func(job *domain.Job, result *boundflowv1.AtomicOperationResult) error {
+		if result == nil || len(result.AgentStateUpdates) == 0 {
+			return nil
+		}
+		// Each report is the operation's running total, so it merges into a copy of the
+		// committed baseline. Cloned deeply: MergeAgentMetrics sums in place through the
+		// pointers, and a shallow copy would grow the baseline with every report.
+		inflight := make(map[string]*boundflowv1.AgentInvocationMetrics, len(job.AgentMetrics))
+		for agent, m := range job.AgentMetrics {
+			inflight[agent] = proto.Clone(m).(*boundflowv1.AgentInvocationMetrics)
+		}
+		s.metrics.MergeAgentMetrics(result.AgentStateUpdates, &inflight)
+
+		owned, err := s.jobs.UpdateJobMetrics(context.Background(), job.WorkflowID, sessionID, inflight)
+		if err != nil {
+			return err
+		}
+		if !owned {
+			return errors.New("job no longer owned by this session")
+		}
+		return nil
 	}
 
 	completeOperation := func(cancelLease chan bool, job *domain.Job, result *boundflowv1.AtomicOperationResult) error {
@@ -679,7 +705,11 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 							log.Warn("operation failed by client", "request_id", currentJob.RequestID, "reason", update.Update.Result.Message)
 							failOperation(cancelLease, currentJob, update.Update.Result.Message)
 						case boundflowv1.OperationStatus_OPERATION_STATUS_IN_PROGRESS:
-							log.Debug("operation still in progress", "request_id", currentJob.RequestID)
+							if err := recordInterim(currentJob, update.Update.Result); err != nil {
+								log.Error("failed to record interim metrics", "request_id", currentJob.RequestID, "error", err)
+								failOperation(cancelLease, currentJob, "failed to record interim metrics")
+								return err
+							}
 							continue ConnectedBusyLoop
 						case boundflowv1.OperationStatus_OPERATION_STATUS_CANCELLED: // This is unexpected
 							log.Warn("unexpected CANCELLED status while busy", "request_id", currentJob.RequestID)

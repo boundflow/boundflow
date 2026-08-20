@@ -51,6 +51,7 @@ from .llm import (
     ToolFailureLimitExceeded,
     Usage,
     _estimate_cost,
+    _rate_for,
     _gen_ai_system,
     tool_limit_message,
 )
@@ -85,6 +86,10 @@ DEFAULT_MAX_TOKENS = 4096
 # against the cap the way call count can. Stopping slightly early leaves room for
 # whatever is in flight to land inside the declared budget.
 COST_HEADROOM = 0.9
+
+# Added to the previous call's input count when reserving, covering messages appended
+# since. Crude on purpose: over-reserving is released, under-reserving is lost spend.
+RESERVE_INPUT_PAD = 2000
 
 
 class AgentFinalized(Exception):
@@ -128,6 +133,7 @@ class GovernedCall:
             return
         self._recorded = True
         self._governor.llm_calls -= 1
+        self._governor._release()
 
     async def __aenter__(self) -> "GovernedCall":
         return self
@@ -238,9 +244,42 @@ class AgentGovernor:
         # Model calls seen in the harness's own state. Distinct from `llm_calls`, which
         # counts reservations and so can't see a call that bypassed the governor.
         self.observed_llm_calls = 0
+        # Worst-case cost of calls that have been authorised but whose real cost isn't
+        # known yet. FIFO: each actual that lands releases the oldest, since a response
+        # answers the call that has been outstanding longest.
+        self._reserved: list[float] = []
+        self._last_input_tokens = 0
 
     def register_governed_tools(self, names: list[str]) -> None:
         self._governed_tools.update(names)
+
+    def _reserve(self, max_tokens: int) -> None:
+        """Hold the worst case for a call that is about to be made.
+
+        Reported cost includes outstanding reservations, so a run that dies mid-call is
+        remembered as having spent roughly what it might have, rather than nothing. It
+        errs high, which is the safe direction for a budget: the alternative is spend
+        that never appears anywhere.
+
+        The input estimate reuses the last call's exact input count — conversations grow
+        by appending, so only the new messages are guessed at — plus a flat pad. Output
+        is bounded by max_tokens and nothing smaller is knowable before the model
+        answers.
+        """
+        rate = _rate_for(self.model, self._pricing) or {}
+        estimated_input = self._last_input_tokens + RESERVE_INPUT_PAD
+        self._reserved.append(
+            estimated_input / 1_000_000 * rate.get("input_per_1m", 0.0)
+            + max_tokens / 1_000_000 * rate.get("output_per_1m", 0.0))
+
+    def _release(self) -> None:
+        """Drop the oldest outstanding reservation, its real cost now being known."""
+        if self._reserved:
+            self._reserved.pop(0)
+
+    @property
+    def reserved_cost_usd(self) -> float:
+        return sum(self._reserved)
 
     def register_harness_metering(self) -> None:
         """Take the harness's own numbers as the truth about spend.
@@ -274,6 +313,8 @@ class AgentGovernor:
         )
         self.cost_usd += _estimate_cost(usage, model or self.model, self._pricing)
         self.tokens_used += usage.total_tokens()
+        self._last_input_tokens = usage.input_tokens + usage.cache_read_input_tokens
+        self._release()
         # Counted separately from the reservation: this includes calls we never
         # reserved, like a subagent that built its own client and bypassed us entirely.
         self.observed_llm_calls += 1
@@ -380,6 +421,7 @@ class AgentGovernor:
         if finalize:
             self._finalize_offered = True
         self.llm_calls += 1  # reserved; released by abandon(), kept by record()
+        self._reserve(self.max_tokens)
         return GovernedCall(
             model=self.model,
             max_tokens=self.max_tokens,
@@ -401,7 +443,9 @@ class AgentGovernor:
         cost = _estimate_cost(usage, self.model, self._pricing)
 
         # llm_calls was incremented at begin_call(); this call held that slot.
+        self._last_input_tokens = usage.input_tokens + usage.cache_read_input_tokens
         if not self._harness_metering_active:
+            self._release()
             # Otherwise the harness records this same call when it writes the message,
             # and its numbers are the ones that count.
             self.cost_usd += cost
@@ -512,7 +556,9 @@ class AgentGovernor:
         """This agent's metrics for the operation, in the shape the server appends
         to invocation_metrics (mirrors what run_agent writes)."""
         return {
-            "cost_usd": self.cost_usd,
+            # Includes calls authorised but not yet answered for, so a crash
+            # mid-call over-reports rather than losing the call.
+            "cost_usd": self.cost_usd + self.reserved_cost_usd,
             # The harness's count when it's metering, since it also sees calls that
             # never reached the governor.
             "llm_calls": (self.observed_llm_calls if self._harness_metering_active

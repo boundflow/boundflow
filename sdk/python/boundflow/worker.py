@@ -248,6 +248,39 @@ class OperationContext:
         # name. Flushed into agent_state_updates/_agent_runs when the operation ends,
         # since a governed loop has no completion point of its own.
         self._governors: dict[str, AgentGovernor] = {}
+        # Set by the transport; None when nothing is listening (tests, MockContext).
+        self._report_metrics: Callable[[Any], Awaitable[None]] | None = None
+
+    async def report_metrics(self) -> None:
+        """Send what each agent has spent so far, without waiting for the operation.
+
+        Called before a model call (worst case on record before the money is spent) and
+        after it (reservation replaced by the real cost).
+
+        TODO: no ack. A report is only durable once the server writes it, and nothing
+        waits for that, so a crash in between still loses the call — milliseconds rather
+        than the seconds an in-flight call takes, but not zero, and silent. The fix is a
+        ServerCommand acking the sequence number these already carry, awaited before the
+        call goes out: ~1 round trip, under 1% of a call's latency. Worth doing when
+        "never under-counts" has to be a guarantee rather than a tendency.
+        """
+        if self._report_metrics is None:
+            return
+        from . import _transport as t
+        from boundflow.v1 import operation_pb2 as op_pb
+
+        # IN_PROGRESS or the server treats this as the operation's final result.
+        interim = op_pb.AtomicOperationResult(status=op_pb.OPERATION_STATUS_IN_PROGRESS)
+        for name, governor in self._governors.items():
+            if governor.llm_calls == 0:
+                continue
+            interim.agent_state_updates[name].CopyFrom(t.metrics_to_proto(governor.snapshot()))
+        if not interim.agent_state_updates:
+            return
+        try:
+            await self._report_metrics(interim)
+        except Exception:  # noqa: BLE001 — metering must never break the run
+            log.warning("failed to report interim metrics", exc_info=True)
 
     @property
     def name(self) -> str:
@@ -419,7 +452,8 @@ class OperationContext:
             model = _derive_model_name(chat_model)
 
         governor = self.agent_governor(agent_name, model=model, budget=budget)
-        return GovernedChatModel(governor=governor, chat_model=chat_model)
+        return GovernedChatModel(governor=governor, chat_model=chat_model,
+                                 report=self.report_metrics)
 
     def agent_tools(self, agent_name: str, tools: list, *, budget: Budget | None = None,
                     output_schema: dict | None = None) -> list:
@@ -597,7 +631,7 @@ class BoundFlowWorker:
         from . import _transport as t
         from boundflow.v1 import operation_pb2 as op_pb
 
-        async def dispatch(op):  # op: AtomicOperation proto
+        async def dispatch(op, report):  # op: AtomicOperation proto
             rtype = op.workflow_type
             if op.name == ENTRY_OPERATION:
                 handler = self._workflows.get((rtype, op.workflow_version))
@@ -608,6 +642,7 @@ class BoundFlowWorker:
                     f"No handler for workflow '{rtype}' operation '{op.name}' v{op.workflow_version}")
 
             ctx = OperationContext(_Operation(op), self._orchestrator, self._trace_sink)
+            ctx._report_metrics = report
             _op_start = now_ms()
             uncaught_reason: str | None = None
             try:

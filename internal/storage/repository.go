@@ -179,6 +179,10 @@ type JobRepository interface {
 	// and workflow-level metrics. Used when advancing to the next operation. delaySeconds
 	// > 0 holds the job's dispatch_at that many seconds out; 0 dispatches as soon as eligible.
 	UpdateJobWithMetrics(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, delaySeconds int, jobContext map[string]any, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error)
+
+	// UpdateJobMetrics writes only the agent metrics, for reports arriving while the
+	// operation is still running. Status, operation and context must not move mid-run.
+	UpdateJobMetrics(ctx context.Context, workflowID string, ownerID string, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics) (bool, error)
 	// GetJobMetrics returns the accumulated per-agent and workflow-level metrics stored on the
 	// job for the given workflow and request. Returns zero values if no such job exists.
 	GetJobMetrics(ctx context.Context, workflowID string, requestID string) (map[string]*boundflowv1.AgentInvocationMetrics, domain.WorkflowJobMetrics, error)

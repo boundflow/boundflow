@@ -434,6 +434,21 @@ func (mr *MockWorkflowRepositoryMockRecorder) TenantGroupIDForWorkflow(ctx, work
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TenantGroupIDForWorkflow", reflect.TypeOf((*MockWorkflowRepository)(nil).TenantGroupIDForWorkflow), ctx, workflowID)
 }
 
+// TryActivateWorkflow mocks base method.
+func (m *MockWorkflowRepository) TryActivateWorkflow(ctx context.Context, id, requestID string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TryActivateWorkflow", ctx, id, requestID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TryActivateWorkflow indicates an expected call of TryActivateWorkflow.
+func (mr *MockWorkflowRepositoryMockRecorder) TryActivateWorkflow(ctx, id, requestID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryActivateWorkflow", reflect.TypeOf((*MockWorkflowRepository)(nil).TryActivateWorkflow), ctx, id, requestID)
+}
+
 // UpdateConfig mocks base method.
 func (m *MockWorkflowRepository) UpdateConfig(ctx context.Context, id string, cfg domain.WorkflowConfig, version int) error {
 	m.ctrl.T.Helper()
@@ -536,21 +551,6 @@ func (m *MockWorkflowRepository) UpdateSchedulerPartition(ctx context.Context, i
 func (mr *MockWorkflowRepositoryMockRecorder) UpdateSchedulerPartition(ctx, id, partitionID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateSchedulerPartition", reflect.TypeOf((*MockWorkflowRepository)(nil).UpdateSchedulerPartition), ctx, id, partitionID)
-}
-
-// TryActivateWorkflow mocks base method.
-func (m *MockWorkflowRepository) TryActivateWorkflow(ctx context.Context, id string, requestID string) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TryActivateWorkflow", ctx, id, requestID)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// TryActivateWorkflow indicates an expected call of TryActivateWorkflow.
-func (mr *MockWorkflowRepositoryMockRecorder) TryActivateWorkflow(ctx, id, requestID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryActivateWorkflow", reflect.TypeOf((*MockWorkflowRepository)(nil).TryActivateWorkflow), ctx, id, requestID)
 }
 
 // MockSchedulerPartitionRepository is a mock of SchedulerPartitionRepository interface.
@@ -1070,6 +1070,21 @@ func (m *MockJobRepository) UpdateJob(ctx context.Context, workflowID, ownerID s
 func (mr *MockJobRepositoryMockRecorder) UpdateJob(ctx, workflowID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, jobContext any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateJob", reflect.TypeOf((*MockJobRepository)(nil).UpdateJob), ctx, workflowID, ownerID, status, currentAtomicOperation, operationTimeoutSeconds, jobContext)
+}
+
+// UpdateJobMetrics mocks base method.
+func (m *MockJobRepository) UpdateJobMetrics(ctx context.Context, workflowID, ownerID string, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateJobMetrics", ctx, workflowID, ownerID, agentMetrics)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateJobMetrics indicates an expected call of UpdateJobMetrics.
+func (mr *MockJobRepositoryMockRecorder) UpdateJobMetrics(ctx, workflowID, ownerID, agentMetrics any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateJobMetrics", reflect.TypeOf((*MockJobRepository)(nil).UpdateJobMetrics), ctx, workflowID, ownerID, agentMetrics)
 }
 
 // UpdateJobStatus mocks base method.

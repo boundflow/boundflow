@@ -31,7 +31,7 @@ from typing import Any
 log = logging.getLogger("boundflow.harness_metering")
 
 
-def metered(saver: Any, governor: Any) -> Any:
+def metered(saver: Any, governor: Any, report: Any = None) -> Any:
     """Record usage from everything `saver` writes. Returns the same saver.
 
     It installs a subclass onto the instance rather than wrapping it. A wrapper would
@@ -71,6 +71,11 @@ def metered(saver: Any, governor: Any) -> Any:
         except Exception:  # noqa: BLE001
             log.warning("failed to meter a checkpoint write", exc_info=True)
 
+    async def _report() -> None:
+        # Actuals replace the reservation server-side as soon as they're known.
+        if report is not None:
+            await report()
+
     def _checkpoint_messages(checkpoint) -> Any:
         return (checkpoint or {}).get("channel_values", {}).get("messages")
 
@@ -83,6 +88,7 @@ def metered(saver: Any, governor: Any) -> Any:
 
         async def aput(self, config, checkpoint, metadata, new_versions):
             meter(_checkpoint_messages(checkpoint))
+            await _report()
             return await super().aput(config, checkpoint, metadata, new_versions)
 
         async def aput_writes(self, config, writes, task_id, task_path=""):
@@ -90,6 +96,7 @@ def metered(saver: Any, governor: Any) -> Any:
             # checkpoints are deltas whose channel_values are empty. (A subagent writes
             # its whole state, so it shows up in both.)
             meter([value for _channel, value in writes])
+            await _report()
             return await super().aput_writes(config, writes, task_id, task_path)
 
         def put(self, config, checkpoint, metadata, new_versions):

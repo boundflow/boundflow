@@ -95,7 +95,7 @@ async def durable_harness(ctx, agent_name: str, store_url: str, *, resume: Any =
                 "backend": StoreBackend(namespace=lambda _rt: namespace, store=store),
                 # Metered on the way through: the harness's own numbers are the
                 # truth about spend, and they cover calls the governor never saw.
-                "checkpointer": metered(saver, governor),
+                "checkpointer": metered(saver, governor, ctx.report_metrics),
                 # Policy, translated. Ours to declare and version, theirs to enforce.
                 "permissions": file_permissions(governor.policy),
                 "middleware": harness_middleware(governor),

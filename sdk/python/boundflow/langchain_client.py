@@ -236,7 +236,7 @@ _governed_cls = None
 _stream_warned = False
 
 
-def GovernedChatModel(*, governor: Any, chat_model: Any):
+def GovernedChatModel(*, governor: Any, chat_model: Any, report: Any = None):
     """A `BaseChatModel` that runs every call through an `AgentGovernor` — caps
     enforced, cost and tokens metered, spans recorded — while behaving like an
     ordinary LangChain model to whatever drives it.
@@ -250,7 +250,7 @@ def GovernedChatModel(*, governor: Any, chat_model: Any):
     global _governed_cls
     if _governed_cls is None:
         _governed_cls = _build_governed_cls()
-    return _governed_cls(governor=governor, chat_model=chat_model)
+    return _governed_cls(governor=governor, chat_model=chat_model, report_metrics=report)
 
 
 def _build_governed_cls():
@@ -270,6 +270,12 @@ def _build_governed_cls():
         # customer's model (which may not be a pydantic type at all).
         governor: Any
         chat_model: Any
+        # Reports metrics mid-operation. None when nothing is listening.
+        report_metrics: Any = None
+
+        async def report(self) -> None:
+            if self.report_metrics is not None:
+                await self.report_metrics()
 
         @property
         def _llm_type(self) -> str:
@@ -316,6 +322,10 @@ def _build_governed_cls():
             if call.finalize and self.governor.finalize_tool:
                 kwargs = {**kwargs, "tool_choice": self.governor.finalize_tool}
 
+            # On record before the call: a crash mid-call is then remembered as
+            # having spent the worst case rather than nothing.
+            await self.report()
+
             invoke = model.ainvoke(messages, stop=stop, **kwargs)
             if call.timeout_seconds > 0:
                 try:
@@ -332,6 +342,7 @@ def _build_governed_cls():
                 input_messages=_lc_to_gen_ai_messages(messages),
                 output_message=_lc_to_gen_ai_messages([msg])[0],
             )
+            await self.report()
             return ChatResult(generations=[ChatGeneration(message=msg)])
 
         def _generate(self, messages, stop=None, run_manager=None, **kwargs) -> ChatResult:

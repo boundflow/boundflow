@@ -25,7 +25,12 @@ from boundflow.v1 import worker_pb2 as wk_pb
 from boundflow.v1 import worker_pb2_grpc as wk_grpc
 
 # dispatch: given the launched operation proto, produce the result proto.
-Dispatch = Callable[[op_pb.AtomicOperation], Awaitable[op_pb.AtomicOperationResult]]
+# The second argument reports metrics mid-operation: an interim AtomicOperationResult
+# carrying nothing but agent_state_updates. See `_run_operation`.
+Dispatch = Callable[
+    [op_pb.AtomicOperation, Callable[[op_pb.AtomicOperationResult], Awaitable[None]]],
+    Awaitable[op_pb.AtomicOperationResult],
+]
 
 
 def _strip_scheme(addr: str) -> str:
@@ -184,8 +189,24 @@ class WorkerSession:
                     await self._write(call, self._ready())
 
     async def _run_operation(self, call, op: op_pb.AtomicOperation, dispatch: Dispatch) -> None:
+        async def report(interim: op_pb.AtomicOperationResult) -> None:
+            """Send metrics before the operation ends.
+
+            Without this an operation's spend only reaches the server when it finishes,
+            so a worker that dies mid-run takes its accounting with it. Sent on the same
+            stream, in order, so an interim report can't overtake the final result.
+
+            No ack, deliberately: a failed write kills the stream and the run is
+            interrupted, which bounds the damage to whatever landed after the last
+            successful report. Worth revisiting — see the note in `worker.py`.
+            """
+            await self._write(call, wk_pb.WorkerMessage(
+                session_id=self._session_id,
+                update=wk_pb.OperationUpdate(operation_id=op.id, result=interim),
+            ))
+
         try:
-            result = await dispatch(op)
+            result = await dispatch(op, report)
         except asyncio.CancelledError:
             raise  # surfaced to the main loop, which sends CANCELLED
         except Exception as ex:  # noqa: BLE001 — report a handler failure
