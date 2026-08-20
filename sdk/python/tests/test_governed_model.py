@@ -715,3 +715,57 @@ async def test_a_spent_tool_cap_is_not_a_tool_failure():
 
     assert gov.calls_per_tool == {"ping": 1}, "the cap did not block the second call"
     assert gov.tool_failure_counts == {}, "a spent cap was counted as a failure"
+
+
+async def test_a_returned_tool_error_is_counted_as_a_failure():
+    """An MCP adapter returns a failing tool's error rather than raising it, so the
+    wrapper saw a success. tool_failure_counts stayed empty for the tools we
+    actually dispatch, max_tool_failures never tripped, and a broken integration
+    burned the whole budget instead of tripping its own breaker.
+
+    The output is still returned, so the model reads the error and can work around
+    it — counted *and* adaptable. Raising instead kills the whole run, which is
+    measurably worse."""
+    from langchain_core.messages import ToolMessage
+    from langchain_core.tools import StructuredTool
+
+    from boundflow.langchain_client import governed_tools
+
+    async def returns_an_error(**kwargs):
+        return ToolMessage(content="Error executing tool desk__refund: upstream 500",
+                           tool_call_id="c1", name="desk__refund", status="error")
+
+    inner = StructuredTool.from_function(
+        coroutine=returns_an_error, name="desk__refund", description="Refund.",
+        args_schema={"type": "object", "properties": {}})
+
+    gov = AgentGovernor("payer", RuntimePolicy(), "m", collect_spans=False)
+    tool = governed_tools(gov, [inner])[0]
+
+    out = await tool.ainvoke({})
+
+    assert gov.tool_failure_counts == {"desk__refund": 1}
+    assert "upstream 500" in str(getattr(out, "content", out)), (
+        "the model must still be told, or it can't work around it")
+
+
+async def test_a_policy_denial_is_still_not_counted():
+    """The companion. Counting refusals would pause an agent for having working
+    guardrails — and the better they work, the faster it trips."""
+    from langchain_core.messages import ToolMessage
+    from langchain_core.tools import StructuredTool
+
+    from boundflow.langchain_client import governed_tools
+
+    async def refuses(**kwargs):
+        return ToolMessage(content="Error: permission denied for write on /secrets/x",
+                           tool_call_id="c1", name="write_file", status="error")
+
+    inner = StructuredTool.from_function(
+        coroutine=refuses, name="write_file", description="Write.",
+        args_schema={"type": "object", "properties": {}})
+
+    gov = AgentGovernor("writer", RuntimePolicy(), "m", collect_spans=False)
+    await governed_tools(gov, [inner])[0].ainvoke({})
+
+    assert gov.tool_failure_counts == {}

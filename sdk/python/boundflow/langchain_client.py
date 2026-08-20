@@ -429,6 +429,34 @@ def governed_tools(governor: Any, tools: list, *, output_schema: dict | None = N
     ]
 
 
+# What a tool's *returned* value looks like when it actually failed. Matching on
+# text is unattractive and still the best option available: the failure mode of a
+# reword is that we go back to under-counting, which is the behaviour without this,
+# so it can only ever over-report. Refusals are excluded deliberately — policy
+# saying no is not a broken tool, and counting it would pause an agent for having
+# working guardrails.
+_TOOL_ERRORS = ("error executing tool",)
+
+
+def _returned_error(output) -> str | None:
+    """The reason a tool failed without raising, or None if it didn't."""
+    from .harness_callbacks import _is_refusal
+
+    content = getattr(output, "content", output)
+    if isinstance(content, list):
+        content = " ".join(str(b.get("text", "")) if isinstance(b, dict) else str(b)
+                           for b in content)
+    text = str(content or "").strip()
+    if not text or _is_refusal(text):
+        return None
+    lowered = text.lower()
+    if any(marker in lowered for marker in _TOOL_ERRORS):
+        return text[:200]
+    if getattr(output, "status", None) == "error":
+        return text[:200]
+    return None
+
+
 def _build_governed_tool_cls():
     from langchain_core.tools import BaseTool
 
@@ -462,6 +490,20 @@ def _build_governed_tool_cls():
             except Exception as exc:  # noqa: BLE001 — reported to the model, and counted
                 call.record(input=tool_input, error=exc)
                 raise
+            if (why := _returned_error(output)) is not None:
+                # Counted as a failure even though nothing raised. An MCP adapter
+                # returns a failing tool's error rather than raising it, so the
+                # wrapper saw a success: tool_failure_counts stayed empty for the
+                # tools we actually dispatch, max_tool_failures never tripped, and
+                # a broken integration burned the whole budget instead of tripping
+                # its own breaker.
+                #
+                # The output is still handed back, so the model reads the error and
+                # can work around it. Counted *and* adaptable, rather than choosing
+                # — raising instead would kill the whole run, which is measurably
+                # worse.
+                call.record(input=tool_input, error=RuntimeError(why))
+                return output
             call.record(input=tool_input, output=output)
             return output
 
