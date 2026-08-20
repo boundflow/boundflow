@@ -653,3 +653,65 @@ async def test_a_broken_tool_is_still_a_failure():
 
     assert not _is_refusal("Error: connection refused")
     assert not _is_refusal("Error: file not found")
+
+
+async def test_a_spent_tool_cap_is_not_a_tool_failure():
+    """The companion to the denial case, and it holds for a different reason.
+
+    A blocked call is synthesized in `after_model` and the tool never runs, so
+    `BaseTool.run` never fires and our callbacks never see it — uncounted for
+    free. A filesystem denial needs classifying because the tool *does* run and
+    refuses from inside its own body.
+
+    So the thing to watch is not refusals generally, it's tools that police
+    themselves internally. This pins the distinction: if a release moved cap
+    enforcement into the tool body, we would silently start counting spent caps as
+    broken integrations.
+    """
+    pytest.importorskip("deepagents")
+    from deepagents import create_deep_agent
+    from langchain_core.tools import tool as make_tool
+
+    from boundflow.harness_callbacks import governed_tool_callbacks
+    from boundflow.harness_middleware import harness_call_limits
+
+    @make_tool
+    async def ping(x: str) -> str:
+        """Ping."""
+        return "pong"
+
+    class CallsTwice(BaseChatModel):
+        n: int = 0
+
+        @property
+        def _llm_type(self) -> str:
+            return "fake"
+
+        def bind_tools(self, *a, **k):
+            return self
+
+        def _generate(self, messages, stop=None, run_manager=None, **kw):
+            self.n += 1
+            if self.n <= 2:
+                msg = AIMessage(content="", tool_calls=[{
+                    "name": "ping", "id": f"c{self.n}", "type": "tool_call",
+                    "args": {"x": "hi"}}])
+            else:
+                msg = AIMessage(content="done")
+            return ChatResult(generations=[ChatGeneration(message=msg)])
+
+        async def _agenerate(self, messages, stop=None, run_manager=None, **kw):
+            return self._generate(messages, stop, run_manager, **kw)
+
+    gov = AgentGovernor(
+        "capped",
+        RuntimePolicy(tool_call_limits=[ToolCallLimit(tool="ping", max_calls=1)]),
+        "m", collect_spans=False)
+
+    agent = create_deep_agent(model=CallsTwice(), tools=[ping], system_prompt="go",
+                              middleware=harness_call_limits(gov))
+    await agent.ainvoke({"messages": [HumanMessage(content="ping twice")]},
+                        {"callbacks": [governed_tool_callbacks(gov)]})
+
+    assert gov.calls_per_tool == {"ping": 1}, "the cap did not block the second call"
+    assert gov.tool_failure_counts == {}, "a spent cap was counted as a failure"

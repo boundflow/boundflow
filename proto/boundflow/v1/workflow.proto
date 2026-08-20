@@ -25,6 +25,11 @@ message WorkflowConfig {
   // Only in queue mode: reject an invoke once this many requests are already queued.
   // 0 uses a server default. Ignored in coalesce mode (latest-wins self-bounds to 1).
   int32 max_queue_depth = 6;
+  // Hand an operation to another worker when the one running it dies, instead of
+  // interrupting the workflow for a human. At-least-once: the operation re-runs, so
+  // only set it where that is safe — a governed harness resumes from its checkpoint,
+  // an arbitrary handler repeats whatever it already did.
+  bool resumable = 7;
 }
 
 enum WorkflowState {

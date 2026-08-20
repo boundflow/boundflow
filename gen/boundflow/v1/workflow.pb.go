@@ -140,6 +140,11 @@ type WorkflowConfig struct {
 	// Only in queue mode: reject an invoke once this many requests are already queued.
 	// 0 uses a server default. Ignored in coalesce mode (latest-wins self-bounds to 1).
 	MaxQueueDepth int32 `protobuf:"varint,6,opt,name=max_queue_depth,json=maxQueueDepth,proto3" json:"max_queue_depth,omitempty"`
+	// Hand an operation to another worker when the one running it dies, instead of
+	// interrupting the workflow for a human. At-least-once: the operation re-runs, so
+	// only set it where that is safe — a governed harness resumes from its checkpoint,
+	// an arbitrary handler repeats whatever it already did.
+	Resumable     bool `protobuf:"varint,7,opt,name=resumable,proto3" json:"resumable,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -214,6 +219,13 @@ func (x *WorkflowConfig) GetMaxQueueDepth() int32 {
 		return x.MaxQueueDepth
 	}
 	return 0
+}
+
+func (x *WorkflowConfig) GetResumable() bool {
+	if x != nil {
+		return x.Resumable
+	}
+	return false
 }
 
 // PendingApproval is the currently open approval gate for a workflow — populated
@@ -517,7 +529,7 @@ var File_boundflow_v1_workflow_proto protoreflect.FileDescriptor
 
 const file_boundflow_v1_workflow_proto_rawDesc = "" +
 	"\n" +
-	"\x1bboundflow/v1/workflow.proto\x12\fboundflow.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x97\x02\n" +
+	"\x1bboundflow/v1/workflow.proto\x12\fboundflow.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb5\x02\n" +
 	"\x0eWorkflowConfig\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\x05R\aversion\x124\n" +
 	"\x16invoke_timeout_seconds\x18\x02 \x01(\x05R\x14invokeTimeoutSeconds\x120\n" +
@@ -525,7 +537,8 @@ const file_boundflow_v1_workflow_proto_rawDesc = "" +
 	"\vtriggerable\x18\x04 \x01(\bR\vtriggerable\x129\n" +
 	"\vinvoke_mode\x18\x05 \x01(\x0e2\x18.boundflow.v1.InvokeModeR\n" +
 	"invokeMode\x12&\n" +
-	"\x0fmax_queue_depth\x18\x06 \x01(\x05R\rmaxQueueDepth\"\x81\x02\n" +
+	"\x0fmax_queue_depth\x18\x06 \x01(\x05R\rmaxQueueDepth\x12\x1c\n" +
+	"\tresumable\x18\a \x01(\bR\tresumable\"\x81\x02\n" +
 	"\x0fPendingApproval\x12\x1f\n" +
 	"\vapproval_id\x18\x01 \x01(\tR\n" +
 	"approvalId\x12$\n" +
