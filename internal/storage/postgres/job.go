@@ -421,7 +421,8 @@ func (r *JobRepo) MarkOrphanedJobsFailed(ctx context.Context, partitionID string
 		 SET status = 'failed'
 		 WHERE workflow_id IN (SELECT id FROM workflows WHERE scheduler_partition_id = $1)
 		   AND status IN ('dispatched', 'running')
-		   AND lease_expires_at < now() - make_interval(secs => $2)`,
+		   AND (owner IS NULL
+		        OR lease_expires_at < now() - make_interval(secs => $2))`,
 		partitionID, gracePeriodSeconds,
 	)
 	if err != nil {
