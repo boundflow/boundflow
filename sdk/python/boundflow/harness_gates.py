@@ -73,7 +73,10 @@ def reject(reason: str = "") -> dict:
 def respond(message: str) -> dict:
     """Answer the agent instead of deciding on the action — the `AwaitInput` shape.
     Use when the human's reply is information rather than a yes or no."""
-    return {"decisions": [{"type": "response", "message": message}]}
+    # "respond", not "response". The harness's DecisionType is a closed literal
+    # and a wrong spelling doesn't raise — the resume is simply never matched, so
+    # the run parks forever and looks like a hang rather than a typo.
+    return {"decisions": [{"type": "respond", "message": message}]}
 
 
 def edit(args: dict) -> dict:
