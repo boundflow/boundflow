@@ -272,6 +272,27 @@ func (s *Scheduler) failJobs(ctx context.Context, partitionID string) error {
 // internal error occurred, etc.); customer-domain failures complete instead.
 const interruptedReason = "the run was interrupted before it could complete (platform failure)"
 
+// recordInterruptedMetrics promotes an interrupted run's metrics before the job row
+// carrying them is deleted. Best-effort: the run is already failing.
+func (s *Scheduler) recordInterruptedMetrics(ctx context.Context, req string, workflowID string) {
+	metrics, workflowMetrics, err := s.jobs.GetJobMetrics(ctx, workflowID, req)
+	if err != nil {
+		s.log.Error("failed to read job metrics for interrupted run", "request_id", req, "workflow_id", workflowID, "error", err)
+		return
+	}
+	if len(metrics) == 0 {
+		return
+	}
+	workflow, err := s.workflow.Get(ctx, workflowID)
+	if err != nil {
+		s.log.Error("failed to get workflow for interrupted run metrics", "request_id", req, "workflow_id", workflowID, "error", err)
+		return
+	}
+	if err, _ := s.metricsHandler.HandleAgentMetrics(ctx, req, metrics, workflowMetrics, workflow); err != nil {
+		s.log.Error("failed to record metrics for interrupted run", "request_id", req, "workflow_id", workflowID, "error", err)
+	}
+}
+
 func (s *Scheduler) FailRequest(ctx context.Context, req string, workflowID string, version int64, reason string) (bool, error) {
 	s.log.Debug("marking request as failed", "request_id", req)
 
@@ -286,6 +307,8 @@ func (s *Scheduler) FailRequest(ctx context.Context, req string, workflowID stri
 	}
 	if applied {
 		s.log.Info("request failed, workflow updated", "request_id", req, "workflow_id", workflowID, "version", version)
+		// Metrics only; policy stays unresolved because the failure was ours.
+		s.recordInterruptedMetrics(ctx, req, workflowID)
 	} else {
 		s.log.Warn("request failed but workflow version check skipped update (newer version already applied)", "request_id", req, "workflow_id", workflowID, "version", version)
 	}
