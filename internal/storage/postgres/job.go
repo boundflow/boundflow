@@ -477,6 +477,29 @@ func (r *JobRepo) UpdateJob(ctx context.Context, workflowID string, ownerID stri
 	return tag.RowsAffected() == 1, nil
 }
 
+// RequeueJob makes a job claimable again after the worker running it died, for a
+// workflow whose config says that is safe. `pending` with no owner is exactly what
+// AcquireJob looks for, so nothing else has to change. Returns the attempt count —
+// always at least 1, so 0 means there was no such job to requeue.
+func (r *JobRepo) RequeueJob(ctx context.Context, workflowID string, requestID string) (int, error) {
+	var attempts int
+	err := r.pool.QueryRow(ctx,
+		`UPDATE jobs
+		 SET status = 'pending', owner = NULL, lease_expires_at = NULL,
+		     attempts = attempts + 1
+		 WHERE workflow_id = $1 AND request_id = $2
+		 RETURNING attempts`,
+		workflowID, requestID,
+	).Scan(&attempts)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("requeue job: %w", err)
+	}
+	return attempts, nil
+}
+
 // UpdateJobMetrics writes the running metrics of an operation that is still going, so
 // a worker that dies loses at most what it spent since the last report.
 func (r *JobRepo) UpdateJobMetrics(ctx context.Context, workflowID string, ownerID string, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics) (bool, error) {

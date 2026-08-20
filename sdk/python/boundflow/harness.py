@@ -46,6 +46,31 @@ class DurableHarness:
     wiring: dict
     config: dict
     _resume: Any = None
+    _store: Any = None
+    _saver: Any = None
+    _namespace: tuple = ()
+
+    async def discard(self) -> None:
+        """Delete this task's state. Call it when the task is over, not before.
+
+        Everything here exists to survive a gate, so it is dead weight the moment
+        the task ends — and it is dead weight in the *operator's* database, which
+        is the one place we can't see it accumulating to warn them. A daily agent
+        would otherwise leave 365 conversations a year, each holding whatever it
+        read.
+
+        Deleting the thread takes the subagents with it: their checkpoints hang off
+        the same `thread_id` under their own `checkpoint_ns`, so they'd otherwise
+        be orphaned by a key nothing refers to any more.
+
+        Never on the way to a gate. The state is the only reason a parked task can
+        resume at all.
+        """
+        if self._saver is not None:
+            await self._saver.adelete_thread(self.thread_id)
+        if self._store is not None:
+            for item in await self._store.asearch(self._namespace):
+                await self._store.adelete(self._namespace, item.key)
 
     def first(self, payload: dict) -> Any:
         """The payload to invoke with: `payload` on a fresh task, or the parked
@@ -107,6 +132,9 @@ async def durable_harness(ctx, agent_name: str, store_url: str, *, resume: Any =
                 "callbacks": [governed_tool_callbacks(governor)],
             },
             _resume=Command(resume=resume) if resume is not None else None,
+            _store=store,
+            _saver=saver,
+            _namespace=namespace,
         )
 
 

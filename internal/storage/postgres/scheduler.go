@@ -145,6 +145,7 @@ func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID stri
 		             status                   = 'pending',
 		             owner                    = NULL,
 		             lease_expires_at         = NULL,
+		             attempts                 = 0,
 		             tenant_group_id          = EXCLUDED.tenant_group_id
 
 		         WHERE jobs.version < EXCLUDED.version
