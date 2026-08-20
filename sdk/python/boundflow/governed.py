@@ -234,9 +234,49 @@ class AgentGovernor:
         # from what the model asked for.
         self._governed_tools: set[str] = set()
         self._harness_observer_active = False
+        self._harness_metering_active = False
+        # Model calls seen in the harness's own state. Distinct from `llm_calls`, which
+        # counts reservations and so can't see a call that bypassed the governor.
+        self.observed_llm_calls = 0
 
     def register_governed_tools(self, names: list[str]) -> None:
         self._governed_tools.update(names)
+
+    def register_harness_metering(self) -> None:
+        """Take the harness's own numbers as the truth about spend.
+
+        Set by `MeteringSaver`, which reads usage off the messages the harness writes.
+        Once it's on, our own per-call accumulation stands down — the same call would
+        otherwise be counted twice, once when we make it and once when it's written —
+        and the harness becomes the single source for tokens and cost. Enforcement is
+        unaffected: reservations are still taken per call, they just no longer decide
+        what gets reported."""
+        self._harness_metering_active = True
+
+    def record_harness_usage(self, *, input_tokens: int, output_tokens: int,
+                             details: dict, model: str | None,
+                             tool_calls: list[str] | None = None) -> None:
+        """One model message the harness wrote, priced and accumulated.
+
+        `model` is the one that actually served the call, which is not always
+        `self.model` — a subagent may run a different one — so it prices per message
+        rather than per agent.
+
+        Tool calls are ignored here: these are the calls the model *asked* for, while
+        the callbacks in `harness_callbacks` see the ones that ran and how they ended.
+        Counting both would double them.
+        """
+        usage = Usage(
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cache_creation_input_tokens=details.get("cache_creation", 0),
+            cache_read_input_tokens=details.get("cache_read", 0),
+        )
+        self.cost_usd += _estimate_cost(usage, model or self.model, self._pricing)
+        self.tokens_used += usage.total_tokens()
+        # Counted separately from the reservation: this includes calls we never
+        # reserved, like a subagent that built its own client and bypassed us entirely.
+        self.observed_llm_calls += 1
 
     def register_harness_observer(self) -> None:
         """Hand metering of undeclared tools to the harness's own callbacks.
@@ -361,8 +401,11 @@ class AgentGovernor:
         cost = _estimate_cost(usage, self.model, self._pricing)
 
         # llm_calls was incremented at begin_call(); this call held that slot.
-        self.cost_usd += cost
-        self.tokens_used += usage.total_tokens()
+        if not self._harness_metering_active:
+            # Otherwise the harness records this same call when it writes the message,
+            # and its numbers are the ones that count.
+            self.cost_usd += cost
+            self.tokens_used += usage.total_tokens()
         for name in tool_calls:
             # A governed tool counts itself when it actually runs — counting the
             # model's *request* here too would double it, and would also count calls
@@ -470,7 +513,10 @@ class AgentGovernor:
         to invocation_metrics (mirrors what run_agent writes)."""
         return {
             "cost_usd": self.cost_usd,
-            "llm_calls": self.llm_calls,
+            # The harness's count when it's metering, since it also sees calls that
+            # never reached the governor.
+            "llm_calls": (self.observed_llm_calls if self._harness_metering_active
+                          else self.llm_calls),
             "tokens_used": self.tokens_used,
             "calls_per_tool": dict(self.calls_per_tool),
             # Only populated for tools passed through agent_tools() — we can't see a

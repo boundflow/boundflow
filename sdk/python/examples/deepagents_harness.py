@@ -53,7 +53,7 @@ from boundflow import (
     WorkflowConfig,
     submit,
 )
-from boundflow.harness import durable_harness, task_context
+from boundflow.harness import durable_harness, task_context, validate_subagents
 from boundflow.harness_gates import approve, pending_action, reject
 
 STORE_URL = os.environ.get(
@@ -106,7 +106,7 @@ def build_worker() -> BoundFlowWorker:
                     # deepagents decides *what* needs a human; BoundFlow makes the
                     # waiting outlive the process.
                     interrupt_on={"restart_database": True},
-                    subagents=[SCRIBE],
+                    subagents=validate_subagents([SCRIBE]),
                     **h.wiring,
                 ).ainvoke(h.first(payload), h.config),
                 chat_model=ChatAnthropic(model=MODEL, max_tokens=1024),

@@ -34,6 +34,7 @@ from typing import Any
 
 from .capabilities import file_permissions
 from .harness_callbacks import governed_tool_callbacks
+from .harness_metering import metered
 from .harness_middleware import harness_middleware
 
 
@@ -92,7 +93,9 @@ async def durable_harness(ctx, agent_name: str, store_url: str, *, resume: Any =
             thread_id=task_id,
             wiring={
                 "backend": StoreBackend(namespace=lambda _rt: namespace, store=store),
-                "checkpointer": saver,
+                # Metered on the way through: the harness's own numbers are the
+                # truth about spend, and they cover calls the governor never saw.
+                "checkpointer": metered(saver, governor),
                 # Policy, translated. Ours to declare and version, theirs to enforce.
                 "permissions": file_permissions(governor.policy),
                 "middleware": harness_middleware(governor),
@@ -105,6 +108,37 @@ async def durable_harness(ctx, agent_name: str, store_url: str, *, resume: Any =
             },
             _resume=Command(resume=resume) if resume is not None else None,
         )
+
+
+class UngovernedModel(ValueError):
+    """A subagent was configured with a model BoundFlow can't govern."""
+
+
+def validate_subagents(specs) -> list:
+    """Reject subagents that name their model as a string. Returns the specs.
+
+        subagents=validate_subagents([RESEARCHER, SCRIBE])
+
+    A spec inherits the parent's model *object* — the governed one — unless it names a
+    model itself, in which case the harness builds its own client. That client never
+    reaches the governor: its calls aren't capped, aren't priced, and don't exist in
+    any metric until the checkpoint is read afterwards. Invisible money, and the only
+    symptom is a cost limit that quietly doesn't apply.
+
+    So it raises rather than warns. Omit `model` to inherit, or pass a model object if
+    the subagent genuinely needs a different one — `ctx.agent_model()` returns a
+    governed one.
+    """
+    for spec in specs:
+        model = spec.get("model") if isinstance(spec, dict) else getattr(spec, "model", None)
+        if isinstance(model, str):
+            name = (spec.get("name") if isinstance(spec, dict) else None) or "<unnamed>"
+            raise UngovernedModel(
+                f"subagent {name!r} names its model as a string ({model!r}), which builds "
+                "a client BoundFlow can't see: its calls are uncapped, unpriced and "
+                "unmetered. Omit 'model' to inherit the governed one, or pass a model "
+                "object.")
+    return list(specs)
 
 
 def task_context(ctx, extra: dict | None = None) -> dict:
