@@ -437,11 +437,28 @@ def governed_tools(governor: Any, tools: list, *, output_schema: dict | None = N
 # working guardrails.
 _TOOL_ERRORS = ("error executing tool",)
 
+# And what a *refusal* looks like: policy saying no, which is not a breakage. Same
+# text-matching trade-off, same safe direction — a wording we don't recognise gets
+# counted as a failure, which is the behaviour without this.
+_REFUSALS = ("error: permission denied",)
+
+
+def _is_refusal(content) -> bool:
+    """Whether an error result is policy saying no, rather than a tool breaking.
+
+    `tool_failure_counts` is what lifecycle rules read, so counting refusals there
+    would pause an agent for having working guardrails — and the better they work,
+    the faster it trips.
+    """
+    if isinstance(content, list):  # some providers return content blocks
+        content = " ".join(str(b.get("text", "")) if isinstance(b, dict) else str(b)
+                           for b in content)
+    text = str(content or "").strip().lower()
+    return any(text.startswith(r) for r in _REFUSALS)
+
 
 def _returned_error(output) -> str | None:
     """The reason a tool failed without raising, or None if it didn't."""
-    from .harness_callbacks import _is_refusal
-
     content = getattr(output, "content", output)
     if isinstance(content, list):
         content = " ".join(str(b.get("text", "")) if isinstance(b, dict) else str(b)

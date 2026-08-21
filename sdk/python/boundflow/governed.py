@@ -301,8 +301,8 @@ class AgentGovernor:
         `self.model` — a subagent may run a different one — so it prices per message
         rather than per agent.
 
-        Tool calls are ignored here: these are the calls the model *asked* for, while
-        the callbacks in `harness_callbacks` see the ones that ran and how they ended.
+        Tool calls are ignored here: these are the calls the model *asked* for, and
+        whatever is metering execution sees the ones that ran and how they ended.
         Counting both would double them.
         """
         usage = Usage(
@@ -326,7 +326,7 @@ class AgentGovernor:
         we can see — it tells us a call happened, never how it ended. LangChain's tool
         callbacks fire around the execution itself, so once installed they count what
         actually ran and how it ended, and the request-side count stands down rather than
-        double-counting the same call. See `harness_callbacks.py`."""
+        double-counting the same call."""
         self._harness_observer_active = True
 
     def is_governed_tool(self, tool: str) -> bool:
@@ -338,17 +338,16 @@ class AgentGovernor:
     def tool_call_caps(self) -> dict[str, int]:
         """Every declared per-tool cap, for a harness that enforces its own.
 
-        deepagents counts tool calls natively (`ToolCallLimitMiddleware`), so when one
-        is running we hand it the policy rather than duplicating the counter — the
-        policy is still ours, versioned and central; the enforcement is the harness's."""
+        A harness that counts tool calls natively can be handed the policy rather than
+        having the counter duplicated — the policy stays ours, versioned and central;
+        the enforcement is the harness's."""
         return dict(self._tool_limits)
 
     def capability_call_caps(self) -> dict[str, int]:
         """Per-capability caps — how many `write`s, not how many `write_file`s.
 
-        No harness counts these (deepagents' limiter is one tool or all tools, nothing
-        between), so unlike `tool_call_caps` these are enforced by BoundFlow middleware.
-        See `capabilities.py`."""
+        A harness typically caps one tool or all tools with nothing in between, so
+        unlike `tool_call_caps` these are enforced by whoever wires the harness up."""
         return {l.capability: l.max_calls for l in self.policy.capability_call_limits}
 
     def record_harness_tool(self, tool: str, *, failed: bool = False) -> None:

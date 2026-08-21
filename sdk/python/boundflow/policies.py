@@ -29,9 +29,9 @@ class CapabilityCallLimit(BaseModel):
     cap survives the agent switching tools — which per-tool caps don't: cap `write_file`
     and the agent reaches for `edit_file`.
 
-    The vocabulary is deepagents' `FilesystemOperation` (`read`, `write`), extended with
-    `execute` and `spawn` for the two tools it ships but doesn't classify. See
-    `capabilities.py`."""
+    `read` and `write` are the filesystem vocabulary most harnesses use; `execute` and
+    `spawn` cover shell and subagent spawning. Whatever runs the harness maps its tools
+    onto these."""
 
     capability: str
     max_calls: int
@@ -52,12 +52,12 @@ class ToolFailureLimit(BaseModel):
 class FileRule(BaseModel):
     """Which files an agent may read or write, and whether a human is asked first.
 
-    Scoped to a harness with a filesystem. The fields mirror deepagents'
-    `FilesystemPermission` one-for-one — same operation vocabulary, same glob semantics,
-    same first-match-wins ordering — because that is who enforces it. What BoundFlow adds
-    is that the rule is *versioned policy*: it arrives with the operation, changes when
-    the agent version changes, and rolls back when the workflow does, rather than living
-    in whatever code happened to construct the agent.
+    Scoped to a harness with a filesystem, and shaped to translate directly onto one:
+    same operation vocabulary, glob semantics and first-match-wins ordering that
+    filesystem permission models generally use, because the harness is what enforces it.
+    What BoundFlow adds is that the rule is *versioned policy* — it arrives with the
+    operation, changes when the agent version changes, and rolls back when the workflow
+    does, rather than living in whatever code happened to construct the agent.
 
         FileRule(operations=["write"], paths=["/secrets/**"], mode="deny")
         FileRule(operations=["write"], paths=["/prod/**"], mode="interrupt")
