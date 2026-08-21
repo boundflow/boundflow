@@ -253,6 +253,17 @@ class OperationContext:
         return self._op.workflow_version
 
     @property
+    def workflow_id(self) -> str:
+        """Which workflow this operation belongs to."""
+        return self._op.workflow_id
+
+    @property
+    def request_id(self) -> str:
+        """This run's id. Stable across the operations of one run, so it keys anything
+        that has to outlive a single operation — a durable harness's thread, say."""
+        return self._op.request_id
+
+    @property
     def context(self) -> dict:
         """The operation's context — the caller's own keys, read and written freely
         (seeded by invoke_workflow(context=...) and carried across operations)."""
