@@ -45,6 +45,9 @@ type Job struct {
 	FailureReason  string
 	Owner          *string
 	LeaseExpiresAt *time.Time
+	// AbandonRequestedAt is set when a suspension asked for this run to be stopped rather
+	// than drained. Read at dispatch (never launch it) and on lease renewal (cancel it).
+	AbandonRequestedAt *time.Time
 	CreatedAt      time.Time
 	// Server-internal metadata for this job.
 	JobMetadata JobMetadata

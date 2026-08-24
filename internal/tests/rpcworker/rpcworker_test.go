@@ -192,7 +192,7 @@ func expectJobAcquired(jobRepo *mocks.MockJobRepository) {
 	jobRepo.EXPECT().GetAvailableJob(gomock.Any(), testTenantGroupID, gomock.Any(), gomock.Any()).Return(&resID, nil)
 	jobRepo.EXPECT().AcquireJob(gomock.Any(), testWorkflowID, gomock.Any(), gomock.Any(), testTenantGroupID).Return(testJob(), nil)
 	jobRepo.EXPECT().SetJobDispatched(gomock.Any(), testWorkflowID, gomock.Any()).Return(true, nil).AnyTimes()
-	jobRepo.EXPECT().RenewJobLease(gomock.Any(), testWorkflowID, gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+	jobRepo.EXPECT().RenewJobLease(gomock.Any(), testWorkflowID, gomock.Any(), gomock.Any()).Return(true, false, nil).AnyTimes()
 	jobRepo.EXPECT().ReleaseJob(gomock.Any(), testWorkflowID, gomock.Any()).Return(nil).AnyTimes()
 }
 
@@ -392,7 +392,7 @@ func TestWorkerSession_Dispatch_UsesSessionOwner(t *testing.T) {
 			return true, nil
 		})
 
-	jobRepo.EXPECT().RenewJobLease(gomock.Any(), testWorkflowID, gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+	jobRepo.EXPECT().RenewJobLease(gomock.Any(), testWorkflowID, gomock.Any(), gomock.Any()).Return(true, false, nil).AnyTimes()
 	jobRepo.EXPECT().ReleaseJob(gomock.Any(), testWorkflowID, gomock.Any()).Return(nil).AnyTimes()
 
 	stream := newMockStream(ctx)
@@ -444,7 +444,7 @@ func TestWorkerSession_LaunchSendFails_ResetsToPending(t *testing.T) {
 			return testJob(), nil
 		})
 	jobRepo.EXPECT().SetJobDispatched(gomock.Any(), testWorkflowID, gomock.Any()).Return(true, nil)
-	jobRepo.EXPECT().RenewJobLease(gomock.Any(), testWorkflowID, gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+	jobRepo.EXPECT().RenewJobLease(gomock.Any(), testWorkflowID, gomock.Any(), gomock.Any()).Return(true, false, nil).AnyTimes()
 	jobRepo.EXPECT().ReleaseJob(gomock.Any(), testWorkflowID, gomock.Any()).Return(nil).AnyTimes()
 
 	reset := make(chan string, 1)

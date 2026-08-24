@@ -109,6 +109,10 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 	sessionID := uuid.NewString()
 
 	leaseExpired := make(chan bool)
+	// Buffered: the renewal tick can notice an abandon while the loop is between selects
+	// (waiting for the IN_PROGRESS ack), so the signal must neither block the renewer nor be
+	// dropped -- ConnectedBusy picks it up as soon as it gets there.
+	abandonRequested := make(chan bool, 1)
 	recvStream := make(chan *boundflowv1.WorkerMessage)
 	controlCodeCancelled := make(chan bool)
 
@@ -344,6 +348,26 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 		}
 	}
 
+	// suspendOperation ends a run an operator's suspension asked to stop. Unlike
+	// softFailOperation it does not bump num_failures: the run was cut deliberately, so
+	// lifecycle policy must not read it as the workflow misbehaving.
+	suspendOperation := func(cancelLease chan bool, job *domain.Job) {
+		ctx := context.Background()
+		defer cancelLeaseIfExists(cancelLease)
+
+		const reason = "stopped by workflow suspension"
+		updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.WorkflowID, sessionID, domain.JobStatusCompleted,
+			domain.RunOutcomeSuspended, reason, nil, job.AgentMetrics, job.WorkflowMetrics)
+		if err != nil {
+			log.Error("failed to complete suspended job", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "error", err)
+			return
+		}
+		if updated {
+			log.Info("run stopped for suspension, completing request", "request_id", job.RequestID, "workflow_id", job.WorkflowID)
+			s.scheduler.CompleteRequest(ctx, job.RequestID, job.WorkflowID, job.Version, domain.CustomerRequestType(job.JobType), domain.RunOutcomeSuspended, reason, nil)
+		}
+	}
+
 	go func() error {
 
 		state := ConnectedIdle
@@ -352,6 +376,9 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 		jobLookupInterval := 5 * time.Second
 		cancelLease := make(chan bool)
 		var currentJob *domain.Job
+		// Why we sent a cancel: a suspension-driven stop records a different outcome than a
+		// timeout, and we know which at send time rather than re-reading the job.
+		cancelledForSuspension := false
 		clientResponseTime := 3 * time.Second
 
 		defer close(cancelLease)
@@ -417,6 +444,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 						go func(workflowID *string) {
 							ticker := time.NewTicker(leaseWake)
 							defer ticker.Stop()
+							abandonSignalled := false
 							for {
 								select {
 								case <-cancelLease:
@@ -424,7 +452,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 									s.jobs.ReleaseJob(context.Background(), *workflowID, sessionID)
 									return
 								case <-ticker.C:
-									renewed, err := s.jobs.RenewJobLease(stream.Context(), *workflowID, sessionID, leaseTime)
+									renewed, abandon, err := s.jobs.RenewJobLease(stream.Context(), *workflowID, sessionID, leaseTime)
 									if !renewed || err != nil {
 										log.Warn("failed to renew job lease, expiring session", "workflow_id", *workflowID, "error", err)
 										select {
@@ -432,6 +460,16 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 										case <-stream.Context().Done():
 										}
 										return
+									}
+									// Signal once and keep renewing: the job stays ours until the cancel
+									// resolves, so the lease still has to be held.
+									if abandon && !abandonSignalled {
+										abandonSignalled = true
+										log.Warn("suspension asked to stop this run", "workflow_id", *workflowID)
+										select {
+										case abandonRequested <- true:
+										default:
+										}
 									}
 									log.Debug("job lease renewed", "workflow_id", *workflowID)
 									ticker.Reset(leaseWake)
@@ -506,6 +544,15 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 							}
 							completeOperation(cancelLease, job, completionResult)
 							return false
+						}
+
+						// A run flagged before anyone picked it up has no consumer for the flag:
+						// complete it here rather than launching, or it holds the suspension open
+						// forever waiting for a request that never goes terminal.
+						if job.AbandonRequestedAt != nil {
+							log.Info("job abandoned for suspension, completing without launching", "request_id", job.RequestID, "workflow_id", job.WorkflowID)
+							suspendOperation(cancelLease, job)
+							continue
 						}
 
 						var shouldLaunch bool
@@ -599,6 +646,13 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 						}
 
 						currentJob = job
+						cancelledForSuspension = false
+						// The channel outlives any one job: a signal raised for a job that then ended
+						// some other way would otherwise cancel this one.
+						select {
+						case <-abandonRequested:
+						default:
+						}
 						break
 					}
 				}
@@ -687,6 +741,15 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 						}
 						state = ConnectedIdle
 						break ConnectedBusyLoop
+					case <-abandonRequested:
+						log.Warn("stopping run for suspension, sending cancel", "request_id", currentJob.RequestID, "workflow_id", currentJob.WorkflowID)
+						if err := cancelOperation(currentJob.RequestID); err != nil {
+							failOperation(cancelLease, currentJob, "")
+							return err
+						}
+						cancelledForSuspension = true
+						state = CancelRequested
+						break ConnectedBusyLoop
 					case <-ticker.C:
 						log.Warn("job timed out, sending cancel", "request_id", currentJob.RequestID, "timeout_secs", currentJob.RuntimeParams.OperationTimeoutSeconds)
 						err := cancelOperation(currentJob.RequestID)
@@ -732,6 +795,10 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 							completeOperation(cancelLease, currentJob, ack.Update.Result)
 						case boundflowv1.OperationStatus_OPERATION_STATUS_FAILED,
 							boundflowv1.OperationStatus_OPERATION_STATUS_CANCELLED:
+							if cancelledForSuspension {
+								suspendOperation(cancelLease, currentJob)
+								break
+							}
 							// The client acked our cancel, so the operation timed out cleanly:
 							// a customer-domain failure (num_failures), not a platform interruption.
 							log.Info("operation timed out (cancel acked), soft-failing", "request_id", currentJob.RequestID, "status", ack.Update.Result.Status)

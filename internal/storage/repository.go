@@ -52,8 +52,13 @@ type WorkflowRepository interface {
 	// Guarded on suspensionID and on the suspension having finalized; false if either fails.
 	RestoreFromSuspension(ctx context.Context, id, suspensionID string, state domain.WorkflowState, expectedVersion, targetVersion int, cooldownUntil *time.Time) (bool, error)
 	// FinalizeSuspended records that a suspension has taken effect (nothing left
-	// running), which is what permits a resume. Guarded on suspensionID. Idempotent.
+	// running), which is what permits a resume. Guarded on suspensionID and on the
+	// workflow still being suspended. Idempotent.
 	FinalizeSuspended(ctx context.Context, id, suspensionID string) error
+	// AbortSuspension drops a suspension whose workflow something else took over, clearing
+	// the suspension columns and releasing the frozen requests. Guarded on suspensionID
+	// and on the workflow no longer being suspended. Idempotent.
+	AbortSuspension(ctx context.Context, id, suspensionID string) error
 	FinalizeDeleted(ctx context.Context, id string) error
 	// ListPendingSuspension returns workflows in the partition whose suspension was
 	// requested but has not taken effect yet, carrying the operator's choices.
@@ -177,9 +182,10 @@ type JobRepository interface {
 	// if successful. Returns nil if the job no longer qualifies (taken by another worker).
 	// tenantGroupID is an additional guard to prevent cross-tenant acquisition.
 	AcquireJob(ctx context.Context, workflowID string, ownerID string, leaseDuration time.Duration, tenantGroupID string) (*domain.Job, error)
-	// RenewJobLease extends the lease on a job owned by ownerID.
+	// RenewJobLease extends the lease on a job owned by ownerID, and reports whether a
+	// suspension has asked for the run to be stopped.
 	// Returns false if the lease could not be renewed.
-	RenewJobLease(ctx context.Context, workflowID string, ownerID string, leaseDuration time.Duration) (bool, error)
+	RenewJobLease(ctx context.Context, workflowID string, ownerID string, leaseDuration time.Duration) (renewed bool, abandonRequested bool, err error)
 	// UpdateJobStatus updates the status of a job only if ownerID is the current owner.
 	// Returns false if the ownership check failed (job taken by another worker or released).
 	UpdateJobStatus(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus) (bool, error)

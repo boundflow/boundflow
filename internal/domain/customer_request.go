@@ -35,6 +35,7 @@ const (
 	RunOutcomeUncaughtException RunOutcome = "uncaught_operation_exception" // handler raised
 	RunOutcomeOperationTimeout  RunOutcome = "operation_timeout"            // op exceeded its timeout
 	RunOutcomeInterrupted       RunOutcome = "interrupted"                  // platform failure
+	RunOutcomeSuspended         RunOutcome = "suspended"                    // stopped by an operator's suspension
 )
 
 type CustomerRequest struct {

@@ -61,7 +61,7 @@ func (r *JobRepo) AcquireJob(ctx context.Context, workflowID string, ownerID str
 		           job_type, workflow_type, timeout_seconds, workflow_version, agent_metrics, workflow_metrics,
 		           job_metadata, approval_id, approval_timeout_at, approval_reason,
 		           input_id, input_timeout_at, input_answer,
-		           owner, lease_expires_at, created_at`,
+		           owner, lease_expires_at, abandon_requested_at, created_at`,
 		workflowID, ownerID, leaseDuration.String(), tenantGroupID,
 	).Scan(
 		&job.WorkflowID, &job.RequestID, &job.Version,
@@ -69,7 +69,7 @@ func (r *JobRepo) AcquireJob(ctx context.Context, workflowID string, ownerID str
 		&job.JobType, &job.WorkflowType, &job.RuntimeParams.OperationTimeoutSeconds, &job.WorkflowVersion, &agentMetricsJSON, &workflowMetricsJSON,
 		&jobMetadataJSON, &job.ApprovalID, &job.ApprovalTimeoutAt, &job.ApprovalReason,
 		&job.InputID, &job.InputTimeoutAt, &inputAnswerJSON,
-		&job.Owner, &job.LeaseExpiresAt, &job.CreatedAt,
+		&job.Owner, &job.LeaseExpiresAt, &job.AbandonRequestedAt, &job.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -99,17 +99,24 @@ func (r *JobRepo) AcquireJob(ctx context.Context, workflowID string, ownerID str
 	return &job, nil
 }
 
-func (r *JobRepo) RenewJobLease(ctx context.Context, workflowID string, ownerID string, leaseDuration time.Duration) (bool, error) {
-	tag, err := r.pool.Exec(ctx,
+// RenewJobLease extends the lease and reports whether a suspension has asked for this run
+// to be stopped. The renewal tick is the only place already touching the row often enough
+// to notice, so the flag rides along rather than costing a second query.
+func (r *JobRepo) RenewJobLease(ctx context.Context, workflowID string, ownerID string, leaseDuration time.Duration) (renewed bool, abandonRequested bool, err error) {
+	err = r.pool.QueryRow(ctx,
 		`UPDATE jobs
 		 SET lease_expires_at = now() + $3::interval
-		 WHERE workflow_id = $1 AND owner = $2`,
+		 WHERE workflow_id = $1 AND owner = $2
+		 RETURNING abandon_requested_at IS NOT NULL`,
 		workflowID, ownerID, leaseDuration.String(),
-	)
+	).Scan(&abandonRequested)
 	if err != nil {
-		return false, fmt.Errorf("renew job lease: %w", err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, false, nil
+		}
+		return false, false, fmt.Errorf("renew job lease: %w", err)
 	}
-	return tag.RowsAffected() == 1, nil
+	return true, abandonRequested, nil
 }
 
 func (r *JobRepo) UpdateJobStatus(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus) (bool, error) {

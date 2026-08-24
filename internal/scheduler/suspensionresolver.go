@@ -78,6 +78,17 @@ func (r *SuspensionReconciler) reconcileOne(ctx context.Context, workflow *domai
 	id := workflow.ID
 	suspensionID := workflow.Suspension.ID
 
+	// An interruption during the drain takes the workflow over and outranks the suspension:
+	// drop it rather than finalizing onto a state we no longer own.
+	if workflow.WorkflowState != domain.WorkflowStateSuspended {
+		if err := r.workflows.AbortSuspension(ctx, id, suspensionID); err != nil {
+			r.log.Error("failed to abort suspension", "workflow_id", id, "suspension_id", suspensionID, "error", err)
+			return
+		}
+		r.log.Info("aborted suspension, workflow taken over", "workflow_id", id, "suspension_id", suspensionID, "workflow_state", workflow.WorkflowState)
+		return
+	}
+
 	if workflow.Suspension.StopCurrent {
 		if _, err := r.jobs.MarkAbandonRequested(ctx, id, suspensionID); err != nil {
 			r.log.Error("failed to request job abandon", "workflow_id", id, "suspension_id", suspensionID, "error", err)

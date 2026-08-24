@@ -336,21 +336,70 @@ func (r *WorkflowRepo) MarkSuspensionRequested(ctx context.Context, id, suspensi
 // This is what permits a resume — the workflow_state has said 'suspended' since the
 // request landed, so it cannot tell draining from drained; the finalized timestamp can.
 //
-// Guarded on suspensionID so a reconciler still working from a stale snapshot cannot
-// finalize a later suspension on the strength of an earlier one's drain check, and on
-// not having finalized already so re-runs keep the original timestamp.
+// Guarded on suspensionID, on the workflow still being suspended (an interruption during
+// the drain takes it over, and that outranks the suspension), and on not having finalized
+// already so re-runs keep the original timestamp.
 func (r *WorkflowRepo) FinalizeSuspended(ctx context.Context, id, suspensionID string) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE workflows
 		 SET lifecycle_state = $3, suspension_finalized_at = now()
 		 WHERE id = $1
 		   AND suspension_id = $2
+		   AND workflow_state = 'suspended'
 		   AND suspension_requested_at IS NOT NULL
 		   AND suspension_finalized_at IS NULL`,
 		id, suspensionID, domain.LifecycleStateHalted,
 	)
 	if err != nil {
 		return fmt.Errorf("finalize suspended: %w", err)
+	}
+	return nil
+}
+
+// AbortSuspension drops a suspension whose workflow something else has taken over — in
+// practice an interruption, which leaves it disabled and needing ResolveInterruptedWorkflow.
+// Releasing the queue is safe because that state blocks scheduling on its own.
+//
+// workflow_state and lifecycle_state are left to whatever took over.
+func (r *WorkflowRepo) AbortSuspension(ctx context.Context, id, suspensionID string) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin abort suspension tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var updatedID string
+	err = tx.QueryRow(ctx,
+		`UPDATE workflows
+		 SET suspension_requested_at   = NULL,
+		     suspension_finalized_at   = NULL,
+		     suspension_id             = NULL,
+		     suspension_reason         = '',
+		     suspension_stop_current   = false,
+		     suspension_abandon_queued = false
+		 WHERE id = $1
+		   AND suspension_id = $2
+		   AND workflow_state != 'suspended'
+		 RETURNING id`,
+		id, suspensionID,
+	).Scan(&updatedID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		return fmt.Errorf("abort suspension: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx,
+		`UPDATE customer_requests SET status = 'unscheduled'
+		 WHERE workflow_id = $1 AND status = 'paused'`,
+		id,
+	); err != nil {
+		return fmt.Errorf("unfreeze paused requests: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit abort suspension tx: %w", err)
 	}
 	return nil
 }
@@ -422,7 +471,7 @@ func (r *WorkflowRepo) ListPurgeable(ctx context.Context, partitionID string, ol
 // rather than ids, since finishing one needs the operator's choices off the row.
 func (r *WorkflowRepo) ListPendingSuspension(ctx context.Context, partitionID string) ([]*domain.Workflow, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT id, suspension_id, suspension_reason, suspension_stop_current,
+		`SELECT id, workflow_state, suspension_id, suspension_reason, suspension_stop_current,
 		        suspension_abandon_queued, suspension_requested_at, suspension_finalized_at
 		 FROM workflows
 		 WHERE scheduler_partition_id = $1
@@ -440,7 +489,7 @@ func (r *WorkflowRepo) ListPendingSuspension(ctx context.Context, partitionID st
 		var w domain.Workflow
 		var suspensionID *string
 		if err := rows.Scan(
-			&w.ID, &suspensionID, &w.Suspension.Reason, &w.Suspension.StopCurrent,
+			&w.ID, &w.WorkflowState, &suspensionID, &w.Suspension.Reason, &w.Suspension.StopCurrent,
 			&w.Suspension.AbandonQueued, &w.Suspension.RequestedAt, &w.Suspension.FinalizedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan pending suspension: %w", err)
@@ -603,17 +652,33 @@ func (r *WorkflowRepo) ApplyCompletedJob(ctx context.Context, id string, lifecyc
 	return true, nil
 }
 
+// A failure interrupts the workflow, which outranks a suspension in flight: the run may
+// have left external state half-written, so a human has to acknowledge it before anything
+// runs again. Any suspension is torn down here, releasing its held requests — safe because
+// 'disabled' blocks scheduling on its own. All one statement: teardown split from the
+// disable leaves residue that blocks future suspends, and split from the unfreeze strands
+// those requests with nothing left that knows to look for them.
 func (r *WorkflowRepo) ApplyFailedJob(ctx context.Context, id string, requestID string, lifecycleState domain.LifecycleState, workflowState domain.WorkflowState, version int64) (bool, error) {
 	var updatedID string
 	err := r.pool.QueryRow(ctx,
-		`UPDATE workflows
-		 SET current_version = $5,
-		     last_completed_request_at = now(),
-		     last_interrupted_request_id = $2,
-		     lifecycle_state = $3::lifecycle_state,
-		     workflow_state  = $4::workflow_state
-		 WHERE id = $1 AND current_version < $5
-		 RETURNING id`,
+		`WITH interrupted AS (
+		     UPDATE workflows
+		     SET current_version = $5,
+		         last_completed_request_at = now(),
+		         last_interrupted_request_id = $2,
+		         lifecycle_state = $3::lifecycle_state,
+		         workflow_state  = $4::workflow_state,
+		         suspension_requested_at = NULL, suspension_finalized_at = NULL,
+		         suspension_id = NULL, suspension_reason = '',
+		         suspension_stop_current = false, suspension_abandon_queued = false
+		     WHERE id = $1 AND current_version < $5
+		     RETURNING id
+		 ),
+		 unfrozen AS (
+		     UPDATE customer_requests SET status = 'unscheduled'
+		     WHERE workflow_id = (SELECT id FROM interrupted) AND status = 'paused'
+		 )
+		 SELECT id FROM interrupted`,
 		id, requestID, lifecycleState, workflowState, version,
 	).Scan(&updatedID)
 	if err != nil {

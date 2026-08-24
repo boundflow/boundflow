@@ -222,6 +222,20 @@ func (m *MockWorkflowRepository) EXPECT() *MockWorkflowRepositoryMockRecorder {
 	return m.recorder
 }
 
+// AbortSuspension mocks base method.
+func (m *MockWorkflowRepository) AbortSuspension(ctx context.Context, id, suspensionID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AbortSuspension", ctx, id, suspensionID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AbortSuspension indicates an expected call of AbortSuspension.
+func (mr *MockWorkflowRepositoryMockRecorder) AbortSuspension(ctx, id, suspensionID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AbortSuspension", reflect.TypeOf((*MockWorkflowRepository)(nil).AbortSuspension), ctx, id, suspensionID)
+}
+
 // ApplyCompletedJob mocks base method.
 func (m *MockWorkflowRepository) ApplyCompletedJob(ctx context.Context, id string, lifecycleState domain.LifecycleState, version int64) (bool, error) {
 	m.ctrl.T.Helper()
@@ -1039,12 +1053,13 @@ func (mr *MockJobRepositoryMockRecorder) ReleaseJob(ctx, workflowID, ownerID any
 }
 
 // RenewJobLease mocks base method.
-func (m *MockJobRepository) RenewJobLease(ctx context.Context, workflowID, ownerID string, leaseDuration time.Duration) (bool, error) {
+func (m *MockJobRepository) RenewJobLease(ctx context.Context, workflowID, ownerID string, leaseDuration time.Duration) (bool, bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RenewJobLease", ctx, workflowID, ownerID, leaseDuration)
 	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // RenewJobLease indicates an expected call of RenewJobLease.
