@@ -423,16 +423,26 @@ func (r *JobRepo) ParkForInput(ctx context.Context, workflowID string, ownerID s
 // completed at dispatch without ever launching, so nothing is left holding the
 // suspension open.
 //
-// Terminal jobs are excluded — they are about to be deleted — and the write is guarded
-// on the flag being unset so the reconciler's re-runs keep the original timestamp
-// rather than pushing it forward.
-func (r *JobRepo) MarkAbandonRequested(ctx context.Context, workflowID string) (bool, error) {
+// Must be called after MarkSuspensionRequested has returned, never folded into it: the
+// freeze there is the barrier that makes every racing job insert visible, and only a
+// statement whose snapshot is taken afterwards can see them.
+//
+// Guarded on suspensionID rather than merely on the workflow being suspended, so a stale
+// retry from an earlier suspension cannot cut a run belonging to a later one that only
+// asked to drain. Terminal jobs are excluded — they are about to be deleted — and the
+// write is guarded on the flag being unset so the reconciler's re-runs keep the original
+// timestamp rather than pushing it forward.
+func (r *JobRepo) MarkAbandonRequested(ctx context.Context, workflowID, suspensionID string) (bool, error) {
 	tag, err := r.pool.Exec(ctx,
 		`UPDATE jobs SET abandon_requested_at = now()
 		 WHERE workflow_id = $1
 		   AND abandon_requested_at IS NULL
-		   AND status NOT IN ('completed', 'failed')`,
-		workflowID,
+		   AND status NOT IN ('completed', 'failed')
+		   AND EXISTS (
+		       SELECT 1 FROM workflows w
+		       WHERE w.id = $1 AND w.suspension_id = $2
+		   )`,
+		workflowID, suspensionID,
 	)
 	if err != nil {
 		return false, fmt.Errorf("mark abandon requested: %w", err)

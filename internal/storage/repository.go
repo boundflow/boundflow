@@ -39,22 +39,21 @@ type WorkflowRepository interface {
 	// matching last_policy_decision_request_id. Never touches disabled.
 	TryActivateWorkflow(ctx context.Context, id string, requestID string) (bool, error)
 	MarkDeletionRequested(ctx context.Context, id string) error
-	// MarkSuspensionRequested stops the workflow being runnable and records the
-	// operator's intent and choices in one statement. Returns
-	// ErrSuspensionAlreadyRequested if it is already suspended, deleted, or has a
-	// suspension in flight.
+	// MarkSuspensionRequested stops the workflow being runnable, records the operator's
+	// intent and choices, and freezes (or abandons) its queued requests — all in one
+	// statement. Returns ErrSuspensionAlreadyRequested if it is already suspended,
+	// deleted, or has a suspension in flight. Must return before MarkAbandonRequested is
+	// called; see its doc for why.
 	MarkSuspensionRequested(ctx context.Context, id, suspensionID, reason string, stopCurrent, abandonQueued bool) error
-	// MarkResumeRequested starts a resume by setting lifecycle_state = 'resuming', which
-	// is what makes a half-finished resume recognisable to the reconciler. Guarded on the
-	// suspension having finalized and on suspensionID matching; false if either fails.
-	MarkResumeRequested(ctx context.Context, id string, suspensionID string) (bool, error)
-	// RestoreFromSuspension finishes a resume: sets workflow_state to the caller's
-	// recomputed target state, lifecycle_state back to active, and clears every
-	// suspension column. Guarded on lifecycle_state = 'resuming' and suspensionID.
-	RestoreFromSuspension(ctx context.Context, id, suspensionID string, state domain.WorkflowState, cooldownUntil *time.Time) error
+	// RestoreFromSuspension resumes a suspended workflow in one transaction: restores
+	// workflow_state/current_workflow_version to the caller's recomputed targets, catches
+	// lifecycle_last_resolved up to current_version, clears every suspension column,
+	// releases the frozen requests, and starts a new metrics epoch if the version changed.
+	// Guarded on suspensionID and on the suspension having finalized; false if either fails.
+	RestoreFromSuspension(ctx context.Context, id, suspensionID string, state domain.WorkflowState, expectedVersion, targetVersion int, cooldownUntil *time.Time) (bool, error)
 	// FinalizeSuspended records that a suspension has taken effect (nothing left
-	// running), which is what permits a resume. Idempotent.
-	FinalizeSuspended(ctx context.Context, id string) error
+	// running), which is what permits a resume. Guarded on suspensionID. Idempotent.
+	FinalizeSuspended(ctx context.Context, id, suspensionID string) error
 	FinalizeDeleted(ctx context.Context, id string) error
 	// ListPendingSuspension returns workflows in the partition whose suspension was
 	// requested but has not taken effect yet, carrying the operator's choices.
@@ -211,9 +210,11 @@ type JobRepository interface {
 	// approval; on success also returns the job bits needed to write the approval audit row.
 	ResolveApproval(ctx context.Context, workflowID string, approvalID string, status domain.JobStatus, reason string) (bool, domain.ResolvedApproval, error)
 	// MarkAbandonRequested flags the workflow's job to be stopped rather than drained,
-	// for a suspension that asked for that. Reports whether a job was marked; idempotent,
-	// so the suspension reconciler can re-run it.
-	MarkAbandonRequested(ctx context.Context, workflowID string) (bool, error)
+	// for a suspension that asked for that. Call only after MarkSuspensionRequested has
+	// returned — that freeze is the barrier that makes racing job inserts visible.
+	// Guarded on suspensionID. Reports whether a job was marked; idempotent, so the
+	// suspension reconciler can re-run it.
+	MarkAbandonRequested(ctx context.Context, workflowID, suspensionID string) (bool, error)
 	// MarkOrphanedJobsFailed atomically sets dispatched or running jobs whose lease
 	// expired more than gracePeriodSeconds ago to failed, scoped to the given partition.
 	// Returns the number of jobs marked failed.
@@ -335,12 +336,6 @@ type CustomerRequestRepository interface {
 	UpdateStatus(ctx context.Context, workflowID, id string, status domain.CustomerRequestStatus) error
 	// AbandonUnscheduledRequests fails every unscheduled request for the workflow.
 	AbandonUnscheduledRequests(ctx context.Context, workflowID string) error
-	// SuspendUnscheduledRequests holds queued work during a suspension, or abandons
-	// it if the operator chose that. Idempotent, for the reconciler's re-runs.
-	SuspendUnscheduledRequests(ctx context.Context, workflowID string, abandonQueued bool) error
-	// UnfreezePausedRequests releases held requests back onto the schedulable queue, on
-	// resume. Idempotent, for the reconciler's re-runs.
-	UnfreezePausedRequests(ctx context.Context, workflowID string) error
 	// HasRunningRequest reports whether the workflow currently has a scheduled or in-progress request.
 	HasRunningRequest(ctx context.Context, workflowID string) (bool, error)
 	// CompleteRequest sets the request status to completed, records the run outcome,

@@ -15,7 +15,6 @@ const (
 	LifecycleStateDeleted          LifecycleState = "deleted"
 	LifecycleStateInterrupted      LifecycleState = "interrupted"
 	LifecycleStateHalted           LifecycleState = "halted"
-	LifecycleStateResuming         LifecycleState = "resuming"
 )
 
 // InvokeMode controls what happens when invokes pile up for a workflow (see the

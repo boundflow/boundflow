@@ -70,17 +70,17 @@ func (r *SuspensionReconciler) sweep(ctx context.Context, partitionID string) {
 	wg.Wait()
 }
 
+// reconcileOne re-runs the suspension tail from the abandon step onwards. Freezing the
+// queue is deliberately not repeated: MarkSuspensionRequested did it in the same statement
+// that made the workflow unrunnable, and nothing can become schedulable again while it
+// stays that way, so there is never later work to freeze.
 func (r *SuspensionReconciler) reconcileOne(ctx context.Context, workflow *domain.Workflow) {
 	id := workflow.ID
-
-	if err := r.customerRequests.SuspendUnscheduledRequests(ctx, id, workflow.Suspension.AbandonQueued); err != nil {
-		r.log.Error("failed to hold queued requests", "workflow_id", id, "error", err)
-		return
-	}
+	suspensionID := workflow.Suspension.ID
 
 	if workflow.Suspension.StopCurrent {
-		if _, err := r.jobs.MarkAbandonRequested(ctx, id); err != nil {
-			r.log.Error("failed to request job abandon", "workflow_id", id, "error", err)
+		if _, err := r.jobs.MarkAbandonRequested(ctx, id, suspensionID); err != nil {
+			r.log.Error("failed to request job abandon", "workflow_id", id, "suspension_id", suspensionID, "error", err)
 			return
 		}
 	}
@@ -94,9 +94,9 @@ func (r *SuspensionReconciler) reconcileOne(ctx context.Context, workflow *domai
 		return
 	}
 
-	if err := r.workflows.FinalizeSuspended(ctx, id); err != nil {
-		r.log.Error("failed to finalize suspension", "workflow_id", id, "error", err)
+	if err := r.workflows.FinalizeSuspended(ctx, id, suspensionID); err != nil {
+		r.log.Error("failed to finalize suspension", "workflow_id", id, "suspension_id", suspensionID, "error", err)
 		return
 	}
-	r.log.Info("finalized pending suspension", "workflow_id", id, "suspension_id", workflow.Suspension.ID)
+	r.log.Info("finalized pending suspension", "workflow_id", id, "suspension_id", suspensionID)
 }

@@ -143,47 +143,6 @@ func (r *CustomerRequestRepo) AbandonUnscheduledRequests(ctx context.Context, wo
 	return nil
 }
 
-// SuspendUnscheduledRequests holds a workflow's queued work for the duration of a
-// suspension, or abandons it when the operator asked for that.
-//
-// Holding keeps each request's version, so on resume they schedule in the order they
-// would have had — the scheduler picks by version, not by when a request was released.
-// Abandoning is the irreversible option, and it exists for the caller's sake: a request
-// nobody will schedule otherwise leaves whoever invoked it waiting for the length of the
-// suspension.
-//
-// Idempotent — only 'unscheduled' rows move — so the reconciler can re-run it.
-func (r *CustomerRequestRepo) SuspendUnscheduledRequests(ctx context.Context, workflowID string, abandonQueued bool) error {
-	status := domain.CustomerRequestStatusPaused
-	if abandonQueued {
-		status = domain.CustomerRequestStatusAbandoned
-	}
-	_, err := r.pool.Exec(ctx,
-		`UPDATE customer_requests SET status = $2 WHERE workflow_id = $1 AND status = 'unscheduled'`,
-		workflowID, status,
-	)
-	if err != nil {
-		return fmt.Errorf("suspend unscheduled requests: %w", err)
-	}
-	return nil
-}
-
-// UnfreezePausedRequests releases a workflow's held requests back onto the schedulable
-// queue, on resume. Their version is untouched, so they compete for the job slot in the
-// same order they would have without the suspension.
-//
-// Idempotent — only 'paused' rows move — so the reconciler can re-run it.
-func (r *CustomerRequestRepo) UnfreezePausedRequests(ctx context.Context, workflowID string) error {
-	_, err := r.pool.Exec(ctx,
-		`UPDATE customer_requests SET status = 'unscheduled' WHERE workflow_id = $1 AND status = 'paused'`,
-		workflowID,
-	)
-	if err != nil {
-		return fmt.Errorf("unfreeze paused requests: %w", err)
-	}
-	return nil
-}
-
 // HasRunningRequest reports whether the workflow currently has a scheduled or
 // in-progress request.
 func (r *CustomerRequestRepo) HasRunningRequest(ctx context.Context, workflowID string) (bool, error) {

@@ -175,8 +175,8 @@ func (s *Scheduler) RejectJob(ctx context.Context, workflowID string, approvalID
 
 // AbandonJob flags the workflow's job to stop rather than drain, for a suspension that
 // asked for that. Reports whether there was a job to flag.
-func (s *Scheduler) AbandonJob(ctx context.Context, workflowID string) (bool, error) {
-	return s.jobs.MarkAbandonRequested(ctx, workflowID)
+func (s *Scheduler) AbandonJob(ctx context.Context, workflowID, suspensionID string) (bool, error) {
+	return s.jobs.MarkAbandonRequested(ctx, workflowID, suspensionID)
 }
 
 func (s *Scheduler) AnswerJob(ctx context.Context, workflowID string, inputID string, answer map[string]any) (bool, domain.ResolvedInput, error) {

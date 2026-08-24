@@ -47,7 +47,7 @@ type InputResolver interface {
 // SuspensionResolver stops the run a suspension asked to interrupt rather than drain.
 // Reports whether there was a job to stop. Satisfied by *scheduler.Scheduler.
 type SuspensionResolver interface {
-	AbandonJob(ctx context.Context, workflowID string) (bool, error)
+	AbandonJob(ctx context.Context, workflowID, suspensionID string) (bool, error)
 }
 
 type LifecycleService struct {
@@ -290,15 +290,9 @@ func (s *LifecycleService) SuspendWorkflow(ctx context.Context, correlationID, s
 		return fmt.Errorf("mark suspension requested: %w", err)
 	}
 
-	if err := s.customerRequests.SuspendUnscheduledRequests(ctx, workflowID, abandonQueued); err != nil {
-		s.log.Error("failed to suspend unscheduled requests", "correlation_id", correlationID, "workflow_id", workflowID, "error", err)
-		return nil
-	}
-
 	if stopCurrentRun {
-		_, err := s.suspensionResolver.AbandonJob(ctx, workflowID)
-		if err != nil {
-			s.log.Error("failed to abandon job", "workflow_id", workflowID, "suspension_id", suspensionID, "error", err)
+		if _, err := s.suspensionResolver.AbandonJob(ctx, workflowID, suspensionID); err != nil {
+			s.log.Error("failed to abandon job", "correlation_id", correlationID, "workflow_id", workflowID, "suspension_id", suspensionID, "error", err)
 		}
 	}
 
@@ -309,7 +303,7 @@ func (s *LifecycleService) SuspendWorkflow(ctx context.Context, correlationID, s
 	}
 
 	if !running {
-		if err := s.workflows.FinalizeSuspended(ctx, workflowID); err != nil {
+		if err := s.workflows.FinalizeSuspended(ctx, workflowID, suspensionID); err != nil {
 			s.log.Error("failed to finalize suspension", "correlation_id", correlationID, "workflow_id", workflowID, "error", err)
 		}
 	}
@@ -326,48 +320,49 @@ func (s *LifecycleService) ResumeWorkflow(ctx context.Context, correlationID, wo
 		return fmt.Errorf("get workflow instance: %w", err)
 	}
 
-	requested, err := s.workflows.MarkResumeRequested(ctx, workflowID, suspensionID)
+	state, version, cooldownUntil, err := s.resolveResumeState(ctx, workflow)
 	if err != nil {
-		s.log.Error("failed to mark resume requested", "correlation_id", correlationID, "workflow_id", workflowID, "suspension_id", suspensionID, "error", err)
-		return fmt.Errorf("mark resume requested: %w", err)
+		s.log.Error("failed to resolve target state for resume", "correlation_id", correlationID, "workflow_id", workflowID, "suspension_id", suspensionID, "error", err)
+		return fmt.Errorf("resolve resume state: %w", err)
 	}
-	if !requested {
+
+	// Everything the resume changes lands in this one call, so unlike suspend there is no
+	// tail for a reconciler to finish: either the workflow is running again with its
+	// backlog released, or nothing happened and the caller can retry.
+	restored, err := s.workflows.RestoreFromSuspension(ctx, workflowID, suspensionID, state, workflow.CurrentWorkflowVersion, version, cooldownUntil)
+	if err != nil {
+		s.log.Error("failed to restore from suspension", "correlation_id", correlationID, "workflow_id", workflowID, "suspension_id", suspensionID, "error", err)
+		return fmt.Errorf("restore from suspension: %w", err)
+	}
+	if !restored {
 		s.log.Info("resume not eligible", "correlation_id", correlationID, "workflow_id", workflowID, "suspension_id", suspensionID)
 		return storage.ErrInvalidLifecycleState
 	}
 
-	if err := s.customerRequests.UnfreezePausedRequests(ctx, workflowID); err != nil {
-		s.log.Error("failed to unfreeze paused requests", "correlation_id", correlationID, "workflow_id", workflowID, "suspension_id", suspensionID, "error", err)
-		return nil
-	}
-
-	state, cooldownUntil, err := s.resolveResumeState(ctx, workflow)
-	if err != nil {
-		s.log.Error("failed to resolve target state for resume", "correlation_id", correlationID, "workflow_id", workflowID, "suspension_id", suspensionID, "error", err)
-		return nil
-	}
-
-	if err := s.workflows.RestoreFromSuspension(ctx, workflowID, suspensionID, state, cooldownUntil); err != nil {
-		s.log.Error("failed to restore from suspension", "correlation_id", correlationID, "workflow_id", workflowID, "suspension_id", suspensionID, "error", err)
-	}
-
+	s.log.Info("workflow resumed", "correlation_id", correlationID, "workflow_id", workflowID, "suspension_id", suspensionID, "workflow_state", state, "workflow_version", version)
 	return nil
 }
 
-// resolveResumeState recomputes the workflow_state a resume should land on: the lifecycle
-// policy may have independently been holding the workflow in paused/cooldown right up
-// until the suspension, so resuming can't just blindly set active. It reuses the same
-// rolling metrics and policy the last real resolution used — nothing about them changed
-// while the workflow was frozen — so this reproduces that decision rather than guessing
-// at a new one.
+// resolveResumeState recomputes what a resume should restore the workflow to. The lifecycle
+// policy may have been holding it in paused/cooldown, or have rolled its version back,
+// right up until the suspension — and a resolution that raced the suspension was dropped
+// outright by TryApplyStateResolution's workflow_state guard, with nothing to retry it. So
+// resuming can't just set active, and can't trust the persisted state either.
+//
+// It re-evaluates against the same rolling metrics, policy and version metrics the last
+// real resolution used: nothing can emit metrics while suspended, and metrics are written
+// before a request goes terminal (so before the suspension could have finalized at all),
+// which makes them provably final and unchanged here.
 //
 // A cooldown result gets its remaining time restored rather than a fresh window:
-// cooldown_until was left untouched by suspend, so (cooldown_until - suspension_requested_at)
-// is exactly how much was left when the clock froze.
-func (s *LifecycleService) resolveResumeState(ctx context.Context, workflow *domain.Workflow) (domain.WorkflowState, *time.Time, error) {
-	versionMetrics, err := s.versionMetrics.GetCurrentVersionMetrics(ctx, workflow.ID, int(workflow.CurrentVersion))
+// suspend never touches cooldown_until, so (cooldown_until - suspension_requested_at) is
+// exactly what was left when the clock froze.
+func (s *LifecycleService) resolveResumeState(ctx context.Context, workflow *domain.Workflow) (domain.WorkflowState, int, *time.Time, error) {
+	version := workflow.CurrentWorkflowVersion
+
+	versionMetrics, err := s.versionMetrics.GetCurrentVersionMetrics(ctx, workflow.ID, version)
 	if err != nil {
-		return "", nil, fmt.Errorf("get current version metrics: %w", err)
+		return "", 0, nil, fmt.Errorf("get current version metrics: %w", err)
 	}
 	if versionMetrics == nil {
 		versionMetrics = &domain.WorkflowVersionMetrics{}
@@ -376,25 +371,27 @@ func (s *LifecycleService) resolveResumeState(ctx context.Context, workflow *dom
 	engine := lifecyclepolicy.NewLifecyclePolicyEngine(s.log)
 	goalState, firedRule, _, err := engine.ResolvePolicy(&workflow.InvocationMetrics, &workflow.LifecyclePolicy, versionMetrics)
 	if err != nil {
-		return "", nil, fmt.Errorf("resolve lifecycle policy: %w", err)
+		return "", 0, nil, fmt.Errorf("resolve lifecycle policy: %w", err)
 	}
 
-	if firedRule == nil || goalState.VersionChange {
-		return domain.WorkflowStateActive, nil, nil
+	if firedRule == nil {
+		return domain.WorkflowStateActive, version, nil, nil
+	}
+	// A version rollback leaves workflow_state alone, exactly as TryApplyVersionResolution
+	// does — the two actions are mutually exclusive in the engine.
+	if goalState.VersionChange {
+		return domain.WorkflowStateActive, goalState.Version, nil, nil
 	}
 	if goalState.State != domain.WorkflowStateCooldown {
-		return goalState.State, nil, nil
+		return goalState.State, version, nil, nil
 	}
 
 	var remaining time.Duration
 	if workflow.CooldownUntil != nil && workflow.Suspension.RequestedAt != nil {
-		remaining = workflow.CooldownUntil.Sub(*workflow.Suspension.RequestedAt)
-		if remaining < 0 {
-			remaining = 0
-		}
+		remaining = max(workflow.CooldownUntil.Sub(*workflow.Suspension.RequestedAt), 0)
 	}
 	cooldownUntil := time.Now().Add(remaining)
-	return domain.WorkflowStateCooldown, &cooldownUntil, nil
+	return domain.WorkflowStateCooldown, version, &cooldownUntil, nil
 }
 
 func (s *LifecycleService) DeleteWorkflow(ctx context.Context, correlationID, workflowID string) error {

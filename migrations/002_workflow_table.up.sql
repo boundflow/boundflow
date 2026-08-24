@@ -8,8 +8,7 @@ CREATE TYPE lifecycle_state AS ENUM (
     'awaiting_input',
     'deleted',
     'interrupted',
-    'halted',
-    'resuming'
+    'halted'
 );
 
 CREATE TYPE workflow_state AS ENUM (
@@ -62,5 +61,3 @@ CREATE INDEX idx_workflows_purgeable ON workflows (scheduler_partition_id, delet
 
 CREATE INDEX idx_workflows_suspending ON workflows (scheduler_partition_id)
     WHERE suspension_requested_at IS NOT NULL AND suspension_finalized_at IS NULL;
-CREATE INDEX idx_workflows_resuming ON workflows (scheduler_partition_id)
-    WHERE lifecycle_state = 'resuming';

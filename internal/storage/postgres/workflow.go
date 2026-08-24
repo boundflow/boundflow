@@ -277,22 +277,48 @@ func (r *WorkflowRepo) MarkDeletionRequested(ctx context.Context, id string) err
 	return nil
 }
 
-// MarkSuspensionRequested records an operator's suspension: the workflow stops being
-// runnable immediately, and the tail — freezing queued work, stopping a live run,
-// finalizing — is finished inline or by the reconciler. suspension_requested_at set
-// with suspension_finalized_at still NULL is what the suspend reconciler picks up as
-// draining; lifecycle_state = 'resuming' is the separate flag a resume sets later.
+// MarkSuspensionRequested records an operator's suspension and freezes the workflow's
+// queued work in one statement: the workflow stops being runnable and nothing is left
+// schedulable behind it. Holding keeps each request's version, so on resume they schedule
+// in the order they would have had; abandoning is the irreversible option, for the
+// caller's sake — a request nobody will schedule leaves whoever invoked it waiting for
+// the length of the suspension.
+//
+// suspension_requested_at set with suspension_finalized_at still NULL is what the suspend
+// reconciler picks up as draining; both set means drained, and resumable.
+//
+// The freeze doubles as a barrier for the abandon step that follows. It cannot return
+// until every in-flight UpsertJobAndSchedule holding a lock on an 'unscheduled' row has
+// committed, and a job can only be created from such a row — so once this returns, every
+// job that could exist for the workflow is committed and visible to the next statement.
+// That is why stopping the current run is a separate call rather than a third CTE here:
+// a CTE would run on this statement's snapshot, which cannot see a job row inserted by a
+// transaction that commits while we are blocked on that very freeze.
 func (r *WorkflowRepo) MarkSuspensionRequested(ctx context.Context, id, suspensionID, reason string, stopCurrent, abandonQueued bool) error {
+	queuedStatus := domain.CustomerRequestStatusPaused
+	if abandonQueued {
+		queuedStatus = domain.CustomerRequestStatusAbandoned
+	}
+
 	var updatedID string
 	err := r.pool.QueryRow(ctx,
-		`UPDATE workflows
-		 SET workflow_state = $2, suspension_requested_at = now(), suspension_id = $3,
-		     suspension_reason = $4, suspension_stop_current = $5, suspension_abandon_queued = $6
-		 WHERE id = $1
-		   AND suspension_requested_at IS NULL
-		   AND workflow_state NOT IN ('disabled', 'suspended')
-		 RETURNING id`,
-		id, domain.WorkflowStateSuspended, suspensionID, reason, stopCurrent, abandonQueued,
+		`WITH suspended AS (
+		     UPDATE workflows
+		     SET workflow_state = $2, suspension_requested_at = now(), suspension_id = $3,
+		         suspension_reason = $4, suspension_stop_current = $5, suspension_abandon_queued = $6
+		     WHERE id = $1
+		       AND suspension_requested_at IS NULL
+		       AND workflow_state NOT IN ('disabled', 'suspended')
+		     RETURNING id
+		 ),
+		 frozen AS (
+		     UPDATE customer_requests
+		     SET status = $7
+		     WHERE workflow_id = (SELECT id FROM suspended)
+		       AND status = 'unscheduled'
+		 )
+		 SELECT id FROM suspended`,
+		id, domain.WorkflowStateSuspended, suspensionID, reason, stopCurrent, abandonQueued, queuedStatus,
 	).Scan(&updatedID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -310,16 +336,18 @@ func (r *WorkflowRepo) MarkSuspensionRequested(ctx context.Context, id, suspensi
 // This is what permits a resume — the workflow_state has said 'suspended' since the
 // request landed, so it cannot tell draining from drained; the finalized timestamp can.
 //
-// Guarded on a suspension actually being in flight, and on not having finalized already
-// so the reconciler's re-runs keep the original timestamp.
-func (r *WorkflowRepo) FinalizeSuspended(ctx context.Context, id string) error {
+// Guarded on suspensionID so a reconciler still working from a stale snapshot cannot
+// finalize a later suspension on the strength of an earlier one's drain check, and on
+// not having finalized already so re-runs keep the original timestamp.
+func (r *WorkflowRepo) FinalizeSuspended(ctx context.Context, id, suspensionID string) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE workflows
-		 SET lifecycle_state = $2, suspension_finalized_at = now()
+		 SET lifecycle_state = $3, suspension_finalized_at = now()
 		 WHERE id = $1
+		   AND suspension_id = $2
 		   AND suspension_requested_at IS NOT NULL
 		   AND suspension_finalized_at IS NULL`,
-		id, domain.LifecycleStateHalted,
+		id, suspensionID, domain.LifecycleStateHalted,
 	)
 	if err != nil {
 		return fmt.Errorf("finalize suspended: %w", err)
@@ -597,63 +625,79 @@ func (r *WorkflowRepo) ApplyFailedJob(ctx context.Context, id string, requestID 
 	return true, nil
 }
 
-// MarkResumeRequested starts a resume: lifecycle_state is the sole flag the reconciler
-// uses to recognize a resume in progress, so a row can be picked back up and finished
-// after a crash without losing suspension_requested_at — the final restore step still
-// needs it (to compute how much of a cooldown was left when the suspension froze it).
+// RestoreFromSuspension resumes a suspended workflow: it restores the workflow row,
+// releases the requests the suspension froze, and starts a fresh metrics epoch if the
+// policy rolled the version back — all in one transaction, so no observer ever sees the
+// workflow runnable again while its backlog is still held. That ordering matters:
+// GetTopUnscheduledRequests has no workflow_state filter, so an unfrozen request is a
+// scheduling candidate the instant it exists, and a window where new work could be
+// created before the backlog was released would let it take the job slot first.
 //
-// The workflow stays unrunnable until the last step restores workflow_state, so the
-// unfreezing in between can't let anything schedule early.
+// workflow_state and current_workflow_version land on the caller's recomputed targets
+// rather than unconditionally 'active': the lifecycle policy may have been holding the
+// workflow in paused/cooldown, or have rolled its version back, right up until the
+// suspension. lifecycle_last_resolved is caught up to current_version because a policy
+// resolution that raced the suspension was dropped by TryApplyStateResolution's
+// workflow_state guard and nothing else ever retries it — leaving it behind would make
+// validateWorkflowState refuse to schedule the workflow forever. It is a no-op when no
+// resolution was skipped, since the two are already equal.
 //
-// Guarded on the suspension having finalized: a suspension still draining isn't
-// resumable, since the two reconcilers would otherwise be working the same workflow
-// from opposite ends. Guarded on suspensionID so a caller can't clear a suspension it
-// never saw. Returns false when either guard fails.
-func (r *WorkflowRepo) MarkResumeRequested(ctx context.Context, id string, suspensionID string) (bool, error) {
+// Guarded on suspensionID and on the suspension having finalized, so a stale caller
+// can't clobber a newer suspension and a still-draining one isn't resumable. Returns
+// false when the guard rejects.
+func (r *WorkflowRepo) RestoreFromSuspension(ctx context.Context, id, suspensionID string, state domain.WorkflowState, expectedVersion, targetVersion int, cooldownUntil *time.Time) (bool, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return false, fmt.Errorf("begin restore from suspension tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
 	var updatedID string
-	err := r.pool.QueryRow(ctx,
+	err = tx.QueryRow(ctx,
 		`UPDATE workflows
-		 SET lifecycle_state = $3
+		 SET workflow_state            = $3,
+		     cooldown_until            = $4,
+		     current_workflow_version  = $5,
+		     lifecycle_state           = 'active',
+		     lifecycle_last_resolved   = current_version,
+		     suspension_requested_at   = NULL,
+		     suspension_finalized_at   = NULL,
+		     suspension_id             = NULL,
+		     suspension_reason         = '',
+		     suspension_stop_current   = false,
+		     suspension_abandon_queued = false
 		 WHERE id = $1
 		   AND suspension_id = $2
 		   AND workflow_state = 'suspended'
 		   AND suspension_finalized_at IS NOT NULL
 		 RETURNING id`,
-		id, suspensionID, domain.LifecycleStateResuming,
+		id, suspensionID, state, cooldownUntil, targetVersion,
 	).Scan(&updatedID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil
 		}
-		return false, fmt.Errorf("mark resume requested: %w", err)
+		return false, fmt.Errorf("restore from suspension: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx,
+		`UPDATE customer_requests SET status = 'unscheduled'
+		 WHERE workflow_id = $1 AND status = 'paused'`,
+		id,
+	); err != nil {
+		return false, fmt.Errorf("unfreeze paused requests: %w", err)
+	}
+
+	if targetVersion != expectedVersion {
+		if err := startNewMetricsEpoch(ctx, tx, id, targetVersion); err != nil {
+			return false, err
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return false, fmt.Errorf("commit restore from suspension tx: %w", err)
 	}
 	return true, nil
-}
-
-// RestoreFromSuspension finishes a resume: workflow_state lands on the caller's recomputed
-// target rather than unconditionally 'active', since the lifecycle policy may have
-// independently been holding the workflow in paused/cooldown right up until the suspension.
-// lifecycle_state goes back to active and every suspension column is cleared.
-//
-// Guarded on lifecycle_state = 'resuming' (the flag MarkResumeRequested set) and on
-// suspensionID, so a retry after a crash is safe and a stale caller can't clobber a
-// newer suspension.
-func (r *WorkflowRepo) RestoreFromSuspension(ctx context.Context, id, suspensionID string, state domain.WorkflowState, cooldownUntil *time.Time) error {
-	_, err := r.pool.Exec(ctx,
-		`UPDATE workflows
-		 SET workflow_state = $3, cooldown_until = $4, lifecycle_state = 'active',
-		     suspension_requested_at = NULL, suspension_finalized_at = NULL,
-		     suspension_id = NULL, suspension_reason = '',
-		     suspension_stop_current = false, suspension_abandon_queued = false
-		 WHERE id = $1
-		   AND suspension_id = $2
-		   AND lifecycle_state = 'resuming'`,
-		id, suspensionID, state, cooldownUntil,
-	)
-	if err != nil {
-		return fmt.Errorf("restore from suspension: %w", err)
-	}
-	return nil
 }
 
 func (r *WorkflowRepo) ResolveInterruptedWorkflow(ctx context.Context, id string, requestID string) (bool, error) {
