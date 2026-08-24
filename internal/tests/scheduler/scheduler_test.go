@@ -362,3 +362,34 @@ func TestFailRequest_RepoError(t *testing.T) {
 		t.Fatal("expected error, got nil")
 	}
 }
+
+// An active workflow whose lifecycle_last_resolved trails current_version is not schedulable.
+func TestScheduleRequest_UnresolvedVersionIsRefused(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	partitions := mocks.NewMockSchedulerPartitionRepository(ctrl)
+	schedulerRepo := mocks.NewMockSchedulerRepository(ctrl)
+	requests := mocks.NewMockCustomerRequestRepository(ctrl)
+	workflow := mocks.NewMockWorkflowRepository(ctrl)
+	agentStates := mocks.NewMockAgentStateRepository(ctrl)
+	jobs := mocks.NewMockJobRepository(ctrl)
+
+	requests.EXPECT().Get(gomock.Any(), "req-1").Return(testCustomerRequest, nil)
+	workflow.EXPECT().Get(gomock.Any(), "workflow-1").Return(&domain.Workflow{
+		ID:                     "workflow-1",
+		CurrentWorkflowVersion: 1,
+		CurrentVersion:         2,
+		LifecycleLastResolved:  1,
+		Lifecycle:              domain.LifecycleInfo{State: domain.LifecycleStateActive},
+		WorkflowState:          domain.WorkflowStateActive,
+	}, nil)
+
+	schedulerRepo.EXPECT().UpsertJobAndSchedule(
+		gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
+		gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+	s := scheduler.NewScheduler("test", 30, 25, partitions, schedulerRepo, requests, workflow, agentStates, jobs, noopMetricsHandler{}, noopPolicyResolver{}, mocks.NewMockAuditRepository(ctrl), discardLogger)
+
+	if err := s.ScheduleRequest(context.Background(), "req-1"); err == nil {
+		t.Fatal("expected a workflow with an unresolved version to be refused, got nil error")
+	}
+}
