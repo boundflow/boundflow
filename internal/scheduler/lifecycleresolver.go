@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/boundflow/boundflow/internal/domain"
+	"github.com/boundflow/boundflow/internal/lifecyclepolicy"
 	"github.com/boundflow/boundflow/internal/storage"
 )
 
@@ -16,7 +17,7 @@ type LifecycleResolver struct {
 	resolver              storage.LifecycleResolverRepository
 	workflow              storage.WorkflowRepository
 	versionMetrics        storage.VersionMetricsRepository
-	lifecyclePolicyEngine *LifecyclePolicyEngine
+	lifecyclePolicyEngine *lifecyclepolicy.LifecyclePolicyEngine
 }
 
 func NewLifecycleResolver(interval int, log *slog.Logger, resolver storage.LifecycleResolverRepository, workflow storage.WorkflowRepository, versionMetrics storage.VersionMetricsRepository) *LifecycleResolver {
@@ -26,7 +27,7 @@ func NewLifecycleResolver(interval int, log *slog.Logger, resolver storage.Lifec
 		resolver:              resolver,
 		workflow:              workflow,
 		versionMetrics:        versionMetrics,
-		lifecyclePolicyEngine: NewLifecyclePolicyEngine(log),
+		lifecyclePolicyEngine: lifecyclepolicy.NewLifecyclePolicyEngine(log),
 	}
 }
 

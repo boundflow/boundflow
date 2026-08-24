@@ -280,6 +280,20 @@ func (mr *MockWorkflowRepositoryMockRecorder) FinalizeDeleted(ctx, id any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeDeleted", reflect.TypeOf((*MockWorkflowRepository)(nil).FinalizeDeleted), ctx, id)
 }
 
+// FinalizeSuspended mocks base method.
+func (m *MockWorkflowRepository) FinalizeSuspended(ctx context.Context, id string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FinalizeSuspended", ctx, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// FinalizeSuspended indicates an expected call of FinalizeSuspended.
+func (mr *MockWorkflowRepositoryMockRecorder) FinalizeSuspended(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeSuspended", reflect.TypeOf((*MockWorkflowRepository)(nil).FinalizeSuspended), ctx, id)
+}
+
 // Get mocks base method.
 func (m *MockWorkflowRepository) Get(ctx context.Context, id string) (*domain.Workflow, error) {
 	m.ctrl.T.Helper()
@@ -340,6 +354,21 @@ func (mr *MockWorkflowRepositoryMockRecorder) ListPendingDeletion(ctx, partition
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPendingDeletion", reflect.TypeOf((*MockWorkflowRepository)(nil).ListPendingDeletion), ctx, partitionID)
 }
 
+// ListPendingSuspension mocks base method.
+func (m *MockWorkflowRepository) ListPendingSuspension(ctx context.Context, partitionID string) ([]*domain.Workflow, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPendingSuspension", ctx, partitionID)
+	ret0, _ := ret[0].([]*domain.Workflow)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPendingSuspension indicates an expected call of ListPendingSuspension.
+func (mr *MockWorkflowRepositoryMockRecorder) ListPendingSuspension(ctx, partitionID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPendingSuspension", reflect.TypeOf((*MockWorkflowRepository)(nil).ListPendingSuspension), ctx, partitionID)
+}
+
 // ListPurgeable mocks base method.
 func (m *MockWorkflowRepository) ListPurgeable(ctx context.Context, partitionID string, olderThan time.Duration) ([]string, error) {
 	m.ctrl.T.Helper()
@@ -367,6 +396,35 @@ func (m *MockWorkflowRepository) MarkDeletionRequested(ctx context.Context, id s
 func (mr *MockWorkflowRepositoryMockRecorder) MarkDeletionRequested(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkDeletionRequested", reflect.TypeOf((*MockWorkflowRepository)(nil).MarkDeletionRequested), ctx, id)
+}
+
+// MarkResumeRequested mocks base method.
+func (m *MockWorkflowRepository) MarkResumeRequested(ctx context.Context, id, suspensionID string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkResumeRequested", ctx, id, suspensionID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MarkResumeRequested indicates an expected call of MarkResumeRequested.
+func (mr *MockWorkflowRepositoryMockRecorder) MarkResumeRequested(ctx, id, suspensionID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkResumeRequested", reflect.TypeOf((*MockWorkflowRepository)(nil).MarkResumeRequested), ctx, id, suspensionID)
+}
+
+// MarkSuspensionRequested mocks base method.
+func (m *MockWorkflowRepository) MarkSuspensionRequested(ctx context.Context, id, suspensionID, reason string, stopCurrent, abandonQueued bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkSuspensionRequested", ctx, id, suspensionID, reason, stopCurrent, abandonQueued)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MarkSuspensionRequested indicates an expected call of MarkSuspensionRequested.
+func (mr *MockWorkflowRepositoryMockRecorder) MarkSuspensionRequested(ctx, id, suspensionID, reason, stopCurrent, abandonQueued any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkSuspensionRequested", reflect.TypeOf((*MockWorkflowRepository)(nil).MarkSuspensionRequested), ctx, id, suspensionID, reason, stopCurrent, abandonQueued)
 }
 
 // PurgeDeleted mocks base method.
@@ -397,6 +455,20 @@ func (m *MockWorkflowRepository) ResolveInterruptedWorkflow(ctx context.Context,
 func (mr *MockWorkflowRepositoryMockRecorder) ResolveInterruptedWorkflow(ctx, id, requestID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveInterruptedWorkflow", reflect.TypeOf((*MockWorkflowRepository)(nil).ResolveInterruptedWorkflow), ctx, id, requestID)
+}
+
+// RestoreFromSuspension mocks base method.
+func (m *MockWorkflowRepository) RestoreFromSuspension(ctx context.Context, id, suspensionID string, state domain.WorkflowState, cooldownUntil *time.Time) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RestoreFromSuspension", ctx, id, suspensionID, state, cooldownUntil)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RestoreFromSuspension indicates an expected call of RestoreFromSuspension.
+func (mr *MockWorkflowRepositoryMockRecorder) RestoreFromSuspension(ctx, id, suspensionID, state, cooldownUntil any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreFromSuspension", reflect.TypeOf((*MockWorkflowRepository)(nil).RestoreFromSuspension), ctx, id, suspensionID, state, cooldownUntil)
 }
 
 // StartInvocationAndIncrementVersion mocks base method.
@@ -432,6 +504,21 @@ func (m *MockWorkflowRepository) TenantGroupIDForWorkflow(ctx context.Context, w
 func (mr *MockWorkflowRepositoryMockRecorder) TenantGroupIDForWorkflow(ctx, workflowID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TenantGroupIDForWorkflow", reflect.TypeOf((*MockWorkflowRepository)(nil).TenantGroupIDForWorkflow), ctx, workflowID)
+}
+
+// TryActivateWorkflow mocks base method.
+func (m *MockWorkflowRepository) TryActivateWorkflow(ctx context.Context, id, requestID string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TryActivateWorkflow", ctx, id, requestID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TryActivateWorkflow indicates an expected call of TryActivateWorkflow.
+func (mr *MockWorkflowRepositoryMockRecorder) TryActivateWorkflow(ctx, id, requestID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryActivateWorkflow", reflect.TypeOf((*MockWorkflowRepository)(nil).TryActivateWorkflow), ctx, id, requestID)
 }
 
 // UpdateConfig mocks base method.
@@ -536,21 +623,6 @@ func (m *MockWorkflowRepository) UpdateSchedulerPartition(ctx context.Context, i
 func (mr *MockWorkflowRepositoryMockRecorder) UpdateSchedulerPartition(ctx, id, partitionID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateSchedulerPartition", reflect.TypeOf((*MockWorkflowRepository)(nil).UpdateSchedulerPartition), ctx, id, partitionID)
-}
-
-// TryActivateWorkflow mocks base method.
-func (m *MockWorkflowRepository) TryActivateWorkflow(ctx context.Context, id string, requestID string) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TryActivateWorkflow", ctx, id, requestID)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// TryActivateWorkflow indicates an expected call of TryActivateWorkflow.
-func (mr *MockWorkflowRepositoryMockRecorder) TryActivateWorkflow(ctx, id, requestID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryActivateWorkflow", reflect.TypeOf((*MockWorkflowRepository)(nil).TryActivateWorkflow), ctx, id, requestID)
 }
 
 // MockSchedulerPartitionRepository is a mock of SchedulerPartitionRepository interface.
@@ -904,6 +976,21 @@ func (m *MockJobRepository) GetJobMetrics(ctx context.Context, workflowID, reque
 func (mr *MockJobRepositoryMockRecorder) GetJobMetrics(ctx, workflowID, requestID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetJobMetrics", reflect.TypeOf((*MockJobRepository)(nil).GetJobMetrics), ctx, workflowID, requestID)
+}
+
+// MarkAbandonRequested mocks base method.
+func (m *MockJobRepository) MarkAbandonRequested(ctx context.Context, workflowID string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkAbandonRequested", ctx, workflowID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MarkAbandonRequested indicates an expected call of MarkAbandonRequested.
+func (mr *MockJobRepositoryMockRecorder) MarkAbandonRequested(ctx, workflowID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkAbandonRequested", reflect.TypeOf((*MockJobRepository)(nil).MarkAbandonRequested), ctx, workflowID)
 }
 
 // MarkOrphanedJobsFailed mocks base method.
@@ -1791,6 +1878,34 @@ func (m *MockCustomerRequestRepository) ListForWorkflow(ctx context.Context, wor
 func (mr *MockCustomerRequestRepositoryMockRecorder) ListForWorkflow(ctx, workflowID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForWorkflow", reflect.TypeOf((*MockCustomerRequestRepository)(nil).ListForWorkflow), ctx, workflowID)
+}
+
+// SuspendUnscheduledRequests mocks base method.
+func (m *MockCustomerRequestRepository) SuspendUnscheduledRequests(ctx context.Context, workflowID string, abandonQueued bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SuspendUnscheduledRequests", ctx, workflowID, abandonQueued)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SuspendUnscheduledRequests indicates an expected call of SuspendUnscheduledRequests.
+func (mr *MockCustomerRequestRepositoryMockRecorder) SuspendUnscheduledRequests(ctx, workflowID, abandonQueued any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SuspendUnscheduledRequests", reflect.TypeOf((*MockCustomerRequestRepository)(nil).SuspendUnscheduledRequests), ctx, workflowID, abandonQueued)
+}
+
+// UnfreezePausedRequests mocks base method.
+func (m *MockCustomerRequestRepository) UnfreezePausedRequests(ctx context.Context, workflowID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UnfreezePausedRequests", ctx, workflowID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UnfreezePausedRequests indicates an expected call of UnfreezePausedRequests.
+func (mr *MockCustomerRequestRepositoryMockRecorder) UnfreezePausedRequests(ctx, workflowID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnfreezePausedRequests", reflect.TypeOf((*MockCustomerRequestRepository)(nil).UnfreezePausedRequests), ctx, workflowID)
 }
 
 // UpdateStatus mocks base method.

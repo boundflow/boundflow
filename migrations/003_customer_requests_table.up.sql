@@ -5,7 +5,8 @@ CREATE TYPE customer_request_status AS ENUM (
     'failed',
     'completed',
     'superceded',
-    'abandoned'
+    'abandoned',
+    'paused'
 );
 
 -- Customer-facing outcome of a request, set once it is terminal (the in-flight state is
@@ -16,7 +17,8 @@ CREATE TYPE run_outcome AS ENUM (
     'customer_marked_failure',
     'uncaught_operation_exception',
     'operation_timeout',
-    'interrupted'
+    'interrupted',
+    'suspended'
 );
 
 CREATE TABLE customer_requests (

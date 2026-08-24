@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/boundflow/boundflow/internal/domain"
+	"github.com/boundflow/boundflow/internal/lifecyclepolicy"
 	"github.com/boundflow/boundflow/internal/pricing"
 	"github.com/boundflow/boundflow/internal/storage"
 )
@@ -43,19 +44,26 @@ type InputResolver interface {
 	AnswerJob(ctx context.Context, workflowID string, inputID string, answer map[string]any) (bool, domain.ResolvedInput, error)
 }
 
+// SuspensionResolver stops the run a suspension asked to interrupt rather than drain.
+// Reports whether there was a job to stop. Satisfied by *scheduler.Scheduler.
+type SuspensionResolver interface {
+	AbandonJob(ctx context.Context, workflowID string) (bool, error)
+}
+
 type LifecycleService struct {
-	workflows storage.WorkflowRepository
-	customerRequests  storage.CustomerRequestRepository
-	tenants           storage.TenantRepository
-	tenantGroups      storage.TenantGroupRepository
-	agentStates       storage.AgentStateRepository
-	modelPricing      storage.ModelPricingRepository
-	versionMetrics    storage.VersionMetricsRepository
-	scheduler         RequestScheduler
-	approvalResolver  ApprovalResolver
-	inputResolver     InputResolver
-	audit             storage.AuditRepository
-	numPartitions     int
+	workflows          storage.WorkflowRepository
+	customerRequests   storage.CustomerRequestRepository
+	tenants            storage.TenantRepository
+	tenantGroups       storage.TenantGroupRepository
+	agentStates        storage.AgentStateRepository
+	modelPricing       storage.ModelPricingRepository
+	versionMetrics     storage.VersionMetricsRepository
+	scheduler          RequestScheduler
+	approvalResolver   ApprovalResolver
+	inputResolver      InputResolver
+	suspensionResolver SuspensionResolver
+	audit              storage.AuditRepository
+	numPartitions      int
 	// minRepeatSeconds is the scheduler's periodic poll cadence; a smaller
 	// repeat_every_seconds can't be honored, so CreateWorkflow rejects it.
 	minRepeatSeconds int
@@ -73,26 +81,28 @@ func NewLifecycleService(
 	scheduler RequestScheduler,
 	approvalResolver ApprovalResolver,
 	inputResolver InputResolver,
+	suspensionResolver SuspensionResolver,
 	audit storage.AuditRepository,
 	numPartitions int,
 	minRepeatSeconds int,
 	log *slog.Logger,
 ) *LifecycleService {
 	return &LifecycleService{
-		workflows: workflows,
-		customerRequests:  customerRequests,
-		tenants:           tenants,
-		tenantGroups:      tenantGroups,
-		agentStates:       agentStates,
-		modelPricing:      modelPricing,
-		versionMetrics:    versionMetrics,
-		scheduler:         scheduler,
-		approvalResolver:  approvalResolver,
-		inputResolver:     inputResolver,
-		audit:             audit,
-		numPartitions:     numPartitions,
-		minRepeatSeconds:  minRepeatSeconds,
-		log:               log.With("component", "lifecycle_service"),
+		workflows:          workflows,
+		customerRequests:   customerRequests,
+		tenants:            tenants,
+		tenantGroups:       tenantGroups,
+		agentStates:        agentStates,
+		modelPricing:       modelPricing,
+		versionMetrics:     versionMetrics,
+		scheduler:          scheduler,
+		approvalResolver:   approvalResolver,
+		inputResolver:      inputResolver,
+		suspensionResolver: suspensionResolver,
+		audit:              audit,
+		numPartitions:      numPartitions,
+		minRepeatSeconds:   minRepeatSeconds,
+		log:                log.With("component", "lifecycle_service"),
 	}
 }
 
@@ -249,11 +259,11 @@ func (s *LifecycleService) InvokeWorkflow(ctx context.Context, correlationID, wo
 	}
 
 	request := domain.CustomerRequest{
-		ID:                 uuid.New().String(),
-		WorkflowID: workflowID,
-		Status:             domain.CustomerRequestStatusUnscheduled,
-		RequestType:        domain.CustomerRequestTypeInvoke,
-		RequestInfo:        requestInfo,
+		ID:          uuid.New().String(),
+		WorkflowID:  workflowID,
+		Status:      domain.CustomerRequestStatusUnscheduled,
+		RequestType: domain.CustomerRequestTypeInvoke,
+		RequestInfo: requestInfo,
 	}
 
 	// Atomically allocates the version, flips to invoking, and inserts the request.
@@ -269,6 +279,122 @@ func (s *LifecycleService) InvokeWorkflow(ctx context.Context, correlationID, wo
 	}
 
 	return request.ID, nil
+}
+
+func (s *LifecycleService) SuspendWorkflow(ctx context.Context, correlationID, suspensionID, workflowID string, abandonQueued bool, stopCurrentRun bool, reason string) error {
+
+	s.log.Info("suspending workflow", "correlation_id", correlationID, "workflow_id", workflowID)
+
+	if err := s.workflows.MarkSuspensionRequested(ctx, workflowID, suspensionID, reason, stopCurrentRun, abandonQueued); err != nil {
+		s.log.Error("failed to mark suspension requested", "correlation_id", correlationID, "workflow_id", workflowID, "suspension_id", suspensionID, "reason", reason)
+		return fmt.Errorf("mark suspension requested: %w", err)
+	}
+
+	if err := s.customerRequests.SuspendUnscheduledRequests(ctx, workflowID, abandonQueued); err != nil {
+		s.log.Error("failed to suspend unscheduled requests", "correlation_id", correlationID, "workflow_id", workflowID, "error", err)
+		return nil
+	}
+
+	if stopCurrentRun {
+		_, err := s.suspensionResolver.AbandonJob(ctx, workflowID)
+		if err != nil {
+			s.log.Error("failed to abandon job", "workflow_id", workflowID, "suspension_id", suspensionID, "error", err)
+		}
+	}
+
+	running, err := s.customerRequests.HasRunningRequest(ctx, workflowID)
+	if err != nil {
+		s.log.Error("failed to check for running request", "correlation_id", correlationID, "workflow_id", workflowID, "error", err)
+		return nil
+	}
+
+	if !running {
+		if err := s.workflows.FinalizeSuspended(ctx, workflowID); err != nil {
+			s.log.Error("failed to finalize suspension", "correlation_id", correlationID, "workflow_id", workflowID, "error", err)
+		}
+	}
+
+	return nil
+}
+
+func (s *LifecycleService) ResumeWorkflow(ctx context.Context, correlationID, workflowID string, suspensionID string) error {
+
+	s.log.Info("resuming workflow", "correlation_id", correlationID, "workflow_id", workflowID)
+
+	workflow, err := s.workflows.Get(ctx, workflowID)
+	if err != nil {
+		return fmt.Errorf("get workflow instance: %w", err)
+	}
+
+	requested, err := s.workflows.MarkResumeRequested(ctx, workflowID, suspensionID)
+	if err != nil {
+		s.log.Error("failed to mark resume requested", "correlation_id", correlationID, "workflow_id", workflowID, "suspension_id", suspensionID, "error", err)
+		return fmt.Errorf("mark resume requested: %w", err)
+	}
+	if !requested {
+		s.log.Info("resume not eligible", "correlation_id", correlationID, "workflow_id", workflowID, "suspension_id", suspensionID)
+		return storage.ErrInvalidLifecycleState
+	}
+
+	if err := s.customerRequests.UnfreezePausedRequests(ctx, workflowID); err != nil {
+		s.log.Error("failed to unfreeze paused requests", "correlation_id", correlationID, "workflow_id", workflowID, "suspension_id", suspensionID, "error", err)
+		return nil
+	}
+
+	state, cooldownUntil, err := s.resolveResumeState(ctx, workflow)
+	if err != nil {
+		s.log.Error("failed to resolve target state for resume", "correlation_id", correlationID, "workflow_id", workflowID, "suspension_id", suspensionID, "error", err)
+		return nil
+	}
+
+	if err := s.workflows.RestoreFromSuspension(ctx, workflowID, suspensionID, state, cooldownUntil); err != nil {
+		s.log.Error("failed to restore from suspension", "correlation_id", correlationID, "workflow_id", workflowID, "suspension_id", suspensionID, "error", err)
+	}
+
+	return nil
+}
+
+// resolveResumeState recomputes the workflow_state a resume should land on: the lifecycle
+// policy may have independently been holding the workflow in paused/cooldown right up
+// until the suspension, so resuming can't just blindly set active. It reuses the same
+// rolling metrics and policy the last real resolution used — nothing about them changed
+// while the workflow was frozen — so this reproduces that decision rather than guessing
+// at a new one.
+//
+// A cooldown result gets its remaining time restored rather than a fresh window:
+// cooldown_until was left untouched by suspend, so (cooldown_until - suspension_requested_at)
+// is exactly how much was left when the clock froze.
+func (s *LifecycleService) resolveResumeState(ctx context.Context, workflow *domain.Workflow) (domain.WorkflowState, *time.Time, error) {
+	versionMetrics, err := s.versionMetrics.GetCurrentVersionMetrics(ctx, workflow.ID, int(workflow.CurrentVersion))
+	if err != nil {
+		return "", nil, fmt.Errorf("get current version metrics: %w", err)
+	}
+	if versionMetrics == nil {
+		versionMetrics = &domain.WorkflowVersionMetrics{}
+	}
+
+	engine := lifecyclepolicy.NewLifecyclePolicyEngine(s.log)
+	goalState, firedRule, _, err := engine.ResolvePolicy(&workflow.InvocationMetrics, &workflow.LifecyclePolicy, versionMetrics)
+	if err != nil {
+		return "", nil, fmt.Errorf("resolve lifecycle policy: %w", err)
+	}
+
+	if firedRule == nil || goalState.VersionChange {
+		return domain.WorkflowStateActive, nil, nil
+	}
+	if goalState.State != domain.WorkflowStateCooldown {
+		return goalState.State, nil, nil
+	}
+
+	var remaining time.Duration
+	if workflow.CooldownUntil != nil && workflow.Suspension.RequestedAt != nil {
+		remaining = workflow.CooldownUntil.Sub(*workflow.Suspension.RequestedAt)
+		if remaining < 0 {
+			remaining = 0
+		}
+	}
+	cooldownUntil := time.Now().Add(remaining)
+	return domain.WorkflowStateCooldown, &cooldownUntil, nil
 }
 
 func (s *LifecycleService) DeleteWorkflow(ctx context.Context, correlationID, workflowID string) error {

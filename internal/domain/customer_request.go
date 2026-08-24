@@ -11,6 +11,8 @@ const (
 	CustomerRequestStatusFailed      CustomerRequestStatus = "failed"
 	CustomerRequestStatusCompleted   CustomerRequestStatus = "completed"
 	CustomerRequestStatusSuperceded  CustomerRequestStatus = "superceded"
+	CustomerRequestStatusAbandoned   CustomerRequestStatus = "abandoned"
+	CustomerRequestStatusPaused      CustomerRequestStatus = "paused"
 )
 
 type CustomerRequestType string
