@@ -18,6 +18,8 @@ from .conftest import (
     WORKER_ADDRESS,
     create_isolated_tenant,
     dummy_mock,
+    run_worker,
+    wait_for_completion,
     wait_for_lifecycle_state,
 )
 
@@ -83,3 +85,16 @@ async def test_resolve_interrupted_workflow_requires_matching_request_id(cp):
     await cp.resolve_interrupted_workflow(workflow.id, request_id)
     assert (await cp.get_workflow(workflow.id)).lifecycle_state == LifecycleState.ACTIVE
     assert (await cp.get_workflow(workflow.id)).workflow_state == WorkflowState.ACTIVE
+
+    # ...and it can actually run again: without the version being resolved too, the workflow
+    # still reports ACTIVE/ACTIVE but the scheduler silently skips every request.
+    recovery_worker = BoundFlowWorker(WORKER_ADDRESS, dummy_mock())
+
+    @recovery_worker.workflow("resolve_test", version=1)
+    async def _recovered(ctx):
+        return Complete()
+
+    async with run_worker(recovery_worker):
+        rerun_id = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=60)
+        info = await wait_for_completion(cp, rerun_id, timeout=60)
+    assert info.status == "completed", f"expected the run after resolution to complete, got {info.status}"
