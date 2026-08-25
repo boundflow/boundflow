@@ -21,21 +21,6 @@ class ToolCallLimit(BaseModel):
     max_calls: int
 
 
-class CapabilityCallLimit(BaseModel):
-    """A cap on how many times an agent may do a *kind* of thing, however it does it.
-
-    `capability="write"` covers `write_file`, `edit_file` and `delete` together, so the
-    cap survives the agent switching tools — which per-tool caps don't: cap `write_file`
-    and the agent reaches for `edit_file`.
-
-    `read` and `write` are the filesystem vocabulary most harnesses use; `execute` and
-    `spawn` cover shell and subagent spawning. Whatever runs the harness maps its tools
-    onto these."""
-
-    capability: str
-    max_calls: int
-
-
 class ToolFailureLimit(BaseModel):
     """A cap on how many times one tool may *fail* during an agent run. Exceeding it
     raises `ToolFailureLimitExceeded`, ending the run — a repeatedly-failing tool is
@@ -51,10 +36,11 @@ class ToolFailureLimit(BaseModel):
 class RuntimePolicy(BaseModel):
     """Caps that travel with the operation, enforced worker-side during the agent loop.
 
-    Everything above `custom` is enforced by this SDK. `custom` is not: it carries limits
-    only the caller can enforce — a harness's own vocabulary, or a rule your handler
-    applies itself — so that they are declared, stored and readable in one place instead
-    of living in whatever code happened to construct the agent.
+    The split is the contract: every field below is enforced by this SDK, and nothing in
+    `custom` is enforced by anything. `custom` carries limits only the caller can apply —
+    a harness's own vocabulary, or a rule your handler enforces itself — so they are
+    declared, stored and readable in one place rather than living in whatever code
+    happened to construct the agent.
     """
 
     max_llm_calls: int = 0
@@ -63,7 +49,6 @@ class RuntimePolicy(BaseModel):
     max_call_seconds: float = 0  # 0 = unset (no per-call timeout)
     tool_call_limits: list[ToolCallLimit] = Field(default_factory=list)
     tool_failure_limits: list[ToolFailureLimit] = Field(default_factory=list)
-    capability_call_limits: list[CapabilityCallLimit] = Field(default_factory=list)
     model: str | None = None
     # Opaque to BoundFlow: stored, shipped with the operation, and handed back via
     # ctx.policy() — never validated or enforced. Nothing here binds unless the caller

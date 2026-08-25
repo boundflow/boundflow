@@ -56,7 +56,6 @@ from .trace import (
 from .policies import (
     AgentMetric,
     AgentRule,
-    CapabilityCallLimit,
     Cooldown,
     Op,
     Pause,
@@ -94,7 +93,7 @@ __all__ = [
     "Tenant", "TenantGroup", "Workflow",
     "WorkflowConfig", "WorkflowState", "WorkflowInfo", "WorkflowMetrics", "PendingApproval", "PendingInput", "InvokeMode", "ApprovalAuditRecord", "ApprovalDecision", "InputAuditRecord", "InputDecision", "PolicyActionRecord", "WorkflowPolicyAction", "AgentPolicyActionRecord", "AgentCallTimeout", "AgentPolicyLimitExceeded", "AgentFinalized", "AgentGovernor", "GovernedCall",
     "MockLlmClient", "MockContext", "Turn",
-    "turn", "submit", "AgentMetric", "AgentRule", "CapabilityCallLimit", "Cooldown",
+    "turn", "submit", "AgentMetric", "AgentRule", "Cooldown",
     "Op", "Pause",
     "WorkflowConfig", "WorkflowState", "WorkflowInfo", "WorkflowMetrics", "PendingApproval", "PendingInput", "Suspension", "InvokeMode", "ApprovalAuditRecord", "ApprovalDecision", "InputAuditRecord", "InputDecision", "PolicyActionRecord", "WorkflowPolicyAction", "AgentPolicyActionRecord", "AgentCallTimeout", "AgentPolicyLimitExceeded", "MockLlmClient", "MockContext", "Turn",
     "turn", "submit", "AgentMetric", "AgentRule", "Cooldown", "Op", "Pause",
