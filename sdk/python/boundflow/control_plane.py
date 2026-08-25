@@ -103,6 +103,8 @@ class RunStatus(str, Enum):
     COMPLETED = "completed"
     SUPERCEDED = "superceded"
     ABANDONED = "abandoned"
+    # Held by an operator suspension; released back to UNSCHEDULED on resume.
+    PAUSED = "paused"
 
     def is_terminal(self) -> bool:
         return self in (RunStatus.COMPLETED, RunStatus.FAILED, RunStatus.SUPERCEDED, RunStatus.ABANDONED)
