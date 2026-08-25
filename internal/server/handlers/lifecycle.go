@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -198,6 +199,57 @@ func (h *WorkflowServiceHandler) DeleteWorkflow(ctx context.Context, req *boundf
 	}
 
 	return &boundflowv1.DeleteWorkflowResponse{}, nil
+}
+
+func (h *WorkflowServiceHandler) SuspendWorkflow(ctx context.Context, req *boundflowv1.SuspendWorkflowRequest) (*boundflowv1.SuspendWorkflowResponse, error) {
+	if req.WorkflowId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
+	}
+
+	if err := h.checkWorkflowOwner(ctx, req.WorkflowId); err != nil {
+		return nil, err
+	}
+
+	// The id is minted here so it can be returned even though the suspension finishes
+	// draining in the background; it is what ResumeWorkflow requires the caller to name.
+	suspensionID := uuid.New().String()
+	if err := h.svc.SuspendWorkflow(ctx, req.CorrelationId, suspensionID, req.WorkflowId, req.AbandonQueued, req.StopCurrentRun, req.Reason); err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Errorf(codes.NotFound, "workflow instance not found")
+		}
+		if errors.Is(err, storage.ErrSuspensionAlreadyRequested) {
+			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
+		}
+		return nil, status.Errorf(codes.Internal, "suspend workflow: %v", err)
+	}
+
+	return &boundflowv1.SuspendWorkflowResponse{SuspensionId: suspensionID}, nil
+}
+
+func (h *WorkflowServiceHandler) ResumeWorkflow(ctx context.Context, req *boundflowv1.ResumeWorkflowRequest) (*boundflowv1.ResumeWorkflowResponse, error) {
+	if req.WorkflowId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
+	}
+	if req.SuspensionId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "suspension_id is required")
+	}
+
+	if err := h.checkWorkflowOwner(ctx, req.WorkflowId); err != nil {
+		return nil, err
+	}
+
+	if err := h.svc.ResumeWorkflow(ctx, req.CorrelationId, req.WorkflowId, req.SuspensionId); err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Errorf(codes.NotFound, "workflow instance not found")
+		}
+		// The suspension id did not match, or it has not finished draining yet.
+		if errors.Is(err, storage.ErrInvalidLifecycleState) {
+			return nil, status.Errorf(codes.FailedPrecondition, "workflow is not resumable for that suspension id")
+		}
+		return nil, status.Errorf(codes.Internal, "resume workflow: %v", err)
+	}
+
+	return &boundflowv1.ResumeWorkflowResponse{}, nil
 }
 
 func (h *WorkflowServiceHandler) GetWorkflow(ctx context.Context, req *boundflowv1.GetWorkflowRequest) (*boundflowv1.GetWorkflowResponse, error) {

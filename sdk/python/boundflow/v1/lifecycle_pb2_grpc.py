@@ -49,6 +49,16 @@ class WorkflowServiceStub:
                 request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.DeleteWorkflowRequest.SerializeToString,
                 response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.DeleteWorkflowResponse.FromString,
                 _registered_method=True)
+        self.SuspendWorkflow = channel.unary_unary(
+                '/boundflow.v1.WorkflowService/SuspendWorkflow',
+                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.SuspendWorkflowRequest.SerializeToString,
+                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.SuspendWorkflowResponse.FromString,
+                _registered_method=True)
+        self.ResumeWorkflow = channel.unary_unary(
+                '/boundflow.v1.WorkflowService/ResumeWorkflow',
+                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.ResumeWorkflowRequest.SerializeToString,
+                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.ResumeWorkflowResponse.FromString,
+                _registered_method=True)
         self.GetWorkflow = channel.unary_unary(
                 '/boundflow.v1.WorkflowService/GetWorkflow',
                 request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowRequest.SerializeToString,
@@ -188,6 +198,24 @@ class WorkflowServiceServicer:
 
     def DeleteWorkflow(self, request, context):
         """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SuspendWorkflow(self, request, context):
+        """SuspendWorkflow holds a workflow: nothing new is scheduled, and queued work is either
+        held for the resume or abandoned. Returns once the hold is recorded; draining any run
+        still in flight finishes in the background.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ResumeWorkflow(self, request, context):
+        """ResumeWorkflow releases a suspension, restoring the workflow_state its lifecycle
+        policy calls for and releasing any held requests. Only valid once the suspension has
+        finalized (Suspension.finalized_at set).
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -358,6 +386,16 @@ def add_WorkflowServiceServicer_to_server(servicer, server):
                     servicer.DeleteWorkflow,
                     request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.DeleteWorkflowRequest.FromString,
                     response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.DeleteWorkflowResponse.SerializeToString,
+            ),
+            'SuspendWorkflow': grpc.unary_unary_rpc_method_handler(
+                    servicer.SuspendWorkflow,
+                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.SuspendWorkflowRequest.FromString,
+                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.SuspendWorkflowResponse.SerializeToString,
+            ),
+            'ResumeWorkflow': grpc.unary_unary_rpc_method_handler(
+                    servicer.ResumeWorkflow,
+                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.ResumeWorkflowRequest.FromString,
+                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.ResumeWorkflowResponse.SerializeToString,
             ),
             'GetWorkflow': grpc.unary_unary_rpc_method_handler(
                     servicer.GetWorkflow,
@@ -561,6 +599,60 @@ class WorkflowService:
             '/boundflow.v1.WorkflowService/DeleteWorkflow',
             boundflow_dot_v1_dot_lifecycle__pb2.DeleteWorkflowRequest.SerializeToString,
             boundflow_dot_v1_dot_lifecycle__pb2.DeleteWorkflowResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SuspendWorkflow(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/boundflow.v1.WorkflowService/SuspendWorkflow',
+            boundflow_dot_v1_dot_lifecycle__pb2.SuspendWorkflowRequest.SerializeToString,
+            boundflow_dot_v1_dot_lifecycle__pb2.SuspendWorkflowResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ResumeWorkflow(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/boundflow.v1.WorkflowService/ResumeWorkflow',
+            boundflow_dot_v1_dot_lifecycle__pb2.ResumeWorkflowRequest.SerializeToString,
+            boundflow_dot_v1_dot_lifecycle__pb2.ResumeWorkflowResponse.FromString,
             options,
             channel_credentials,
             insecure,

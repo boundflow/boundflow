@@ -13,6 +13,14 @@ service WorkflowService {
   rpc CreateWorkflow(CreateWorkflowRequest) returns (CreateWorkflowResponse);
   rpc InvokeWorkflow(InvokeWorkflowRequest) returns (InvokeWorkflowResponse);
   rpc DeleteWorkflow(DeleteWorkflowRequest) returns (DeleteWorkflowResponse);
+  // SuspendWorkflow holds a workflow: nothing new is scheduled, and queued work is either
+  // held for the resume or abandoned. Returns once the hold is recorded; draining any run
+  // still in flight finishes in the background.
+  rpc SuspendWorkflow(SuspendWorkflowRequest) returns (SuspendWorkflowResponse);
+  // ResumeWorkflow releases a suspension, restoring the workflow_state its lifecycle
+  // policy calls for and releasing any held requests. Only valid once the suspension has
+  // finalized (Suspension.finalized_at set).
+  rpc ResumeWorkflow(ResumeWorkflowRequest) returns (ResumeWorkflowResponse);
   rpc GetWorkflow(GetWorkflowRequest) returns (GetWorkflowResponse);
   rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse);
 
@@ -84,6 +92,31 @@ message InvokeWorkflowRequest {
 message InvokeWorkflowResponse {
   string request_id = 1;
 }
+
+message SuspendWorkflowRequest {
+  string correlation_id = 1;
+  string workflow_id = 2;
+  // Operator-supplied note, surfaced on Suspension.reason.
+  string reason = 3;
+  // Stop the run in flight rather than letting it finish.
+  bool stop_current_run = 4;
+  // Abandon queued requests instead of holding them for the resume.
+  bool abandon_queued = 5;
+}
+
+message SuspendWorkflowResponse {
+  // Pass back as ResumeWorkflowRequest.suspension_id to release this suspension.
+  string suspension_id = 1;
+}
+
+message ResumeWorkflowRequest {
+  string correlation_id = 1;
+  string workflow_id = 2;
+  // From SuspendWorkflowResponse, or Workflow.suspension.suspension_id.
+  string suspension_id = 3;
+}
+
+message ResumeWorkflowResponse {}
 
 message DeleteWorkflowRequest {
   string correlation_id = 1;

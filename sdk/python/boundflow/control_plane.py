@@ -81,6 +81,8 @@ class LifecycleState(str, Enum):
     AWAITING_INPUT = "awaiting_input"
     DELETED = "deleted"
     INTERRUPTED = "interrupted"
+    # An operator suspension that has finished draining; see WorkflowInfo.suspension.
+    HALTED = "halted"
 
 
 class WorkflowState(str, Enum):
@@ -89,6 +91,7 @@ class WorkflowState(str, Enum):
     PAUSED = "paused"
     COOLDOWN = "cooldown"
     DISABLED = "disabled"
+    SUSPENDED = "suspended"
 
 
 class RunStatus(str, Enum):
@@ -112,6 +115,7 @@ class RunOutcome(str, Enum):
     UNCAUGHT_OPERATION_EXCEPTION = "uncaught_operation_exception"
     OPERATION_TIMEOUT = "operation_timeout"
     INTERRUPTED = "interrupted"
+    SUSPENDED = "suspended"
 
 
 class ApprovalDecision(str, Enum):
@@ -135,6 +139,20 @@ class WorkflowPolicyAction(str, Enum):
     SET_VERSION = "set_version"
     COOLDOWN = "cooldown"
     PAUSE = "pause"
+
+
+@dataclass
+class Suspension:
+    """The operator hold currently on a workflow (WorkflowInfo.suspension, populated only
+    while workflow_state is SUSPENDED). suspension_id is what resume_workflow expects.
+    finalized_at is None while a run is still draining; the workflow is only resumable
+    once it is set."""
+    suspension_id: str
+    reason: str
+    stop_current: bool
+    abandon_queued: bool
+    requested_at: datetime | None
+    finalized_at: datetime | None
 
 
 @dataclass
@@ -182,6 +200,7 @@ class WorkflowInfo:
     deletion_requested_at: datetime | None = None
     pending_approval: PendingApproval | None = None
     pending_input: PendingInput | None = None
+    suspension: Suspension | None = None
 
 
 @dataclass
@@ -217,8 +236,21 @@ def _workflow_info(w, full: bool = False) -> WorkflowInfo:
         last_policy_decision_request_id=w.last_policy_decision_request_id,
         config=_workflow_config(w.workflow_config) if full else None,
         deletion_requested_at=_ts(w, "deletion_requested_at"),
+        suspension=_suspension(w) if w.HasField("suspension") else None,
         pending_approval=_pending_approval(w) if w.HasField("pending_approval") else None,
         pending_input=_pending_input(w) if w.HasField("pending_input") else None,
+    )
+
+
+def _suspension(w) -> Suspension:
+    s = w.suspension
+    return Suspension(
+        suspension_id=s.suspension_id,
+        reason=s.reason,
+        stop_current=s.stop_current,
+        abandon_queued=s.abandon_queued,
+        requested_at=_ts(s, "requested_at"),
+        finalized_at=_ts(s, "finalized_at"),
     )
 
 
@@ -475,6 +507,7 @@ _LIFECYCLE = {
     "awaiting_input": LifecycleState.AWAITING_INPUT,
     "deleted": LifecycleState.DELETED,
     "interrupted": LifecycleState.INTERRUPTED,
+    "halted": LifecycleState.HALTED,
 }
 
 _WF_STATE = {
@@ -482,6 +515,7 @@ _WF_STATE = {
     ri.WORKFLOW_STATE_PAUSED: WorkflowState.PAUSED,
     ri.WORKFLOW_STATE_COOLDOWN: WorkflowState.COOLDOWN,
     ri.WORKFLOW_STATE_DISABLED: WorkflowState.DISABLED,
+    ri.WORKFLOW_STATE_SUSPENDED: WorkflowState.SUSPENDED,
 }
 
 _WF_METRIC = {
@@ -844,6 +878,36 @@ class ControlPlaneClient:
             elif which == "input":
                 out.append(_input_record(e.input))
         return out
+
+    async def suspend_workflow(
+        self,
+        workflow_id: str,
+        reason: str = "",
+        stop_current_run: bool = False,
+        abandon_queued: bool = False,
+    ) -> str:
+        """Hold a workflow: nothing new is scheduled and queued work is held for the resume
+        (or abandoned with abandon_queued=True). Returns the suspension_id to pass to
+        resume_workflow. Returns as soon as the hold is recorded — a run already in flight
+        finishes draining in the background unless stop_current_run=True, and the workflow
+        is only resumable once WorkflowInfo.suspension.finalized_at is set."""
+        resp = await self._lc.SuspendWorkflow(
+            lc.SuspendWorkflowRequest(
+                workflow_id=workflow_id,
+                reason=reason,
+                stop_current_run=stop_current_run,
+                abandon_queued=abandon_queued,
+            ),
+            metadata=self._metadata)
+        return resp.suspension_id
+
+    async def resume_workflow(self, workflow_id: str, suspension_id: str) -> None:
+        """Release a suspension, restoring the workflow_state its lifecycle policy calls for
+        and releasing any held requests. Raises FailedPreconditionError if the id does not
+        match or the suspension has not finished draining yet."""
+        await self._lc.ResumeWorkflow(
+            lc.ResumeWorkflowRequest(workflow_id=workflow_id, suspension_id=suspension_id),
+            metadata=self._metadata)
 
     async def delete_workflow(self, workflow_id: str) -> None:
         await self._lc.DeleteWorkflow(
