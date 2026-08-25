@@ -210,9 +210,12 @@ func (h *WorkflowServiceHandler) SuspendWorkflow(ctx context.Context, req *bound
 		return nil, err
 	}
 
-	// Minted here so it can be returned while the suspension is still draining.
-	suspensionID := uuid.New().String()
-	if err := h.svc.SuspendWorkflow(ctx, req.CorrelationId, suspensionID, req.WorkflowId, req.AbandonQueued, req.StopCurrentRun, req.Reason); err != nil {
+	// A caller-supplied id retargets their existing hold; otherwise mint one to return.
+	suspensionID := req.SuspensionId
+	if suspensionID == "" {
+		suspensionID = uuid.New().String()
+	}
+	if err := h.svc.SuspendWorkflow(ctx, req.CorrelationId, suspensionID, req.WorkflowId, req.StopCurrentRun, req.Reason); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Errorf(codes.NotFound, "workflow instance not found")
 		}
@@ -223,6 +226,30 @@ func (h *WorkflowServiceHandler) SuspendWorkflow(ctx context.Context, req *bound
 	}
 
 	return &boundflowv1.SuspendWorkflowResponse{SuspensionId: suspensionID}, nil
+}
+
+func (h *WorkflowServiceHandler) AbandonQueuedRequests(ctx context.Context, req *boundflowv1.AbandonQueuedRequestsRequest) (*boundflowv1.AbandonQueuedRequestsResponse, error) {
+	if req.WorkflowId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
+	}
+	// Requiring one or the other keeps an accidentally-empty list from clearing the queue.
+	if req.All == (len(req.RequestIds) > 0) {
+		return nil, status.Errorf(codes.InvalidArgument, "exactly one of request_ids or all is required")
+	}
+
+	if err := h.checkWorkflowOwner(ctx, req.WorkflowId); err != nil {
+		return nil, err
+	}
+
+	abandoned, err := h.svc.AbandonQueuedRequests(ctx, req.CorrelationId, req.WorkflowId, req.RequestIds)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Errorf(codes.NotFound, "workflow instance not found")
+		}
+		return nil, status.Errorf(codes.Internal, "abandon queued requests: %v", err)
+	}
+
+	return &boundflowv1.AbandonQueuedRequestsResponse{RequestIds: abandoned}, nil
 }
 
 func (h *WorkflowServiceHandler) ResumeWorkflow(ctx context.Context, req *boundflowv1.ResumeWorkflowRequest) (*boundflowv1.ResumeWorkflowResponse, error) {

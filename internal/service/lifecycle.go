@@ -280,11 +280,11 @@ func (s *LifecycleService) InvokeWorkflow(ctx context.Context, correlationID, wo
 	return request.ID, nil
 }
 
-func (s *LifecycleService) SuspendWorkflow(ctx context.Context, correlationID, suspensionID, workflowID string, abandonQueued bool, stopCurrentRun bool, reason string) error {
+func (s *LifecycleService) SuspendWorkflow(ctx context.Context, correlationID, suspensionID, workflowID string, stopCurrentRun bool, reason string) error {
 
 	s.log.Info("suspending workflow", "correlation_id", correlationID, "workflow_id", workflowID)
 
-	if err := s.workflows.MarkSuspensionRequested(ctx, workflowID, suspensionID, reason, stopCurrentRun, abandonQueued); err != nil {
+	if err := s.workflows.MarkSuspensionRequested(ctx, workflowID, suspensionID, reason, stopCurrentRun); err != nil {
 		s.log.Error("failed to mark suspension requested", "correlation_id", correlationID, "workflow_id", workflowID, "suspension_id", suspensionID, "reason", reason)
 		return fmt.Errorf("mark suspension requested: %w", err)
 	}
@@ -308,6 +308,17 @@ func (s *LifecycleService) SuspendWorkflow(ctx context.Context, correlationID, s
 	}
 
 	return nil
+}
+
+// Irreversible, so it is its own call rather than a flag on suspend.
+func (s *LifecycleService) AbandonQueuedRequests(ctx context.Context, correlationID, workflowID string, requestIDs []string) ([]string, error) {
+	s.log.Info("abandoning queued requests", "correlation_id", correlationID, "workflow_id", workflowID, "request_ids", requestIDs)
+
+	abandoned, err := s.customerRequests.AbandonQueuedRequests(ctx, workflowID, requestIDs)
+	if err != nil {
+		return nil, fmt.Errorf("abandon queued requests: %w", err)
+	}
+	return abandoned, nil
 }
 
 func (s *LifecycleService) ResumeWorkflow(ctx context.Context, correlationID, workflowID string, suspensionID string) error {
@@ -390,7 +401,7 @@ func (s *LifecycleService) DeleteWorkflow(ctx context.Context, correlationID, wo
 		return fmt.Errorf("mark deletion requested: %w", err)
 	}
 
-	if err := s.customerRequests.AbandonUnscheduledRequests(ctx, workflowID); err != nil {
+	if _, err := s.customerRequests.AbandonQueuedRequests(ctx, workflowID, nil); err != nil {
 		s.log.Error("failed to abandon unscheduled requests", "correlation_id", correlationID, "workflow_id", workflowID, "error", err)
 		return fmt.Errorf("abandon unscheduled requests: %w", err)
 	}

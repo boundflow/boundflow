@@ -72,12 +72,11 @@ type Workflow struct {
 }
 
 type Suspension struct {
-	ID            string
-	Reason        string
-	StopCurrent   bool
-	AbandonQueued bool
-	RequestedAt   *time.Time
-	FinalizedAt   *time.Time
+	ID          string
+	Reason      string
+	StopCurrent bool
+	RequestedAt *time.Time
+	FinalizedAt *time.Time
 }
 
 // LifecycleInfo groups a workflow's current lifecycle state with the raw gate log

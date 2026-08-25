@@ -44,7 +44,7 @@ type WorkflowRepository interface {
 	// statement. Returns ErrSuspensionAlreadyRequested if it is already suspended,
 	// deleted, or has a suspension in flight. Must return before MarkAbandonRequested is
 	// called; see its doc for why.
-	MarkSuspensionRequested(ctx context.Context, id, suspensionID, reason string, stopCurrent, abandonQueued bool) error
+	MarkSuspensionRequested(ctx context.Context, id, suspensionID, reason string, stopCurrent bool) error
 	// RestoreFromSuspension resumes a suspended workflow in one transaction: restores
 	// workflow_state/current_workflow_version to the caller's recomputed targets, catches
 	// lifecycle_last_resolved up to current_version, clears every suspension column,
@@ -340,8 +340,9 @@ type CustomerRequestRepository interface {
 	CreateDuePeriodicRequest(ctx context.Context, req *domain.CustomerRequest, minGap time.Duration) (int64, bool, error)
 	Get(ctx context.Context, id string) (*domain.CustomerRequest, error)
 	UpdateStatus(ctx context.Context, workflowID, id string, status domain.CustomerRequestStatus) error
-	// AbandonUnscheduledRequests fails every unscheduled or suspension-held request.
-	AbandonUnscheduledRequests(ctx context.Context, workflowID string) error
+	// AbandonQueuedRequests drops queued runs (nil ids = all). Only unscheduled and held
+	// requests can be abandoned; anything already running is untouched. Returns what changed.
+	AbandonQueuedRequests(ctx context.Context, workflowID string, requestIDs []string) ([]string, error)
 	// HasRunningRequest reports whether the workflow currently has a scheduled or in-progress request.
 	HasRunningRequest(ctx context.Context, workflowID string) (bool, error)
 	// CompleteRequest sets the request status to completed, records the run outcome,

@@ -59,6 +59,11 @@ class WorkflowServiceStub:
                 request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.ResumeWorkflowRequest.SerializeToString,
                 response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.ResumeWorkflowResponse.FromString,
                 _registered_method=True)
+        self.AbandonQueuedRequests = channel.unary_unary(
+                '/boundflow.v1.WorkflowService/AbandonQueuedRequests',
+                request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.AbandonQueuedRequestsRequest.SerializeToString,
+                response_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.AbandonQueuedRequestsResponse.FromString,
+                _registered_method=True)
         self.GetWorkflow = channel.unary_unary(
                 '/boundflow.v1.WorkflowService/GetWorkflow',
                 request_serializer=boundflow_dot_v1_dot_lifecycle__pb2.GetWorkflowRequest.SerializeToString,
@@ -215,6 +220,13 @@ class WorkflowServiceServicer:
         """ResumeWorkflow releases a suspension, restoring the workflow_state its lifecycle
         policy calls for and releasing any held requests. Only valid once the suspension has
         finalized (Suspension.finalized_at set).
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def AbandonQueuedRequests(self, request, context):
+        """AbandonQueuedRequests drops queued runs without waiting for them. Irreversible.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -396,6 +408,11 @@ def add_WorkflowServiceServicer_to_server(servicer, server):
                     servicer.ResumeWorkflow,
                     request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.ResumeWorkflowRequest.FromString,
                     response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.ResumeWorkflowResponse.SerializeToString,
+            ),
+            'AbandonQueuedRequests': grpc.unary_unary_rpc_method_handler(
+                    servicer.AbandonQueuedRequests,
+                    request_deserializer=boundflow_dot_v1_dot_lifecycle__pb2.AbandonQueuedRequestsRequest.FromString,
+                    response_serializer=boundflow_dot_v1_dot_lifecycle__pb2.AbandonQueuedRequestsResponse.SerializeToString,
             ),
             'GetWorkflow': grpc.unary_unary_rpc_method_handler(
                     servicer.GetWorkflow,
@@ -653,6 +670,33 @@ class WorkflowService:
             '/boundflow.v1.WorkflowService/ResumeWorkflow',
             boundflow_dot_v1_dot_lifecycle__pb2.ResumeWorkflowRequest.SerializeToString,
             boundflow_dot_v1_dot_lifecycle__pb2.ResumeWorkflowResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def AbandonQueuedRequests(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/boundflow.v1.WorkflowService/AbandonQueuedRequests',
+            boundflow_dot_v1_dot_lifecycle__pb2.AbandonQueuedRequestsRequest.SerializeToString,
+            boundflow_dot_v1_dot_lifecycle__pb2.AbandonQueuedRequestsResponse.FromString,
             options,
             channel_credentials,
             insecure,

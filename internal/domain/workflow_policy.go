@@ -29,12 +29,12 @@ type WorkflowLifecyclePolicyAction struct {
 const MaxLifecycleWindow = 100
 
 type WorkflowLifecyclePolicyRule struct {
-	Metric    WorkflowMetric                `json:"metric"`
-	Threshold float64                       `json:"threshold"`
+	Metric    WorkflowMetric `json:"metric"`
+	Threshold float64        `json:"threshold"`
 	// Window is the number of recent runs to evaluate. 0 = version-total (set_version actions only).
-	Window   int                            `json:"window"`
-	ToolName string                         `json:"tool_name,omitempty"`
-	Action   WorkflowLifecyclePolicyAction  `json:"action"`
+	Window   int                           `json:"window"`
+	ToolName string                        `json:"tool_name,omitempty"`
+	Action   WorkflowLifecyclePolicyAction `json:"action"`
 }
 
 type WorkflowLifecyclePolicy struct {
@@ -53,7 +53,7 @@ type WorkflowInvocationSnapshot struct {
 }
 
 type WorkflowVersionMetrics struct {
-	WorkflowID      string
+	WorkflowID              string
 	Version                 int
 	Epoch                   int
 	TotalCost               float64

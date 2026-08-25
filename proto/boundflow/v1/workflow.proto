@@ -66,8 +66,6 @@ message Suspension {
   string reason = 2;
   // Whether the run in flight when the suspension landed was stopped rather than drained.
   bool stop_current = 3;
-  // Whether queued requests were abandoned rather than held for the resume.
-  bool abandon_queued = 4;
   google.protobuf.Timestamp requested_at = 5;
   // Set once nothing is running any more; the workflow is only resumable after this.
   google.protobuf.Timestamp finalized_at = 6;

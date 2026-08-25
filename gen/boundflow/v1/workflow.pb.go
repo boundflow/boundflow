@@ -385,10 +385,8 @@ type Suspension struct {
 	SuspensionId string                 `protobuf:"bytes,1,opt,name=suspension_id,json=suspensionId,proto3" json:"suspension_id,omitempty"`
 	Reason       string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
 	// Whether the run in flight when the suspension landed was stopped rather than drained.
-	StopCurrent bool `protobuf:"varint,3,opt,name=stop_current,json=stopCurrent,proto3" json:"stop_current,omitempty"`
-	// Whether queued requests were abandoned rather than held for the resume.
-	AbandonQueued bool                   `protobuf:"varint,4,opt,name=abandon_queued,json=abandonQueued,proto3" json:"abandon_queued,omitempty"`
-	RequestedAt   *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=requested_at,json=requestedAt,proto3" json:"requested_at,omitempty"`
+	StopCurrent bool                   `protobuf:"varint,3,opt,name=stop_current,json=stopCurrent,proto3" json:"stop_current,omitempty"`
+	RequestedAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=requested_at,json=requestedAt,proto3" json:"requested_at,omitempty"`
 	// Set once nothing is running any more; the workflow is only resumable after this.
 	FinalizedAt   *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=finalized_at,json=finalizedAt,proto3" json:"finalized_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -442,13 +440,6 @@ func (x *Suspension) GetReason() string {
 func (x *Suspension) GetStopCurrent() bool {
 	if x != nil {
 		return x.StopCurrent
-	}
-	return false
-}
-
-func (x *Suspension) GetAbandonQueued() bool {
-	if x != nil {
-		return x.AbandonQueued
 	}
 	return false
 }
@@ -642,13 +633,12 @@ const file_boundflow_v1_workflow_proto_rawDesc = "" +
 	"\bmetadata\x18\x03 \x01(\v2\x17.google.protobuf.StructR\bmetadata\x127\n" +
 	"\topened_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\bopenedAt\x129\n" +
 	"\n" +
-	"timeout_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimeoutAt\"\x91\x02\n" +
+	"timeout_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimeoutAt\"\xea\x01\n" +
 	"\n" +
 	"Suspension\x12#\n" +
 	"\rsuspension_id\x18\x01 \x01(\tR\fsuspensionId\x12\x16\n" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\x12!\n" +
-	"\fstop_current\x18\x03 \x01(\bR\vstopCurrent\x12%\n" +
-	"\x0eabandon_queued\x18\x04 \x01(\bR\rabandonQueued\x12=\n" +
+	"\fstop_current\x18\x03 \x01(\bR\vstopCurrent\x12=\n" +
 	"\frequested_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\vrequestedAt\x12=\n" +
 	"\ffinalized_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\vfinalizedAt\"\xe5\x05\n" +
 	"\bWorkflow\x12\x0e\n" +

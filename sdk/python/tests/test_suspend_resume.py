@@ -345,10 +345,9 @@ async def test_suspend_holds_queued_requests_for_the_resume(cp):
         assert (await wait_for_completion(cp, second, timeout=90)).status == RunStatus.COMPLETED
 
 
-async def test_suspend_with_abandon_queued_discards_held_requests(cp):
-    """abandon_queued=True fails the backlog instead of holding it — the irreversible
-    option, so whoever invoked isn't left waiting for the length of the suspension. Those
-    requests stay abandoned after the resume."""
+async def test_abandon_queued_requests_discards_held_work(cp):
+    """Dropping the backlog is its own call, since it can't be undone. Held requests can be
+    abandoned while suspended, and stay abandoned after the resume."""
     started, release = asyncio.Event(), asyncio.Event()
     worker, workflow = await _queued_behind_a_running_run(cp, "discard", release, started)
 
@@ -358,8 +357,12 @@ async def test_suspend_with_abandon_queued_discards_held_requests(cp):
         second = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=120)
         assert (await cp.get_request_info(second)).status == RunStatus.UNSCHEDULED
 
-        suspension_id = await cp.suspend_workflow(
-            workflow.id, reason="drop the queue", abandon_queued=True)
+        suspension_id = await cp.suspend_workflow(workflow.id, reason="drop the queue")
+        assert (await cp.get_request_info(second)).status == RunStatus.PAUSED
+
+        # Naming it explicitly; the running one is not eligible and must be left alone.
+        abandoned = await cp.abandon_queued_requests(workflow.id, request_ids=[second, first])
+        assert abandoned == [second], f"expected only the queued run, got {abandoned}"
         assert (await cp.get_request_info(second)).status == RunStatus.ABANDONED
 
         release.set()
@@ -466,3 +469,84 @@ async def test_delete_during_a_draining_suspension_drops_the_hold(cp):
             await asyncio.sleep(1)
 
     await wait_for_lifecycle_state(cp, workflow.id, LifecycleState.DELETED, timeout=180)
+
+
+async def test_retargeting_a_hold_toggles_stop_current_both_ways(cp):
+    """Passing an existing suspension_id retargets that hold instead of starting a new one:
+    same id, same requested_at, and stop_current_run applied last-write-wins. It is
+    best-effort in both directions — a run may finish before a worker sees either change."""
+    started, release = asyncio.Event(), asyncio.Event()
+
+    async def _entry(ctx):
+        started.set()
+        await release.wait()
+        return Complete()
+
+    worker, workflow = await _suspended_workflow(cp, "retarget", _entry)
+
+    async with run_worker(worker):
+        request_id = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=120)
+        await asyncio.wait_for(started.wait(), timeout=30)
+        await asyncio.sleep(2)
+
+        # Drain to begin with.
+        suspension_id = await cp.suspend_workflow(workflow.id, reason="drain first")
+        await wait_for_workflow_state(cp, workflow.id, WorkflowState.SUSPENDED)
+        held = await cp.get_workflow(workflow.id)
+        assert held.suspension.stop_current is False
+
+        # Escalate to a cut, then immediately back off — the same id throughout.
+        same = await cp.suspend_workflow(
+            workflow.id, reason="actually cut it", stop_current_run=True,
+            suspension_id=suspension_id)
+        assert same == suspension_id, "retargeting must not mint a new id"
+        cut = await cp.get_workflow(workflow.id)
+        assert cut.suspension.stop_current is True
+        assert cut.suspension.requested_at == held.suspension.requested_at, \
+            "retargeting must not restart the hold's clock"
+
+        same = await cp.suspend_workflow(
+            workflow.id, reason="changed my mind", stop_current_run=False,
+            suspension_id=suspension_id)
+        assert same == suspension_id
+        assert (await cp.get_workflow(workflow.id)).suspension.stop_current is False
+
+        # Un-cut in time, so the run finishes on its own rather than as SUSPENDED.
+        release.set()
+        run = await wait_for_completion(cp, request_id, timeout=90)
+        assert run.run_outcome == RunOutcome.SUCCESSFUL, f"expected an un-cut run, got {run.run_outcome}"
+
+        for _ in range(120):
+            info = await cp.get_workflow(workflow.id)
+            if info.suspension and info.suspension.finalized_at is not None:
+                break
+            await asyncio.sleep(0.5)
+        assert info.suspension.finalized_at is not None
+
+        await cp.resume_workflow(workflow.id, suspension_id)
+        assert (await cp.get_workflow(workflow.id)).workflow_state == WorkflowState.ACTIVE
+
+
+async def test_abandon_queued_requests_leaves_running_work_and_takes_all(cp):
+    """The status filter is the safety property, not the workflow state: a run already in
+    flight is never abandoned, so this is callable on an active workflow to clear a backlog."""
+    started, release = asyncio.Event(), asyncio.Event()
+    worker, workflow = await _queued_behind_a_running_run(cp, "clear", release, started)
+
+    async with run_worker(worker):
+        first = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=120)
+        await asyncio.wait_for(started.wait(), timeout=30)
+        second = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=120)
+        third = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=120)
+
+        # No suspension at all — the workflow is active and running.
+        abandoned = await cp.abandon_queued_requests(workflow.id, all=True)
+        assert sorted(abandoned) == sorted([second, third]), f"got {abandoned}"
+        running = (await cp.get_request_info(first)).status
+        assert running in (RunStatus.SCHEDULED, RunStatus.IN_PROGRESS), \
+            f"the in-flight run must be untouched, got {running}"
+
+        release.set()
+        assert (await wait_for_completion(cp, first, timeout=90)).status == RunStatus.COMPLETED
+        for r in (second, third):
+            assert (await cp.get_request_info(r)).status == RunStatus.ABANDONED

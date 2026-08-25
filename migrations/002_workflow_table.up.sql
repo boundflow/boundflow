@@ -53,8 +53,7 @@ CREATE TABLE workflows (
     suspension_finalized_at   TIMESTAMPTZ,
     suspension_id             TEXT,
     suspension_reason         TEXT NOT NULL DEFAULT '',
-    suspension_stop_current   BOOLEAN NOT NULL DEFAULT false,
-    suspension_abandon_queued BOOLEAN NOT NULL DEFAULT false
+    suspension_stop_current   BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE INDEX idx_workflows_purgeable ON workflows (scheduler_partition_id, deletion_finalized_at) WHERE lifecycle_state = 'deleted';

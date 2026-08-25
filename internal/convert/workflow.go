@@ -55,10 +55,9 @@ func WorkflowToProto(r *domain.Workflow) *boundflowv1.Workflow {
 
 func suspensionToProto(s domain.Suspension) *boundflowv1.Suspension {
 	out := &boundflowv1.Suspension{
-		SuspensionId:  s.ID,
-		Reason:        s.Reason,
-		StopCurrent:   s.StopCurrent,
-		AbandonQueued: s.AbandonQueued,
+		SuspensionId: s.ID,
+		Reason:       s.Reason,
+		StopCurrent:  s.StopCurrent,
 	}
 	if s.RequestedAt != nil {
 		out.RequestedAt = timestamppb.New(*s.RequestedAt)

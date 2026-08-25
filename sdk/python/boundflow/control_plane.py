@@ -152,7 +152,6 @@ class Suspension:
     suspension_id: str
     reason: str
     stop_current: bool
-    abandon_queued: bool
     requested_at: datetime | None
     finalized_at: datetime | None
 
@@ -250,7 +249,6 @@ def _suspension(w) -> Suspension:
         suspension_id=s.suspension_id,
         reason=s.reason,
         stop_current=s.stop_current,
-        abandon_queued=s.abandon_queued,
         requested_at=_ts(s, "requested_at"),
         finalized_at=_ts(s, "finalized_at"),
     )
@@ -886,22 +884,40 @@ class ControlPlaneClient:
         workflow_id: str,
         reason: str = "",
         stop_current_run: bool = False,
-        abandon_queued: bool = False,
+        suspension_id: str = "",
     ) -> str:
-        """Hold a workflow: nothing new is scheduled and queued work is held for the resume
-        (or abandoned with abandon_queued=True). Returns the suspension_id to pass to
-        resume_workflow. Returns as soon as the hold is recorded — a run already in flight
-        finishes draining in the background unless stop_current_run=True, and the workflow
-        is only resumable once WorkflowInfo.suspension.finalized_at is set."""
+        """Hold a workflow: nothing new is scheduled and queued work is held for the resume.
+        Returns the suspension_id to pass to resume_workflow, and returns as soon as the hold
+        is recorded — a run already in flight finishes draining in the background unless
+        stop_current_run=True, and the workflow is only resumable once
+        WorkflowInfo.suspension.finalized_at is set.
+
+        Pass an existing suspension_id to retarget that hold rather than start a new one;
+        stop_current_run is last-write-wins and best-effort in both directions, since the run
+        may finish before a worker sees it either way. Use abandon_queued_requests to drop
+        held work — that is irreversible, so it is a separate call."""
         resp = await self._lc.SuspendWorkflow(
             lc.SuspendWorkflowRequest(
                 workflow_id=workflow_id,
                 reason=reason,
                 stop_current_run=stop_current_run,
-                abandon_queued=abandon_queued,
+                suspension_id=suspension_id,
             ),
             metadata=self._metadata)
         return resp.suspension_id
+
+    async def abandon_queued_requests(
+        self, workflow_id: str, request_ids: list[str] | None = None, all: bool = False
+    ) -> list[str]:
+        """Drop queued runs, by id or all of them. Irreversible. Only queued runs can be
+        abandoned — one already scheduled or in progress is untouched, so this is safe to call
+        at any time. Returns the ids actually abandoned, which may be fewer than asked for if
+        some had already moved on."""
+        resp = await self._lc.AbandonQueuedRequests(
+            lc.AbandonQueuedRequestsRequest(
+                workflow_id=workflow_id, request_ids=request_ids or [], all=all),
+            metadata=self._metadata)
+        return list(resp.request_ids)
 
     async def resume_workflow(self, workflow_id: str, suspension_id: str) -> None:
         """Release a suspension, restoring the workflow_state its lifecycle policy calls for

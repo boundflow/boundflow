@@ -188,8 +188,8 @@ func TestDeleteWorkflow(t *testing.T) {
 		Return(nil)
 
 	requestRepo.EXPECT().
-		AbandonUnscheduledRequests(gomock.Any(), "instance-1").
-		Return(nil)
+		AbandonQueuedRequests(gomock.Any(), "instance-1", nil).
+		Return(nil, nil)
 
 	requestRepo.EXPECT().
 		HasRunningRequest(gomock.Any(), "instance-1").

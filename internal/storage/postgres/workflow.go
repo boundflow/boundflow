@@ -127,7 +127,7 @@ func (r *WorkflowRepo) Get(ctx context.Context, id string) (*domain.Workflow, er
 		        w.last_gate_opened_at, w.last_gate_timeout_at, w.deletion_requested_at,
 		        w.last_policy_decision_request_id,
 		        w.suspension_id, w.suspension_reason, w.suspension_stop_current,
-		        w.suspension_abandon_queued, w.suspension_requested_at, w.suspension_finalized_at
+		        w.suspension_requested_at, w.suspension_finalized_at
 		 FROM workflows w
 		 WHERE w.id = $1`, id,
 	).Scan(
@@ -145,8 +145,7 @@ func (r *WorkflowRepo) Get(ctx context.Context, id string) (*domain.Workflow, er
 		&instance.Lifecycle.LastGateOpenedAt, &instance.Lifecycle.LastGateTimeoutAt, &instance.DeletionRequestedAt,
 		&instance.LastPolicyDecisionRequestID,
 		&suspensionID, &instance.Suspension.Reason, &instance.Suspension.StopCurrent,
-		&instance.Suspension.AbandonQueued, &instance.Suspension.RequestedAt,
-		&instance.Suspension.FinalizedAt,
+		&instance.Suspension.RequestedAt, &instance.Suspension.FinalizedAt,
 	)
 	if err != nil {
 		return nil, handleError(err, "workflow instance")
@@ -256,7 +255,7 @@ func startNewMetricsEpoch(ctx context.Context, tx pgx.Tx, workflowID string, ver
 }
 
 // MarkDeletionRequested disables the workflow for new work and records when deletion
-// was requested. Idle work still in flight is left alone; AbandonUnscheduledRequests
+// was requested. Idle work still in flight is left alone; AbandonQueuedRequests
 // and FinalizeDeleted (called after this, and again periodically by the reconciler)
 // bring the workflow the rest of the way to lifecycle_state = deleted. Fails with
 // ErrDeletionAlreadyRequested if deletion was already requested for this workflow.
@@ -277,34 +276,37 @@ func (r *WorkflowRepo) MarkDeletionRequested(ctx context.Context, id string) err
 	return nil
 }
 
-// MarkSuspensionRequested records a suspension and freezes (or abandons) the workflow's
-// queued work in one statement, so nothing is left schedulable behind it. The freeze also
-// acts as a barrier for MarkAbandonRequested, which must run after this returns.
-func (r *WorkflowRepo) MarkSuspensionRequested(ctx context.Context, id, suspensionID, reason string, stopCurrent, abandonQueued bool) error {
-	queuedStatus := domain.CustomerRequestStatusPaused
-	if abandonQueued {
-		queuedStatus = domain.CustomerRequestStatusAbandoned
-	}
-
+// Records a suspension and freezes queued work in one statement. The freeze is the barrier
+// MarkAbandonRequested depends on, so that must run after this returns. Passing a draining
+// hold's id retargets it: stop_current is last-write-wins, and clearing it un-cuts the run.
+func (r *WorkflowRepo) MarkSuspensionRequested(ctx context.Context, id, suspensionID, reason string, stopCurrent bool) error {
 	var updatedID string
 	err := r.pool.QueryRow(ctx,
 		`WITH suspended AS (
 		     UPDATE workflows
-		     SET workflow_state = $2, suspension_requested_at = now(), suspension_id = $3,
-		         suspension_reason = $4, suspension_stop_current = $5, suspension_abandon_queued = $6
+		     SET workflow_state          = $2,
+		         suspension_requested_at = COALESCE(suspension_requested_at, now()),
+		         suspension_id           = $3,
+		         suspension_reason       = $4,
+		         suspension_stop_current = $5
 		     WHERE id = $1
-		       AND suspension_requested_at IS NULL
-		       AND workflow_state NOT IN ('disabled', 'suspended')
+		       AND workflow_state != 'disabled'
+		       AND suspension_finalized_at IS NULL
+		       AND (suspension_requested_at IS NULL OR suspension_id = $3)
 		     RETURNING id
 		 ),
 		 frozen AS (
 		     UPDATE customer_requests
-		     SET status = $7
+		     SET status = 'paused'
 		     WHERE workflow_id = (SELECT id FROM suspended)
 		       AND status = 'unscheduled'
+		 ),
+		 uncut AS (
+		     UPDATE jobs SET abandon_requested_at = NULL
+		     WHERE workflow_id = (SELECT id FROM suspended) AND NOT $5
 		 )
 		 SELECT id FROM suspended`,
-		id, domain.WorkflowStateSuspended, suspensionID, reason, stopCurrent, abandonQueued, queuedStatus,
+		id, domain.WorkflowStateSuspended, suspensionID, reason, stopCurrent,
 	).Scan(&updatedID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -352,8 +354,7 @@ func (r *WorkflowRepo) AbortSuspension(ctx context.Context, id, suspensionID str
 		     suspension_finalized_at   = NULL,
 		     suspension_id             = NULL,
 		     suspension_reason         = '',
-		     suspension_stop_current   = false,
-		     suspension_abandon_queued = false
+		     suspension_stop_current   = false
 		 WHERE id = $1
 		   AND suspension_id = $2
 		   AND workflow_state != 'suspended'
@@ -449,7 +450,7 @@ func (r *WorkflowRepo) ListPurgeable(ctx context.Context, partitionID string, ol
 func (r *WorkflowRepo) ListPendingSuspension(ctx context.Context, partitionID string) ([]*domain.Workflow, error) {
 	rows, err := r.pool.Query(ctx,
 		`SELECT id, workflow_state, suspension_id, suspension_reason, suspension_stop_current,
-		        suspension_abandon_queued, suspension_requested_at, suspension_finalized_at
+		        suspension_requested_at, suspension_finalized_at
 		 FROM workflows
 		 WHERE scheduler_partition_id = $1
 		   AND suspension_requested_at IS NOT NULL
@@ -467,7 +468,7 @@ func (r *WorkflowRepo) ListPendingSuspension(ctx context.Context, partitionID st
 		var suspensionID *string
 		if err := rows.Scan(
 			&w.ID, &w.WorkflowState, &suspensionID, &w.Suspension.Reason, &w.Suspension.StopCurrent,
-			&w.Suspension.AbandonQueued, &w.Suspension.RequestedAt, &w.Suspension.FinalizedAt,
+			&w.Suspension.RequestedAt, &w.Suspension.FinalizedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan pending suspension: %w", err)
 		}
@@ -645,7 +646,7 @@ func (r *WorkflowRepo) ApplyFailedJob(ctx context.Context, id string, requestID 
 		         workflow_state  = $4::workflow_state,
 		         suspension_requested_at = NULL, suspension_finalized_at = NULL,
 		         suspension_id = NULL, suspension_reason = '',
-		         suspension_stop_current = false, suspension_abandon_queued = false
+		         suspension_stop_current = false
 		     WHERE id = $1 AND current_version < $5
 		     RETURNING id
 		 ),
@@ -687,8 +688,7 @@ func (r *WorkflowRepo) RestoreFromSuspension(ctx context.Context, id, suspension
 		     suspension_finalized_at   = NULL,
 		     suspension_id             = NULL,
 		     suspension_reason         = '',
-		     suspension_stop_current   = false,
-		     suspension_abandon_queued = false
+		     suspension_stop_current   = false
 		 WHERE id = $1
 		   AND suspension_id = $2
 		   AND workflow_state = 'suspended'

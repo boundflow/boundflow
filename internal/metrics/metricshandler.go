@@ -40,10 +40,10 @@ func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, requestID strin
 	}
 	if versionMetrics == nil {
 		versionMetrics = &domain.WorkflowVersionMetrics{
-			WorkflowID: workFlowId,
-			Version:            workflow.CurrentWorkflowVersion,
-			Epoch:              1,
-			ToolFailureCounts:  map[string]int{},
+			WorkflowID:        workFlowId,
+			Version:           workflow.CurrentWorkflowVersion,
+			Epoch:             1,
+			ToolFailureCounts: map[string]int{},
 		}
 	}
 	if versionMetrics.ToolFailureCounts == nil {
@@ -74,9 +74,9 @@ func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, requestID strin
 			}
 		} else {
 			agentStates[agent] = &domain.AgentState{
-				WorkflowID: workFlowId,
-				AgentName:          agent,
-				InvocationMetrics:  []domain.AgentInvocationSnapshot{agentSnapshot},
+				WorkflowID:        workFlowId,
+				AgentName:         agent,
+				InvocationMetrics: []domain.AgentInvocationSnapshot{agentSnapshot},
 			}
 		}
 

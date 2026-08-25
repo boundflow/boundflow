@@ -150,12 +150,12 @@ func (m *mockMetrics) MergeWorkflowMetrics(opMetrics domain.WorkflowJobMetrics, 
 // ---- constants and helpers ----
 
 const (
-	testWorkerID          = "test-worker"
-	testWorkflowID        = "workflow-1"
-	testRequestID         = "req-1"
-	testTenantGroupID     = "test-group"
-	testWorkflowType      = "test-workflow"
-	testWorkflowVersion   = int32(1)
+	testWorkerID        = "test-worker"
+	testWorkflowID      = "workflow-1"
+	testRequestID       = "req-1"
+	testTenantGroupID   = "test-group"
+	testWorkflowType    = "test-workflow"
+	testWorkflowVersion = int32(1)
 )
 
 func newTestWorker(ctrl *gomock.Controller) (*rpcworker.RpcWorker, *mocks.MockJobRepository, *mockScheduler) {
@@ -168,7 +168,7 @@ func newTestWorker(ctrl *gomock.Controller) (*rpcworker.RpcWorker, *mocks.MockJo
 
 func testJob() *domain.Job {
 	return &domain.Job{
-		WorkflowID:     testWorkflowID,
+		WorkflowID:             testWorkflowID,
 		RequestID:              testRequestID,
 		CurrentAtomicOperation: "create",
 		JobType:                "create",
