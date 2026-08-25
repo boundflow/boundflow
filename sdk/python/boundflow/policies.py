@@ -6,10 +6,9 @@ Pydantic models with snake_case fields and typed action constructors.
 from __future__ import annotations
 
 from enum import Enum
-from pathlib import PurePosixPath
-from typing import Annotated, Literal, Union
+from typing import Annotated, Any, Literal, Union
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 # ── Runtime policy (hard caps, snapshotted at invoke time) ───────────────────
 
@@ -49,44 +48,14 @@ class ToolFailureLimit(BaseModel):
     max_failures: int
 
 
-class FileRule(BaseModel):
-    """Which files an agent may read or write, and whether a human is asked first.
-
-    Scoped to a harness with a filesystem, and shaped to translate directly onto one:
-    same operation vocabulary, glob semantics and first-match-wins ordering that
-    filesystem permission models generally use, because the harness is what enforces it.
-    What BoundFlow adds is that the rule is *versioned policy* — it arrives with the
-    operation, changes when the agent version changes, and rolls back when the workflow
-    does, rather than living in whatever code happened to construct the agent.
-
-        FileRule(operations=["write"], paths=["/secrets/**"], mode="deny")
-        FileRule(operations=["write"], paths=["/prod/**"], mode="interrupt")
-
-    Paths are absolute POSIX globs (`**` and `{a,b}` supported). An `interrupt` rule
-    pauses the call for approval — under BoundFlow that pause is durable, which is the
-    one thing the harness can't do on its own.
-    """
-
-    operations: list[Literal["read", "write"]]
-    paths: list[str]
-    mode: Literal["allow", "deny", "interrupt"] = "allow"
-
-    @field_validator("paths")
-    @classmethod
-    def _absolute_and_literal(cls, paths: list[str]) -> list[str]:
-        """Reject at declaration time what the harness would reject at construction —
-        a bad rule should fail when it's written, not mid-run."""
-        for path in paths:
-            if not path.startswith("/"):
-                raise ValueError(f"file rule path must start with '/': {path!r}")
-            parts = PurePosixPath(path.replace("\\", "/")).parts
-            if ".." in parts or "~" in parts:
-                raise ValueError(f"file rule path must not contain '..' or '~': {path!r}")
-        return paths
-
-
 class RuntimePolicy(BaseModel):
-    """Hard caps enforced SDK-side during the agent loop."""
+    """Caps that travel with the operation, enforced worker-side during the agent loop.
+
+    Everything above `custom` is enforced by this SDK. `custom` is not: it carries limits
+    only the caller can enforce — a harness's own vocabulary, or a rule your handler
+    applies itself — so that they are declared, stored and readable in one place instead
+    of living in whatever code happened to construct the agent.
+    """
 
     max_llm_calls: int = 0
     max_cost_usd: float = 0
@@ -94,16 +63,12 @@ class RuntimePolicy(BaseModel):
     max_call_seconds: float = 0  # 0 = unset (no per-call timeout)
     tool_call_limits: list[ToolCallLimit] = Field(default_factory=list)
     tool_failure_limits: list[ToolFailureLimit] = Field(default_factory=list)
-    # The three below only apply when a harness supplies its own tools. Declared here
-    # so they are versioned and roll back with the workflow; enforced by the harness.
     capability_call_limits: list[CapabilityCallLimit] = Field(default_factory=list)
-    file_rules: list[FileRule] = Field(default_factory=list)
-    # Default-deny, and empty means *no* allowlist rather than "nothing allowed" — a
-    # policy that silently forbade everything the moment someone added the field would
-    # be a bad default. Tools BoundFlow dispatches are always permitted.
-    allowed_tools: list[str] = Field(default_factory=list)
-    allowed_capabilities: list[str] = Field(default_factory=list)
     model: str | None = None
+    # Opaque to BoundFlow: stored, shipped with the operation, and handed back via
+    # ctx.policy() — never validated or enforced. Nothing here binds unless the caller
+    # makes it bind, which is the whole contract.
+    custom: dict[str, Any] = Field(default_factory=dict)
 
 
 # ── Agent lifecycle policy (reacts to prior-run metrics) ─────────────────────

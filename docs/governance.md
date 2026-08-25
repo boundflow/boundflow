@@ -17,6 +17,28 @@ await cp.set_agent_runtime_policy(wf.id, "analyst", RuntimePolicy(max_cost_usd=0
 Runtime policies also cover `max_llm_calls`, `max_tokens_per_call`, and per-tool
 call limits — the knobs that stop an output blowup or a runaway loop mid-run.
 
+### Caps BoundFlow carries but doesn't enforce
+
+`custom` holds limits only you can enforce — a harness's own vocabulary, or a rule your
+handler applies itself. BoundFlow stores it, ships it with the operation and hands it
+back; it never validates or acts on it.
+
+```python
+await cp.set_agent_runtime_policy(wf.id, "analyst", RuntimePolicy(
+    max_cost_usd=0.25,                        # BoundFlow enforces this
+    custom={"max_total_subagents": 4},        # you enforce this
+))
+
+@worker.workflow("research", version=1)
+async def entry(ctx):
+    cap = ctx.policy("analyst").custom.get("max_total_subagents", 0)
+    ...
+```
+
+The point is that the limit is declared in one place and readable from the control plane,
+rather than hard-coded wherever the agent is built. Nothing in `custom` binds unless you
+make it bind.
+
 ## 2. Agent lifecycle — adapt the model after runs
 
 ```python
