@@ -60,7 +60,9 @@ message LaunchOperation {
 }
 
 // CancelOperation instructs the worker to abort the current operation.
-// The worker should respond with an OperationUpdate with status CANCELLED.
+// The worker should respond with an OperationUpdate with status CANCELLED, echoing
+// reason back in the result so the server records why the run actually ended.
 message CancelOperation {
   string operation_id = 1;
+  CancelReason reason = 2;
 }
