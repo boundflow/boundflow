@@ -765,11 +765,14 @@ func (r *WorkflowRepo) RestoreFromSuspension(ctx context.Context, id, suspension
 	return true, nil
 }
 
+// The interrupted run advanced current_version and never resolved policy, so the
+// acknowledgement resolves that version — otherwise validateWorkflowState never schedules again.
 func (r *WorkflowRepo) ResolveInterruptedWorkflow(ctx context.Context, id string, requestID string) (bool, error) {
 	var updatedID string
 	err := r.pool.QueryRow(ctx,
 		`UPDATE workflows
-		 SET lifecycle_state = 'active', workflow_state = 'active'
+		 SET lifecycle_state = 'active', workflow_state = 'active',
+		     lifecycle_last_resolved = current_version
 		 WHERE id = $1 AND lifecycle_state = 'interrupted' AND last_interrupted_request_id = $2
 		 RETURNING id`,
 		id, requestID,
