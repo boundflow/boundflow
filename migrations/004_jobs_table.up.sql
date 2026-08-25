@@ -32,6 +32,7 @@ CREATE TABLE jobs (
     -- Times this run has been handed to a worker. Bounds retries for a resumable
     -- workflow so an operation that kills its worker can't tour the fleet forever.
     attempts                 INTEGER NOT NULL DEFAULT 0,
+    abandon_requested_at     TIMESTAMPTZ,
     -- The run's published output (Complete(result=...)), NULL until completed and
     -- NULL if the workflow never published one.
     result                    JSONB,

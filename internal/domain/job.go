@@ -45,7 +45,9 @@ type Job struct {
 	FailureReason  string
 	Owner          *string
 	LeaseExpiresAt *time.Time
-	CreatedAt      time.Time
+	// Set when a suspension asked for this run to be stopped rather than drained.
+	AbandonRequestedAt *time.Time
+	CreatedAt          time.Time
 	// Server-internal metadata for this job.
 	JobMetadata JobMetadata
 	// Approval gate — only populated when Status == JobStatusAwaitingApproval/Approved/Rejected.

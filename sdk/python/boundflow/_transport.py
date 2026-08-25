@@ -180,11 +180,15 @@ class WorkerSession:
                     op_task = asyncio.create_task(self._run_operation(call, op, dispatch))
                 elif which == "cancel":
                     if op_task is not None and command.cancel.operation_id == op_id:
+                        reason = command.cancel.reason
                         op_task.cancel()
                         try:
                             await op_task
                         except asyncio.CancelledError:
-                            await self._write(call, self._update(op_id, op_pb.OPERATION_STATUS_CANCELLED))
+                            # Echo the reason back: the server records the run outcome from
+                            # what actually stopped it, not from what it asked for.
+                            await self._write(call, self._update(
+                                op_id, op_pb.OPERATION_STATUS_CANCELLED, cancel_reason=reason))
                     op_task, op_id = None, None
                     await self._write(call, self._ready())
 
@@ -230,11 +234,14 @@ class WorkerSession:
             ready=wk_pb.ReadyForWork(capabilities=self._capabilities),
         )
 
-    def _update(self, operation_id: str, status, message: str = "") -> wk_pb.WorkerMessage:
+    def _update(self, operation_id: str, status, message: str = "", cancel_reason=None) -> wk_pb.WorkerMessage:
+        result = op_pb.AtomicOperationResult(status=status, message=message)
+        if cancel_reason is not None:
+            result.cancel_reason = cancel_reason
         return wk_pb.WorkerMessage(
             session_id=self._session_id,
             update=wk_pb.OperationUpdate(
                 operation_id=operation_id,
-                result=op_pb.AtomicOperationResult(status=status, message=message),
+                result=result,
             ),
         )

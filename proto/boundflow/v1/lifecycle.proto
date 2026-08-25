@@ -13,6 +13,16 @@ service WorkflowService {
   rpc CreateWorkflow(CreateWorkflowRequest) returns (CreateWorkflowResponse);
   rpc InvokeWorkflow(InvokeWorkflowRequest) returns (InvokeWorkflowResponse);
   rpc DeleteWorkflow(DeleteWorkflowRequest) returns (DeleteWorkflowResponse);
+  // SuspendWorkflow holds a workflow: nothing new is scheduled, and queued work is either
+  // held for the resume or abandoned. Returns once the hold is recorded; draining any run
+  // still in flight finishes in the background.
+  rpc SuspendWorkflow(SuspendWorkflowRequest) returns (SuspendWorkflowResponse);
+  // ResumeWorkflow releases a suspension, restoring the workflow_state its lifecycle
+  // policy calls for and releasing any held requests. Only valid once the suspension has
+  // finalized (Suspension.finalized_at set).
+  rpc ResumeWorkflow(ResumeWorkflowRequest) returns (ResumeWorkflowResponse);
+  // AbandonQueuedRequests drops queued runs without waiting for them. Irreversible.
+  rpc AbandonQueuedRequests(AbandonQueuedRequestsRequest) returns (AbandonQueuedRequestsResponse);
   rpc GetWorkflow(GetWorkflowRequest) returns (GetWorkflowResponse);
   rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse);
 
@@ -84,6 +94,49 @@ message InvokeWorkflowRequest {
 message InvokeWorkflowResponse {
   string request_id = 1;
 }
+
+message SuspendWorkflowRequest {
+  string correlation_id = 1;
+  string workflow_id = 2;
+  // Operator-supplied note, surfaced on Suspension.reason.
+  string reason = 3;
+  // Stop the run in flight rather than letting it finish. Best-effort in both directions:
+  // the run may finish before a worker sees the request, and clearing it only takes if no
+  // worker has acted on it yet.
+  bool stop_current_run = 4;
+  // Set to retarget a suspension that is still draining rather than start a new one. The
+  // hold is never released, so the same id is returned and stays valid for resume.
+  string suspension_id = 6;
+}
+
+message SuspendWorkflowResponse {
+  // Pass back as ResumeWorkflowRequest.suspension_id to release this suspension.
+  string suspension_id = 1;
+}
+
+message AbandonQueuedRequestsRequest {
+  string correlation_id = 1;
+  string workflow_id = 2;
+  // The runs to abandon. Only queued ones can be — a run already scheduled or in progress
+  // is unaffected; use SuspendWorkflow.stop_current_run to stop that.
+  repeated string request_ids = 3;
+  // Abandon every queued run instead of naming them. Exactly one of this or request_ids.
+  bool all = 4;
+}
+
+message AbandonQueuedRequestsResponse {
+  // The runs actually abandoned — a subset of what was asked for if any had moved on.
+  repeated string request_ids = 1;
+}
+
+message ResumeWorkflowRequest {
+  string correlation_id = 1;
+  string workflow_id = 2;
+  // From SuspendWorkflowResponse, or Workflow.suspension.suspension_id.
+  string suspension_id = 3;
+}
+
+message ResumeWorkflowResponse {}
 
 message DeleteWorkflowRequest {
   string correlation_id = 1;

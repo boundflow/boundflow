@@ -7,14 +7,16 @@ CREATE TYPE lifecycle_state AS ENUM (
     'awaiting_approval',
     'awaiting_input',
     'deleted',
-    'interrupted'
+    'interrupted',
+    'halted'
 );
 
 CREATE TYPE workflow_state AS ENUM (
     'active',
     'paused',
     'cooldown',
-    'disabled'
+    'disabled',
+    'suspended'
 );
 
 CREATE TABLE workflows (
@@ -47,7 +49,15 @@ CREATE TABLE workflows (
     last_gate_timeout_at   TIMESTAMPTZ,
     created_at                TIMESTAMPTZ NOT NULL DEFAULT now(),
     deletion_requested_at     TIMESTAMPTZ,
-    deletion_finalized_at     TIMESTAMPTZ
+    deletion_finalized_at     TIMESTAMPTZ,
+    suspension_requested_at   TIMESTAMPTZ,
+    suspension_finalized_at   TIMESTAMPTZ,
+    suspension_id             TEXT,
+    suspension_reason         TEXT NOT NULL DEFAULT '',
+    suspension_stop_current   BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE INDEX idx_workflows_purgeable ON workflows (scheduler_partition_id, deletion_finalized_at) WHERE lifecycle_state = 'deleted';
+
+CREATE INDEX idx_workflows_suspending ON workflows (scheduler_partition_id)
+    WHERE suspension_requested_at IS NOT NULL AND suspension_finalized_at IS NULL;

@@ -1,4 +1,4 @@
-package scheduler_test
+package lifecyclepolicy_test
 
 import (
 	"io"
@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/boundflow/boundflow/internal/domain"
-	"github.com/boundflow/boundflow/internal/scheduler"
+	"github.com/boundflow/boundflow/internal/lifecyclepolicy"
 )
 
 var engineLogger = slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -40,8 +40,8 @@ func setVersionRule(metric domain.WorkflowMetric, threshold float64, target int)
 	}
 }
 
-func resolve(rolling []domain.WorkflowInvocationSnapshot, rules []domain.WorkflowLifecyclePolicyRule, vm *domain.WorkflowVersionMetrics) (bool, scheduler.WorkflowGoalState) {
-	e := scheduler.NewLifecyclePolicyEngine(engineLogger)
+func resolve(rolling []domain.WorkflowInvocationSnapshot, rules []domain.WorkflowLifecyclePolicyRule, vm *domain.WorkflowVersionMetrics) (bool, lifecyclepolicy.WorkflowGoalState) {
+	e := lifecyclepolicy.NewLifecyclePolicyEngine(engineLogger)
 	if vm == nil {
 		vm = &domain.WorkflowVersionMetrics{}
 	}
@@ -221,10 +221,10 @@ func TestMetricEmitted(t *testing.T) {
 		{domain.WorkflowMetricToolFailureRate, "t"},
 	}
 	for _, c := range cases {
-		if !scheduler.MetricEmitted(full, c.metric, c.tool) {
+		if !lifecyclepolicy.MetricEmitted(full, c.metric, c.tool) {
 			t.Errorf("expected %s emitted in full snapshot", c.metric)
 		}
-		if scheduler.MetricEmitted(empty, c.metric, c.tool) {
+		if lifecyclepolicy.MetricEmitted(empty, c.metric, c.tool) {
 			t.Errorf("expected %s not emitted in empty snapshot", c.metric)
 		}
 	}

@@ -14,6 +14,7 @@ const (
 	LifecycleStateAwaitingInput    LifecycleState = "awaiting_input"
 	LifecycleStateDeleted          LifecycleState = "deleted"
 	LifecycleStateInterrupted      LifecycleState = "interrupted"
+	LifecycleStateHalted           LifecycleState = "halted"
 )
 
 // InvokeMode controls what happens when invokes pile up for a workflow (see the
@@ -41,31 +42,42 @@ type WorkflowConfig struct {
 type WorkflowState string
 
 const (
-	WorkflowStateActive   WorkflowState = "active"
-	WorkflowStatePaused   WorkflowState = "paused"
-	WorkflowStateCooldown WorkflowState = "cooldown"
-	WorkflowStateDisabled WorkflowState = "disabled"
+	WorkflowStateActive    WorkflowState = "active"
+	WorkflowStatePaused    WorkflowState = "paused"
+	WorkflowStateCooldown  WorkflowState = "cooldown"
+	WorkflowStateDisabled  WorkflowState = "disabled"
+	WorkflowStateSuspended WorkflowState = "suspended"
 )
 
 type Workflow struct {
-	ID                     string
-	TenantID               string
-	WorkflowType           string
-	WorkflowConfig         WorkflowConfig
-	Lifecycle              LifecycleInfo
-	WorkflowState          WorkflowState
-	LifecyclePolicy        WorkflowLifecyclePolicy
-	InvocationMetrics      []WorkflowInvocationSnapshot
-	CooldownUntil          *time.Time
+	ID                string
+	TenantID          string
+	WorkflowType      string
+	WorkflowConfig    WorkflowConfig
+	Lifecycle         LifecycleInfo
+	WorkflowState     WorkflowState
+	LifecyclePolicy   WorkflowLifecyclePolicy
+	InvocationMetrics []WorkflowInvocationSnapshot
+	CooldownUntil     *time.Time
 	// LastPolicyDecisionRequestID is the request_id ActivateWorkflow guards on.
 	LastPolicyDecisionRequestID string
-	LifecycleLastResolved  int64
-	CurrentWorkflowVersion int
-	SchedulerPartitionID   string
-	TargetVersion          int64
-	CurrentVersion         int64
-	CreatedAt              time.Time
-	DeletionRequestedAt    *time.Time
+	LifecycleLastResolved       int64
+	CurrentWorkflowVersion      int
+	SchedulerPartitionID        string
+	TargetVersion               int64
+	CurrentVersion              int64
+	CreatedAt                   time.Time
+	DeletionRequestedAt         *time.Time
+	// The operator's choices, so the reconciler's re-runs take the same steps.
+	Suspension Suspension
+}
+
+type Suspension struct {
+	ID          string
+	Reason      string
+	StopCurrent bool
+	RequestedAt *time.Time
+	FinalizedAt *time.Time
 }
 
 // LifecycleInfo groups a workflow's current lifecycle state with the raw gate log

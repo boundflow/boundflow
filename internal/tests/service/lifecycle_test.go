@@ -51,6 +51,16 @@ func (m *mockInputResolver) AnswerJob(_ context.Context, _ string, _ string, _ m
 	return m.answerResult, domain.ResolvedInput{}, m.answerErr
 }
 
+// mockSuspensionResolver is a simple test double for service.SuspensionResolver.
+type mockSuspensionResolver struct {
+	abandoned  bool
+	abandonErr error
+}
+
+func (m *mockSuspensionResolver) AbandonJob(_ context.Context, _ string, _ string) (bool, error) {
+	return m.abandoned, m.abandonErr
+}
+
 // policy used in all tests — non-zero so resolveJobPolicy returns immediately.
 var testPolicy = domain.WorkflowRuntimeParams{OperationTimeoutSeconds: 30}
 
@@ -76,7 +86,8 @@ func newSvcWithApproval(ctrl *gomock.Controller, approval service.ApprovalResolv
 	// Approval decisions append an audit row on success; tests don't assert on it.
 	auditRepo.EXPECT().Append(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	input := &mockInputResolver{answerResult: true}
-	svc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, versionMetricsRepo, sched, approval, input, auditRepo, 10, 30, discardLogger)
+	suspension := &mockSuspensionResolver{abandoned: true}
+	svc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, versionMetricsRepo, sched, approval, input, suspension, auditRepo, 10, 30, discardLogger)
 	return svc, workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo
 }
 
@@ -177,8 +188,8 @@ func TestDeleteWorkflow(t *testing.T) {
 		Return(nil)
 
 	requestRepo.EXPECT().
-		AbandonUnscheduledRequests(gomock.Any(), "instance-1").
-		Return(nil)
+		AbandonQueuedRequests(gomock.Any(), "instance-1", nil).
+		Return(nil, nil)
 
 	requestRepo.EXPECT().
 		HasRunningRequest(gomock.Any(), "instance-1").
@@ -325,7 +336,7 @@ func newSvcForMetrics(ctrl *gomock.Controller) (*service.LifecycleService, *mock
 	workflowRepo := mocks.NewMockWorkflowRepository(ctrl)
 	versionMetricsRepo := mocks.NewMockVersionMetricsRepository(ctrl)
 	svc := service.NewLifecycleService(
-		workflowRepo, nil, nil, nil, nil, nil, versionMetricsRepo, nil, nil, nil, nil, 10, 30, discardLogger,
+		workflowRepo, nil, nil, nil, nil, nil, versionMetricsRepo, nil, nil, nil, nil, nil, 10, 30, discardLogger,
 	)
 	return svc, workflowRepo, versionMetricsRepo
 }

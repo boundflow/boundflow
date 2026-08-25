@@ -37,7 +37,7 @@ func newHandler(ctrl *gomock.Controller) (*handlers.WorkflowServiceHandler, *moc
 
 	svc := service.NewLifecycleService(
 		workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo,
-		modelPricingRepo, versionMetricsRepo, nil, nil, nil, auditRepo, 10, 30, discardLogger,
+		modelPricingRepo, versionMetricsRepo, nil, nil, nil, nil, auditRepo, 10, 30, discardLogger,
 	)
 	return handlers.NewWorkflowServiceHandler(svc), workflowRepo, agentStateRepo, versionMetricsRepo
 }

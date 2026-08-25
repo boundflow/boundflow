@@ -17,9 +17,9 @@ func ApprovalAuditRecord(e domain.AuditEvent) (*boundflowv1.ApprovalAuditRecord,
 		return nil, err
 	}
 	rec := &boundflowv1.ApprovalAuditRecord{
-		ApprovalId: d.ApprovalID,
-		WorkflowId: e.WorkflowID,
-		RequestId:  e.RequestID,
+		ApprovalId:    d.ApprovalID,
+		WorkflowId:    e.WorkflowID,
+		RequestId:     e.RequestID,
 		Decision:      approvalDecisionToProto(d.Decision),
 		Actor:         e.Actor,
 		OccurredAt:    timestamppb.New(e.OccurredAt),

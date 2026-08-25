@@ -177,6 +177,11 @@ func (s *Scheduler) RejectJob(ctx context.Context, workflowID string, approvalID
 	return s.jobs.ResolveApproval(ctx, workflowID, approvalID, domain.JobStatusRejected, reason)
 }
 
+// AbandonJob flags the workflow's job to stop rather than drain. Reports whether there was one.
+func (s *Scheduler) AbandonJob(ctx context.Context, workflowID, suspensionID string) (bool, error) {
+	return s.jobs.MarkAbandonRequested(ctx, workflowID, suspensionID)
+}
+
 func (s *Scheduler) AnswerJob(ctx context.Context, workflowID string, inputID string, answer map[string]any) (bool, domain.ResolvedInput, error) {
 	return s.jobs.ResolveInput(ctx, workflowID, inputID, answer)
 }

@@ -6,8 +6,8 @@ import (
 	"net"
 
 	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
-	config "github.com/boundflow/boundflow/internal/config"
 	"github.com/boundflow/boundflow/internal/auth"
+	config "github.com/boundflow/boundflow/internal/config"
 	"github.com/boundflow/boundflow/internal/server/handlers"
 	"github.com/boundflow/boundflow/internal/service"
 	"google.golang.org/grpc"

@@ -2,6 +2,8 @@ package scheduler_test
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"testing"
 
 	"go.uber.org/mock/gomock"
@@ -10,6 +12,27 @@ import (
 	"github.com/boundflow/boundflow/internal/scheduler"
 	"github.com/boundflow/boundflow/internal/storage/mocks"
 )
+
+var engineLogger = slog.New(slog.NewTextHandler(io.Discard, nil))
+
+func ip(v int) *int { return &v }
+
+func pauseRule(metric domain.WorkflowMetric, threshold float64, window int) domain.WorkflowLifecyclePolicyRule {
+	return domain.WorkflowLifecyclePolicyRule{
+		Metric:    metric,
+		Threshold: threshold,
+		Window:    window,
+		Action:    domain.WorkflowLifecyclePolicyAction{Type: domain.WorkflowPolicyActionPause},
+	}
+}
+
+func setVersionRule(metric domain.WorkflowMetric, threshold float64, target int) domain.WorkflowLifecyclePolicyRule {
+	return domain.WorkflowLifecyclePolicyRule{
+		Metric:    metric,
+		Threshold: threshold,
+		Action:    domain.WorkflowLifecyclePolicyAction{Type: domain.WorkflowPolicyActionSetVersion, TargetVersion: target},
+	}
+}
 
 func TestResolveLifecyclePolicy_SetVersionGuardsOnPreviousVersion(t *testing.T) {
 	ctrl := gomock.NewController(t)

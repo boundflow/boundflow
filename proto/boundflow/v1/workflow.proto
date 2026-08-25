@@ -38,6 +38,7 @@ enum WorkflowState {
   WORKFLOW_STATE_PAUSED   = 2;
   WORKFLOW_STATE_COOLDOWN = 3;
   WORKFLOW_STATE_DISABLED = 4;
+  WORKFLOW_STATE_SUSPENDED = 5;
 }
 
 // PendingApproval is the currently open approval gate for a workflow — populated
@@ -62,6 +63,19 @@ message PendingInput {
   google.protobuf.Timestamp timeout_at = 5;
 }
 
+// Suspension is the operator hold currently on a workflow — populated on Workflow only
+// while workflow_state is WORKFLOW_STATE_SUSPENDED. Read-only; the suspension_id here is
+// what resume_workflow expects.
+message Suspension {
+  string suspension_id = 1;
+  string reason = 2;
+  // Whether the run in flight when the suspension landed was stopped rather than drained.
+  bool stop_current = 3;
+  google.protobuf.Timestamp requested_at = 5;
+  // Set once nothing is running any more; the workflow is only resumable after this.
+  google.protobuf.Timestamp finalized_at = 6;
+}
+
 // Workflow is a managed, stateful unit of agent execution tied to a specific
 // tenant. Managed via the WorkflowService.
 message Workflow {
@@ -82,4 +96,6 @@ message Workflow {
   google.protobuf.Timestamp deletion_requested_at = 14;
   // Pass back as ActivateWorkflowRequest.request_id to resume from paused/cooldown.
   string last_policy_decision_request_id = 15;
+  // The operator hold currently on the workflow; unset when it is not suspended.
+  Suspension suspension = 16;
 }

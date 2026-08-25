@@ -22,6 +22,9 @@ const (
 	WorkflowService_CreateWorkflow_FullMethodName             = "/boundflow.v1.WorkflowService/CreateWorkflow"
 	WorkflowService_InvokeWorkflow_FullMethodName             = "/boundflow.v1.WorkflowService/InvokeWorkflow"
 	WorkflowService_DeleteWorkflow_FullMethodName             = "/boundflow.v1.WorkflowService/DeleteWorkflow"
+	WorkflowService_SuspendWorkflow_FullMethodName            = "/boundflow.v1.WorkflowService/SuspendWorkflow"
+	WorkflowService_ResumeWorkflow_FullMethodName             = "/boundflow.v1.WorkflowService/ResumeWorkflow"
+	WorkflowService_AbandonQueuedRequests_FullMethodName      = "/boundflow.v1.WorkflowService/AbandonQueuedRequests"
 	WorkflowService_GetWorkflow_FullMethodName                = "/boundflow.v1.WorkflowService/GetWorkflow"
 	WorkflowService_ListWorkflows_FullMethodName              = "/boundflow.v1.WorkflowService/ListWorkflows"
 	WorkflowService_SetAgentRuntimePolicy_FullMethodName      = "/boundflow.v1.WorkflowService/SetAgentRuntimePolicy"
@@ -55,6 +58,16 @@ type WorkflowServiceClient interface {
 	CreateWorkflow(ctx context.Context, in *CreateWorkflowRequest, opts ...grpc.CallOption) (*CreateWorkflowResponse, error)
 	InvokeWorkflow(ctx context.Context, in *InvokeWorkflowRequest, opts ...grpc.CallOption) (*InvokeWorkflowResponse, error)
 	DeleteWorkflow(ctx context.Context, in *DeleteWorkflowRequest, opts ...grpc.CallOption) (*DeleteWorkflowResponse, error)
+	// SuspendWorkflow holds a workflow: nothing new is scheduled, and queued work is either
+	// held for the resume or abandoned. Returns once the hold is recorded; draining any run
+	// still in flight finishes in the background.
+	SuspendWorkflow(ctx context.Context, in *SuspendWorkflowRequest, opts ...grpc.CallOption) (*SuspendWorkflowResponse, error)
+	// ResumeWorkflow releases a suspension, restoring the workflow_state its lifecycle
+	// policy calls for and releasing any held requests. Only valid once the suspension has
+	// finalized (Suspension.finalized_at set).
+	ResumeWorkflow(ctx context.Context, in *ResumeWorkflowRequest, opts ...grpc.CallOption) (*ResumeWorkflowResponse, error)
+	// AbandonQueuedRequests drops queued runs without waiting for them. Irreversible.
+	AbandonQueuedRequests(ctx context.Context, in *AbandonQueuedRequestsRequest, opts ...grpc.CallOption) (*AbandonQueuedRequestsResponse, error)
 	GetWorkflow(ctx context.Context, in *GetWorkflowRequest, opts ...grpc.CallOption) (*GetWorkflowResponse, error)
 	ListWorkflows(ctx context.Context, in *ListWorkflowsRequest, opts ...grpc.CallOption) (*ListWorkflowsResponse, error)
 	SetAgentRuntimePolicy(ctx context.Context, in *SetAgentRuntimePolicyRequest, opts ...grpc.CallOption) (*SetAgentRuntimePolicyResponse, error)
@@ -118,6 +131,36 @@ func (c *workflowServiceClient) DeleteWorkflow(ctx context.Context, in *DeleteWo
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DeleteWorkflowResponse)
 	err := c.cc.Invoke(ctx, WorkflowService_DeleteWorkflow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *workflowServiceClient) SuspendWorkflow(ctx context.Context, in *SuspendWorkflowRequest, opts ...grpc.CallOption) (*SuspendWorkflowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SuspendWorkflowResponse)
+	err := c.cc.Invoke(ctx, WorkflowService_SuspendWorkflow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *workflowServiceClient) ResumeWorkflow(ctx context.Context, in *ResumeWorkflowRequest, opts ...grpc.CallOption) (*ResumeWorkflowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResumeWorkflowResponse)
+	err := c.cc.Invoke(ctx, WorkflowService_ResumeWorkflow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *workflowServiceClient) AbandonQueuedRequests(ctx context.Context, in *AbandonQueuedRequestsRequest, opts ...grpc.CallOption) (*AbandonQueuedRequestsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AbandonQueuedRequestsResponse)
+	err := c.cc.Invoke(ctx, WorkflowService_AbandonQueuedRequests_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -371,6 +414,16 @@ type WorkflowServiceServer interface {
 	CreateWorkflow(context.Context, *CreateWorkflowRequest) (*CreateWorkflowResponse, error)
 	InvokeWorkflow(context.Context, *InvokeWorkflowRequest) (*InvokeWorkflowResponse, error)
 	DeleteWorkflow(context.Context, *DeleteWorkflowRequest) (*DeleteWorkflowResponse, error)
+	// SuspendWorkflow holds a workflow: nothing new is scheduled, and queued work is either
+	// held for the resume or abandoned. Returns once the hold is recorded; draining any run
+	// still in flight finishes in the background.
+	SuspendWorkflow(context.Context, *SuspendWorkflowRequest) (*SuspendWorkflowResponse, error)
+	// ResumeWorkflow releases a suspension, restoring the workflow_state its lifecycle
+	// policy calls for and releasing any held requests. Only valid once the suspension has
+	// finalized (Suspension.finalized_at set).
+	ResumeWorkflow(context.Context, *ResumeWorkflowRequest) (*ResumeWorkflowResponse, error)
+	// AbandonQueuedRequests drops queued runs without waiting for them. Irreversible.
+	AbandonQueuedRequests(context.Context, *AbandonQueuedRequestsRequest) (*AbandonQueuedRequestsResponse, error)
 	GetWorkflow(context.Context, *GetWorkflowRequest) (*GetWorkflowResponse, error)
 	ListWorkflows(context.Context, *ListWorkflowsRequest) (*ListWorkflowsResponse, error)
 	SetAgentRuntimePolicy(context.Context, *SetAgentRuntimePolicyRequest) (*SetAgentRuntimePolicyResponse, error)
@@ -418,6 +471,15 @@ func (UnimplementedWorkflowServiceServer) InvokeWorkflow(context.Context, *Invok
 }
 func (UnimplementedWorkflowServiceServer) DeleteWorkflow(context.Context, *DeleteWorkflowRequest) (*DeleteWorkflowResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteWorkflow not implemented")
+}
+func (UnimplementedWorkflowServiceServer) SuspendWorkflow(context.Context, *SuspendWorkflowRequest) (*SuspendWorkflowResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SuspendWorkflow not implemented")
+}
+func (UnimplementedWorkflowServiceServer) ResumeWorkflow(context.Context, *ResumeWorkflowRequest) (*ResumeWorkflowResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResumeWorkflow not implemented")
+}
+func (UnimplementedWorkflowServiceServer) AbandonQueuedRequests(context.Context, *AbandonQueuedRequestsRequest) (*AbandonQueuedRequestsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AbandonQueuedRequests not implemented")
 }
 func (UnimplementedWorkflowServiceServer) GetWorkflow(context.Context, *GetWorkflowRequest) (*GetWorkflowResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetWorkflow not implemented")
@@ -562,6 +624,60 @@ func _WorkflowService_DeleteWorkflow_Handler(srv interface{}, ctx context.Contex
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WorkflowServiceServer).DeleteWorkflow(ctx, req.(*DeleteWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WorkflowService_SuspendWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SuspendWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorkflowServiceServer).SuspendWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorkflowService_SuspendWorkflow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorkflowServiceServer).SuspendWorkflow(ctx, req.(*SuspendWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WorkflowService_ResumeWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResumeWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorkflowServiceServer).ResumeWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorkflowService_ResumeWorkflow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorkflowServiceServer).ResumeWorkflow(ctx, req.(*ResumeWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WorkflowService_AbandonQueuedRequests_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AbandonQueuedRequestsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorkflowServiceServer).AbandonQueuedRequests(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorkflowService_AbandonQueuedRequests_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorkflowServiceServer).AbandonQueuedRequests(ctx, req.(*AbandonQueuedRequestsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1016,6 +1132,18 @@ var WorkflowService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteWorkflow",
 			Handler:    _WorkflowService_DeleteWorkflow_Handler,
+		},
+		{
+			MethodName: "SuspendWorkflow",
+			Handler:    _WorkflowService_SuspendWorkflow_Handler,
+		},
+		{
+			MethodName: "ResumeWorkflow",
+			Handler:    _WorkflowService_ResumeWorkflow_Handler,
+		},
+		{
+			MethodName: "AbandonQueuedRequests",
+			Handler:    _WorkflowService_AbandonQueuedRequests_Handler,
 		},
 		{
 			MethodName: "GetWorkflow",

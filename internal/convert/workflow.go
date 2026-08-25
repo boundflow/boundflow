@@ -9,10 +9,11 @@ import (
 )
 
 var workflowStateToProto = map[domain.WorkflowState]boundflowv1.WorkflowState{
-	domain.WorkflowStateActive:   boundflowv1.WorkflowState_WORKFLOW_STATE_ACTIVE,
-	domain.WorkflowStatePaused:   boundflowv1.WorkflowState_WORKFLOW_STATE_PAUSED,
-	domain.WorkflowStateCooldown: boundflowv1.WorkflowState_WORKFLOW_STATE_COOLDOWN,
-	domain.WorkflowStateDisabled: boundflowv1.WorkflowState_WORKFLOW_STATE_DISABLED,
+	domain.WorkflowStateActive:    boundflowv1.WorkflowState_WORKFLOW_STATE_ACTIVE,
+	domain.WorkflowStatePaused:    boundflowv1.WorkflowState_WORKFLOW_STATE_PAUSED,
+	domain.WorkflowStateCooldown:  boundflowv1.WorkflowState_WORKFLOW_STATE_COOLDOWN,
+	domain.WorkflowStateDisabled:  boundflowv1.WorkflowState_WORKFLOW_STATE_DISABLED,
+	domain.WorkflowStateSuspended: boundflowv1.WorkflowState_WORKFLOW_STATE_SUSPENDED,
 }
 
 func WorkflowToProto(r *domain.Workflow) *boundflowv1.Workflow {
@@ -47,7 +48,25 @@ func WorkflowToProto(r *domain.Workflow) *boundflowv1.Workflow {
 	if r.DeletionRequestedAt != nil {
 		w.DeletionRequestedAt = timestamppb.New(*r.DeletionRequestedAt)
 	}
+	if r.Suspension.RequestedAt != nil {
+		w.Suspension = suspensionToProto(r.Suspension)
+	}
 	return w
+}
+
+func suspensionToProto(s domain.Suspension) *boundflowv1.Suspension {
+	out := &boundflowv1.Suspension{
+		SuspensionId: s.ID,
+		Reason:       s.Reason,
+		StopCurrent:  s.StopCurrent,
+	}
+	if s.RequestedAt != nil {
+		out.RequestedAt = timestamppb.New(*s.RequestedAt)
+	}
+	if s.FinalizedAt != nil {
+		out.FinalizedAt = timestamppb.New(*s.FinalizedAt)
+	}
+	return out
 }
 
 func pendingApprovalToProto(p *domain.PendingApproval) *boundflowv1.PendingApproval {

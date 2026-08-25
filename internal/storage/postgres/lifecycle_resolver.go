@@ -115,7 +115,7 @@ func (r *LifecycleResolverRepo) TryApplyVersionResolution(ctx context.Context, w
 		WHERE id = $1
 		  AND lifecycle_last_resolved < $2
 		  AND current_workflow_version = $4
-		  AND workflow_state != 'disabled'
+		  AND workflow_state NOT IN ('disabled', 'suspended')
 		RETURNING id
 	`, workflowID, resolved, targetVersion, expectedVersion, requestID).Scan(&updatedID)
 	if err != nil {
@@ -147,7 +147,7 @@ func (r *LifecycleResolverRepo) TryApplyStateResolution(ctx context.Context, wor
 		    last_policy_decision_request_id = $5
 		WHERE id = $1
 		  AND lifecycle_last_resolved < $2
-		  AND workflow_state != 'disabled'
+		  AND workflow_state NOT IN ('disabled', 'suspended')
 		RETURNING id
 	`, workflowID, resolved, workflowState, cooldownUntil, requestID).Scan(&updatedID)
 	if err != nil {
