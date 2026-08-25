@@ -358,6 +358,14 @@ class OperationContext:
             }
         return runtime_policy
 
+    def policy(self, agent_name: str) -> RuntimePolicy:
+        """The agent's effective runtime policy, for enforcing `policy.custom` yourself.
+
+        The same policy `run_agent` uses, lifecycle rules already applied — so a limit you
+        enforce here agrees with the one BoundFlow enforces. Reading it does not audit
+        anything; only a rule that actually changes the policy does that."""
+        return self._resolve_policy(agent_name)
+
     async def run_agent(self, agent: AgentDefinition, *, budget: Budget | None = None) -> StepResult:
         """Run an agent step — BoundFlow drives the loop. Metrics are written back on
         completion. See `agent_model()` for the inverse (you drive, BoundFlow governs).

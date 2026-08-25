@@ -343,13 +343,6 @@ class AgentGovernor:
         the enforcement is the harness's."""
         return dict(self._tool_limits)
 
-    def capability_call_caps(self) -> dict[str, int]:
-        """Per-capability caps — how many `write`s, not how many `write_file`s.
-
-        A harness typically caps one tool or all tools with nothing in between, so
-        unlike `tool_call_caps` these are enforced by whoever wires the harness up."""
-        return {l.capability: l.max_calls for l in self.policy.capability_call_limits}
-
     def record_harness_tool(self, tool: str, *, failed: bool = False) -> None:
         """Record one harness-injected tool call that actually executed.
 
