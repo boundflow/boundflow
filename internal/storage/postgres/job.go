@@ -422,6 +422,36 @@ func (r *JobRepo) ParkForInput(ctx context.Context, workflowID string, ownerID s
 	return tag.RowsAffected() == 1, nil
 }
 
+// SweepAbandonedGates finishes flagged jobs parked at a gate. AcquireJob excludes the
+// awaiting states, so no worker can ever pick these up to honour the flag themselves —
+// without this a suspension waits forever on an answer that is never coming. Completing
+// them here lets the ordinary completeJobs sweep take the request terminal.
+func (r *JobRepo) SweepAbandonedGates(ctx context.Context, partitionID string) ([]string, error) {
+	rows, err := r.pool.Query(ctx,
+		`UPDATE jobs
+		 SET status = 'completed', result_type = $2, failure_reason = $3
+		 WHERE workflow_id IN (SELECT id FROM workflows WHERE scheduler_partition_id = $1)
+		   AND status IN ('awaiting_approval', 'awaiting_input')
+		   AND abandon_requested_at IS NOT NULL
+		 RETURNING workflow_id`,
+		partitionID, domain.RunOutcomeSuspended, "stopped by workflow suspension",
+	)
+	if err != nil {
+		return nil, fmt.Errorf("sweep abandoned gates: %w", err)
+	}
+	defer rows.Close()
+
+	var out []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan abandoned gate workflow id: %w", err)
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
+}
+
 // MarkAbandonRequested tells whoever holds the job to stop the run. Call only after
 // MarkSuspensionRequested returns — that freeze is the barrier that makes racing job inserts
 // visible to this statement's snapshot. Guarded on suspensionID; idempotent.
