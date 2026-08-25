@@ -215,6 +215,9 @@ type JobRepository interface {
 	// guarded by approvalID match. Returns false if the ID doesn't match or the job isn't awaiting
 	// approval; on success also returns the job bits needed to write the approval audit row.
 	ResolveApproval(ctx context.Context, workflowID string, approvalID string, status domain.JobStatus, reason string) (bool, domain.ResolvedApproval, error)
+	// SweepAbandonedGates finishes flagged jobs parked at a gate, which no worker can
+	// acquire. Returns the workflow ids finished.
+	SweepAbandonedGates(ctx context.Context, partitionID string) ([]string, error)
 	// MarkAbandonRequested flags the workflow's job to be stopped rather than drained,
 	// for a suspension that asked for that. Call only after MarkSuspensionRequested has
 	// returned — that freeze is the barrier that makes racing job inserts visible.

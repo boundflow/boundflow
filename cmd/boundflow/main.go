@@ -167,13 +167,14 @@ func runScheduler(sigCh <-chan os.Signal) {
 		// Finishes deletions left pending by InitiateDelete once nothing's left in flight.
 		deletionReconciler := internalscheduler.NewDeletionReconciler(30, workflowRepo, customerRequestRepo, logger)
 		suspensionReconciler := internalscheduler.NewSuspensionReconciler(30, workflowRepo, customerRequestRepo, jobRepo, logger)
+		abandonedJobs := internalscheduler.NewAbandonedJobResolver(30, jobRepo, logger)
 		// Purges finalized workflows' operational rows once they're past the retention window.
 		workflowPurgeReconciler := internalscheduler.NewWorkflowPurgeReconciler(30, cfg.WorkflowPurgeAgeSeconds, workflowRepo, customerRequestRepo, versionMetricsRepo, logger)
 		// Hard-deletes soft-deleted tenants once their workflows have all been purged.
 		tenantPurgeReconciler := internalscheduler.NewTenantPurgeReconciler(30, tenantRepo, logger)
 		// Resolver (cooldown expiry) and periodic handler are partition-scoped: the scheduler
 		// starts them when it acquires a partition and cancels them when it loses it.
-		sched.SetPartitionWorkers(resolver, periodic, approvalTimeouts, inputTimeouts, deletionReconciler, suspensionReconciler, workflowPurgeReconciler, tenantPurgeReconciler)
+		sched.SetPartitionWorkers(resolver, periodic, approvalTimeouts, inputTimeouts, deletionReconciler, suspensionReconciler, abandonedJobs, workflowPurgeReconciler, tenantPurgeReconciler)
 		logger.Info("starting scheduler partition worker", "index", i, "scheduler_id", schedulerID)
 		go func() { errCh <- sched.Run(ctx) }()
 	}
