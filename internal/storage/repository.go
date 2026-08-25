@@ -340,7 +340,7 @@ type CustomerRequestRepository interface {
 	CreateDuePeriodicRequest(ctx context.Context, req *domain.CustomerRequest, minGap time.Duration) (int64, bool, error)
 	Get(ctx context.Context, id string) (*domain.CustomerRequest, error)
 	UpdateStatus(ctx context.Context, workflowID, id string, status domain.CustomerRequestStatus) error
-	// AbandonUnscheduledRequests fails every unscheduled request for the workflow.
+	// AbandonUnscheduledRequests fails every unscheduled or suspension-held request.
 	AbandonUnscheduledRequests(ctx context.Context, workflowID string) error
 	// HasRunningRequest reports whether the workflow currently has a scheduled or in-progress request.
 	HasRunningRequest(ctx context.Context, workflowID string) (bool, error)

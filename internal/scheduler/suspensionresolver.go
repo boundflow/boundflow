@@ -70,7 +70,8 @@ func (r *SuspensionReconciler) reconcileOne(ctx context.Context, workflow *domai
 	id := workflow.ID
 	suspensionID := workflow.Suspension.ID
 
-	// Something else took the workflow over (an interruption); don't finalize onto it.
+	// Delete took the workflow over mid-drain (an interruption can't reach here -- it tears
+	// the suspension down itself). Drop the hold rather than sweeping it forever.
 	if workflow.WorkflowState != domain.WorkflowStateSuspended {
 		if err := r.workflows.AbortSuspension(ctx, id, suspensionID); err != nil {
 			r.log.Error("failed to abort suspension", "workflow_id", id, "suspension_id", suspensionID, "error", err)

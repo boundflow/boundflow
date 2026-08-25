@@ -378,3 +378,91 @@ async def test_suspend_with_abandon_queued_discards_held_requests(cp):
         # The workflow itself is fine and takes new work.
         third = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=60)
         assert (await wait_for_completion(cp, third, timeout=90)).status == RunStatus.COMPLETED
+
+
+async def test_suspend_is_refused_when_the_workflow_is_already_stopped(cp):
+    """Deleting, deleted and interrupted workflows all sit at workflow_state=DISABLED, which
+    the suspend guard excludes — there is nothing to hold, and a hold would outlive the
+    thing holding it."""
+    async def _entry(ctx):
+        return Complete()
+
+    # Deleting / deleted.
+    worker, workflow = await _suspended_workflow(cp, "refuse-del", _entry)
+    async with run_worker(worker):
+        first = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=60)
+        await wait_for_completion(cp, first, timeout=60)
+    await cp.delete_workflow(workflow.id)
+    with pytest.raises(FailedPreconditionError):
+        await cp.suspend_workflow(workflow.id, reason="too late")
+
+    # Interrupted: a lost worker disables the workflow until it is acknowledged.
+    started = asyncio.Event()
+
+    async def _blocks(ctx):
+        started.set()
+        await asyncio.sleep(120)
+        return Complete()
+
+    worker2 = BoundFlowWorker(WORKER_ADDRESS, dummy_mock())
+    worker2.workflow("refuse_int_wf", version=1)(_blocks)
+    tenant = await create_isolated_tenant(cp, "refuse-int")
+    wf2 = await cp.create_workflow("refuse_int_wf", tenant.id, config=WorkflowConfig(version=1))
+    await cp.activate_workflow(wf2.id)
+
+    worker_task = asyncio.create_task(worker2.run())
+    await asyncio.sleep(0.1)
+    try:
+        request_id = await cp.invoke_workflow(wf2.id, operation_timeout_seconds=120)
+        await asyncio.wait_for(started.wait(), timeout=30)
+        await asyncio.sleep(2)
+    finally:
+        worker_task.cancel()
+        await asyncio.gather(worker_task, return_exceptions=True)
+
+    await wait_for_lifecycle_state(cp, wf2.id, LifecycleState.INTERRUPTED, timeout=120)
+    with pytest.raises(FailedPreconditionError):
+        await cp.suspend_workflow(wf2.id, reason="not while interrupted")
+
+    # Acknowledging the interruption makes it suspendable again.
+    await cp.resolve_interrupted_workflow(wf2.id, request_id)
+    assert await cp.suspend_workflow(wf2.id, reason="now it's fine")
+
+
+async def test_delete_during_a_draining_suspension_drops_the_hold(cp):
+    """Delete outranks an operator hold. It takes the workflow to DISABLED with the
+    suspension columns still set, so the suspension reconciler drops the hold rather than
+    sweeping a workflow it no longer owns — and the held requests are released so the
+    deletion's own tail can abandon them."""
+    started, release = asyncio.Event(), asyncio.Event()
+    worker, workflow = await _queued_behind_a_running_run(cp, "del-drain", release, started)
+
+    async with run_worker(worker):
+        first = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=120)
+        await asyncio.wait_for(started.wait(), timeout=30)
+        second = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=120)
+
+        await cp.suspend_workflow(workflow.id, reason="hold then delete")
+        await wait_for_workflow_state(cp, workflow.id, WorkflowState.SUSPENDED)
+        assert (await cp.get_request_info(second)).status == RunStatus.PAUSED
+        # Still draining — this is the only window where the reconciler sees the hold.
+        assert (await cp.get_workflow(workflow.id)).suspension.finalized_at is None
+
+        await cp.delete_workflow(workflow.id)
+        assert (await cp.get_workflow(workflow.id)).workflow_state == WorkflowState.DISABLED
+
+        release.set()
+        await wait_for_completion(cp, first, timeout=90)
+
+        # The reconciler drops the hold; the freed request is then abandoned by the delete.
+        deadline = asyncio.get_event_loop().time() + 180
+        while True:
+            info = await cp.get_workflow(workflow.id)
+            run = await cp.get_request_info(second)
+            if info.suspension is None and run.status == RunStatus.ABANDONED:
+                break
+            assert asyncio.get_event_loop().time() < deadline, \
+                f"hold not dropped: suspension={info.suspension} second={run.status}"
+            await asyncio.sleep(1)
+
+    await wait_for_lifecycle_state(cp, workflow.id, LifecycleState.DELETED, timeout=180)

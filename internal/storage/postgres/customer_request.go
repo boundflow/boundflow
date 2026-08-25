@@ -132,9 +132,12 @@ func (r *CustomerRequestRepo) DeleteForWorkflow(ctx context.Context, workflowID 
 	return nil
 }
 
+// Held ('paused') requests are abandoned too: the workflow is going away, so a hold that
+// would have released them has nothing left to release them into.
 func (r *CustomerRequestRepo) AbandonUnscheduledRequests(ctx context.Context, workflowID string) error {
 	_, err := r.pool.Exec(ctx,
-		`UPDATE customer_requests SET status = 'abandoned' WHERE workflow_id = $1 AND status = 'unscheduled'`,
+		`UPDATE customer_requests SET status = 'abandoned'
+		 WHERE workflow_id = $1 AND status IN ('unscheduled', 'paused')`,
 		workflowID,
 	)
 	if err != nil {

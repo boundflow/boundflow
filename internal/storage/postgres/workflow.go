@@ -336,10 +336,8 @@ func (r *WorkflowRepo) FinalizeSuspended(ctx context.Context, id, suspensionID s
 }
 
 // AbortSuspension drops a suspension whose workflow something else has taken over — in
-// practice an interruption, which leaves it disabled and needing ResolveInterruptedWorkflow.
-// Releasing the queue is safe because that state blocks scheduling on its own.
-//
-// workflow_state and lifecycle_state are left to whatever took over.
+// practice a delete landing mid-drain. Releasing the queue is safe because the state that
+// took over blocks scheduling on its own; workflow_state/lifecycle_state are left alone.
 func (r *WorkflowRepo) AbortSuspension(ctx context.Context, id, suspensionID string) error {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
