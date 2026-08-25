@@ -103,7 +103,7 @@ func runServer(sigCh <-chan os.Signal) {
 
 	modelPricingRepo := postgres.NewModelPricingRepo(pool)
 	regSvc := service.NewRegistrationService(tenantGroupRepo, tenantRepo, modelPricingRepo, cfg.NumPartitions, logger)
-	lifecycleSvc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, versionMetricsRepo, sched, sched, sched, auditRepo, cfg.NumPartitions, cfg.PeriodicPollSeconds, logger)
+	lifecycleSvc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, versionMetricsRepo, sched, sched, sched, sched, auditRepo, cfg.NumPartitions, cfg.PeriodicPollSeconds, logger)
 
 	authn := auth.NewAuthenticator(postgres.NewApiKeyRepo(pool))
 	srv := server.New(cfg, regSvc, lifecycleSvc, authn, cfg.Debug)
@@ -158,7 +158,7 @@ func runScheduler(sigCh <-chan os.Signal) {
 		resolver := internalscheduler.NewLifecycleResolver(30, logger, lifecycleResolverRepo, workflowRepo, versionMetricsRepo)
 		sched := internalscheduler.NewScheduler(schedulerID, 30, 25, partitionRepo, schedulerRepo, customerRequestRepo, workflowRepo, agentStateRepo, jobRepo, metricsHandler, resolver, auditRepo, logger)
 		// The periodic handler invokes due workflows via the scheduler + lifecycle service.
-		lifecycleSvc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, versionMetricsRepo, sched, sched, sched, auditRepo, cfg.NumPartitions, cfg.PeriodicPollSeconds, logger)
+		lifecycleSvc := service.NewLifecycleService(workflowRepo, customerRequestRepo, tenantRepo, tenantGroupRepo, agentStateRepo, modelPricingRepo, versionMetricsRepo, sched, sched, sched, sched, auditRepo, cfg.NumPartitions, cfg.PeriodicPollSeconds, logger)
 		periodic := internalscheduler.NewPeriodicWorkflowHandler(cfg.PeriodicPollSeconds, logger, sched, lifecycleSvc, schedulerRepo, customerRequestRepo)
 		// Approval-gate timeouts resolve here (partition-scoped, like cooldown expiry)
 		approvalTimeouts := internalscheduler.NewApprovalTimeoutResolver(30, jobRepo, auditRepo, logger)
@@ -166,13 +166,14 @@ func runScheduler(sigCh <-chan os.Signal) {
 		inputTimeouts := internalscheduler.NewInputTimeoutResolver(30, jobRepo, auditRepo, logger)
 		// Finishes deletions left pending by InitiateDelete once nothing's left in flight.
 		deletionReconciler := internalscheduler.NewDeletionReconciler(30, workflowRepo, customerRequestRepo, logger)
+		suspensionReconciler := internalscheduler.NewSuspensionReconciler(30, workflowRepo, customerRequestRepo, jobRepo, logger)
 		// Purges finalized workflows' operational rows once they're past the retention window.
 		workflowPurgeReconciler := internalscheduler.NewWorkflowPurgeReconciler(30, cfg.WorkflowPurgeAgeSeconds, workflowRepo, customerRequestRepo, versionMetricsRepo, logger)
 		// Hard-deletes soft-deleted tenants once their workflows have all been purged.
 		tenantPurgeReconciler := internalscheduler.NewTenantPurgeReconciler(30, tenantRepo, logger)
 		// Resolver (cooldown expiry) and periodic handler are partition-scoped: the scheduler
 		// starts them when it acquires a partition and cancels them when it loses it.
-		sched.SetPartitionWorkers(resolver, periodic, approvalTimeouts, inputTimeouts, deletionReconciler, workflowPurgeReconciler, tenantPurgeReconciler)
+		sched.SetPartitionWorkers(resolver, periodic, approvalTimeouts, inputTimeouts, deletionReconciler, suspensionReconciler, workflowPurgeReconciler, tenantPurgeReconciler)
 		logger.Info("starting scheduler partition worker", "index", i, "scheduler_id", schedulerID)
 		go func() { errCh <- sched.Run(ctx) }()
 	}

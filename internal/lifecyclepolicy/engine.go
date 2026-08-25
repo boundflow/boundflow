@@ -1,4 +1,4 @@
-package scheduler
+package lifecyclepolicy
 
 import (
 	"log/slog"

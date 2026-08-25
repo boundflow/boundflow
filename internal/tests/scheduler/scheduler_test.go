@@ -67,10 +67,10 @@ func newTestScheduler(ctrl *gomock.Controller) (
 
 // testCustomerRequest is a minimal CustomerRequest used across ScheduleRequest tests.
 var testCustomerRequest = &domain.CustomerRequest{
-	ID:                 "req-1",
-	WorkflowID: "workflow-1",
-	RequestType:        domain.CustomerRequestTypeInvoke,
-	RequestInfo:        map[string]any{"correlationId": "corr-1", "operationTimeoutSeconds": float64(30), "initialVersion": float64(1)},
+	ID:          "req-1",
+	WorkflowID:  "workflow-1",
+	RequestType: domain.CustomerRequestTypeInvoke,
+	RequestInfo: map[string]any{"correlationId": "corr-1", "operationTimeoutSeconds": float64(30), "initialVersion": float64(1)},
 }
 
 func TestScheduleRequest_WrittenSupercedes(t *testing.T) {
@@ -242,7 +242,6 @@ func TestCompleteRequest_Create_TransitionsToActive(t *testing.T) {
 		t.Error("expected applied=true")
 	}
 }
-
 
 func TestCompleteRequest_VersionSkipped_ReturnsFalse(t *testing.T) {
 	ctrl := gomock.NewController(t)

@@ -65,7 +65,7 @@ func (r *DeletionReconciler) sweep(ctx context.Context, partitionID string) {
 }
 
 func (r *DeletionReconciler) reconcileOne(ctx context.Context, id string) {
-	if err := r.customerRequests.AbandonUnscheduledRequests(ctx, id); err != nil {
+	if _, err := r.customerRequests.AbandonQueuedRequests(ctx, id, nil); err != nil {
 		r.log.Error("failed to abandon unscheduled requests", "workflow_id", id, "error", err)
 		return
 	}

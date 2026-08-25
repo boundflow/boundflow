@@ -145,6 +145,7 @@ func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID stri
 		             status                   = 'pending',
 		             owner                    = NULL,
 		             lease_expires_at         = NULL,
+		             abandon_requested_at     = NULL,
 		             tenant_group_id          = EXCLUDED.tenant_group_id
 
 		         WHERE jobs.version < EXCLUDED.version
@@ -248,7 +249,7 @@ func (r *SchedulerRepo) MarkWorkflowScheduled(ctx context.Context, workflowID st
 		 FROM jobs j
 		 WHERE j.workflow_id = ri.id
 		   AND ri.id = $1
-		   AND ri.lifecycle_state NOT IN ('creating', 'deleted', 'interrupted')`,
+		   AND ri.lifecycle_state NOT IN ('creating', 'deleted', 'interrupted', 'halted')`,
 		workflowID,
 	)
 	if err != nil {
@@ -265,7 +266,7 @@ func (r *SchedulerRepo) MarkWorkflowInvoking(ctx context.Context, workflowID str
 		 FROM jobs j
 		 WHERE j.workflow_id = ri.id
 		   AND ri.id = $1
-		   AND ri.lifecycle_state NOT IN ('creating', 'deleted', 'interrupted')`,
+		   AND ri.lifecycle_state NOT IN ('creating', 'deleted', 'interrupted', 'halted')`,
 		workflowID,
 	)
 	if err != nil {
@@ -342,7 +343,7 @@ func (r *SchedulerRepo) ReconcileWorkflowLifecycles(ctx context.Context, partiti
 		     FROM jobs j
 		     JOIN workflows ri ON j.workflow_id = ri.id
 		     WHERE ri.scheduler_partition_id = $1
-		       AND ri.lifecycle_state NOT IN ('creating', 'deleted', 'interrupted')
+		       AND ri.lifecycle_state NOT IN ('creating', 'deleted', 'interrupted', 'halted')
 		 )
 		 UPDATE workflows ri
 		 SET lifecycle_state = t.new_state,

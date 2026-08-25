@@ -121,9 +121,6 @@ func (r *CustomerRequestRepo) CreateDuePeriodicRequest(ctx context.Context, req 
 	return version, true, nil
 }
 
-// AbandonUnscheduledRequests fails every unscheduled request for the workflow. Safe to
-// call repeatedly - the periodic reconciler calls it again for any workflow still
-// waiting to finalize deletion.
 func (r *CustomerRequestRepo) DeleteForWorkflow(ctx context.Context, workflowID string) error {
 	_, err := r.pool.Exec(ctx, `DELETE FROM customer_requests WHERE workflow_id = $1`, workflowID)
 	if err != nil {
@@ -132,15 +129,31 @@ func (r *CustomerRequestRepo) DeleteForWorkflow(ctx context.Context, workflowID 
 	return nil
 }
 
-func (r *CustomerRequestRepo) AbandonUnscheduledRequests(ctx context.Context, workflowID string) error {
-	_, err := r.pool.Exec(ctx,
-		`UPDATE customer_requests SET status = 'abandoned' WHERE workflow_id = $1 AND status = 'unscheduled'`,
-		workflowID,
+// Drops queued work, naming the requests or (nil ids) taking all. Only queued rows can be
+// abandoned, so a run already in progress is untouched — that makes it safe at any time.
+func (r *CustomerRequestRepo) AbandonQueuedRequests(ctx context.Context, workflowID string, requestIDs []string) ([]string, error) {
+	rows, err := r.pool.Query(ctx,
+		`UPDATE customer_requests SET status = 'abandoned'
+		 WHERE workflow_id = $1
+		   AND status IN ('unscheduled', 'paused')
+		   AND ($2::text[] IS NULL OR id = ANY($2))
+		 RETURNING id`,
+		workflowID, requestIDs,
 	)
 	if err != nil {
-		return fmt.Errorf("abandon unscheduled requests: %w", err)
+		return nil, fmt.Errorf("abandon queued requests: %w", err)
 	}
-	return nil
+	defer rows.Close()
+
+	var abandoned []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan abandoned request id: %w", err)
+		}
+		abandoned = append(abandoned, id)
+	}
+	return abandoned, rows.Err()
 }
 
 // HasRunningRequest reports whether the workflow currently has a scheduled or
@@ -286,4 +299,3 @@ func (r *CustomerRequestRepo) UpdateStatus(ctx context.Context, workflowID, id s
 	}
 	return nil
 }
-

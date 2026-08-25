@@ -29,6 +29,7 @@ CREATE TABLE jobs (
     -- Customer-facing result of the run, NULL until the job reaches 'completed'.
     result_type              run_outcome,
     failure_reason           TEXT NOT NULL DEFAULT '',
+    abandon_requested_at     TIMESTAMPTZ,
     -- The run's published output (Complete(result=...)), NULL until completed and
     -- NULL if the workflow never published one.
     result                    JSONB,

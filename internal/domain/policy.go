@@ -20,9 +20,9 @@ type FailurePolicy struct {
 }
 
 type RetryPolicy struct {
-	MaxRetries       int32
-	InitialBackoff   time.Duration
-	MaxBackoff       time.Duration
+	MaxRetries        int32
+	InitialBackoff    time.Duration
+	MaxBackoff        time.Duration
 	BackoffMultiplier float64
 }
 

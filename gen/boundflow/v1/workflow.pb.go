@@ -83,6 +83,7 @@ const (
 	WorkflowState_WORKFLOW_STATE_PAUSED      WorkflowState = 2
 	WorkflowState_WORKFLOW_STATE_COOLDOWN    WorkflowState = 3
 	WorkflowState_WORKFLOW_STATE_DISABLED    WorkflowState = 4
+	WorkflowState_WORKFLOW_STATE_SUSPENDED   WorkflowState = 5
 )
 
 // Enum value maps for WorkflowState.
@@ -93,6 +94,7 @@ var (
 		2: "WORKFLOW_STATE_PAUSED",
 		3: "WORKFLOW_STATE_COOLDOWN",
 		4: "WORKFLOW_STATE_DISABLED",
+		5: "WORKFLOW_STATE_SUSPENDED",
 	}
 	WorkflowState_value = map[string]int32{
 		"WORKFLOW_STATE_UNSPECIFIED": 0,
@@ -100,6 +102,7 @@ var (
 		"WORKFLOW_STATE_PAUSED":      2,
 		"WORKFLOW_STATE_COOLDOWN":    3,
 		"WORKFLOW_STATE_DISABLED":    4,
+		"WORKFLOW_STATE_SUSPENDED":   5,
 	}
 )
 
@@ -374,6 +377,87 @@ func (x *PendingInput) GetTimeoutAt() *timestamppb.Timestamp {
 	return nil
 }
 
+// Suspension is the operator hold currently on a workflow — populated on Workflow only
+// while workflow_state is WORKFLOW_STATE_SUSPENDED. Read-only; the suspension_id here is
+// what resume_workflow expects.
+type Suspension struct {
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	SuspensionId string                 `protobuf:"bytes,1,opt,name=suspension_id,json=suspensionId,proto3" json:"suspension_id,omitempty"`
+	Reason       string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	// Whether the run in flight when the suspension landed was stopped rather than drained.
+	StopCurrent bool                   `protobuf:"varint,3,opt,name=stop_current,json=stopCurrent,proto3" json:"stop_current,omitempty"`
+	RequestedAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=requested_at,json=requestedAt,proto3" json:"requested_at,omitempty"`
+	// Set once nothing is running any more; the workflow is only resumable after this.
+	FinalizedAt   *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=finalized_at,json=finalizedAt,proto3" json:"finalized_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Suspension) Reset() {
+	*x = Suspension{}
+	mi := &file_boundflow_v1_workflow_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Suspension) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Suspension) ProtoMessage() {}
+
+func (x *Suspension) ProtoReflect() protoreflect.Message {
+	mi := &file_boundflow_v1_workflow_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Suspension.ProtoReflect.Descriptor instead.
+func (*Suspension) Descriptor() ([]byte, []int) {
+	return file_boundflow_v1_workflow_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *Suspension) GetSuspensionId() string {
+	if x != nil {
+		return x.SuspensionId
+	}
+	return ""
+}
+
+func (x *Suspension) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *Suspension) GetStopCurrent() bool {
+	if x != nil {
+		return x.StopCurrent
+	}
+	return false
+}
+
+func (x *Suspension) GetRequestedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RequestedAt
+	}
+	return nil
+}
+
+func (x *Suspension) GetFinalizedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.FinalizedAt
+	}
+	return nil
+}
+
 // Workflow is a managed, stateful unit of agent execution tied to a specific
 // tenant. Managed via the WorkflowService.
 type Workflow struct {
@@ -395,13 +479,15 @@ type Workflow struct {
 	DeletionRequestedAt *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=deletion_requested_at,json=deletionRequestedAt,proto3" json:"deletion_requested_at,omitempty"`
 	// Pass back as ActivateWorkflowRequest.request_id to resume from paused/cooldown.
 	LastPolicyDecisionRequestId string `protobuf:"bytes,15,opt,name=last_policy_decision_request_id,json=lastPolicyDecisionRequestId,proto3" json:"last_policy_decision_request_id,omitempty"`
-	unknownFields               protoimpl.UnknownFields
-	sizeCache                   protoimpl.SizeCache
+	// The operator hold currently on the workflow; unset when it is not suspended.
+	Suspension    *Suspension `protobuf:"bytes,16,opt,name=suspension,proto3" json:"suspension,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Workflow) Reset() {
 	*x = Workflow{}
-	mi := &file_boundflow_v1_workflow_proto_msgTypes[3]
+	mi := &file_boundflow_v1_workflow_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -413,7 +499,7 @@ func (x *Workflow) String() string {
 func (*Workflow) ProtoMessage() {}
 
 func (x *Workflow) ProtoReflect() protoreflect.Message {
-	mi := &file_boundflow_v1_workflow_proto_msgTypes[3]
+	mi := &file_boundflow_v1_workflow_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -426,7 +512,7 @@ func (x *Workflow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Workflow.ProtoReflect.Descriptor instead.
 func (*Workflow) Descriptor() ([]byte, []int) {
-	return file_boundflow_v1_workflow_proto_rawDescGZIP(), []int{3}
+	return file_boundflow_v1_workflow_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Workflow) GetId() string {
@@ -513,6 +599,13 @@ func (x *Workflow) GetLastPolicyDecisionRequestId() string {
 	return ""
 }
 
+func (x *Workflow) GetSuspension() *Suspension {
+	if x != nil {
+		return x.Suspension
+	}
+	return nil
+}
+
 var File_boundflow_v1_workflow_proto protoreflect.FileDescriptor
 
 const file_boundflow_v1_workflow_proto_rawDesc = "" +
@@ -540,7 +633,14 @@ const file_boundflow_v1_workflow_proto_rawDesc = "" +
 	"\bmetadata\x18\x03 \x01(\v2\x17.google.protobuf.StructR\bmetadata\x127\n" +
 	"\topened_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\bopenedAt\x129\n" +
 	"\n" +
-	"timeout_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimeoutAt\"\xab\x05\n" +
+	"timeout_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimeoutAt\"\xea\x01\n" +
+	"\n" +
+	"Suspension\x12#\n" +
+	"\rsuspension_id\x18\x01 \x01(\tR\fsuspensionId\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\x12!\n" +
+	"\fstop_current\x18\x03 \x01(\bR\vstopCurrent\x12=\n" +
+	"\frequested_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\vrequestedAt\x12=\n" +
+	"\ffinalized_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\vfinalizedAt\"\xe5\x05\n" +
 	"\bWorkflow\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
 	"\rworkflow_type\x18\x02 \x01(\tR\fworkflowType\x12\x1b\n" +
@@ -555,18 +655,22 @@ const file_boundflow_v1_workflow_proto_rawDesc = "" +
 	"\x10pending_approval\x18\f \x01(\v2\x1d.boundflow.v1.PendingApprovalR\x0fpendingApproval\x12?\n" +
 	"\rpending_input\x18\r \x01(\v2\x1a.boundflow.v1.PendingInputR\fpendingInput\x12N\n" +
 	"\x15deletion_requested_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\x13deletionRequestedAt\x12D\n" +
-	"\x1flast_policy_decision_request_id\x18\x0f \x01(\tR\x1blastPolicyDecisionRequestId*Z\n" +
+	"\x1flast_policy_decision_request_id\x18\x0f \x01(\tR\x1blastPolicyDecisionRequestId\x128\n" +
+	"\n" +
+	"suspension\x18\x10 \x01(\v2\x18.boundflow.v1.SuspensionR\n" +
+	"suspension*Z\n" +
 	"\n" +
 	"InvokeMode\x12\x1b\n" +
 	"\x17INVOKE_MODE_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14INVOKE_MODE_COALESCE\x10\x01\x12\x15\n" +
-	"\x11INVOKE_MODE_QUEUE\x10\x02*\x9f\x01\n" +
+	"\x11INVOKE_MODE_QUEUE\x10\x02*\xbd\x01\n" +
 	"\rWorkflowState\x12\x1e\n" +
 	"\x1aWORKFLOW_STATE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15WORKFLOW_STATE_ACTIVE\x10\x01\x12\x19\n" +
 	"\x15WORKFLOW_STATE_PAUSED\x10\x02\x12\x1b\n" +
 	"\x17WORKFLOW_STATE_COOLDOWN\x10\x03\x12\x1b\n" +
-	"\x17WORKFLOW_STATE_DISABLED\x10\x04B=Z;github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1b\x06proto3"
+	"\x17WORKFLOW_STATE_DISABLED\x10\x04\x12\x1c\n" +
+	"\x18WORKFLOW_STATE_SUSPENDED\x10\x05B=Z;github.com/boundflow/boundflow/gen/boundflow/v1;boundflowv1b\x06proto3"
 
 var (
 	file_boundflow_v1_workflow_proto_rawDescOnce sync.Once
@@ -581,36 +685,40 @@ func file_boundflow_v1_workflow_proto_rawDescGZIP() []byte {
 }
 
 var file_boundflow_v1_workflow_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_boundflow_v1_workflow_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_boundflow_v1_workflow_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_boundflow_v1_workflow_proto_goTypes = []any{
 	(InvokeMode)(0),               // 0: boundflow.v1.InvokeMode
 	(WorkflowState)(0),            // 1: boundflow.v1.WorkflowState
 	(*WorkflowConfig)(nil),        // 2: boundflow.v1.WorkflowConfig
 	(*PendingApproval)(nil),       // 3: boundflow.v1.PendingApproval
 	(*PendingInput)(nil),          // 4: boundflow.v1.PendingInput
-	(*Workflow)(nil),              // 5: boundflow.v1.Workflow
-	(*structpb.Struct)(nil),       // 6: google.protobuf.Struct
-	(*timestamppb.Timestamp)(nil), // 7: google.protobuf.Timestamp
+	(*Suspension)(nil),            // 5: boundflow.v1.Suspension
+	(*Workflow)(nil),              // 6: boundflow.v1.Workflow
+	(*structpb.Struct)(nil),       // 7: google.protobuf.Struct
+	(*timestamppb.Timestamp)(nil), // 8: google.protobuf.Timestamp
 }
 var file_boundflow_v1_workflow_proto_depIdxs = []int32{
 	0,  // 0: boundflow.v1.WorkflowConfig.invoke_mode:type_name -> boundflow.v1.InvokeMode
-	6,  // 1: boundflow.v1.PendingApproval.metadata:type_name -> google.protobuf.Struct
-	7,  // 2: boundflow.v1.PendingApproval.opened_at:type_name -> google.protobuf.Timestamp
-	7,  // 3: boundflow.v1.PendingApproval.timeout_at:type_name -> google.protobuf.Timestamp
-	6,  // 4: boundflow.v1.PendingInput.metadata:type_name -> google.protobuf.Struct
-	7,  // 5: boundflow.v1.PendingInput.opened_at:type_name -> google.protobuf.Timestamp
-	7,  // 6: boundflow.v1.PendingInput.timeout_at:type_name -> google.protobuf.Timestamp
-	7,  // 7: boundflow.v1.Workflow.created_at:type_name -> google.protobuf.Timestamp
-	2,  // 8: boundflow.v1.Workflow.workflow_config:type_name -> boundflow.v1.WorkflowConfig
-	1,  // 9: boundflow.v1.Workflow.workflow_state:type_name -> boundflow.v1.WorkflowState
-	3,  // 10: boundflow.v1.Workflow.pending_approval:type_name -> boundflow.v1.PendingApproval
-	4,  // 11: boundflow.v1.Workflow.pending_input:type_name -> boundflow.v1.PendingInput
-	7,  // 12: boundflow.v1.Workflow.deletion_requested_at:type_name -> google.protobuf.Timestamp
-	13, // [13:13] is the sub-list for method output_type
-	13, // [13:13] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	7,  // 1: boundflow.v1.PendingApproval.metadata:type_name -> google.protobuf.Struct
+	8,  // 2: boundflow.v1.PendingApproval.opened_at:type_name -> google.protobuf.Timestamp
+	8,  // 3: boundflow.v1.PendingApproval.timeout_at:type_name -> google.protobuf.Timestamp
+	7,  // 4: boundflow.v1.PendingInput.metadata:type_name -> google.protobuf.Struct
+	8,  // 5: boundflow.v1.PendingInput.opened_at:type_name -> google.protobuf.Timestamp
+	8,  // 6: boundflow.v1.PendingInput.timeout_at:type_name -> google.protobuf.Timestamp
+	8,  // 7: boundflow.v1.Suspension.requested_at:type_name -> google.protobuf.Timestamp
+	8,  // 8: boundflow.v1.Suspension.finalized_at:type_name -> google.protobuf.Timestamp
+	8,  // 9: boundflow.v1.Workflow.created_at:type_name -> google.protobuf.Timestamp
+	2,  // 10: boundflow.v1.Workflow.workflow_config:type_name -> boundflow.v1.WorkflowConfig
+	1,  // 11: boundflow.v1.Workflow.workflow_state:type_name -> boundflow.v1.WorkflowState
+	3,  // 12: boundflow.v1.Workflow.pending_approval:type_name -> boundflow.v1.PendingApproval
+	4,  // 13: boundflow.v1.Workflow.pending_input:type_name -> boundflow.v1.PendingInput
+	8,  // 14: boundflow.v1.Workflow.deletion_requested_at:type_name -> google.protobuf.Timestamp
+	5,  // 15: boundflow.v1.Workflow.suspension:type_name -> boundflow.v1.Suspension
+	16, // [16:16] is the sub-list for method output_type
+	16, // [16:16] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_boundflow_v1_workflow_proto_init() }
@@ -624,7 +732,7 @@ func file_boundflow_v1_workflow_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_boundflow_v1_workflow_proto_rawDesc), len(file_boundflow_v1_workflow_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   4,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

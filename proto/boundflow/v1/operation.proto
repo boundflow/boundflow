@@ -79,6 +79,18 @@ message AtomicOperationResult {
   // Set by the SDK on Complete(result=...) — the run's published output, persisted
   // on the request for later retrieval via GetRequestInfo. Unset otherwise.
   google.protobuf.Struct result = 10;
+  // Echoed by the SDK when the operation ended because the server asked it to stop,
+  // so the run outcome reflects why it actually ended rather than why we asked.
+  // Unset when the operation ended for its own reasons.
+  CancelReason cancel_reason = 12;
+}
+
+// CancelReason is why the server asked for an operation to stop, echoed back by the
+// worker so the run outcome can be recorded accurately.
+enum CancelReason {
+  CANCEL_REASON_UNSPECIFIED = 0; // not a server-requested stop
+  CANCEL_REASON_TIMEOUT = 1;     // operation exceeded its timeout
+  CANCEL_REASON_SUSPENSION = 2;  // an operator suspended the workflow
 }
 
 enum OperationFailureType {
