@@ -44,8 +44,7 @@ type InputResolver interface {
 	AnswerJob(ctx context.Context, workflowID string, inputID string, answer map[string]any) (bool, domain.ResolvedInput, error)
 }
 
-// SuspensionResolver stops the run a suspension asked to interrupt rather than drain.
-// Reports whether there was a job to stop. Satisfied by *scheduler.Scheduler.
+// SuspensionResolver stops the run a suspension asked to cut. Satisfied by *scheduler.Scheduler.
 type SuspensionResolver interface {
 	AbandonJob(ctx context.Context, workflowID, suspensionID string) (bool, error)
 }
@@ -326,9 +325,7 @@ func (s *LifecycleService) ResumeWorkflow(ctx context.Context, correlationID, wo
 		return fmt.Errorf("resolve resume state: %w", err)
 	}
 
-	// Everything the resume changes lands in this one call, so unlike suspend there is no
-	// tail for a reconciler to finish: either the workflow is running again with its
-	// backlog released, or nothing happened and the caller can retry.
+	// One call, so unlike suspend there is no tail to reconcile: it either all landed or none did.
 	restored, err := s.workflows.RestoreFromSuspension(ctx, workflowID, suspensionID, state, workflow.CurrentWorkflowVersion, version, cooldownUntil)
 	if err != nil {
 		s.log.Error("failed to restore from suspension", "correlation_id", correlationID, "workflow_id", workflowID, "suspension_id", suspensionID, "error", err)
@@ -343,20 +340,8 @@ func (s *LifecycleService) ResumeWorkflow(ctx context.Context, correlationID, wo
 	return nil
 }
 
-// resolveResumeState recomputes what a resume should restore the workflow to. The lifecycle
-// policy may have been holding it in paused/cooldown, or have rolled its version back,
-// right up until the suspension — and a resolution that raced the suspension was dropped
-// outright by TryApplyStateResolution's workflow_state guard, with nothing to retry it. So
-// resuming can't just set active, and can't trust the persisted state either.
-//
-// It re-evaluates against the same rolling metrics, policy and version metrics the last
-// real resolution used: nothing can emit metrics while suspended, and metrics are written
-// before a request goes terminal (so before the suspension could have finalized at all),
-// which makes them provably final and unchanged here.
-//
-// A cooldown result gets its remaining time restored rather than a fresh window:
-// suspend never touches cooldown_until, so (cooldown_until - suspension_requested_at) is
-// exactly what was left when the clock froze.
+// Recomputes what a resume should restore: the policy may have been holding the workflow, and
+// a resolution that raced the suspension was dropped. Cooldowns keep their remaining time.
 func (s *LifecycleService) resolveResumeState(ctx context.Context, workflow *domain.Workflow) (domain.WorkflowState, int, *time.Time, error) {
 	version := workflow.CurrentWorkflowVersion
 
@@ -377,8 +362,7 @@ func (s *LifecycleService) resolveResumeState(ctx context.Context, workflow *dom
 	if firedRule == nil {
 		return domain.WorkflowStateActive, version, nil, nil
 	}
-	// A version rollback leaves workflow_state alone, exactly as TryApplyVersionResolution
-	// does — the two actions are mutually exclusive in the engine.
+	// A rollback leaves workflow_state alone, as TryApplyVersionResolution does.
 	if goalState.VersionChange {
 		return domain.WorkflowStateActive, goalState.Version, nil, nil
 	}

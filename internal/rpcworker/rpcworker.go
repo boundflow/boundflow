@@ -109,11 +109,9 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 	sessionID := uuid.NewString()
 
 	leaseExpired := make(chan bool)
-	// Carries the request id it was raised for, so a signal outliving its job is ignored
-	// rather than cancelling the next one. Buffered because the renewal tick can raise it
-	// while the loop waits for the IN_PROGRESS ack: ConnectedWaiting deliberately does not
-	// act on it -- cancelling an operation the client has not acked may reach it before the
-	// operation is registered -- so the signal has to survive until ConnectedBusy.
+	// Request id, so a signal outliving its job is ignored. Buffered: it can be raised while
+	// ConnectedWaiting holds, which deliberately ignores it (the client may not have
+	// registered the operation yet), so it must survive until ConnectedBusy.
 	abandonRequested := make(chan string, 1)
 	recvStream := make(chan *boundflowv1.WorkerMessage)
 	controlCodeCancelled := make(chan bool)
@@ -351,9 +349,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 		}
 	}
 
-	// suspendOperation ends a run an operator's suspension asked to stop. Unlike
-	// softFailOperation it does not bump num_failures: the run was cut deliberately, so
-	// lifecycle policy must not read it as the workflow misbehaving.
+	// Like softFailOperation but without the num_failures bump: the run was cut deliberately.
 	suspendOperation := func(cancelLease chan bool, job *domain.Job) {
 		ctx := context.Background()
 		defer cancelLeaseIfExists(cancelLease)
@@ -461,8 +457,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 										}
 										return
 									}
-									// Signal once and keep renewing: the job stays ours until the cancel
-									// resolves, so the lease still has to be held.
+									// Signal once, keep renewing: the job stays ours until the cancel resolves.
 									if abandon && !abandonSignalled {
 										abandonSignalled = true
 										log.Warn("suspension asked to stop this run", "workflow_id", *workflowID)
@@ -546,9 +541,8 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 							return false
 						}
 
-						// A run flagged before anyone picked it up has no consumer for the flag:
-						// complete it here rather than launching, or it holds the suspension open
-						// forever waiting for a request that never goes terminal.
+						// Nobody ran it, so nothing else will consume the flag; launching it would
+						// hold the suspension open forever.
 						if job.AbandonRequestedAt != nil {
 							log.Info("job abandoned for suspension, completing without launching", "request_id", job.RequestID, "workflow_id", job.WorkflowID)
 							suspendOperation(cancelLease, job)
@@ -790,15 +784,13 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 							completeOperation(cancelLease, currentJob, ack.Update.Result)
 						case boundflowv1.OperationStatus_OPERATION_STATUS_FAILED,
 							boundflowv1.OperationStatus_OPERATION_STATUS_CANCELLED:
-							// The client reports what it actually stopped for, so a run that failed on its own
-							// while our cancel was in flight is not recorded as though we caused it.
+							// The client reports what it actually stopped for, not what we asked for.
 							switch ack.Update.Result.CancelReason {
 							case boundflowv1.CancelReason_CANCEL_REASON_SUSPENSION:
 								log.Info("operation stopped for suspension (cancel acked)", "request_id", currentJob.RequestID)
 								suspendOperation(cancelLease, currentJob)
 							case boundflowv1.CancelReason_CANCEL_REASON_TIMEOUT:
-								// Acked our cancel: a customer-domain failure (num_failures), not a
-								// platform interruption.
+								// Customer-domain failure (num_failures), not a platform interruption.
 								log.Info("operation timed out (cancel acked), soft-failing", "request_id", currentJob.RequestID, "status", ack.Update.Result.Status)
 								softFailOperation(cancelLease, currentJob, domain.RunOutcomeOperationTimeout, "operation exceeded its timeout")
 							default:

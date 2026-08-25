@@ -67,8 +67,7 @@ type Workflow struct {
 	CurrentVersion              int64
 	CreatedAt                   time.Time
 	DeletionRequestedAt         *time.Time
-	// Suspension carries the operator's choices, so the reconciler's re-runs take the
-	// same steps the inline attempt did.
+	// The operator's choices, so the reconciler's re-runs take the same steps.
 	Suspension Suspension
 }
 

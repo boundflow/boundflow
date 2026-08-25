@@ -10,14 +10,8 @@ import (
 	"github.com/boundflow/boundflow/internal/storage"
 )
 
-// SuspensionReconciler finishes suspensions left pending by SuspendWorkflow: the run in
-// flight when one was requested has to end before the workflow is really stopped, and
-// any of the inline steps may have failed. This sweep re-runs the same
-// hold-then-stop-then-check-then-finalize steps until nothing is left outstanding. A
-// partition-scoped PartitionWorker, same pattern as DeletionReconciler.
-//
-// The operator's choices are read from the workflow row rather than passed in, so a
-// re-run takes the same steps the inline attempt did.
+// SuspensionReconciler finishes suspensions left pending by SuspendWorkflow, once the run in
+// flight has ended. PartitionWorker, same shape as DeletionReconciler.
 type SuspensionReconciler struct {
 	interval         int
 	workflows        storage.WorkflowRepository
@@ -70,16 +64,13 @@ func (r *SuspensionReconciler) sweep(ctx context.Context, partitionID string) {
 	wg.Wait()
 }
 
-// reconcileOne re-runs the suspension tail from the abandon step onwards. Freezing the
-// queue is deliberately not repeated: MarkSuspensionRequested did it in the same statement
-// that made the workflow unrunnable, and nothing can become schedulable again while it
-// stays that way, so there is never later work to freeze.
+// Re-runs the tail from the abandon step. The queue freeze is not repeated: nothing can
+// become schedulable again while the workflow stays unrunnable.
 func (r *SuspensionReconciler) reconcileOne(ctx context.Context, workflow *domain.Workflow) {
 	id := workflow.ID
 	suspensionID := workflow.Suspension.ID
 
-	// An interruption during the drain takes the workflow over and outranks the suspension:
-	// drop it rather than finalizing onto a state we no longer own.
+	// Something else took the workflow over (an interruption); don't finalize onto it.
 	if workflow.WorkflowState != domain.WorkflowStateSuspended {
 		if err := r.workflows.AbortSuspension(ctx, id, suspensionID); err != nil {
 			r.log.Error("failed to abort suspension", "workflow_id", id, "suspension_id", suspensionID, "error", err)

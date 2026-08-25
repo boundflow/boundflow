@@ -422,23 +422,9 @@ func (r *JobRepo) ParkForInput(ctx context.Context, workflowID string, ownerID s
 	return tag.RowsAffected() == 1, nil
 }
 
-// MarkAbandonRequested tells whoever holds the job to stop the run, for a suspension
-// the operator asked to stop rather than drain. Reports whether a job was marked.
-//
-// Not ownership-guarded: the point is to reach the job whether or not a worker is on
-// it. A live one picks the flag up when it renews its lease; an unclaimed one is
-// completed at dispatch without ever launching, so nothing is left holding the
-// suspension open.
-//
-// Must be called after MarkSuspensionRequested has returned, never folded into it: the
-// freeze there is the barrier that makes every racing job insert visible, and only a
-// statement whose snapshot is taken afterwards can see them.
-//
-// Guarded on suspensionID rather than merely on the workflow being suspended, so a stale
-// retry from an earlier suspension cannot cut a run belonging to a later one that only
-// asked to drain. Terminal jobs are excluded — they are about to be deleted — and the
-// write is guarded on the flag being unset so the reconciler's re-runs keep the original
-// timestamp rather than pushing it forward.
+// MarkAbandonRequested tells whoever holds the job to stop the run. Call only after
+// MarkSuspensionRequested returns — that freeze is the barrier that makes racing job inserts
+// visible to this statement's snapshot. Guarded on suspensionID; idempotent.
 func (r *JobRepo) MarkAbandonRequested(ctx context.Context, workflowID, suspensionID string) (bool, error) {
 	tag, err := r.pool.Exec(ctx,
 		`UPDATE jobs SET abandon_requested_at = now()

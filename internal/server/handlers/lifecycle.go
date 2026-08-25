@@ -210,8 +210,7 @@ func (h *WorkflowServiceHandler) SuspendWorkflow(ctx context.Context, req *bound
 		return nil, err
 	}
 
-	// The id is minted here so it can be returned even though the suspension finishes
-	// draining in the background; it is what ResumeWorkflow requires the caller to name.
+	// Minted here so it can be returned while the suspension is still draining.
 	suspensionID := uuid.New().String()
 	if err := h.svc.SuspendWorkflow(ctx, req.CorrelationId, suspensionID, req.WorkflowId, req.AbandonQueued, req.StopCurrentRun, req.Reason); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
