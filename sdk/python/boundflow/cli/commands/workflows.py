@@ -1,7 +1,7 @@
 """boundflow workflow — workflow lifecycle commands."""
 
 import json
-from typing import Optional
+from typing import List, Optional
 
 import typer
 
@@ -127,6 +127,45 @@ def request(
     """Show the status and outcome of a single run, by its request ID."""
     result = cp_call(lambda cp: cp.get_request_info(request_id))
     output(result)
+
+
+@app.command("suspend")
+def suspend(
+    workflow_id: str = typer.Argument(..., help="Workflow ID"),
+    reason: str = typer.Option("", "--reason", help="Why it was held; shown on the workflow"),
+    stop_current_run: bool = typer.Option(False, "--stop-current-run", help="Stop the run in flight instead of letting it finish"),
+    suspension_id: str = typer.Option("", "--suspension-id", help="Retarget this hold instead of starting a new one"),
+):
+    """Hold a workflow. Prints the suspension_id that 'resume' requires."""
+    sid = cp_call(lambda cp: cp.suspend_workflow(
+        workflow_id, reason=reason, stop_current_run=stop_current_run,
+        suspension_id=suspension_id))
+    output({"suspension_id": sid})
+
+
+@app.command("resume")
+def resume(
+    workflow_id: str = typer.Argument(..., help="Workflow ID"),
+    suspension_id: str = typer.Argument(..., help="From 'suspend', or workflow.suspension.suspension_id"),
+):
+    """Release a hold. Only valid once the suspension has finished draining."""
+    cp_call(lambda cp: cp.resume_workflow(workflow_id, suspension_id))
+    success(f"Workflow {workflow_id} resumed.")
+
+
+@app.command("abandon-queued")
+def abandon_queued(
+    workflow_id: str = typer.Argument(..., help="Workflow ID"),
+    request_id: List[str] = typer.Option([], "--request-id", help="A queued run to abandon (repeatable)"),
+    all: bool = typer.Option(False, "--all", help="Abandon every queued run"),
+):
+    """Drop queued runs. Irreversible; a run already in progress is left alone."""
+    if all == bool(request_id):
+        error("provide --request-id (repeatable) or --all, not both.")
+        raise typer.Exit(1)
+    abandoned = cp_call(lambda cp: cp.abandon_queued_requests(
+        workflow_id, request_ids=list(request_id), all=all))
+    output({"abandoned": abandoned})
 
 
 @app.command("resolve")
