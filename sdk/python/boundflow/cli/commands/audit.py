@@ -6,7 +6,7 @@ from typing import Optional
 import typer
 
 from boundflow.cli._client import cp_call
-from boundflow.cli._output import output
+from boundflow.cli.output import output
 
 app = typer.Typer(help="View approval, input and policy audit records.")
 

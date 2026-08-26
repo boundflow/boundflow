@@ -6,7 +6,7 @@ from typing import List, Optional
 import typer
 
 from boundflow.cli._client import cp_call
-from boundflow.cli._output import error, output, success
+from boundflow.cli.output import error, output, success
 from boundflow.control_plane import InvokeMode, WorkflowConfig
 
 app = typer.Typer(help="Manage workflows.")

@@ -7,7 +7,7 @@ from typing import List, Optional
 import typer
 
 from boundflow.cli._client import cp_call
-from boundflow.cli._output import error, output, success
+from boundflow.cli.output import error, output, success
 from boundflow.policies import AgentRule, RuntimePolicy, ToolCallLimit, WorkflowRule
 
 app = typer.Typer(help="Manage agent and workflow policies.")

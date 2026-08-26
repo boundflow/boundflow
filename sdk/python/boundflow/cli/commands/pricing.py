@@ -3,7 +3,7 @@
 import typer
 
 from boundflow.cli._client import cp_call
-from boundflow.cli._output import output, success
+from boundflow.cli.output import output, success
 
 app = typer.Typer(help="Manage model pricing rates.")
 
