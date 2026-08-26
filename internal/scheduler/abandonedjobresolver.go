@@ -8,9 +8,8 @@ import (
 	"github.com/boundflow/boundflow/internal/storage"
 )
 
-// AbandonedJobResolver finishes runs flagged for abandon that no worker holds — parked at a
-// gate, waiting out a Next delay, or queued with nobody connected. The server-side twin of
-// the worker's dispatch-time check. PartitionWorker, same shape as ApprovalTimeoutResolver.
+// AbandonedJobResolver is the server-side twin of the worker's dispatch-time check, for
+// flagged runs no worker holds. PartitionWorker, same shape as ApprovalTimeoutResolver.
 type AbandonedJobResolver struct {
 	interval int
 	jobs     storage.JobRepository

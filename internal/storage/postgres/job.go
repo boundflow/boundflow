@@ -422,19 +422,10 @@ func (r *JobRepo) ParkForInput(ctx context.Context, workflowID string, ownerID s
 	return tag.RowsAffected() == 1, nil
 }
 
-// SweepAbandonedJobs finishes flagged runs nobody holds. A worker that holds one honours
-// the flag itself, on lease renewal or at dispatch — but plenty of jobs no worker has, or
-// can get: parked at a gate (AcquireJob excludes the awaiting states), waiting out a
-// Next delay (dispatch_at in the future), or simply queued with no worker connected for
-// its type. Left alone those wait forever on a worker that may never come, and the
-// suspension waits with them.
-//
-// Ownership is the guard, not the status list: whichever of this and AcquireJob commits
-// first, the other re-checks under EvalPlanQual and finds nothing to do. Running jobs are
-// excluded so this never races MarkOrphanedJobsFailed over a dead worker's run.
-//
-// Completing them here lets the ordinary completeJobs sweep take the request terminal,
-// with the metrics already on the row.
+// SweepAbandonedJobs finishes flagged runs nobody holds — parked at a gate, waiting out a
+// Next delay, or unclaimed. Ownership is the guard, not the status list: AcquireJob leaves
+// status alone, so a status-only match would finish a run mid-dispatch. Running jobs are
+// excluded to leave a dead worker's run to MarkOrphanedJobsFailed.
 func (r *JobRepo) SweepAbandonedJobs(ctx context.Context, partitionID string) ([]string, error) {
 	rows, err := r.pool.Query(ctx,
 		`UPDATE jobs

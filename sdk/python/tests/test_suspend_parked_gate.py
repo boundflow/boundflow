@@ -79,9 +79,8 @@ async def test_stop_current_finishes_a_run_parked_at_an_approval_gate(cp):
 
 
 async def test_stop_current_finishes_a_run_waiting_out_a_next_delay(cp):
-    """The other job a worker can't reach: `Next(delay_seconds=...)` sets dispatch_at in
-    the future, and AcquireJob filters on it, so for the length of the delay nothing can
-    pick the job up to honour the flag. Same hang as a gate, on a timer instead of a human."""
+    """`Next(delay_seconds=...)` puts dispatch_at in the future, so for the length of the
+    delay nothing can acquire the job to honour the flag. Same hang as a gate, on a timer."""
     later_ran = [False]
     first_done = asyncio.Event()
 
@@ -103,9 +102,8 @@ async def test_stop_current_finishes_a_run_waiting_out_a_next_delay(cp):
 
     async with run_worker(worker):
         request_id = await cp.invoke_workflow(workflow.id, operation_timeout_seconds=60)
-        # The first operation has to actually finish, so the job is parked on its delay and
-        # the worker has released the lease — otherwise the suspension is honoured by the
-        # lease-renewal path and this tests nothing.
+        # Must actually finish, or the worker still holds the job and the lease-renewal
+        # path honours the suspension instead — which would pass without the fix.
         await asyncio.wait_for(first_done.wait(), timeout=60)
         await asyncio.sleep(5)
 
