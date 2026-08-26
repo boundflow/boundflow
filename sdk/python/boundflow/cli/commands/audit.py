@@ -1,4 +1,4 @@
-"""boundflow audit — approval and policy audit log commands."""
+"""boundflow audit — approval, input and policy audit log commands."""
 
 from dataclasses import asdict
 from typing import Optional
@@ -8,7 +8,7 @@ import typer
 from boundflow.cli._client import cp_call
 from boundflow.cli._output import output
 
-app = typer.Typer(help="View approval and policy audit records.")
+app = typer.Typer(help="View approval, input and policy audit records.")
 
 
 def _flatten(record) -> dict:
@@ -32,6 +32,15 @@ def approvals(
     else:
         results = cp_call(lambda cp: cp.get_approval_audit(workflow_id))
         output([_flatten(r) for r in results])
+
+
+@app.command("inputs")
+def inputs(
+    workflow_id: str = typer.Argument(..., help="Workflow ID"),
+):
+    """List input-gate decisions for a workflow."""
+    results = cp_call(lambda cp: cp.get_input_audit(workflow_id))
+    output([_flatten(r) for r in results])
 
 
 @app.command("workflow")
