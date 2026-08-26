@@ -1,4 +1,12 @@
-"""Rich table rendering and --json output helpers."""
+"""Rendering for CLIs built on BoundFlow — tables, or JSON under --json.
+
+Public so tools wrapping the control plane render the same way. `output()` derives its
+columns from the data, so a field added to a BoundFlow object appears without anyone
+updating a list of things to print — which is the point: a renderer that picks fields by
+hand silently drops the ones nobody remembered.
+
+`set_json()` writes a module global, so a process running two CLIs shares the flag.
+"""
 
 import json
 from dataclasses import asdict, is_dataclass

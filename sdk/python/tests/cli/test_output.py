@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from boundflow.cli import _output
+from boundflow.cli import output as output_mod
 
 
 class _TableSpy:
@@ -52,10 +52,10 @@ def test_table_aligns_heterogeneous_rows_by_key(
     monkeypatch, rows, expected_columns, expected_rows
 ):
     rendered = []
-    monkeypatch.setattr(_output, "Table", _TableSpy)
-    monkeypatch.setattr(_output.console, "print", rendered.append)
+    monkeypatch.setattr(output_mod, "Table", _TableSpy)
+    monkeypatch.setattr(output_mod.console, "print", rendered.append)
 
-    _output._table(rows)
+    output_mod._table(rows)
 
     assert rendered[0].columns == expected_columns
     assert rendered[0].rows == expected_rows
@@ -63,10 +63,10 @@ def test_table_aligns_heterogeneous_rows_by_key(
 
 def test_table_preserves_homogeneous_row_layout(monkeypatch):
     rendered = []
-    monkeypatch.setattr(_output, "Table", _TableSpy)
-    monkeypatch.setattr(_output.console, "print", rendered.append)
+    monkeypatch.setattr(output_mod, "Table", _TableSpy)
+    monkeypatch.setattr(output_mod.console, "print", rendered.append)
 
-    _output._table([{"name": "one", "count": 0}, {"name": "two", "count": None}])
+    output_mod._table([{"name": "one", "count": 0}, {"name": "two", "count": None}])
 
     assert rendered[0].columns == ["name", "count"]
     assert rendered[0].rows == [("one", "0"), ("two", "")]
