@@ -8,10 +8,9 @@ import (
 	"github.com/boundflow/boundflow/internal/storage"
 )
 
-// AbandonedJobResolver finishes runs flagged for abandon that are parked at a gate. It is
-// the server-side twin of the worker's dispatch-time check: AcquireJob excludes the awaiting
-// states, so no worker can pick these up to honour the flag. A partition-scoped
-// PartitionWorker, same shape as ApprovalTimeoutResolver.
+// AbandonedJobResolver finishes runs flagged for abandon that no worker holds — parked at a
+// gate, waiting out a Next delay, or queued with nobody connected. The server-side twin of
+// the worker's dispatch-time check. PartitionWorker, same shape as ApprovalTimeoutResolver.
 type AbandonedJobResolver struct {
 	interval int
 	jobs     storage.JobRepository
@@ -43,12 +42,12 @@ func (r *AbandonedJobResolver) Run(ctx context.Context, partitionID string) erro
 }
 
 func (r *AbandonedJobResolver) sweep(ctx context.Context, partitionID string) {
-	finished, err := r.jobs.SweepAbandonedGates(ctx, partitionID)
+	finished, err := r.jobs.SweepAbandonedJobs(ctx, partitionID)
 	if err != nil {
-		r.log.Error("failed to sweep abandoned gates", "partition_id", partitionID, "error", err)
+		r.log.Error("failed to sweep abandoned jobs", "partition_id", partitionID, "error", err)
 		return
 	}
 	if len(finished) > 0 {
-		r.log.Info("finished abandoned runs parked at a gate", "count", len(finished), "workflow_ids", finished)
+		r.log.Info("finished abandoned runs no worker held", "count", len(finished), "workflow_ids", finished)
 	}
 }

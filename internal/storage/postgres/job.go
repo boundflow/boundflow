@@ -422,22 +422,32 @@ func (r *JobRepo) ParkForInput(ctx context.Context, workflowID string, ownerID s
 	return tag.RowsAffected() == 1, nil
 }
 
-// SweepAbandonedGates finishes flagged jobs parked at a gate. AcquireJob excludes the
-// awaiting states, so no worker can ever pick these up to honour the flag themselves —
-// without this a suspension waits forever on an answer that is never coming. Completing
-// them here lets the ordinary completeJobs sweep take the request terminal.
-func (r *JobRepo) SweepAbandonedGates(ctx context.Context, partitionID string) ([]string, error) {
+// SweepAbandonedJobs finishes flagged runs nobody holds. A worker that holds one honours
+// the flag itself, on lease renewal or at dispatch — but plenty of jobs no worker has, or
+// can get: parked at a gate (AcquireJob excludes the awaiting states), waiting out a
+// Next delay (dispatch_at in the future), or simply queued with no worker connected for
+// its type. Left alone those wait forever on a worker that may never come, and the
+// suspension waits with them.
+//
+// Ownership is the guard, not the status list: whichever of this and AcquireJob commits
+// first, the other re-checks under EvalPlanQual and finds nothing to do. Running jobs are
+// excluded so this never races MarkOrphanedJobsFailed over a dead worker's run.
+//
+// Completing them here lets the ordinary completeJobs sweep take the request terminal,
+// with the metrics already on the row.
+func (r *JobRepo) SweepAbandonedJobs(ctx context.Context, partitionID string) ([]string, error) {
 	rows, err := r.pool.Query(ctx,
 		`UPDATE jobs
 		 SET status = 'completed', result_type = $2, failure_reason = $3
 		 WHERE workflow_id IN (SELECT id FROM workflows WHERE scheduler_partition_id = $1)
-		   AND status IN ('awaiting_approval', 'awaiting_input')
 		   AND abandon_requested_at IS NOT NULL
+		   AND status NOT IN ('completed', 'failed', 'dispatched', 'running')
+		   AND (owner IS NULL OR lease_expires_at < now())
 		 RETURNING workflow_id`,
 		partitionID, domain.RunOutcomeSuspended, "stopped by workflow suspension",
 	)
 	if err != nil {
-		return nil, fmt.Errorf("sweep abandoned gates: %w", err)
+		return nil, fmt.Errorf("sweep abandoned jobs: %w", err)
 	}
 	defer rows.Close()
 
@@ -445,7 +455,7 @@ func (r *JobRepo) SweepAbandonedGates(ctx context.Context, partitionID string) (
 	for rows.Next() {
 		var id string
 		if err := rows.Scan(&id); err != nil {
-			return nil, fmt.Errorf("scan abandoned gate workflow id: %w", err)
+			return nil, fmt.Errorf("scan abandoned job workflow id: %w", err)
 		}
 		out = append(out, id)
 	}
