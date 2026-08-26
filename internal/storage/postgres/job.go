@@ -422,22 +422,23 @@ func (r *JobRepo) ParkForInput(ctx context.Context, workflowID string, ownerID s
 	return tag.RowsAffected() == 1, nil
 }
 
-// SweepAbandonedGates finishes flagged jobs parked at a gate. AcquireJob excludes the
-// awaiting states, so no worker can ever pick these up to honour the flag themselves —
-// without this a suspension waits forever on an answer that is never coming. Completing
-// them here lets the ordinary completeJobs sweep take the request terminal.
-func (r *JobRepo) SweepAbandonedGates(ctx context.Context, partitionID string) ([]string, error) {
+// SweepAbandonedJobs finishes flagged runs nobody holds — parked at a gate, waiting out a
+// Next delay, or unclaimed. Ownership is the guard, not the status list: AcquireJob leaves
+// status alone, so a status-only match would finish a run mid-dispatch. Running jobs are
+// excluded to leave a dead worker's run to MarkOrphanedJobsFailed.
+func (r *JobRepo) SweepAbandonedJobs(ctx context.Context, partitionID string) ([]string, error) {
 	rows, err := r.pool.Query(ctx,
 		`UPDATE jobs
 		 SET status = 'completed', result_type = $2, failure_reason = $3
 		 WHERE workflow_id IN (SELECT id FROM workflows WHERE scheduler_partition_id = $1)
-		   AND status IN ('awaiting_approval', 'awaiting_input')
 		   AND abandon_requested_at IS NOT NULL
+		   AND status NOT IN ('completed', 'failed', 'dispatched', 'running')
+		   AND (owner IS NULL OR lease_expires_at < now())
 		 RETURNING workflow_id`,
 		partitionID, domain.RunOutcomeSuspended, "stopped by workflow suspension",
 	)
 	if err != nil {
-		return nil, fmt.Errorf("sweep abandoned gates: %w", err)
+		return nil, fmt.Errorf("sweep abandoned jobs: %w", err)
 	}
 	defer rows.Close()
 
@@ -445,7 +446,7 @@ func (r *JobRepo) SweepAbandonedGates(ctx context.Context, partitionID string) (
 	for rows.Next() {
 		var id string
 		if err := rows.Scan(&id); err != nil {
-			return nil, fmt.Errorf("scan abandoned gate workflow id: %w", err)
+			return nil, fmt.Errorf("scan abandoned job workflow id: %w", err)
 		}
 		out = append(out, id)
 	}

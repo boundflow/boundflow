@@ -38,6 +38,13 @@ def test_audit_approvals_returns_empty_for_new_workflow(runner, boundflow_api_ke
     assert results == []
 
 
+def test_audit_inputs_returns_empty_for_new_workflow(runner, boundflow_api_key):
+    tenant_id = make_tenant(runner, boundflow_api_key, "audit-inputs")
+    workflow_id = make_workflow(runner, boundflow_api_key, tenant_id)
+    data = run(runner, boundflow_api_key, ["audit", "inputs", workflow_id])
+    assert data == []
+
+
 def test_audit_workflow_policy_returns_empty_for_new_workflow(runner, boundflow_api_key):
     tenant_id = make_tenant(runner, boundflow_api_key, "aud-wfpol")
     wf_id = make_workflow(runner, boundflow_api_key, tenant_id)
