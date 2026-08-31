@@ -157,19 +157,24 @@ def build_app(console: Console):
             current,
         )
 
+    # Every screen is a live view of control-plane state, so a cached copy is always
+    # wrong — and a stale gate is worse than no gate, since it invites a decision on
+    # an approval that has already been resolved.
+    NO_STORE = {"Cache-Control": "no-store"}
+
     def render(title: str, body: str, request, *, current: str = "/",
                workflows: list | None = None, filterable: bool = True) -> HTMLResponse:
         return HTMLResponse(page(
             title, body, server=console.server, labels=console.labels,
             nav=nav(current, workflows), filterable=filterable,
             error=request.query_params.get("error", ""),
-        ))
+        ), headers=NO_STORE)
 
     def failed(request, title: str, exc: Exception) -> HTMLResponse:
         return HTMLResponse(page(
             title, "", server=console.server, labels=console.labels,
             nav=nav(request.url.path), error=str(exc),
-        ))
+        ), headers=NO_STORE)
 
     def back(workflow_id: str, error: str = "") -> RedirectResponse:
         # 303 so a refresh after acting doesn't repost the decision.
@@ -213,7 +218,8 @@ def build_app(console: Console):
             workflows = await console.cp.list_workflows()
         except Exception as exc:
             return HTMLResponse(str(exc), status_code=502)
-        return HTMLResponse(views.fleet_table(workflows, console.labels))
+        return HTMLResponse(views.fleet_table(workflows, console.labels),
+                            headers=NO_STORE)
 
     async def detail(request):
         wid = request.path_params["workflow_id"]
@@ -221,20 +227,32 @@ def build_app(console: Console):
             workflow = await console.cp.get_workflow(wid)
         except Exception as exc:
             return failed(request, console.labels.workflow.capitalize(), exc)
-        runs, metrics = await asyncio.gather(
+        # Every panel is optional: a workflow with a broken metrics read still has
+        # to render, because the page is how an operator finds out what is wrong.
+        runs, metrics, audit, policies = await asyncio.gather(
             console.cp.list_workflow_runs(wid),
             console.cp.get_workflow_metrics(wid),
+            console.cp.get_audit_log(wid),
+            console.cp.get_workflow_policy_audit(wid),
             return_exceptions=True,
         )
-        if isinstance(runs, BaseException):
-            log.warning("could not list runs for %s", wid, exc_info=runs)
-            runs = []
-        if isinstance(metrics, BaseException):
-            log.warning("could not load metrics for %s", wid, exc_info=metrics)
-            metrics = None
+        for name, value in (("runs", runs), ("metrics", metrics),
+                            ("audit", audit), ("policy audit", policies)):
+            if isinstance(value, BaseException):
+                log.warning("could not load %s for %s", name, wid, exc_info=value)
+        runs = [] if isinstance(runs, BaseException) else runs
+        metrics = None if isinstance(metrics, BaseException) else metrics
+        audit = [] if isinstance(audit, BaseException) else audit
+        policies = [] if isinstance(policies, BaseException) else policies
+
+        # The decision that put the workflow in its current state, so the callout can
+        # say what crossed rather than only that something did.
+        decision = next(
+            (p for p in policies
+             if p.request_id == workflow.last_policy_decision_request_id), None)
         return render(wid, views.workflow_detail(workflow, runs, metrics,
-                                                 console.labels), request,
-                      current="", filterable=False)
+                                                 console.labels, audit, decision),
+                      request, current="", filterable=False)
 
     async def act(request, fn):
         """Run one control-plane mutation and redirect back to the workflow."""
@@ -269,6 +287,7 @@ def build_app(console: Console):
             await console.cp.suspend_workflow(
                 wid, reason=form.get("reason", ""),
                 stop_current_run=bool(form.get("stop_current")),
+                suspension_id=form.get("suspension_id", ""),
             )
         return await act(request, go)
 
@@ -276,6 +295,45 @@ def build_app(console: Console):
         async def go(wid: str, form: Any):
             await console.cp.resume_workflow(wid, form.get("suspension_id", ""))
         return await act(request, go)
+
+    async def abandon(request):
+        async def go(wid: str, form: Any):
+            ids = [i.strip() for i in form.get("request_ids", "").split(",") if i.strip()]
+            everything = bool(form.get("all"))
+            # The RPC takes exactly one of the two, the same as `abandon-queued`.
+            if everything and ids:
+                raise ValueError("choose run ids or all queued runs, not both")
+            if not everything and not ids:
+                raise ValueError("give run ids, or tick all queued runs")
+            await console.cp.abandon_queued_requests(
+                wid, request_ids=ids or None, all=everything)
+        return await act(request, go)
+
+    async def activate(request):
+        async def go(wid: str, form: Any):
+            await console.cp.activate_workflow(wid, form.get("request_id", ""))
+        return await act(request, go)
+
+    async def resolve(request):
+        async def go(wid: str, form: Any):
+            await console.cp.resolve_interrupted_workflow(wid, form.get("request_id", ""))
+        return await act(request, go)
+
+    async def delete(request):
+        """Deleting leaves nothing to redirect back to, so this one goes to the fleet.
+
+        The typed id is checked here rather than in the browser: a confirmation that
+        only exists in JavaScript isn't one.
+        """
+        wid = request.path_params["workflow_id"]
+        form = await request.form()
+        if form.get("confirm", "").strip() != wid:
+            return back(wid, "confirmation does not match this workflow id")
+        try:
+            await console.cp.delete_workflow(wid)
+        except Exception as exc:
+            return back(wid, str(exc))
+        return RedirectResponse("/", status_code=303)
 
     return Starlette(
         routes=[
@@ -288,6 +346,10 @@ def build_app(console: Console):
             Route("/workflows/{workflow_id}/input", submit_input, methods=["POST"]),
             Route("/workflows/{workflow_id}/suspend", suspend, methods=["POST"]),
             Route("/workflows/{workflow_id}/resume", resume, methods=["POST"]),
+            Route("/workflows/{workflow_id}/abandon", abandon, methods=["POST"]),
+            Route("/workflows/{workflow_id}/activate", activate, methods=["POST"]),
+            Route("/workflows/{workflow_id}/resolve", resolve, methods=["POST"]),
+            Route("/workflows/{workflow_id}/delete", delete, methods=["POST"]),
         ],
         lifespan=lifespan,
     )

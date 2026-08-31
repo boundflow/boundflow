@@ -71,11 +71,31 @@ def pill(value: Any) -> str:
     return f'<span class="pill {tone}">{escape(text)}</span>'
 
 
+def _nested(value: Any) -> str:
+    """A dataclass or dict as its own definition list, nested inside a <dd>.
+
+    Comma-joining these produced a repr — `version=1, invoke_timeout_seconds=300,
+    triggerable=yes` — which is unreadable exactly where the detail matters, on a
+    workflow's config and its suspension.
+    """
+    if dataclasses.is_dataclass(value):
+        items = [(f.name, getattr(value, f.name)) for f in dataclasses.fields(value)]
+    else:
+        items = list(value.items())
+    if not items:
+        return '<span class="muted">—</span>'
+    rows = "".join(
+        f"<dt>{escape(str(k).replace('_', ' '))}</dt><dd>{esc(v)}</dd>"
+        for k, v in items
+    )
+    return f'<dl class="sub">{rows}</dl>'
+
+
 def detail_rows(obj: Any, skip: tuple[str, ...] = ()) -> str:
     """A definition list of a dataclass's fields, minus `skip`.
 
-    Nested dataclasses (a workflow's config, suspension, pending gates) are rendered
-    inline rather than as a repr, since a repr in a table cell is unreadable.
+    Nested dataclasses and non-empty dicts become their own indented lists rather
+    than one flattened line.
     """
     if obj is None:
         return '<p class="muted">none</p>'
@@ -84,13 +104,11 @@ def detail_rows(obj: Any, skip: tuple[str, ...] = ()) -> str:
         if f.name in skip:
             continue
         value = getattr(obj, f.name)
-        if dataclasses.is_dataclass(value):
-            value = ", ".join(
-                f"{sub.name}={fmt(getattr(value, sub.name))}"
-                for sub in dataclasses.fields(value)
-            )
-        label = f.name.replace("_", " ")
-        out.append(f"<dt>{escape(label)}</dt><dd>{esc(value)}</dd>")
+        if dataclasses.is_dataclass(value) or (isinstance(value, dict) and value):
+            cell = _nested(value)
+        else:
+            cell = esc(value)
+        out.append(f"<dt>{escape(f.name.replace('_', ' '))}</dt><dd>{cell}</dd>")
     return f"<dl>{''.join(out)}</dl>"
 
 
@@ -157,6 +175,11 @@ tbody tr.cur{background:var(--sel);box-shadow:inset 2px 0 0 var(--acc)}
 dl{display:grid;grid-template-columns:minmax(110px,auto) 1fr;gap:3px 18px;margin:0}
 dt{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
 dd{margin:0;word-break:break-word;white-space:normal}
+dl.sub{grid-column:1/-1;margin:2px 0 6px;padding-left:12px;gap:2px 14px;
+       border-left:1px solid var(--line)}
+dl.sub dt{font-size:10px;opacity:.85}
+dl.sub dd{font-size:12px}
+dd:has(dl.sub){grid-column:1/-1}
 form{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:10px}
 label{display:flex;flex-direction:column;gap:3px;font-size:10px;color:var(--dim);
       text-transform:uppercase;letter-spacing:.08em}
@@ -174,10 +197,43 @@ button:hover{filter:brightness(1.12)}
 .stat{padding:9px 18px;border-right:1px solid var(--line)}
 .stat b{display:block;font-size:17px;color:var(--acc)}
 .stat span{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em}
+.dhead{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+       flex-wrap:wrap;margin-bottom:12px}
+.dhead h2{margin:0}
+.actions{display:flex;gap:8px;align-items:flex-start}
+.actions form{margin:0}
+label.check{flex-direction:row;align-items:center;gap:6px;text-transform:none;
+  letter-spacing:0;font-size:12px}
+.callout{border-left:2px solid var(--warn);background:var(--panel);padding:10px 14px;
+  margin-bottom:12px}
+.callout.bad{border-left-color:var(--bad)}
+.callout strong{display:block;font-size:13px;margin-bottom:2px}
+.callout.bad strong{color:var(--bad)}
+.callout.warn strong{color:var(--warn)}
+.callout p{margin:0;color:var(--dim);font-size:12px}
+.callout code{color:var(--fg)}
+.block,.danger{border:1px solid var(--line);padding:12px 14px;margin-top:28px}
+.danger{border-color:var(--bad)}
+.block.warn{border-color:var(--warn)}
+.block.warn strong{color:var(--warn)}
+.block.warn button{background:transparent;color:var(--warn);
+  border:1px solid var(--warn)}
+.block+.danger{margin-top:12px}
+.block strong,.danger strong{display:block;font-size:11px;text-transform:uppercase;
+  letter-spacing:.12em;margin-bottom:6px;color:var(--dim)}
+.danger strong{color:var(--bad)}
+.block p,.danger p{margin:0 0 4px;color:var(--dim);font-size:12px}
+.danger button{background:transparent;color:var(--bad);border:1px solid var(--bad)}
 .status{border-top:1px solid var(--line);background:var(--panel);padding:6px 16px;
         color:var(--dim);font-size:11px;display:flex;gap:16px;flex-wrap:wrap}
 .status kbd{color:var(--acc);font-weight:700;font-family:inherit}
 .scroll{overflow-x:auto}
+td details summary{cursor:pointer;list-style:none}
+td details summary::-webkit-details-marker{display:none}
+td details summary:before{content:"\\25b8  ";color:var(--dim)}
+td details[open] summary:before{content:"\\25be  "}
+td details[open]{white-space:normal}
+td details dl{margin-top:6px;padding-left:12px;border-left:1px solid var(--line)}
 @media (max-width:720px){.wrap{grid-template-columns:1fr}
  aside{flex-direction:row;align-items:center;gap:8px;padding:8px 12px;overflow-x:auto}
  aside .brand{padding:0}aside nav{display:flex;gap:4px}aside .foot{display:none}

@@ -18,6 +18,7 @@ from boundflow.control_plane import (
     PendingApproval,
     PendingInput,
     Run,
+    RunOutcome,
     RunStatus,
     Suspension,
     WorkflowInfo,
@@ -46,9 +47,10 @@ def _wf(wid, *, lifecycle=LifecycleState.ACTIVE, state=WorkflowState.ACTIVE,
 class FakeCP:
     """Records calls; returns whatever the test set up."""
 
-    def __init__(self, workflows):
+    def __init__(self, workflows, audit=None):
         self._workflows = {w.id: w for w in workflows}
         self.calls: list[tuple] = []
+        self.audit = audit or []
 
     async def list_workflows(self):
         # Mirrors the real light view: gate detail is only on get_workflow.
@@ -66,6 +68,12 @@ class FakeCP:
 
     async def get_workflow_metrics(self, wid):
         return WorkflowMetrics(1, 1.5, 3, 0, 9, 12.0, 0, {})
+
+    async def get_audit_log(self, wid=""):
+        return self.audit
+
+    async def get_workflow_policy_audit(self, wid):
+        return [r for r in self.audit if type(r).__name__ == "PolicyActionRecord"]
 
     async def approve_workflow(self, wid, aid, actor="", reason=""):
         self.calls.append(("approve", wid, aid, actor, reason))
@@ -85,9 +93,9 @@ class FakeCP:
         self.calls.append(("resume", wid, sid))
 
 
-def client(workflows):
+def client(workflows, audit=None):
     console = Console("http://localhost:50051", "key")
-    cp = FakeCP(workflows)
+    cp = FakeCP(workflows, audit)
     console._cp = cp
     # console._cp is already set, and TestClient only runs the lifespan inside a
     # `with` block, so the fake survives.
@@ -107,7 +115,7 @@ def test_inbox_holds_only_workflows_waiting_on_a_person():
         _wf("w-broken", lifecycle=LifecycleState.INTERRUPTED),
     ])
     body = c.get("/").text
-    assert "Waiting on you (1)" in body
+    assert "Pending decisions (1)" in body
     assert "refund over $500" in body
     assert "w-running" in body       # still on the fleet table
     assert "ap-1" in body
@@ -121,9 +129,9 @@ def test_a_workflow_that_leaves_its_gate_drops_out_of_the_inbox():
     # get_workflow reports it has moved on, with no gate attached.
     cp._workflows["w1"] = _wf("w1", lifecycle=LifecycleState.ACTIVE)
     home = c.get("/").text
-    assert "Waiting on you (" not in home        # the section is dropped entirely
-    assert "Waiting on you<b>0</b>" in home      # the sidebar still says zero
-    assert "Nothing is waiting on a person." in c.get("/inbox").text
+    assert "Pending decisions (" not in home    # the section is dropped entirely
+    assert "Pending decisions<b>0</b>" in home  # the sidebar still says zero
+    assert "No decisions pending." in c.get("/inbox").text
 
 
 def test_approve_sends_actor_and_reason_then_redirects():
@@ -253,7 +261,7 @@ def test_labels_rename_the_console_s_own_words():
     assert "Agents (1)" in body
     assert "runtime state" in body
     assert "BoundFlow" not in body
-    assert "Waiting on you" not in body
+    assert "Pending decisions" not in body
 
 
 def test_labels_cannot_rename_what_the_control_plane_returns():
@@ -290,7 +298,7 @@ def test_sidebar_counts_the_three_views():
     ])
     body = c.get("/").text
     assert "Fleet<b>3</b>" in body
-    assert "Waiting on you<b>1</b>" in body
+    assert "Pending decisions<b>1</b>" in body
     assert "Holds<b>1</b>" in body
 
 
@@ -339,3 +347,390 @@ def test_fleet_polls_itself_and_the_detail_page_does_not():
     c, _ = client([_wf("w1")])
     assert 'data-src="/fragment/fleet"' in c.get("/").text
     assert 'data-src="/fragment/fleet"' not in c.get("/workflows/w1").text
+
+
+def test_screens_are_never_cached():
+    """A cached gate invites a decision on an approval that is already resolved."""
+    c, _ = client([_wf("w1", lifecycle=LifecycleState.AWAITING_APPROVAL,
+                       approval=APPROVAL)])
+    for path in ("/", "/inbox", "/holds", "/workflows/w1", "/fragment/fleet"):
+        assert c.get(path).headers["cache-control"] == "no-store", path
+
+
+# ── Scheduling: naming the cause ─────────────────────────────────────────────
+# workflow_state alone can't answer "why isn't this running" — `paused` covers both
+# a policy decision and a workflow nobody ever activated. These pin that the console
+# distinguishes them, since that was invisible when both rendered as the same pill.
+
+def _sched(w):
+    """The callout plus whatever control that state offers."""
+    return views.status_callout(w) + views.actions(w) + views.suspend_control(w)
+
+
+def test_an_operator_hold_reads_as_an_operator_hold():
+    held = _wf("w1", lifecycle=LifecycleState.HALTED, state=WorkflowState.SUSPENDED,
+               suspension=Suspension("s1", "cost spike", True, NOW, NOW))
+    body = _sched(held)
+    assert "Held by an operator" in body
+    assert "cost spike" in body
+    assert "Resume" in body
+    assert "lifecycle policy" not in body
+
+
+def test_a_policy_pause_reads_as_a_policy_decision_not_an_operator():
+    paused = _wf("w1", lifecycle=LifecycleState.BLOCKED, state=WorkflowState.PAUSED)
+    paused.last_policy_decision_request_id = "req-77"
+    body = _sched(paused)
+    assert "lifecycle policy" in body
+    assert "not an operator" in body
+    assert "req-77" in body          # the thread to pull
+    assert "Held by an operator" not in body
+
+
+def test_cooldown_says_cooling_down_rather_than_paused():
+    cooling = _wf("w1", lifecycle=LifecycleState.BLOCKED, state=WorkflowState.COOLDOWN)
+    cooling.last_policy_decision_request_id = "req-9"
+    assert "Cooling down" in _sched(cooling)
+
+
+def test_a_deleted_workflow_says_so_rather_than_looking_idle():
+    """Soft delete plus async purge means it keeps being listed for a while."""
+    gone = _wf("w1", lifecycle=LifecycleState.DELETED, state=WorkflowState.DISABLED)
+    assert "Deleted." in views.status_callout(gone)
+
+
+def test_a_never_activated_workflow_is_not_reported_as_policy_paused():
+    """A fresh workflow is lifecycle=active, workflow_state=paused — the same
+    workflow_state a policy sets, and *not* `creating`. Only the absence of a policy
+    decision separates them, so getting this wrong told an operator a brand new
+    workflow had been stopped by a policy acting on metrics it never produced."""
+    fresh = _wf("w1", lifecycle=LifecycleState.ACTIVE, state=WorkflowState.PAUSED)
+    fresh.last_policy_decision_request_id = ""
+    body = _sched(fresh)
+    assert "Not activated." in body
+    assert "lifecycle policy" not in body
+
+
+def test_an_interruption_offers_resolve_with_the_run_id_filled_in():
+    """The CLI makes you find and paste last_interrupted_request_id; it's already on
+    the workflow, so the console shouldn't."""
+    broken = _wf("w1", lifecycle=LifecycleState.INTERRUPTED,
+                 state=WorkflowState.DISABLED)
+    broken.last_interrupted_request_id = "req-dead"
+    body = _sched(broken)
+    assert "platform failure" in body
+    assert 'value="req-dead"' in body
+    assert "Resolve" in body
+
+
+def test_an_active_workflow_says_nothing_but_still_offers_the_hold():
+    """The old version printed "Scheduling normally" — a section whose only job was
+    to report that there was nothing to report."""
+    w = _wf("w1")
+    assert views.status_callout(w) == ""        # no callout when nothing is wrong
+    assert "Suspend" in views.suspend_control(w)
+
+
+def test_resolve_reaches_the_rpc():
+    c, cp = client([_wf("w1", lifecycle=LifecycleState.INTERRUPTED)])
+
+    async def resolve(wid, rid):
+        cp.calls.append(("resolve", wid, rid))
+
+    cp.resolve_interrupted_workflow = resolve
+    c.post("/workflows/w1/resolve", data={"request_id": "req-dead"},
+           follow_redirects=False)
+    assert cp.calls == [("resolve", "w1", "req-dead")]
+
+
+# ── Delete ───────────────────────────────────────────────────────────────────
+
+def test_delete_requires_the_typed_id_to_match():
+    c, cp = client([_wf("w1")])
+    deleted = []
+    cp.delete_workflow = lambda wid: deleted.append(wid)
+
+    r = c.post("/workflows/w1/delete", data={"confirm": "w2"}, follow_redirects=False)
+    assert deleted == []                                  # nothing happened
+    assert "does+not+match" in r.headers["location"].replace("%20", "+")
+
+
+def test_delete_with_the_right_id_deletes_and_leaves_the_workflow():
+    c, cp = client([_wf("w1")])
+    deleted = []
+
+    async def go(wid):
+        deleted.append(wid)
+
+    cp.delete_workflow = go
+    r = c.post("/workflows/w1/delete", data={"confirm": "w1"}, follow_redirects=False)
+    assert deleted == ["w1"]
+    # Redirecting back to the workflow would 404 — it's gone.
+    assert r.headers["location"] == "/"
+
+
+def test_delete_is_offered_on_the_detail_page_only():
+    """A delete button in a list, next to a 4-second auto-refresh, is a misclick."""
+    c, _ = client([_wf("w1")])
+    assert "/workflows/w1/delete" in c.get("/workflows/w1").text
+    assert "/delete" not in c.get("/").text
+
+
+def test_a_workflow_already_being_deleted_is_not_offered_again():
+    w = _wf("w1")
+    w.deletion_requested_at = NOW
+    body = views.delete_control(w)
+    assert "already requested" in body
+    assert "<form" not in body
+
+
+def test_nested_objects_render_as_lists_not_a_flattened_line():
+    """A workflow's config and suspension are where the detail matters most, and
+    comma-joining them produced a repr rather than something readable."""
+    from boundflow.control_plane import InvokeMode, WorkflowConfig
+    from boundflow.ui.render import detail_rows
+
+    w = _wf("w1", suspension=Suspension("s1", "cost spike", True, NOW, NOW))
+    w.config = WorkflowConfig(1, 300, 0, True, InvokeMode.COALESCE, 0, True)
+    html = detail_rows(w)
+
+    assert "invoke_timeout_seconds=300" not in html      # the old flattened form
+    assert html.count('<dl class="sub">') == 2           # config and suspension
+    assert "<dt>invoke timeout seconds</dt><dd>300</dd>" in html
+    assert "<dt>suspension id</dt>" in html
+
+
+def test_an_empty_dict_stays_inline():
+    """Only non-empty objects earn their own list; an empty one is just a dash."""
+    from boundflow.ui.render import detail_rows
+
+    w = _wf("w1")
+    html = detail_rows(w)
+    assert '<dl class="sub">' not in html
+
+
+def test_only_the_action_that_applies_is_offered():
+    """Which control shows is decided by the state, so there is never a Resume next
+    to a Suspend for the operator to choose wrongly between."""
+    assert views.actions(_wf("w1")) == ""       # suspend is a block, not a header button
+
+    drained = views.actions(_wf("w1", state=WorkflowState.SUSPENDED,
+                                suspension=Suspension("s1", "r", False, NOW, NOW)))
+    assert "Resume" in drained
+
+    draining = views.actions(_wf("w1", state=WorkflowState.SUSPENDED,
+                                 suspension=Suspension("s1", "r", False, NOW, None)))
+    assert draining == ""                       # resume would be refused
+
+    paused = _wf("w1", lifecycle=LifecycleState.BLOCKED, state=WorkflowState.PAUSED)
+    assert "Activate" in views.actions(paused)  # releasing a policy pause
+    assert views.suspend_control(paused) == ""  # but it can't be held on top of that
+
+
+def test_delete_is_not_among_the_header_actions():
+    """Irreversible, so it must not sit where you click while reading."""
+    assert "delete" not in views.actions(_wf("w1")).lower()
+
+
+def test_a_policy_pause_offers_activation_carrying_that_decision():
+    """The callout used to name a cause and offer nothing to do about it.
+
+    ActivateWorkflow is guarded on last_policy_decision_request_id, so sending the
+    decision currently on the workflow overrides exactly that one — if a newer
+    decision lands first the click is refused rather than quietly discarding it.
+    """
+    paused = _wf("w1", lifecycle=LifecycleState.BLOCKED, state=WorkflowState.PAUSED)
+    paused.last_policy_decision_request_id = "req-77"
+    assert 'value="req-77"' in views.actions(paused)
+    assert "overrides that decision" in views.status_callout(paused)
+
+
+def test_activate_reaches_the_rpc_with_the_decision_id():
+    c, cp = client([_wf("w1", lifecycle=LifecycleState.BLOCKED,
+                        state=WorkflowState.PAUSED)])
+
+    async def go(wid, rid=""):
+        cp.calls.append(("activate", wid, rid))
+
+    cp.activate_workflow = go
+    c.post("/workflows/w1/activate", data={"request_id": "req-77"},
+           follow_redirects=False)
+    assert cp.calls == [("activate", "w1", "req-77")]
+
+
+def test_no_second_person_copy_anywhere():
+    """This is infrastructure tooling, not a demo talking to its user."""
+    import re
+    from boundflow.ui import labels, views
+
+    c, _ = client([_wf("w1", lifecycle=LifecycleState.AWAITING_APPROVAL,
+                       approval=APPROVAL)])
+    surfaces = [c.get(p).text for p in ("/", "/inbox", "/holds", "/workflows/w1")]
+    surfaces += [getattr(labels.DEFAULT, f) for f in vars(labels.DEFAULT)]
+    for text in surfaces:
+        visible = re.sub(r"<script.*?</script>|<style.*?</style>", "", text, flags=re.S)
+        assert not re.search(r"\b(you|your|yours)\b", visible, re.I), visible[:200]
+
+
+# ── Audit ────────────────────────────────────────────────────────────────────
+
+def _policy_record(request_id="req-77", metric="cost", threshold=5.0,
+                   trigger=7.32, window=10, action="pause"):
+    from boundflow.control_plane import PolicyActionRecord
+    return PolicyActionRecord(
+        workflow_id="w1", request_id=request_id, metric=metric, threshold=threshold,
+        window=window, tool="", action=action, target_version=0, cooldown_seconds=0,
+        trigger_value=trigger, previous_version=1, previous_state="active",
+        actor="system", occurred_at=NOW,
+    )
+
+
+def test_a_policy_pause_says_what_crossed_and_which_run_caused_it():
+    """Naming the cause without the reason left the operator to go find the rule."""
+    paused = _wf("w1", lifecycle=LifecycleState.BLOCKED, state=WorkflowState.PAUSED)
+    paused.last_policy_decision_request_id = "req-77"
+    body = views.status_callout(paused, policy=_policy_record())
+
+    assert "cost reached 7.32" in body
+    assert "threshold of 5" in body
+    assert "over 10 runs" in body
+    assert "req-77" in body                     # the run that triggered it
+
+
+def test_the_callout_still_renders_without_its_audit_record():
+    """The policy audit read is allowed to fail; the page must not."""
+    paused = _wf("w1", lifecycle=LifecycleState.BLOCKED, state=WorkflowState.PAUSED)
+    paused.last_policy_decision_request_id = "req-77"
+    body = views.status_callout(paused, policy=None)
+    assert "lifecycle policy" in body
+    assert "req-77" in body
+
+
+def test_the_detail_page_shows_the_audit_log():
+    """Every decision is recorded server-side; a console that shows state but not
+    how it got there sends the operator to the CLI for the usual question."""
+    from boundflow.control_plane import ApprovalDecision, ApprovalAuditRecord
+
+    approval = ApprovalAuditRecord(
+        workflow_id="w1", request_id="req-1", approval_id="ap-1",
+        decision=ApprovalDecision.REJECTED, opened_at=NOW, decided_at=NOW,
+        actor="ops@example.com", occurred_at=NOW,
+        justification="refund $5,000", reason="over the limit")
+    c, _ = client([_wf("w1")], audit=[approval, _policy_record()])
+    body = c.get("/workflows/w1").text
+
+    assert "Audit" in body
+    assert "ops@example.com" in body
+    assert "refund $5,000" in body and "over the limit" in body
+    assert "rejected" in body
+    assert "workflow policy" in body            # the policy firing, same table
+    assert "req-1" in body and "req-77" in body  # each tied to its run
+
+
+def test_the_detail_page_survives_the_audit_read_failing():
+    c, cp = client([_wf("w1")])
+
+    async def boom(wid=""):
+        raise RuntimeError("audit unavailable")
+
+    cp.get_audit_log = boom
+    cp.get_workflow_policy_audit = boom
+    r = c.get("/workflows/w1")
+    assert r.status_code == 200
+    assert "Nothing recorded yet." in r.text
+
+
+# ── Nothing the control plane returns gets dropped ───────────────────────────
+
+def test_every_field_the_control_plane_returns_reaches_the_page():
+    """These types exist field by field for a reason; a renderer that picks by hand
+    silently drops whatever nobody remembered. This is the guard against that."""
+    import dataclasses
+    from boundflow.control_plane import (
+        ApprovalDecision, ApprovalAuditRecord, InputAuditRecord, InputDecision,
+        InvokeMode, WorkflowConfig,
+    )
+
+    approval = PendingApproval("ap-1", "why", {"amount": 500}, NOW, NOW)
+    gate_input = PendingInput("in-1", "which?", {"choices": 2}, NOW, NOW)
+    w = _wf("w1", lifecycle=LifecycleState.AWAITING_APPROVAL, approval=approval,
+            pending_input=gate_input,
+            suspension=Suspension("s1", "reason", True, NOW, NOW))
+    w.config = WorkflowConfig(1, 300, 60, True, InvokeMode.QUEUE, 5, True)
+    w.deletion_requested_at = None
+
+    audit = [
+        ApprovalAuditRecord("w1", "req-1", "ap-9", ApprovalDecision.REJECTED, NOW, NOW,
+                            "ops", NOW, "justify", "because"),
+        InputAuditRecord("w1", "req-2", "in-9", InputDecision.ANSWERED, NOW, NOW,
+                         "ops", NOW, {"region": "us"}, "prompt?"),
+        _policy_record(),
+    ]
+    run = Run("req-3", "invoke", RunStatus.FAILED, RunOutcome.OPERATION_TIMEOUT,
+              "too slow", NOW, NOW)
+
+    c, _ = client([w], audit=audit)
+    page = c.get("/workflows/w1").text + views.runs_table([run])
+
+    def field_values(obj):
+        for f in dataclasses.fields(obj):
+            v = getattr(obj, f.name)
+            if v is None or v == "" or v == {} or isinstance(v, bool):
+                continue          # nothing to look for, or rendered as yes/no
+            yield f.name, v
+
+    for obj in (w, w.config, w.suspension, approval, gate_input, run, *audit):
+        for name, value in field_values(obj):
+            if dataclasses.is_dataclass(value) or isinstance(value, (dict, list)):
+                continue          # rendered structurally; covered by its own case
+            rendered = views.esc(value) if hasattr(views, "esc") else str(value)
+            assert rendered in page or str(value) in page, \
+                f"{type(obj).__name__}.{name} = {value!r} never reaches the page"
+
+
+def test_abandon_queued_is_offered_and_mirrors_the_rpc():
+    """The CLI's abandon-queued had no console counterpart at all."""
+    c, cp = client([_wf("w1")])
+    captured = []
+
+    async def go(wid, request_ids=None, all=False):
+        captured.append((wid, request_ids, all))
+        return request_ids or []
+
+    cp.abandon_queued_requests = go
+
+    c.post("/workflows/w1/abandon", data={"request_ids": "r1, r2"},
+           follow_redirects=False)
+    assert captured == [("w1", ["r1", "r2"], False)]
+
+    captured.clear()
+    c.post("/workflows/w1/abandon", data={"all": "1"}, follow_redirects=False)
+    assert captured == [("w1", None, True)]
+
+
+def test_abandon_requires_exactly_one_of_ids_or_all():
+    """Same rule the CLI enforces; the console shouldn't send an ambiguous request."""
+    c, cp = client([_wf("w1")])
+    cp.abandon_queued_requests = lambda *a, **k: pytest.fail("should not be called")
+
+    both = c.post("/workflows/w1/abandon", data={"request_ids": "r1", "all": "1"},
+                  follow_redirects=False)
+    assert "not+both" in both.headers["location"].replace("%20", "+")
+
+    neither = c.post("/workflows/w1/abandon", data={}, follow_redirects=False)
+    assert "error=" in neither.headers["location"]
+
+
+def test_suspend_can_retarget_an_existing_hold():
+    """suspend_workflow takes suspension_id to retarget; the form never offered it."""
+    c, cp = client([_wf("w1")])
+    captured = []
+
+    async def go(wid, reason="", stop_current_run=False, suspension_id=""):
+        captured.append(suspension_id)
+
+    cp.suspend_workflow = go
+    c.post("/workflows/w1/suspend",
+           data={"reason": "r", "suspension_id": "sus-existing"},
+           follow_redirects=False)
+    assert captured == ["sus-existing"]

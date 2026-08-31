@@ -9,7 +9,7 @@ from typing import Any
 
 from ..control_plane import LifecycleState, WorkflowInfo, WorkflowState
 from .labels import DEFAULT, Labels
-from .render import detail_rows, esc, pill, table
+from .render import detail_rows, esc, fmt, pill, table
 
 # Workflows in one of these are waiting on a person, and are what the inbox is for.
 GATED = (LifecycleState.AWAITING_APPROVAL, LifecycleState.AWAITING_INPUT)
@@ -42,7 +42,7 @@ def _actor_reason_fields(reason_label: str) -> str:
     # actor is a free-text, self-asserted label, exactly as `--actor` is on the CLI.
     # The API key is the authentication; this is what gets recorded on the audit event.
     return (
-        '<label>actor<input type="text" name="actor" placeholder="you@example.com"></label>'
+        '<label>actor<input type="text" name="actor" placeholder="name@example.com"></label>'
         f'<label>{esc(reason_label)}'
         '<input type="text" name="reason" placeholder="recorded on the audit event"></label>'
     )
@@ -77,12 +77,14 @@ def input_form(w: WorkflowInfo) -> str:
         f"<dl><dt>input</dt><dd class='mono'>{esc(i.input_id)}</dd>"
         f"<dt>prompt</dt><dd>{esc(i.prompt)}</dd>"
         f"<dt>opened</dt><dd>{esc(i.opened_at)}</dd>"
-        f"<dt>times out</dt><dd>{esc(i.timeout_at)}</dd></dl>"
+        f"<dt>times out</dt><dd>{esc(i.timeout_at)}</dd>"
+        + (f"<dt>metadata</dt><dd>{esc(i.metadata)}</dd>" if i.metadata else "")
+        + "</dl>"
         f'<form method="post" action="/workflows/{esc(w.id)}/input">'
         f'<input type="hidden" name="input_id" value="{esc(i.input_id)}">'
         '<label>answer<input type="text" name="answer" required '
         'placeholder=\'text, or {"key": "value"}\'></label>'
-        '<label>actor<input type="text" name="actor" placeholder="you@example.com"></label>'
+        '<label>actor<input type="text" name="actor" placeholder="name@example.com"></label>'
         '<button>Submit</button></form></div>'
     )
 
@@ -94,7 +96,7 @@ def inbox(gated: list[WorkflowInfo], lb: Labels = DEFAULT) -> str:
     out = []
     for w in gated:
         out.append(
-            f"<h3 style='margin:16px 0 4px;font-size:14px'>{_link(w.id)} "
+            f"<h3>{_link(w.id)} "
             f"<span class='muted'>{esc(w.workflow_type)}</span></h3>"
             + approval_form(w)
             + input_form(w)
@@ -102,7 +104,7 @@ def inbox(gated: list[WorkflowInfo], lb: Labels = DEFAULT) -> str:
     return "".join(out)
 
 
-def suspension_controls(w: WorkflowInfo) -> str:
+def suspension_controls(w: WorkflowInfo, lb: Labels = DEFAULT) -> str:
     """Suspend, or resume once a suspension has finished draining."""
     s = w.suspension
     if s is None:
@@ -114,14 +116,14 @@ def suspension_controls(w: WorkflowInfo) -> str:
             "stop the running run</label>"
             "<button>Suspend</button></form>"
         )
-    draining = s.finalized_at is None
     detail = (
         f"<dl><dt>suspension</dt><dd class='mono'>{esc(s.suspension_id)}</dd>"
         f"<dt>reason</dt><dd>{esc(s.reason)}</dd>"
+        f"<dt>stop current run</dt><dd>{esc(s.stop_current)}</dd>"
         f"<dt>requested</dt><dd>{esc(s.requested_at)}</dd>"
         f"<dt>finalized</dt><dd>{esc(s.finalized_at)}</dd></dl>"
     )
-    if draining:
+    if s.finalized_at is None:
         # resume_workflow rejects a suspension that hasn't drained, so don't offer it.
         return detail + '<p class="muted">Draining — resumable once finalized.</p>'
     return (
@@ -132,10 +134,185 @@ def suspension_controls(w: WorkflowInfo) -> str:
     )
 
 
+def suspend_control(w: WorkflowInfo, lb: Labels = DEFAULT) -> str:
+    """Suspending needs a reason and a decision about the run in flight, so it's a
+    block of its own beside delete rather than a button in the header — the two
+    controls that take a deliberate act belong together, and away from the reading.
+
+    Only offered where the operator is the one who can act: a policy-paused or
+    disabled workflow isn't theirs to hold.
+    """
+    if w.workflow_state != WorkflowState.ACTIVE:
+        return ""
+    return (
+        f'<div class="block warn"><strong>{esc(lb.hold)}</strong>'
+        "<p>Stops new runs being scheduled. Anything queued is held, not lost, and "
+        "comes back on resume.</p>"
+        f'<form method="post" action="/workflows/{esc(w.id)}/suspend">'
+        '<label>reason<input type="text" name="reason" '
+        'placeholder="why the hold"></label>'
+        '<label class="check"><input type="checkbox" name="stop_current" value="1"> '
+        "stop the run in flight</label>"
+        '<label>retarget (optional)<input type="text" name="suspension_id" '
+        'placeholder="an existing suspension id"></label>'
+        "<button class='ghost'>Suspend</button></form></div>"
+    )
+
+
+def actions(w: WorkflowInfo, lb: Labels = DEFAULT) -> str:
+    """The state-changing controls, for the detail header.
+
+    Only one is ever applicable, because which applies is decided by the state the
+    workflow is actually in. Delete isn't here — it's irreversible, so it lives at
+    the bottom, clear of anything reached while reading.
+    """
+    if w.lifecycle_state == LifecycleState.INTERRUPTED:
+        return (
+            f'<form method="post" action="/workflows/{esc(w.id)}/resolve">'
+            '<input type="hidden" name="request_id" '
+            f'value="{esc(w.last_interrupted_request_id)}">'
+            "<button>Resolve &amp; reactivate</button></form>"
+        )
+    if w.workflow_state == WorkflowState.SUSPENDED:
+        s = w.suspension
+        if s is None or s.finalized_at is None:
+            return ""            # still draining; resume would be refused
+        return (
+            f'<form method="post" action="/workflows/{esc(w.id)}/resume">'
+            f'<input type="hidden" name="suspension_id" value="{esc(s.suspension_id)}">'
+            "<button>Resume</button></form>"
+        )
+    if w.workflow_state in (WorkflowState.PAUSED, WorkflowState.COOLDOWN):
+        # ActivateWorkflow is guarded on last_policy_decision_request_id, so sending
+        # the decision currently on the workflow overrides exactly that one: if a
+        # newer decision lands first this is refused rather than silently discarding
+        # it. Empty for a workflow no policy has touched — the plain activation path.
+        return (
+            f'<form method="post" action="/workflows/{esc(w.id)}/activate">'
+            '<input type="hidden" name="request_id" '
+            f'value="{esc(w.last_policy_decision_request_id)}">'
+            "<button>Activate</button></form>"
+        )
+    # Suspend isn't here: it needs a form, so it lives beside delete.
+    return ""
+
+
+def _callout(tone: str, title: str, detail: str) -> str:
+    body = f"<p>{detail}</p>" if detail else ""
+    return f'<div class="callout {tone}"><strong>{title}</strong>{body}</div>'
+
+
+def policy_reason(record: Any) -> str:
+    """One line saying what actually crossed, from a PolicyActionRecord.
+
+    Without this the callout can say a policy acted but not why, which leaves the
+    operator to go and find the rule themselves — the audit record already carries
+    the metric, the threshold, the window and the value that crossed it.
+    """
+    if record is None:
+        return ""
+    window = f" over {record.window} runs" if record.window else ""
+    return (f"{esc(record.metric)} reached {esc(record.trigger_value)} against a "
+            f"threshold of {esc(record.threshold)}{esc(window)}.")
+
+
+def status_callout(w: WorkflowInfo, lb: Labels = DEFAULT, policy: Any = None) -> str:
+    """Why the workflow isn't scheduling — shown only when it isn't.
+
+    workflow_state alone doesn't answer this: `paused` means a lifecycle policy
+    stopped it, *or* that it was created and never activated, and neither reads any
+    differently from the other. Naming the cause is the point. A workflow running
+    normally says nothing here, because there is nothing to say.
+    """
+    if w.lifecycle_state == LifecycleState.DELETED:
+        # Deletion is a soft delete plus an async purge, so a deleted workflow keeps
+        # being listed until the reconciler collects it.
+        return _callout("bad", "Deleted.",
+                        "Waiting to be purged. It no longer schedules runs.")
+    if w.lifecycle_state == LifecycleState.INTERRUPTED:
+        return _callout("bad", "Stopped by a platform failure.",
+                        f"Run <code>{esc(w.last_interrupted_request_id)}</code> was "
+                        "interrupted before it could finish. Resolving clears it and "
+                        "re-activates the workflow.")
+    if w.workflow_state == WorkflowState.SUSPENDED:
+        s = w.suspension
+        if s is None:
+            return _callout("warn", "Held by an operator.", "")
+        note = ("Draining — resumable once the running run finishes."
+                if s.finalized_at is None else "")
+        reason = f"&ldquo;{esc(s.reason)}&rdquo;" if s.reason else "No reason given."
+        return _callout("warn", "Held by an operator.", f"{reason} {note}".strip())
+    if w.workflow_state in (WorkflowState.PAUSED, WorkflowState.COOLDOWN):
+        # A freshly created workflow is `active`/`paused` — not `creating`, which is
+        # what the shape of the enum suggests. So lifecycle_state can't distinguish
+        # "never activated" from "a policy stopped it"; the presence of a policy
+        # decision is what does. Getting this wrong reported a brand new workflow as
+        # having been paused by a policy acting on metrics it has never produced.
+        if not w.last_policy_decision_request_id:
+            return _callout("warn", "Not activated.",
+                            "No policy has acted on it and it is not yet eligible "
+                            "to run.")
+        # cooldown_until isn't on the wire, so when a cooldown lifts can't be shown.
+        verb = ("Cooling down after a lifecycle policy decision."
+                if w.workflow_state == WorkflowState.COOLDOWN
+                else "Paused by a lifecycle policy.")
+        why = policy_reason(policy)
+        detail = (f"{why} " if why else
+                  "The platform acted on this workflow's own metrics, not an "
+                  "operator. ")
+        return _callout(
+            "warn", verb,
+            f"{detail}Triggered by run <code>"
+            f"{esc(w.last_policy_decision_request_id)}</code>. "
+            "Activating overrides that decision.")
+    if w.workflow_state == WorkflowState.DISABLED:
+        return _callout("bad", "Disabled.", "It will not schedule runs.")
+    return ""
+
+
+def abandon_control(w: WorkflowInfo, lb: Labels = DEFAULT) -> str:
+    """Drop queued runs, by id or all of them.
+
+    Only queued runs can be abandoned — one already scheduled or in progress is
+    untouched — so this is safe at any time, but it is irreversible for the runs it
+    does catch, which is why it sits down here rather than beside the runs table.
+    """
+    return (
+        f'<div class="block warn"><strong>{esc(lb.abandon)}</strong>'
+        "<p>Drops runs still waiting in the queue. A run already scheduled or in "
+        "progress is untouched. Irreversible for the runs it catches.</p>"
+        f'<form method="post" action="/workflows/{esc(w.id)}/abandon">'
+        '<label>run ids<input type="text" name="request_ids" '
+        'placeholder="comma separated; leave empty for all"></label>'
+        '<label class="check"><input type="checkbox" name="all" value="1"> '
+        "all queued runs</label>"
+        "<button class='ghost'>Abandon</button></form></div>"
+    )
+
+
+def delete_control(w: WorkflowInfo, lb: Labels = DEFAULT) -> str:
+    """Irreversible, and this console has no undo — so it sits apart from everything
+    else and asks for the id to be typed."""
+    if w.deletion_requested_at is not None:
+        return (f'<div class="danger"><strong>{esc(lb.danger)}</strong>'
+                '<p class="muted">Deletion already requested at '
+                f"{esc(w.deletion_requested_at)}.</p></div>")
+    return (
+        f'<div class="danger"><strong>{esc(lb.danger)}</strong>'
+        "<p>Deletes the workflow and abandons anything queued for it. "
+        "Type the id to confirm.</p>"
+        f'<form method="post" action="/workflows/{esc(w.id)}/delete">'
+        '<label>workflow id<input type="text" name="confirm" required '
+        'autocomplete="off" placeholder="paste the id above"></label>'
+        "<button class='ghost'>Delete</button></form></div>"
+    )
+
+
 def runs_table(runs: list[Any], lb: Labels = DEFAULT) -> str:
     rows = [
         [
             f'<span class="mono">{esc(r.request_id)}</span>',
+            esc(r.request_type),
             pill(r.status),
             pill(r.run_outcome) if r.run_outcome else '<span class="muted">—</span>',
             esc(r.failure_reason),
@@ -145,7 +322,7 @@ def runs_table(runs: list[Any], lb: Labels = DEFAULT) -> str:
         for r in runs
     ]
     return table(
-        [lb.run, "status", "outcome", "failure", "created", "completed"],
+        [lb.run, "type", "status", "outcome", "failure", "created", "completed"],
         rows,
         empty=lb.empty_runs,
     )
@@ -196,23 +373,76 @@ def holds_page(held: list[WorkflowInfo], lb: Labels = DEFAULT) -> str:
     for w in held:
         out.append(
             f"<h3>{_link(w.id)} <span class='muted'>{esc(w.workflow_type)}</span></h3>"
-            f'<div class="card">{suspension_controls(w)}</div>'
+            f'<div class="card">{suspension_controls(w, lb)}</div>'
         )
     return "".join(out)
 
 
+def _audit_summary(r: Any) -> tuple[str, str]:
+    """(kind, one-line summary) for any of the four audit record types."""
+    cls = type(r).__name__
+    if cls == "ApprovalAuditRecord":
+        bits = [f"“{r.justification}”" if r.justification else "",
+                f"— {r.reason}" if r.reason else ""]
+        return "approval", f"{fmt(r.decision)} {' '.join(b for b in bits if b)}".strip()
+    if cls == "InputAuditRecord":
+        return "input", f"{fmt(r.decision)} “{r.prompt}” → {fmt(r.answer)}".strip()
+    if cls == "PolicyActionRecord":
+        return "workflow policy", f"{fmt(r.action)}: {policy_reason(r)}"
+    if cls == "AgentPolicyActionRecord":
+        n = len(r.fired_rules)
+        return "agent policy", f"{r.agent}: {n} rule{'s' if n != 1 else ''} fired"
+    return cls, fmt(r)
+
+
+def audit_table(records: list[Any], lb: Labels = DEFAULT) -> str:
+    """The unified audit log for one workflow — every decision, by whom, and why.
+
+    Every gate decision and policy firing is already recorded server-side; a console
+    that shows current state but not how it got there sends an operator to the CLI
+    for the question they most often have.
+    """
+    rows = []
+    for r in records:
+        kind, summary = _audit_summary(r)
+        # The summary is what you scan; the record is what you need once something
+        # looks wrong, so every field stays available rather than being summarised
+        # away. Approval ids, gate timings and the policy's previous state are all
+        # here for a reason.
+        full = (f"<details><summary>{esc(summary)}</summary>"
+                f"{detail_rows(r, skip=('workflow_id', 'request_id', 'actor', 'occurred_at'))}"
+                "</details>")
+        rows.append([
+            esc(getattr(r, "occurred_at", None)),
+            esc(kind),
+            # Every record type carries the run it came from, which ties a decision
+            # back to the run in the table above it.
+            f'<span class="mono">{esc(getattr(r, "request_id", ""))}</span>',
+            esc(getattr(r, "actor", "") or "—"),
+            full,
+        ])
+    return table(["when", "kind", "run", "actor", "what"], rows,
+                 empty="Nothing recorded yet.")
+
+
 def workflow_detail(w: WorkflowInfo, runs: list[Any], metrics: Any,
-                    lb: Labels = DEFAULT) -> str:
+                    lb: Labels = DEFAULT, audit: list[Any] | None = None,
+                    policy: Any = None) -> str:
     gates = approval_form(w) + input_form(w)
     gates_section = f"<h2>{esc(lb.inbox)}</h2>{gates}" if gates else ""
     return (
+        "<div class='dhead'>"
         f"<h2>{esc(w.workflow_type)} <span class='mono muted'>{esc(w.id)}</span></h2>"
-        f'<div class="card">{detail_rows(w, skip=("pending_approval", "pending_input"))}</div>'
+        f"<div class='actions'>{actions(w, lb)}</div></div>"
+        f"{status_callout(w, lb, policy)}"
         f"{gates_section}"
-        f'<h2>{esc(lb.hold)}</h2><div class="card">{suspension_controls(w)}</div>'
+        f'<div class="card">{detail_rows(w, skip=("pending_approval", "pending_input"))}</div>'
         f"<h2>{esc(lb.metrics)} (version {esc(w.version)})</h2>"
         f"{metrics_cards(metrics, lb)}"
         f"<h2>{esc(lb.runs).capitalize()}</h2>{runs_table(runs, lb)}"
+        f"<h2>{esc(lb.audit)}</h2>{audit_table(audit or [], lb)}"
+        f"{suspend_control(w, lb)}{abandon_control(w, lb)}"
+        f"{delete_control(w, lb)}"
     )
 
 
