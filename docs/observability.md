@@ -66,16 +66,28 @@ boundflow ui                    # serves http://127.0.0.1:8787
 
 Three views, in the sidebar with live counts:
 
-- **Fleet** — every workflow with its lifecycle and workflow state, refreshing every
-  four seconds. `/` filters the table, `j`/`k` move a cursor, `Enter` opens a row.
+- **Fleet** — every live workflow with its lifecycle and workflow state, refreshing
+  every four seconds. `/` filters the table, `j`/`k` move a cursor, `Enter` opens a
+  row. Column headers sort; a tenant is a link that narrows the fleet to it. Both are
+  server-side, so the refresh doesn't undo them.
 - **Waiting on you** — approval gates with their justification, input gates with
   their prompt, each with `actor` and `reason` fields next to the decision. These are
   recorded on the audit event exactly as `--actor` and `--reason` are from the CLI.
 - **Holds** — every workflow under an operator hold, with its release control. Resume
   only appears once a suspension has finished draining, which is when the control
   plane will accept it.
+- **Deleted** — deleted but not yet purged. Deletion is soft plus a periodic purge, so
+  these keep being returned for a while; they get their own view rather than swamping
+  the fleet.
 
-Opening a workflow gives you its runs, its version metrics, and suspend/resume.
+Opening a workflow gives its runs, its version metrics, its audit log, and the
+control that applies to the state it is in — suspend, resume, activate (releasing a
+lifecycle-policy pause), resolve (clearing a platform interruption), abandon queued
+runs, or delete.
+
+A workflow that isn't scheduling says why: held by an operator, stopped by a
+lifecycle policy (with the metric, threshold and value that crossed, and when a
+cooldown lifts), interrupted by a platform failure, or never activated.
 
 The console is a client of the same control plane the CLI uses; it has no identity of
 its own. Your API key stays in the `boundflow ui` process and is never rendered into

@@ -492,7 +492,10 @@ type Workflow struct {
 	// Pass back as ActivateWorkflowRequest.request_id to resume from paused/cooldown.
 	LastPolicyDecisionRequestId string `protobuf:"bytes,15,opt,name=last_policy_decision_request_id,json=lastPolicyDecisionRequestId,proto3" json:"last_policy_decision_request_id,omitempty"`
 	// The operator hold currently on the workflow; unset when it is not suspended.
-	Suspension    *Suspension `protobuf:"bytes,16,opt,name=suspension,proto3" json:"suspension,omitempty"`
+	Suspension *Suspension `protobuf:"bytes,16,opt,name=suspension,proto3" json:"suspension,omitempty"`
+	// When a cooldown lifts, for a workflow a lifecycle policy put in WORKFLOW_STATE_COOLDOWN.
+	// Unset in every other state. Without it a cooldown can be explained but not timed.
+	CooldownUntil *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=cooldown_until,json=cooldownUntil,proto3" json:"cooldown_until,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -618,6 +621,13 @@ func (x *Workflow) GetSuspension() *Suspension {
 	return nil
 }
 
+func (x *Workflow) GetCooldownUntil() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CooldownUntil
+	}
+	return nil
+}
+
 var File_boundflow_v1_workflow_proto protoreflect.FileDescriptor
 
 const file_boundflow_v1_workflow_proto_rawDesc = "" +
@@ -653,7 +663,7 @@ const file_boundflow_v1_workflow_proto_rawDesc = "" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\x12!\n" +
 	"\fstop_current\x18\x03 \x01(\bR\vstopCurrent\x12=\n" +
 	"\frequested_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\vrequestedAt\x12=\n" +
-	"\ffinalized_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\vfinalizedAt\"\xe5\x05\n" +
+	"\ffinalized_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\vfinalizedAt\"\xa8\x06\n" +
 	"\bWorkflow\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
 	"\rworkflow_type\x18\x02 \x01(\tR\fworkflowType\x12\x1b\n" +
@@ -671,7 +681,8 @@ const file_boundflow_v1_workflow_proto_rawDesc = "" +
 	"\x1flast_policy_decision_request_id\x18\x0f \x01(\tR\x1blastPolicyDecisionRequestId\x128\n" +
 	"\n" +
 	"suspension\x18\x10 \x01(\v2\x18.boundflow.v1.SuspensionR\n" +
-	"suspension*Z\n" +
+	"suspension\x12A\n" +
+	"\x0ecooldown_until\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampR\rcooldownUntil*Z\n" +
 	"\n" +
 	"InvokeMode\x12\x1b\n" +
 	"\x17INVOKE_MODE_UNSPECIFIED\x10\x00\x12\x18\n" +
@@ -727,11 +738,12 @@ var file_boundflow_v1_workflow_proto_depIdxs = []int32{
 	4,  // 13: boundflow.v1.Workflow.pending_input:type_name -> boundflow.v1.PendingInput
 	8,  // 14: boundflow.v1.Workflow.deletion_requested_at:type_name -> google.protobuf.Timestamp
 	5,  // 15: boundflow.v1.Workflow.suspension:type_name -> boundflow.v1.Suspension
-	16, // [16:16] is the sub-list for method output_type
-	16, // [16:16] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	8,  // 16: boundflow.v1.Workflow.cooldown_until:type_name -> google.protobuf.Timestamp
+	17, // [17:17] is the sub-list for method output_type
+	17, // [17:17] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_boundflow_v1_workflow_proto_init() }

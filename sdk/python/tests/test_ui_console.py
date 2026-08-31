@@ -345,8 +345,9 @@ def test_a_view_that_cannot_reach_the_control_plane_still_renders_its_nav():
 
 def test_fleet_polls_itself_and_the_detail_page_does_not():
     c, _ = client([_wf("w1")])
-    assert 'data-src="/fragment/fleet"' in c.get("/").text
-    assert 'data-src="/fragment/fleet"' not in c.get("/workflows/w1").text
+    # The src now carries the sort and tenant filter so a poll preserves them.
+    assert 'data-src="/fragment/fleet' in c.get("/").text
+    assert "data-src=" not in c.get("/workflows/w1").text
 
 
 def test_screens_are_never_cached():
@@ -784,3 +785,81 @@ def test_a_requested_but_unfinalized_deletion_stays_in_the_fleet_and_says_so():
     callout = views.status_callout(draining)
     assert "Deletion requested." in callout
     assert "Waiting for anything in flight" in callout
+
+
+# ── Fleet sorting and the tenant filter ──────────────────────────────────────
+
+def _fleet(*specs):
+    """(id, type, tenant) triples."""
+    out = []
+    for wid, wtype, tid in specs:
+        w = _wf(wid, wtype=wtype)
+        w.tenant_id = tid
+        out.append(w)
+    return out
+
+
+def test_the_fleet_can_be_filtered_to_one_tenant():
+    c, _ = client(_fleet(("w-a", "alpha", "tenant-1"), ("w-b", "beta", "tenant-2")))
+    body = c.get("/?tenant=tenant-1").text
+
+    assert "w-a" in body
+    assert "w-b" not in body
+    assert "Filtered to tenant" in body
+    assert "show all" in body                   # and a way back out
+
+
+def test_the_fleet_count_reflects_the_tenant_filter():
+    c, _ = client(_fleet(("w-a", "alpha", "tenant-1"), ("w-b", "beta", "tenant-2")))
+    assert "Fleet (1)" in c.get("/?tenant=tenant-1").text
+    assert "Fleet (2)" in c.get("/").text
+
+
+def test_a_tenant_is_a_link_that_filters_to_it():
+    c, _ = client(_fleet(("w-a", "alpha", "tenant-1")))
+    assert "?tenant=tenant-1" in c.get("/").text
+
+
+def test_the_fleet_sorts_by_a_column_and_flips_on_a_second_click():
+    c, _ = client(_fleet(("w-a", "zeta", "t1"), ("w-b", "alpha", "t1")))
+
+    asc = c.get("/?sort=type").text
+    assert asc.index("alpha") < asc.index("zeta")
+
+    desc = c.get("/?sort=type&desc=1").text
+    assert desc.index("zeta") < desc.index("alpha")
+
+
+def test_an_unknown_sort_key_leaves_the_order_alone():
+    """A hand-typed URL shouldn't take the page down."""
+    workflows = _fleet(("w-a", "zeta", "t1"), ("w-b", "alpha", "t1"))
+    assert views.sort_workflows(workflows, "not-a-column") == workflows
+
+    c, _ = client(workflows)
+    assert c.get("/?sort=not-a-column").status_code == 200
+
+
+def test_the_poll_keeps_the_sort_and_the_filter():
+    """The table reloads every few seconds; a sort it dropped would be worse than
+    no sort at all."""
+    c, _ = client(_fleet(("w-a", "alpha", "tenant-1"), ("w-b", "beta", "tenant-2")))
+    body = c.get("/?sort=type&desc=1&tenant=tenant-1").text
+    assert "sort=type" in body and "desc=1" in body and "tenant=tenant-1" in body
+
+    fragment = c.get("/fragment/fleet?sort=type&desc=1&tenant=tenant-1").text
+    assert "w-a" in fragment and "w-b" not in fragment
+
+
+def test_cooldown_until_reaches_the_page_and_is_named_in_the_callout():
+    """The column was loaded on every read and dropped at the proto boundary, so a
+    cooldown could be explained but not timed."""
+    from datetime import timedelta
+
+    cooling = _wf("w1", lifecycle=LifecycleState.BLOCKED, state=WorkflowState.COOLDOWN)
+    cooling.last_policy_decision_request_id = "req-9"
+    cooling.cooldown_until = NOW + timedelta(minutes=30)
+
+    assert "Scheduling resumes" in views.status_callout(cooling)
+
+    c, _ = client([cooling])
+    assert "cooldown until" in c.get("/workflows/w1").text.lower()

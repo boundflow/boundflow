@@ -190,9 +190,12 @@ def build_app(console: Console):
         except Exception as exc:
             return failed(request, console.labels.fleet, exc)
         gated = await console.gated(workflows)
+        q = request.query_params
         return render(console.labels.fleet,
-                      views.home(workflows, gated, console.labels), request,
-                      current="/", workflows=workflows)
+                      views.home(workflows, gated, console.labels,
+                                 sort=q.get("sort", ""), desc=bool(q.get("desc")),
+                                 tenant=q.get("tenant", "")),
+                      request, current="/", workflows=workflows)
 
     async def inbox(request):
         try:
@@ -231,8 +234,11 @@ def build_app(console: Console):
             workflows = await console.cp.list_workflows()
         except Exception as exc:
             return HTMLResponse(str(exc), status_code=502)
-        return HTMLResponse(views.fleet_table(workflows, console.labels),
-                            headers=NO_STORE)
+        q = request.query_params
+        return HTMLResponse(
+            views.fleet_table(workflows, console.labels, sort=q.get("sort", ""),
+                              desc=bool(q.get("desc")), tenant=q.get("tenant", "")),
+            headers=NO_STORE)
 
     async def detail(request):
         wid = request.path_params["workflow_id"]

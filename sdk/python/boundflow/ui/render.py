@@ -112,11 +112,15 @@ def detail_rows(obj: Any, skip: tuple[str, ...] = ()) -> str:
     return f"<dl>{''.join(out)}</dl>"
 
 
-def table(headers: list[str], rows: list[list[str]], empty: str = "Nothing here.") -> str:
-    """A table of pre-rendered cells. Cells are inserted raw, so callers escape."""
+def table(headers: list[str], rows: list[list[str]], empty: str = "Nothing here.",
+          *, raw_headers: bool = False) -> str:
+    """A table of pre-rendered cells. Cells are inserted raw, so callers escape.
+
+    raw_headers lets a caller pass markup (a sort link); it escapes them itself.
+    """
     if not rows:
         return f'<p class="muted">{escape(empty)}</p>'
-    head = "".join(f"<th>{escape(h)}</th>" for h in headers)
+    head = "".join(f"<th>{h if raw_headers else escape(h)}</th>" for h in headers)
     body = "".join("<tr>" + "".join(f"<td>{c}</td>" for c in r) + "</tr>" for r in rows)
     return f'<div class="scroll"><table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>'
 
@@ -158,6 +162,8 @@ h2{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--dim)
 h2:first-child{margin-top:0}
 h3{font-size:13px;margin:14px 0 4px;font-weight:600}
 table{border-collapse:collapse;width:100%}
+th a{color:inherit}
+th a:hover{color:var(--acc)}
 th{text-align:left;color:var(--dim);font-size:10px;letter-spacing:.14em;
    text-transform:uppercase;font-weight:600;padding:0 14px 6px 0;
    border-bottom:1px solid var(--line);white-space:nowrap}

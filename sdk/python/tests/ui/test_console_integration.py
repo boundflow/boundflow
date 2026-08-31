@@ -466,3 +466,67 @@ async def test_abandoning_queued_runs_from_the_console(console, boundflow_api_ke
         runs = await cp.list_workflow_runs(wf.id)
         assert any(r.status == RunStatus.ABANDONED for r in runs), \
             [r.status.value for r in runs]
+
+
+async def test_the_fleet_filters_by_tenant_against_real_data(console,
+                                                             boundflow_api_key):
+    async with control_plane(boundflow_api_key) as cp:
+        t1 = await cp.create_tenant(unique("ui-t1"))
+        t2 = await cp.create_tenant(unique("ui-t2"))
+        a = await cp.create_workflow(unique("ui_ta"), t1.id,
+                                     config=WorkflowConfig(version=1))
+        b = await cp.create_workflow(unique("ui_tb"), t2.id,
+                                     config=WorkflowConfig(version=1))
+
+        async with console_client(console) as c:
+            both = (await c.get("/")).text
+            assert a.id in both and b.id in both
+
+            only_t1 = (await c.get(f"/?tenant={t1.id}")).text
+            assert a.id in only_t1
+            assert b.id not in only_t1
+            assert "Filtered to tenant" in only_t1
+
+            # The poll fetches with the same filter, so a refresh doesn't drop it.
+            frag = (await c.get(f"/fragment/fleet?tenant={t1.id}")).text
+            assert a.id in frag and b.id not in frag
+
+
+async def test_cooldown_until_reaches_the_console(console, boundflow_api_key):
+    """The column was loaded on every read but dropped in WorkflowToProto, so a
+    cooldown reached the customer explained and untimed. This drives a real policy
+    cooldown and checks the deadline arrives and is rendered.
+
+    Fires on failures rather than LLM calls because this worker never runs an agent.
+    """
+    from boundflow import Complete, WorkflowMetric, WorkflowRule
+    from boundflow.policies import Cooldown
+
+    wtype = unique("ui_cooldown")
+    worker = BoundFlowWorker(WORKER_ADDRESS, dummy_mock())
+
+    @worker.workflow(wtype, version=1)
+    async def _entry(ctx):
+        raise RuntimeError("failing on purpose, to trip the cooldown rule")
+
+    async with run_worker(worker), control_plane(boundflow_api_key) as cp:
+        wf = await _tenant_and_workflow(cp, wtype, activate=False)
+        await cp.set_workflow_lifecycle_policy(wf.id, [
+            WorkflowRule(metric=WorkflowMetric.NUM_FAILURES, threshold=1,
+                         action=Cooldown(window=1, seconds=120)),
+        ])
+        await cp.activate_workflow(wf.id)
+        await cp.invoke_workflow(wf.id, operation_timeout_seconds=60)
+
+        async def cooling():
+            return (await cp.get_workflow(wf.id)).workflow_state == WorkflowState.COOLDOWN
+
+        await wait_for(cooling, "the policy to put the workflow in cooldown", 90)
+
+        info = await cp.get_workflow(wf.id)
+        assert info.cooldown_until is not None, "cooldown_until never reached the SDK"
+
+        async with console_client(console) as c:
+            body = (await c.get(f"/workflows/{wf.id}")).text
+        assert "Cooling down" in body
+        assert "Scheduling resumes" in body

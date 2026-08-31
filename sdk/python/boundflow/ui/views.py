@@ -19,8 +19,55 @@ def _link(workflow_id: str) -> str:
     return f'<a class="mono" href="/workflows/{esc(workflow_id)}">{esc(workflow_id)}</a>'
 
 
-def fleet_table(workflows: list[WorkflowInfo], lb: Labels = DEFAULT) -> str:
+# Fleet columns that can be sorted, mapped to the WorkflowInfo attribute behind them.
+SORTABLE = {
+    "workflow": "id",
+    "type": "workflow_type",
+    "lifecycle": "lifecycle_state",
+    "state": "workflow_state",
+    "version": "version",
+    "tenant": "tenant_id",
+}
+
+
+def sort_workflows(workflows: list[WorkflowInfo], key: str = "",
+                   desc: bool = False) -> list[WorkflowInfo]:
+    """Sort by a fleet column. An unknown key leaves the order alone rather than
+    raising — a hand-typed URL shouldn't take the page down."""
+    attr = SORTABLE.get(key)
+    if attr is None:
+        return workflows
+    return sorted(workflows, key=lambda w: fmt(getattr(w, attr)).lower(), reverse=desc)
+
+
+def _header_link(label: str, col: str, sort: str, desc: bool, base: str) -> str:
+    """A sortable header. Clicking the active column flips direction."""
+    if col not in SORTABLE:
+        return escape_header(label)
+    flip = "1" if (sort == col and not desc) else ""
+    mark = (" \u25be" if desc else " \u25b4") if sort == col else ""
+    query = f"{base}sort={col}" + ("&desc=1" if flip else "")
+    return f"<a href='{esc(query)}'>{escape_header(label)}{mark}</a>"
+
+
+def escape_header(label: str) -> str:
+    return esc(label)
+
+
+def fleet_table(workflows: list[WorkflowInfo], lb: Labels = DEFAULT, *,
+                sort: str = "", desc: bool = False, tenant: str = "") -> str:
+    """The live fleet. Deleted workflows have their own view.
+
+    Sorting and the tenant filter are server-side rather than JavaScript because the
+    table reloads itself every few seconds — a client-side sort would be silently
+    undone on the next poll, which is worse than not having one.
+    """
     workflows = [w for w in workflows if not is_deleted(w)]
+    if tenant:
+        workflows = [w for w in workflows if w.tenant_id == tenant]
+    workflows = sort_workflows(workflows, sort, desc)
+
+    base = f"?tenant={tenant}&" if tenant else "?"
     rows = [
         [
             _link(w.id),
@@ -28,15 +75,25 @@ def fleet_table(workflows: list[WorkflowInfo], lb: Labels = DEFAULT) -> str:
             pill(w.lifecycle_state),
             pill(w.workflow_state),
             esc(w.version),
-            esc(w.tenant_id),
+            # Clicking a tenant narrows the fleet to it; clicking again clears it.
+            (f"<a href='?tenant='>{esc(w.tenant_id)}</a>" if tenant
+             else f"<a href='?tenant={esc(w.tenant_id)}'>{esc(w.tenant_id)}</a>"),
         ]
         for w in workflows
     ]
-    return table(
-        [lb.workflow, "type", lb.lifecycle, lb.state, "version", "tenant"],
-        rows,
-        empty=lb.empty_fleet,
-    )
+    headers = [
+        _header_link(lb.workflow, "workflow", sort, desc, base),
+        _header_link("type", "type", sort, desc, base),
+        _header_link(lb.lifecycle, "lifecycle", sort, desc, base),
+        _header_link(lb.state, "state", sort, desc, base),
+        _header_link("version", "version", sort, desc, base),
+        _header_link("tenant", "tenant", sort, desc, base),
+    ]
+    body = table(headers, rows, empty=lb.empty_fleet, raw_headers=True)
+    if tenant:
+        body = (f"<p class='muted'>Filtered to tenant <span class='mono'>"
+                f"{esc(tenant)}</span> — <a href='?'>show all</a></p>{body}")
+    return body
 
 
 def _actor_reason_fields(reason_label: str) -> str:
@@ -258,10 +315,12 @@ def status_callout(w: WorkflowInfo, lb: Labels = DEFAULT, policy: Any = None) ->
             return _callout("warn", "Not activated.",
                             "No policy has acted on it and it is not yet eligible "
                             "to run.")
-        # cooldown_until isn't on the wire, so when a cooldown lifts can't be shown.
-        verb = ("Cooling down after a lifecycle policy decision."
-                if w.workflow_state == WorkflowState.COOLDOWN
-                else "Paused by a lifecycle policy.")
+        if w.workflow_state == WorkflowState.COOLDOWN:
+            until = (f" Scheduling resumes {fmt(w.cooldown_until)}."
+                     if w.cooldown_until else "")
+            verb = f"Cooling down after a lifecycle policy decision.{until}"
+        else:
+            verb = "Paused by a lifecycle policy."
         why = policy_reason(policy)
         detail = (f"{why} " if why else
                   "The platform acted on this workflow's own metrics, not an "
@@ -358,12 +417,18 @@ def metrics_cards(m: Any, lb: Labels = DEFAULT) -> str:
 
 
 def home(workflows: list[WorkflowInfo], gated: list[WorkflowInfo],
-         lb: Labels = DEFAULT) -> str:
+         lb: Labels = DEFAULT, *, sort: str = "", desc: bool = False,
+         tenant: str = "") -> str:
     """The fleet, with anything parked on a person pulled to the top."""
     head = f"<h2>{esc(lb.inbox)} ({len(gated)})</h2>{inbox(gated, lb)}" if gated else ""
+    live = [w for w in workflows if not is_deleted(w)
+            and (not tenant or w.tenant_id == tenant)]
+    # The poll re-fetches with the same sort and filter, so neither is lost on refresh.
+    src = f"/fragment/fleet?sort={sort}&desc={'1' if desc else ''}&tenant={tenant}"
     return (
-        f"{head}<h2>{esc(lb.fleet)} ({len(workflows)})</h2>"
-        f'<div id="fleet" data-src="/fragment/fleet">{fleet_table(workflows, lb)}</div>'
+        f"{head}<h2>{esc(lb.fleet)} ({len(live)})</h2>"
+        f'<div id="fleet" data-src="{esc(src)}">'
+        f"{fleet_table(workflows, lb, sort=sort, desc=desc, tenant=tenant)}</div>"
     )
 
 

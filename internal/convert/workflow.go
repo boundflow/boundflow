@@ -51,6 +51,11 @@ func WorkflowToProto(r *domain.Workflow) *boundflowv1.Workflow {
 	if r.Suspension.RequestedAt != nil {
 		w.Suspension = suspensionToProto(r.Suspension)
 	}
+	// Only set in cooldown. The column is loaded on every read and was being dropped
+	// here, so a cooldown could be explained to a customer but never timed.
+	if r.CooldownUntil != nil {
+		w.CooldownUntil = timestamppb.New(*r.CooldownUntil)
+	}
 	return w
 }
 

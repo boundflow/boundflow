@@ -207,6 +207,10 @@ class WorkflowInfo:
     pending_approval: PendingApproval | None = None
     pending_input: PendingInput | None = None
     suspension: Suspension | None = None
+    # When a cooldown lifts. Set only while workflow_state is COOLDOWN; None in every
+    # other state, so it says when the workflow starts scheduling again rather than
+    # leaving a cooldown explained but untimed.
+    cooldown_until: datetime | None = None
 
 
 @dataclass
@@ -245,6 +249,7 @@ def _workflow_info(w, full: bool = False) -> WorkflowInfo:
         suspension=_suspension(w) if w.HasField("suspension") else None,
         pending_approval=_pending_approval(w) if w.HasField("pending_approval") else None,
         pending_input=_pending_input(w) if w.HasField("pending_input") else None,
+        cooldown_until=_ts(w, "cooldown_until"),
     )
 
 
