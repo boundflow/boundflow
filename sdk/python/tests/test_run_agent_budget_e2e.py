@@ -1,6 +1,5 @@
-"""run_agent(budget=...) against a real backend — the shape Charter's loop needs:
-several agent steps in one run, sharing one budget that BoundFlow's per-step policy
-can't express on its own.
+"""run_agent(budget=...) against a real backend: several agent steps in one run,
+sharing one budget that BoundFlow's per-step policy can't express on its own.
 """
 from __future__ import annotations
 
@@ -57,7 +56,7 @@ async def test_budget_spans_multiple_agent_steps_in_one_run(cp):
             try:
                 result = await ctx.run_agent(_agent(), budget=Budget(max_llm_calls=total - spent))
             except AgentPolicyLimitExceeded:
-                break  # budget gone — Charter's loop reports this rather than crashing
+                break  # budget gone — a caller's loop reports this rather than crashing
             spent += result.llm_calls_used
             steps.append(result.llm_calls_used)
         return Complete(result={"spent": spent})
