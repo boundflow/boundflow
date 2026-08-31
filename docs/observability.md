@@ -53,3 +53,32 @@ info = await cp.get_request_info(request_id)
 Each run reports a `run_outcome` — `successful`, `customer_marked_failure`,
 `uncaught_operation_exception`, `operation_timeout`, or `interrupted` — plus a
 failure reason where applicable.
+
+## The operator console
+
+The same inventory in a browser, plus the actions that need a person:
+
+```bash
+pip install "boundflow[ui]"
+export BOUNDFLOW_API_KEY=<your key>
+boundflow ui                    # serves http://127.0.0.1:8787
+```
+
+It opens on the fleet and on everything waiting on a human — approval gates with
+their justification, input gates with their prompt — each with `actor` and `reason`
+fields next to the decision, recorded on the audit event exactly as `--actor` and
+`--reason` are from the CLI. Per workflow you also get its runs, its version metrics,
+and suspend/resume.
+
+The console is a client of the same control plane the CLI uses; it has no identity of
+its own. Your API key stays in the `boundflow ui` process and is never rendered into
+the page, and the server binds `127.0.0.1` only — anyone who can reach the console can
+act with your key, so to reach a remote control plane point `--server` at it rather
+than exposing the console:
+
+```bash
+boundflow --server https://boundflow.example.com:443 ui
+```
+
+Creating workflows, editing config and setting policy stay in the CLI, where a policy
+is JSON you can review and commit rather than a form.
