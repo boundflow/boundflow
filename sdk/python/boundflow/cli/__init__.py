@@ -2,8 +2,8 @@
 
 import typer
 
-from boundflow.cli._client import configure
-from boundflow.cli.output import set_json
+from boundflow.cli._client import configure, resolved
+from boundflow.cli.output import error, set_json
 from boundflow.cli.commands import audit, policies, pricing, tenants, workflows
 
 app = typer.Typer(
@@ -36,6 +36,21 @@ def root(
 ):
     set_json(json_output)
     configure(server, api_key)
+
+
+@app.command("ui")
+def ui(
+    port: int = typer.Option(8787, "--port", help="Port to serve on (localhost only)"),
+    no_browser: bool = typer.Option(False, "--no-browser", help="Don't open a browser"),
+):
+    """Serve the local operator console: the fleet, its gates, and holds."""
+    from boundflow.ui import serve
+
+    server, api_key = resolved()
+    if not api_key:
+        error("no API key. Set BOUNDFLOW_API_KEY or pass --api-key.")
+        raise typer.Exit(1)
+    serve(server, api_key, port=port, open_browser=not no_browser)
 
 
 def main() -> None:
