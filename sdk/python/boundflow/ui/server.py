@@ -20,7 +20,7 @@ from typing import Any
 from ..control_plane import ControlPlaneClient, DEFAULT_SERVER_ADDRESS
 from . import views
 from .labels import DEFAULT as DEFAULT_LABELS, Labels
-from .render import page
+from .render import nav_links, page
 
 log = logging.getLogger("boundflow.ui")
 
@@ -101,6 +101,25 @@ class Console:
         full = await asyncio.gather(*(one(w) for w in waiting))
         return [w for w in full if w is not None and views.is_gated(w)]
 
+    async def held(self, workflows: list) -> list:
+        """Workflows under an operator hold, with the suspension detail the release
+        control needs — which, like the gates, only get_workflow carries."""
+        suspended = [w for w in workflows if views.is_suspended(w)]
+        if not suspended:
+            return []
+        sem = asyncio.Semaphore(_GATE_FANOUT)
+
+        async def one(w):
+            async with sem:
+                try:
+                    return await self.cp.get_workflow(w.id)
+                except Exception:
+                    log.warning("could not load hold detail for %s", w.id, exc_info=True)
+                    return None
+
+        full = await asyncio.gather(*(one(w) for w in suspended))
+        return [w for w in full if w is not None and views.is_suspended(w)]
+
 
 def build_app(console: Console):
     """Construct the Starlette app. Imported lazily so `boundflow --help` works
@@ -119,10 +138,37 @@ def build_app(console: Console):
         finally:
             await console.stop()
 
-    def render(title: str, body: str, request) -> HTMLResponse:
+    def nav(current: str, workflows: list | None = None) -> str:
+        """Sidebar entries. Counts need the fleet, so a page that hasn't loaded it
+        renders the labels bare rather than paying for an extra call."""
+        lb = console.labels
+        if workflows is None:
+            counts = (None, None, None)
+        else:
+            counts = (
+                len(workflows),
+                sum(1 for w in workflows if views.is_gated(w)),
+                sum(1 for w in workflows if views.is_suspended(w)),
+            )
+        return nav_links(
+            [("/", lb.fleet, counts[0]),
+             ("/inbox", lb.inbox, counts[1]),
+             ("/holds", lb.holds, counts[2])],
+            current,
+        )
+
+    def render(title: str, body: str, request, *, current: str = "/",
+               workflows: list | None = None, filterable: bool = True) -> HTMLResponse:
         return HTMLResponse(page(
             title, body, server=console.server, labels=console.labels,
+            nav=nav(current, workflows), filterable=filterable,
             error=request.query_params.get("error", ""),
+        ))
+
+    def failed(request, title: str, exc: Exception) -> HTMLResponse:
+        return HTMLResponse(page(
+            title, "", server=console.server, labels=console.labels,
+            nav=nav(request.url.path), error=str(exc),
         ))
 
     def back(workflow_id: str, error: str = "") -> RedirectResponse:
@@ -134,11 +180,31 @@ def build_app(console: Console):
         try:
             workflows = await console.cp.list_workflows()
         except Exception as exc:
-            return HTMLResponse(page(console.labels.fleet, "", server=console.server,
-                                     labels=console.labels, error=str(exc)))
+            return failed(request, console.labels.fleet, exc)
         gated = await console.gated(workflows)
         return render(console.labels.fleet,
-                      views.home(workflows, gated, console.labels), request)
+                      views.home(workflows, gated, console.labels), request,
+                      current="/", workflows=workflows)
+
+    async def inbox(request):
+        try:
+            workflows = await console.cp.list_workflows()
+        except Exception as exc:
+            return failed(request, console.labels.inbox, exc)
+        gated = await console.gated(workflows)
+        return render(console.labels.inbox,
+                      views.inbox_page(gated, console.labels), request,
+                      current="/inbox", workflows=workflows, filterable=False)
+
+    async def holds(request):
+        try:
+            workflows = await console.cp.list_workflows()
+        except Exception as exc:
+            return failed(request, console.labels.holds, exc)
+        held = await console.held(workflows)
+        return render(console.labels.holds,
+                      views.holds_page(held, console.labels), request,
+                      current="/holds", workflows=workflows, filterable=False)
 
     async def fleet_fragment(request):
         """Polled by the page. Errors return 502 so the poller leaves the last good
@@ -154,9 +220,7 @@ def build_app(console: Console):
         try:
             workflow = await console.cp.get_workflow(wid)
         except Exception as exc:
-            return HTMLResponse(page(console.labels.workflow.capitalize(), "",
-                                     server=console.server, labels=console.labels,
-                                     error=str(exc)))
+            return failed(request, console.labels.workflow.capitalize(), exc)
         runs, metrics = await asyncio.gather(
             console.cp.list_workflow_runs(wid),
             console.cp.get_workflow_metrics(wid),
@@ -169,7 +233,8 @@ def build_app(console: Console):
             log.warning("could not load metrics for %s", wid, exc_info=metrics)
             metrics = None
         return render(wid, views.workflow_detail(workflow, runs, metrics,
-                                                 console.labels), request)
+                                                 console.labels), request,
+                      current="", filterable=False)
 
     async def act(request, fn):
         """Run one control-plane mutation and redirect back to the workflow."""
@@ -215,6 +280,8 @@ def build_app(console: Console):
     return Starlette(
         routes=[
             Route("/", home),
+            Route("/inbox", inbox),
+            Route("/holds", holds),
             Route("/fragment/fleet", fleet_fragment),
             Route("/workflows/{workflow_id}", detail),
             Route("/workflows/{workflow_id}/approval", approval, methods=["POST"]),

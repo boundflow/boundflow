@@ -64,11 +64,18 @@ export BOUNDFLOW_API_KEY=<your key>
 boundflow ui                    # serves http://127.0.0.1:8787
 ```
 
-It opens on the fleet and on everything waiting on a human — approval gates with
-their justification, input gates with their prompt — each with `actor` and `reason`
-fields next to the decision, recorded on the audit event exactly as `--actor` and
-`--reason` are from the CLI. Per workflow you also get its runs, its version metrics,
-and suspend/resume.
+Three views, in the sidebar with live counts:
+
+- **Fleet** — every workflow with its lifecycle and workflow state, refreshing every
+  four seconds. `/` filters the table, `j`/`k` move a cursor, `Enter` opens a row.
+- **Waiting on you** — approval gates with their justification, input gates with
+  their prompt, each with `actor` and `reason` fields next to the decision. These are
+  recorded on the audit event exactly as `--actor` and `--reason` are from the CLI.
+- **Holds** — every workflow under an operator hold, with its release control. Resume
+  only appears once a suspension has finished draining, which is when the control
+  plane will accept it.
+
+Opening a workflow gives you its runs, its version metrics, and suspend/resume.
 
 The console is a client of the same control plane the CLI uses; it has no identity of
 its own. Your API key stays in the `boundflow ui` process and is never rendered into
@@ -97,8 +104,8 @@ serve(server, api_key, labels=Labels(
 ))
 ```
 
-`Labels` covers the console's own wording — the brand, the section headings, the
-column titles. It deliberately cannot rename the values the control plane returns:
+`Labels` covers the console's own wording — the brand, the sidebar entries, the
+section headings, the column titles. It deliberately cannot rename the values the control plane returns:
 `awaiting_approval`, `cooldown`, `interrupted`, or a workflow type. Those same
 strings appear in the CLI, the API and the audit log, so a console-only rename gives
 an operator a word that exists nowhere else — they report an agent stuck in "Needs

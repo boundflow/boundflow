@@ -176,18 +176,29 @@ def metrics_cards(m: Any, lb: Labels = DEFAULT) -> str:
 
 def home(workflows: list[WorkflowInfo], gated: list[WorkflowInfo],
          lb: Labels = DEFAULT) -> str:
-    counts: dict[str, int] = {}
-    for w in workflows:
-        counts[w.lifecycle_state.value] = counts.get(w.lifecycle_state.value, 0) + 1
-    summary = "".join(
-        f'<div class="card stat"><b>{esc(n)}</b><span>{esc(state)}</span></div>'
-        for state, n in sorted(counts.items())
-    )
+    """The fleet, with anything parked on a person pulled to the top."""
+    head = f"<h2>{esc(lb.inbox)} ({len(gated)})</h2>{inbox(gated, lb)}" if gated else ""
     return (
-        f"<h2>{esc(lb.inbox)} ({len(gated)})</h2>{inbox(gated, lb)}"
-        f'<h2>{esc(lb.fleet)} ({len(workflows)})</h2><div class="grid">{summary}</div>'
-        f'<div id="fleet">{fleet_table(workflows, lb)}</div>'
+        f"{head}<h2>{esc(lb.fleet)} ({len(workflows)})</h2>"
+        f'<div id="fleet" data-src="/fragment/fleet">{fleet_table(workflows, lb)}</div>'
     )
+
+
+def inbox_page(gated: list[WorkflowInfo], lb: Labels = DEFAULT) -> str:
+    return f"<h2>{esc(lb.inbox)} ({len(gated)})</h2>{inbox(gated, lb)}"
+
+
+def holds_page(held: list[WorkflowInfo], lb: Labels = DEFAULT) -> str:
+    """Every workflow under an operator hold, each with its release control."""
+    if not held:
+        return f'<p class="muted">{esc(lb.empty_holds)}</p>'
+    out = [f"<h2>{esc(lb.hold)} ({len(held)})</h2>"]
+    for w in held:
+        out.append(
+            f"<h3>{_link(w.id)} <span class='muted'>{esc(w.workflow_type)}</span></h3>"
+            f'<div class="card">{suspension_controls(w)}</div>'
+        )
+    return "".join(out)
 
 
 def workflow_detail(w: WorkflowInfo, runs: list[Any], metrics: Any,

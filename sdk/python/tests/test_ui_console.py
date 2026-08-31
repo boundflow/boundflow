@@ -120,7 +120,10 @@ def test_a_workflow_that_leaves_its_gate_drops_out_of_the_inbox():
     c, cp = client([moved])
     # get_workflow reports it has moved on, with no gate attached.
     cp._workflows["w1"] = _wf("w1", lifecycle=LifecycleState.ACTIVE)
-    assert "Waiting on you (0)" in c.get("/").text
+    home = c.get("/").text
+    assert "Waiting on you (" not in home        # the section is dropped entirely
+    assert "Waiting on you<b>0</b>" in home      # the sidebar still says zero
+    assert "Nothing is waiting on a person." in c.get("/inbox").text
 
 
 def test_approve_sends_actor_and_reason_then_redirects():
@@ -246,7 +249,7 @@ def test_labels_rename_the_console_s_own_words():
     body = TestClient(build_app(console)).get("/").text
 
     assert "Acme" in body and "agent control" in body
-    assert "Needs you (0)" in body
+    assert "Needs you<b>0</b>" in body           # sidebar
     assert "Agents (1)" in body
     assert "runtime state" in body
     assert "BoundFlow" not in body
@@ -276,3 +279,63 @@ def test_labels_are_escaped():
     console._cp = FakeCP([_wf("w1")])
     body = TestClient(build_app(console)).get("/").text
     assert "<script>alert(1)</script>" not in body
+
+
+def test_sidebar_counts_the_three_views():
+    c, _ = client([
+        _wf("w1", lifecycle=LifecycleState.AWAITING_APPROVAL, approval=APPROVAL),
+        _wf("w2"),
+        _wf("w3", state=WorkflowState.SUSPENDED,
+            suspension=Suspension("s1", "hold", False, NOW, NOW)),
+    ])
+    body = c.get("/").text
+    assert "Fleet<b>3</b>" in body
+    assert "Waiting on you<b>1</b>" in body
+    assert "Holds<b>1</b>" in body
+
+
+def test_holds_view_lists_held_workflows_with_their_release():
+    drained = Suspension("sus-1", "cost spike", True, NOW, NOW)
+    c, _ = client([
+        _wf("w1", state=WorkflowState.SUSPENDED, suspension=drained),
+        _wf("w2"),
+    ])
+    body = c.get("/holds").text
+    assert "cost spike" in body
+    assert "Resume" in body
+    assert "w2" not in body        # not held, so not here
+
+
+def test_holds_view_is_empty_when_nothing_is_held():
+    c, _ = client([_wf("w1")])
+    assert "Nothing is held." in c.get("/holds").text
+
+
+def test_inbox_view_shows_only_the_gates():
+    c, _ = client([
+        _wf("w1", lifecycle=LifecycleState.AWAITING_INPUT, pending_input=INPUT_GATE),
+        _wf("w2"),
+    ])
+    body = c.get("/inbox").text
+    assert "which region?" in body
+    assert "w2" not in body
+
+
+def test_a_view_that_cannot_reach_the_control_plane_still_renders_its_nav():
+    """The error page is where an operator lands when things are broken, so it has to
+    keep the navigation rather than becoming a dead end."""
+    c, cp = client([_wf("w1")])
+
+    async def boom():
+        raise RuntimeError("control plane down")
+
+    cp.list_workflows = boom
+    body = c.get("/").text
+    assert "control plane down" in body
+    assert "href='/holds'" in body
+
+
+def test_fleet_polls_itself_and_the_detail_page_does_not():
+    c, _ = client([_wf("w1")])
+    assert 'data-src="/fragment/fleet"' in c.get("/").text
+    assert 'data-src="/fragment/fleet"' not in c.get("/workflows/w1").text

@@ -33,16 +33,18 @@ class Labels:
     run: str = "run"
     runs: str = "runs"
 
-    # Section headings.
+    # Section headings, which double as the sidebar's nav entries.
     inbox: str = "Waiting on you"
     fleet: str = "Fleet"
     hold: str = "Operator hold"
+    holds: str = "Holds"
     metrics: str = "Metrics"
 
     # Empty states, which read badly if they're built by concatenation.
     empty_inbox: str = "Nothing is waiting on a person."
     empty_fleet: str = "No workflows yet."
     empty_runs: str = "No runs yet."
+    empty_holds: str = "Nothing is held."
 
 
 DEFAULT = Labels()
