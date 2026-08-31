@@ -176,15 +176,19 @@ _JS = """
 """
 
 
-def page(title: str, body: str, *, server: str, error: str = "") -> str:
+def page(title: str, body: str, *, server: str, error: str = "",
+         labels: "Labels | None" = None) -> str:
     """Wrap body content in the full document."""
+    from .labels import DEFAULT
+    lb = labels or DEFAULT
     banner = f'<div class="err">{escape(error)}</div>' if error else ""
     return (
         "<!doctype html><html><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width,initial-scale=1'>"
-        f"<title>{escape(title)} · BoundFlow</title><style>{_CSS}</style></head><body>"
-        "<header><h1><a href='/' style='text-decoration:none'>BoundFlow</a></h1>"
+        f"<title>{escape(title)} · {escape(lb.brand)}</title>"
+        f"<style>{_CSS}</style></head><body>"
+        f"<header><h1><a href='/' style='text-decoration:none'>{escape(lb.brand)}</a></h1>"
         f"<span class='muted mono'>{escape(server)}</span>"
-        "<span class='muted'>local operator console</span></header>"
+        f"<span class='muted'>{escape(lb.tagline)}</span></header>"
         f"<main>{banner}{body}</main><script>{_JS}</script></body></html>"
     )

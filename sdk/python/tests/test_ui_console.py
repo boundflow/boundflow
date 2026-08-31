@@ -232,3 +232,47 @@ def test_fleet_fragment_keeps_the_last_good_table_on_error():
 
     cp.list_workflows = boom
     assert c.get("/fragment/fleet").status_code == 502
+
+
+def test_labels_rename_the_console_s_own_words():
+    from boundflow.ui import Labels
+
+    console = Console("http://localhost:50051", "key",
+                      Labels(brand="Acme", tagline="agent control",
+                             workflow="agent", workflows="agents",
+                             lifecycle="runtime state", fleet="Agents",
+                             inbox="Needs you", runs="invocations"))
+    console._cp = FakeCP([_wf("w1")])
+    body = TestClient(build_app(console)).get("/").text
+
+    assert "Acme" in body and "agent control" in body
+    assert "Needs you (0)" in body
+    assert "Agents (1)" in body
+    assert "runtime state" in body
+    assert "BoundFlow" not in body
+    assert "Waiting on you" not in body
+
+
+def test_labels_cannot_rename_what_the_control_plane_returns():
+    """The stored values are what appear in the CLI, the API and the audit log. A
+    console word that exists nowhere else makes an operator's report unsearchable."""
+    from boundflow.ui import Labels
+
+    console = Console("http://localhost:50051", "key",
+                      Labels(workflow="agent", lifecycle="runtime state"))
+    console._cp = FakeCP([_wf("w1", lifecycle=LifecycleState.AWAITING_APPROVAL,
+                              approval=APPROVAL, wtype="leads_finder")])
+    body = TestClient(build_app(console)).get("/").text
+
+    assert "awaiting_approval" in body     # the state, verbatim
+    assert "leads_finder" in body          # the workflow type, verbatim
+
+
+def test_labels_are_escaped():
+    from boundflow.ui import Labels
+
+    console = Console("http://localhost:50051", "key",
+                      Labels(brand="<script>alert(1)</script>"))
+    console._cp = FakeCP([_wf("w1")])
+    body = TestClient(build_app(console)).get("/").text
+    assert "<script>alert(1)</script>" not in body

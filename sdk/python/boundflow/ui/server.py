@@ -19,6 +19,7 @@ from typing import Any
 
 from ..control_plane import ControlPlaneClient, DEFAULT_SERVER_ADDRESS
 from . import views
+from .labels import DEFAULT as DEFAULT_LABELS, Labels
 from .render import page
 
 log = logging.getLogger("boundflow.ui")
@@ -56,8 +57,10 @@ def _parse_answer(raw: str) -> dict:
 class Console:
     """Holds the control-plane connection and renders the screens."""
 
-    def __init__(self, server: str, api_key: str) -> None:
+    def __init__(self, server: str, api_key: str,
+                 labels: Labels = DEFAULT_LABELS) -> None:
         self.server = server
+        self.labels = labels
         self._api_key = api_key
         self._cp: ControlPlaneClient | None = None
 
@@ -118,7 +121,7 @@ def build_app(console: Console):
 
     def render(title: str, body: str, request) -> HTMLResponse:
         return HTMLResponse(page(
-            title, body, server=console.server,
+            title, body, server=console.server, labels=console.labels,
             error=request.query_params.get("error", ""),
         ))
 
@@ -131,9 +134,11 @@ def build_app(console: Console):
         try:
             workflows = await console.cp.list_workflows()
         except Exception as exc:
-            return HTMLResponse(page("Fleet", "", server=console.server, error=str(exc)))
+            return HTMLResponse(page(console.labels.fleet, "", server=console.server,
+                                     labels=console.labels, error=str(exc)))
         gated = await console.gated(workflows)
-        return render("Fleet", views.home(workflows, gated), request)
+        return render(console.labels.fleet,
+                      views.home(workflows, gated, console.labels), request)
 
     async def fleet_fragment(request):
         """Polled by the page. Errors return 502 so the poller leaves the last good
@@ -142,14 +147,16 @@ def build_app(console: Console):
             workflows = await console.cp.list_workflows()
         except Exception as exc:
             return HTMLResponse(str(exc), status_code=502)
-        return HTMLResponse(views.fleet_table(workflows))
+        return HTMLResponse(views.fleet_table(workflows, console.labels))
 
     async def detail(request):
         wid = request.path_params["workflow_id"]
         try:
             workflow = await console.cp.get_workflow(wid)
         except Exception as exc:
-            return HTMLResponse(page("Workflow", "", server=console.server, error=str(exc)))
+            return HTMLResponse(page(console.labels.workflow.capitalize(), "",
+                                     server=console.server, labels=console.labels,
+                                     error=str(exc)))
         runs, metrics = await asyncio.gather(
             console.cp.list_workflow_runs(wid),
             console.cp.get_workflow_metrics(wid),
@@ -161,7 +168,8 @@ def build_app(console: Console):
         if isinstance(metrics, BaseException):
             log.warning("could not load metrics for %s", wid, exc_info=metrics)
             metrics = None
-        return render(wid, views.workflow_detail(workflow, runs, metrics), request)
+        return render(wid, views.workflow_detail(workflow, runs, metrics,
+                                                 console.labels), request)
 
     async def act(request, fn):
         """Run one control-plane mutation and redirect back to the workflow."""
@@ -219,16 +227,17 @@ def build_app(console: Console):
 
 
 def serve(server: str = DEFAULT_SERVER_ADDRESS, api_key: str = "",
-          port: int = 8787, open_browser: bool = True) -> None:
+          port: int = 8787, open_browser: bool = True,
+          labels: Labels = DEFAULT_LABELS) -> None:
     """Run the console until interrupted. Blocks."""
     _require_starlette()
     import uvicorn
 
-    app = build_app(Console(server, api_key))
+    app = build_app(Console(server, api_key, labels))
     url = f"http://127.0.0.1:{port}"
     if open_browser:
         import threading
         import webbrowser
         threading.Timer(0.5, lambda: webbrowser.open(url)).start()
-    print(f"BoundFlow console on {url}  (control plane: {server})")
+    print(f"{labels.brand} console on {url}  (control plane: {server})")
     uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")

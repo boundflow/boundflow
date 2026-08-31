@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..control_plane import LifecycleState, WorkflowInfo, WorkflowState
+from .labels import DEFAULT, Labels
 from .render import detail_rows, esc, pill, table
 
 # Workflows in one of these are waiting on a person, and are what the inbox is for.
@@ -18,7 +19,7 @@ def _link(workflow_id: str) -> str:
     return f'<a class="mono" href="/workflows/{esc(workflow_id)}">{esc(workflow_id)}</a>'
 
 
-def fleet_table(workflows: list[WorkflowInfo]) -> str:
+def fleet_table(workflows: list[WorkflowInfo], lb: Labels = DEFAULT) -> str:
     rows = [
         [
             _link(w.id),
@@ -31,9 +32,9 @@ def fleet_table(workflows: list[WorkflowInfo]) -> str:
         for w in workflows
     ]
     return table(
-        ["workflow", "type", "lifecycle", "state", "version", "tenant"],
+        [lb.workflow, "type", lb.lifecycle, lb.state, "version", "tenant"],
         rows,
-        empty="No workflows. Create one with `boundflow workflows create`.",
+        empty=lb.empty_fleet,
     )
 
 
@@ -86,10 +87,10 @@ def input_form(w: WorkflowInfo) -> str:
     )
 
 
-def inbox(gated: list[WorkflowInfo]) -> str:
+def inbox(gated: list[WorkflowInfo], lb: Labels = DEFAULT) -> str:
     """Workflows parked on a human. The reason the console exists."""
     if not gated:
-        return '<p class="muted">Nothing is waiting on a person.</p>'
+        return f'<p class="muted">{esc(lb.empty_inbox)}</p>'
     out = []
     for w in gated:
         out.append(
@@ -131,7 +132,7 @@ def suspension_controls(w: WorkflowInfo) -> str:
     )
 
 
-def runs_table(runs: list[Any]) -> str:
+def runs_table(runs: list[Any], lb: Labels = DEFAULT) -> str:
     rows = [
         [
             f'<span class="mono">{esc(r.request_id)}</span>',
@@ -144,17 +145,17 @@ def runs_table(runs: list[Any]) -> str:
         for r in runs
     ]
     return table(
-        ["run", "status", "outcome", "failure", "created", "completed"],
+        [lb.run, "status", "outcome", "failure", "created", "completed"],
         rows,
-        empty="No runs yet.",
+        empty=lb.empty_runs,
     )
 
 
-def metrics_cards(m: Any) -> str:
+def metrics_cards(m: Any, lb: Labels = DEFAULT) -> str:
     if m is None:
-        return '<p class="muted">No metrics for this version yet.</p>'
+        return f'<p class="muted">No {esc(lb.metrics).lower()} for this version yet.</p>'
     stats = [
-        ("runs", m.run_count),
+        (lb.runs, m.run_count),
         ("cost usd", f"{m.total_cost_usd:,.4f}"),
         ("llm calls", m.total_llm_calls),
         ("failures", m.total_failures),
@@ -173,7 +174,8 @@ def metrics_cards(m: Any) -> str:
     return f'<div class="grid">{cards}</div>{tools}'
 
 
-def home(workflows: list[WorkflowInfo], gated: list[WorkflowInfo]) -> str:
+def home(workflows: list[WorkflowInfo], gated: list[WorkflowInfo],
+         lb: Labels = DEFAULT) -> str:
     counts: dict[str, int] = {}
     for w in workflows:
         counts[w.lifecycle_state.value] = counts.get(w.lifecycle_state.value, 0) + 1
@@ -182,22 +184,24 @@ def home(workflows: list[WorkflowInfo], gated: list[WorkflowInfo]) -> str:
         for state, n in sorted(counts.items())
     )
     return (
-        f"<h2>Waiting on you ({len(gated)})</h2>{inbox(gated)}"
-        f'<h2>Fleet ({len(workflows)})</h2><div class="grid">{summary}</div>'
-        f'<div id="fleet">{fleet_table(workflows)}</div>'
+        f"<h2>{esc(lb.inbox)} ({len(gated)})</h2>{inbox(gated, lb)}"
+        f'<h2>{esc(lb.fleet)} ({len(workflows)})</h2><div class="grid">{summary}</div>'
+        f'<div id="fleet">{fleet_table(workflows, lb)}</div>'
     )
 
 
-def workflow_detail(w: WorkflowInfo, runs: list[Any], metrics: Any) -> str:
+def workflow_detail(w: WorkflowInfo, runs: list[Any], metrics: Any,
+                    lb: Labels = DEFAULT) -> str:
     gates = approval_form(w) + input_form(w)
-    gates_section = f"<h2>Waiting on you</h2>{gates}" if gates else ""
+    gates_section = f"<h2>{esc(lb.inbox)}</h2>{gates}" if gates else ""
     return (
         f"<h2>{esc(w.workflow_type)} <span class='mono muted'>{esc(w.id)}</span></h2>"
         f'<div class="card">{detail_rows(w, skip=("pending_approval", "pending_input"))}</div>'
         f"{gates_section}"
-        f'<h2>Operator hold</h2><div class="card">{suspension_controls(w)}</div>'
-        f"<h2>Metrics (version {esc(w.version)})</h2>{metrics_cards(metrics)}"
-        f"<h2>Runs</h2>{runs_table(runs)}"
+        f'<h2>{esc(lb.hold)}</h2><div class="card">{suspension_controls(w)}</div>'
+        f"<h2>{esc(lb.metrics)} (version {esc(w.version)})</h2>"
+        f"{metrics_cards(metrics, lb)}"
+        f"<h2>{esc(lb.runs).capitalize()}</h2>{runs_table(runs, lb)}"
     )
 
 
