@@ -39,6 +39,7 @@ class Labels:
     hold: str = "Operator hold"
     holds: str = "Holds"
     scheduling: str = "Scheduling"
+    deleted: str = "Deleted"
     metrics: str = "Metrics"
     audit: str = "Audit"
     abandon: str = "Abandon queued runs"
@@ -49,6 +50,7 @@ class Labels:
     empty_fleet: str = "No workflows yet."
     empty_runs: str = "No runs yet."
     empty_holds: str = "Nothing is held."
+    empty_deleted: str = "Nothing deleted."
 
 
 DEFAULT = Labels()

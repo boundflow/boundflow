@@ -143,17 +143,20 @@ def build_app(console: Console):
         renders the labels bare rather than paying for an extra call."""
         lb = console.labels
         if workflows is None:
-            counts = (None, None, None)
+            counts = (None, None, None, None)
         else:
+            gone = [w for w in workflows if views.is_deleted(w)]
             counts = (
-                len(workflows),
+                len(workflows) - len(gone),      # the fleet excludes tombstones
                 sum(1 for w in workflows if views.is_gated(w)),
                 sum(1 for w in workflows if views.is_suspended(w)),
+                len(gone),
             )
         return nav_links(
             [("/", lb.fleet, counts[0]),
              ("/inbox", lb.inbox, counts[1]),
-             ("/holds", lb.holds, counts[2])],
+             ("/holds", lb.holds, counts[2]),
+             ("/deleted", lb.deleted, counts[3])],
             current,
         )
 
@@ -200,6 +203,16 @@ def build_app(console: Console):
         return render(console.labels.inbox,
                       views.inbox_page(gated, console.labels), request,
                       current="/inbox", workflows=workflows, filterable=False)
+
+    async def deleted(request):
+        try:
+            workflows = await console.cp.list_workflows()
+        except Exception as exc:
+            return failed(request, console.labels.deleted, exc)
+        gone = [w for w in workflows if views.is_deleted(w)]
+        return render(console.labels.deleted,
+                      views.deleted_page(gone, console.labels), request,
+                      current="/deleted", workflows=workflows)
 
     async def holds(request):
         try:
@@ -340,6 +353,7 @@ def build_app(console: Console):
             Route("/", home),
             Route("/inbox", inbox),
             Route("/holds", holds),
+            Route("/deleted", deleted),
             Route("/fragment/fleet", fleet_fragment),
             Route("/workflows/{workflow_id}", detail),
             Route("/workflows/{workflow_id}/approval", approval, methods=["POST"]),

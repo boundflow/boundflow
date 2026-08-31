@@ -304,6 +304,11 @@ async def test_delete_needs_the_typed_id_and_then_removes_the_workflow(
             await wait_for(lambda: _deleted(cp, wf.id), "the workflow to be deleted")
             assert "Deleted." in (await c.get(f"/workflows/{wf.id}")).text
 
+            # It leaves the fleet for its own view rather than sitting among the live
+            # workflows until the purge reconciler gets to it.
+            assert wf.id not in (await c.get("/")).text
+            assert wf.id in (await c.get("/deleted")).text
+
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 

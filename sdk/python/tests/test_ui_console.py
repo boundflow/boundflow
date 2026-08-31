@@ -473,7 +473,8 @@ def test_delete_is_offered_on_the_detail_page_only():
     """A delete button in a list, next to a 4-second auto-refresh, is a misclick."""
     c, _ = client([_wf("w1")])
     assert "/workflows/w1/delete" in c.get("/workflows/w1").text
-    assert "/delete" not in c.get("/").text
+    # Not `/delete` — the Deleted view's nav href contains that as a substring.
+    assert "/workflows/w1/delete" not in c.get("/").text
 
 
 def test_a_workflow_already_being_deleted_is_not_offered_again():
@@ -734,3 +735,52 @@ def test_suspend_can_retarget_an_existing_hold():
            data={"reason": "r", "suspension_id": "sus-existing"},
            follow_redirects=False)
     assert captured == ["sus-existing"]
+
+
+# ── Deleted view ─────────────────────────────────────────────────────────────
+
+def _tombstone(wid="w-gone"):
+    w = _wf(wid, lifecycle=LifecycleState.DELETED, state=WorkflowState.DISABLED)
+    w.deletion_requested_at = NOW
+    return w
+
+
+def test_the_fleet_excludes_tombstones_and_counts_them_separately():
+    """Deletion is soft plus a periodic purge, so deleted workflows keep being
+    returned for a while — enough of them to swamp the fleet they're mixed into."""
+    c, _ = client([_wf("w-live"), _tombstone("w-gone")])
+    home = c.get("/").text
+
+    assert "w-live" in home
+    assert "w-gone" not in home
+    assert "Fleet<b>1</b>" in home
+    assert "Deleted<b>1</b>" in home
+
+
+def test_the_deleted_view_lists_them_with_when_deletion_was_requested():
+    c, _ = client([_wf("w-live"), _tombstone("w-gone")])
+    body = c.get("/deleted").text
+
+    assert "w-gone" in body
+    assert "w-live" not in body
+    assert "deletion requested" in body
+
+
+def test_the_deleted_view_is_empty_when_nothing_is_deleted():
+    c, _ = client([_wf("w-live")])
+    assert "Nothing deleted." in c.get("/deleted").text
+
+
+def test_a_requested_but_unfinalized_deletion_stays_in_the_fleet_and_says_so():
+    """It is still draining and may still be running, so it isn't a tombstone yet —
+    but the console said nothing about it at all before."""
+    draining = _wf("w1")
+    draining.deletion_requested_at = NOW
+
+    c, _ = client([draining])
+    assert "w1" in c.get("/").text              # still the fleet's problem
+    assert "w1" not in c.get("/deleted").text   # not finalized
+
+    callout = views.status_callout(draining)
+    assert "Deletion requested." in callout
+    assert "Waiting for anything in flight" in callout

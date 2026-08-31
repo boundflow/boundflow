@@ -20,6 +20,7 @@ def _link(workflow_id: str) -> str:
 
 
 def fleet_table(workflows: list[WorkflowInfo], lb: Labels = DEFAULT) -> str:
+    workflows = [w for w in workflows if not is_deleted(w)]
     rows = [
         [
             _link(w.id),
@@ -224,6 +225,11 @@ def status_callout(w: WorkflowInfo, lb: Labels = DEFAULT, policy: Any = None) ->
     differently from the other. Naming the cause is the point. A workflow running
     normally says nothing here, because there is nothing to say.
     """
+    if (w.deletion_requested_at is not None
+            and w.lifecycle_state != LifecycleState.DELETED):
+        return _callout("bad", "Deletion requested.",
+                        "Waiting for anything in flight to finish before it is "
+                        f"finalized. Requested {esc(w.deletion_requested_at)}.")
     if w.lifecycle_state == LifecycleState.DELETED:
         # Deletion is a soft delete plus an async purge, so a deleted workflow keeps
         # being listed until the reconciler collects it.
@@ -365,6 +371,28 @@ def inbox_page(gated: list[WorkflowInfo], lb: Labels = DEFAULT) -> str:
     return f"<h2>{esc(lb.inbox)} ({len(gated)})</h2>{inbox(gated, lb)}"
 
 
+def deleted_page(gone: list[WorkflowInfo], lb: Labels = DEFAULT) -> str:
+    """Workflows that have been deleted but not yet purged.
+
+    Deletion is a soft delete plus a periodic purge, so these keep being returned by
+    the control plane for a while. Somewhere to look for them beats both hiding them
+    (where did it go?) and leaving them in the fleet (which they swamp).
+    """
+    rows = [
+        [
+            _link(w.id),
+            esc(w.workflow_type),
+            pill(w.lifecycle_state),
+            esc(w.deletion_requested_at),
+            esc(w.tenant_id),
+        ]
+        for w in gone
+    ]
+    return (f"<h2>{esc(lb.deleted)} ({len(gone)})</h2>"
+            + table([lb.workflow, "type", lb.lifecycle, "deletion requested", "tenant"],
+                    rows, empty=lb.empty_deleted))
+
+
 def holds_page(held: list[WorkflowInfo], lb: Labels = DEFAULT) -> str:
     """Every workflow under an operator hold, each with its release control."""
     if not held:
@@ -452,3 +480,9 @@ def is_gated(w: WorkflowInfo) -> bool:
 
 def is_suspended(w: WorkflowInfo) -> bool:
     return w.workflow_state == WorkflowState.SUSPENDED
+
+
+def is_deleted(w: WorkflowInfo) -> bool:
+    """Finalized deletions only. A workflow whose deletion was merely *requested* is
+    still draining — possibly still running — and belongs in the fleet."""
+    return w.lifecycle_state == LifecycleState.DELETED
