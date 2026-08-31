@@ -45,6 +45,10 @@ type Scheduler struct {
 	partitionWorkers           []PartitionWorker
 }
 
+// maxJobAttempts bounds retries for a resumable workflow, so a poison-pill operation
+// can't tour the fleet forever. High, because most requeues are infra, not the job.
+const maxJobAttempts = 20
+
 // Functions of the scheduler:
 // 1, Grabs partition id from the partitions table, and manages the workflows belonging to that partition
 // 2. Schedules unscheduled requests onto the job queue (picking priority by version number)
@@ -277,11 +281,67 @@ func (s *Scheduler) failJobs(ctx context.Context, partitionID string) error {
 // internal error occurred, etc.); customer-domain failures complete instead.
 const interruptedReason = "the run was interrupted before it could complete (platform failure)"
 
+// requeueJob makes the job claimable again so another worker continues the run.
+// At-least-once: the operation re-runs, which is why it is opt-in config.
+// Reports whether to leave the workflow alone — false means interrupt it.
+func (s *Scheduler) requeueJob(ctx context.Context, req string, workflowID string) bool {
+	attempts, err := s.jobs.RequeueJob(ctx, workflowID, req, maxJobAttempts)
+	if err != nil {
+		// The job is untouched and still failed, so the next sweep brings it back here.
+		s.log.Error("failed to requeue job, leaving it for the next sweep", "request_id", req, "workflow_id", workflowID, "error", err)
+		return true
+	}
+	if attempts == 0 {
+		// Gone, or out of attempts; either way the job was left alone.
+		s.log.Warn("job not requeued, interrupting", "request_id", req, "workflow_id", workflowID, "max_attempts", maxJobAttempts)
+		return false
+	}
+	s.log.Info("resumable job requeued for another worker", "request_id", req, "workflow_id", workflowID, "attempt", attempts)
+	return true
+}
+
+// recordInterruptedMetrics promotes an interrupted run's metrics before the job row
+// carrying them is deleted. Best-effort: the run is already failing.
+func (s *Scheduler) recordInterruptedMetrics(ctx context.Context, req string, workflowID string) {
+	metrics, workflowMetrics, err := s.jobs.GetJobMetrics(ctx, workflowID, req)
+	if err != nil {
+		s.log.Error("failed to read job metrics for interrupted run", "request_id", req, "workflow_id", workflowID, "error", err)
+		return
+	}
+	if len(metrics) == 0 {
+		return
+	}
+	// Read after the transition, as CompleteRequest does: EmitMetrics gates on the
+	// version ApplyFailedJob just advanced.
+	workflow, err := s.workflow.Get(ctx, workflowID)
+	if err != nil {
+		s.log.Error("failed to get workflow for interrupted run metrics", "request_id", req, "workflow_id", workflowID, "error", err)
+		return
+	}
+	if err, _ := s.metricsHandler.HandleAgentMetrics(ctx, req, metrics, workflowMetrics, workflow); err != nil {
+		s.log.Error("failed to record metrics for interrupted run", "request_id", req, "workflow_id", workflowID, "error", err)
+	}
+}
+
 func (s *Scheduler) FailRequest(ctx context.Context, req string, workflowID string, version int64, reason string) (bool, error) {
 	s.log.Debug("marking request as failed", "request_id", req)
 
 	if reason == "" {
 		reason = interruptedReason
+	}
+
+	// Read once for both the resumable check and the metrics below. On error, fall
+	// through and interrupt: failing closed is the safe direction.
+	workflow, err := s.workflow.Get(ctx, workflowID)
+	if err != nil {
+		s.log.Error("failed to read workflow while failing request", "request_id", req, "workflow_id", workflowID, "error", err)
+	}
+
+	// Before anything terminal: a resumable workflow hands the run to another worker
+	// instead. Metrics stay on the job row — promoting them here would record a run
+	// that hasn't finished, and record it again when it does.
+	if workflow != nil && workflow.WorkflowConfig.Resumable && s.requeueJob(ctx, req, workflowID) {
+		return false, nil
 	}
 
 	applied, err := s.workflow.ApplyFailedJob(ctx, workflowID, req, domain.LifecycleStateInterrupted, domain.WorkflowStateDisabled, version)
@@ -291,6 +351,8 @@ func (s *Scheduler) FailRequest(ctx context.Context, req string, workflowID stri
 	}
 	if applied {
 		s.log.Info("request failed, workflow updated", "request_id", req, "workflow_id", workflowID, "version", version)
+		// Metrics only; policy stays unresolved because the failure was ours.
+		s.recordInterruptedMetrics(ctx, req, workflowID)
 	} else {
 		s.log.Warn("request failed but workflow version check skipped update (newer version already applied)", "request_id", req, "workflow_id", workflowID, "version", version)
 	}

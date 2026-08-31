@@ -61,6 +61,11 @@ class WorkflowConfig:
     # coalesce mode.
     invoke_mode: InvokeMode = InvokeMode.COALESCE
     max_queue_depth: int = 0
+    # Hand an operation to another worker when the one running it dies, rather than
+    # interrupting the workflow for a human. The operation re-runs, so set it only
+    # where that's safe: a governed harness resumes from its checkpoint, an arbitrary
+    # handler repeats whatever it already did.
+    resumable: bool = False
 
 
 @dataclass
@@ -222,7 +227,7 @@ def _workflow_config(wc) -> WorkflowConfig:
     return WorkflowConfig(
         wc.version, wc.invoke_timeout_seconds, wc.repeat_every_seconds, wc.triggerable,
         InvokeMode.QUEUE if wc.invoke_mode == ri.INVOKE_MODE_QUEUE else InvokeMode.COALESCE,
-        wc.max_queue_depth)
+        wc.max_queue_depth, wc.resumable)
 
 
 def _workflow_info(w, full: bool = False) -> WorkflowInfo:
@@ -667,6 +672,7 @@ class ControlPlaneClient:
                 invoke_mode=(ri.INVOKE_MODE_QUEUE if cfg.invoke_mode == InvokeMode.QUEUE
                              else ri.INVOKE_MODE_COALESCE),
                 max_queue_depth=cfg.max_queue_depth,
+                resumable=cfg.resumable,
             ),
         ), metadata=self._metadata)
         inst = resp.workflow
@@ -688,6 +694,7 @@ class ControlPlaneClient:
                 invoke_mode=(ri.INVOKE_MODE_QUEUE if config.invoke_mode == InvokeMode.QUEUE
                              else ri.INVOKE_MODE_COALESCE),
                 max_queue_depth=config.max_queue_depth,
+                resumable=config.resumable,
             ),
         ), metadata=self._metadata)
         inst = resp.workflow

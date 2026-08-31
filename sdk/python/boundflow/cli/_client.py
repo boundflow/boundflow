@@ -5,7 +5,7 @@ import os
 
 import typer
 
-from boundflow.cli._output import error as report_error
+from boundflow.cli.output import error as report_error
 from boundflow.control_plane import ControlPlaneClient, DEFAULT_SERVER_ADDRESS
 
 _server: str = DEFAULT_SERVER_ADDRESS

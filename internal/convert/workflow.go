@@ -32,6 +32,7 @@ func WorkflowToProto(r *domain.Workflow) *boundflowv1.Workflow {
 			Triggerable:          r.WorkflowConfig.Triggerable,
 			InvokeMode:           invokeModeToProto(r.WorkflowConfig.InvokeMode),
 			MaxQueueDepth:        r.WorkflowConfig.MaxQueueDepth,
+			Resumable:            r.WorkflowConfig.Resumable,
 		},
 		LifecycleState:              string(r.Lifecycle.State),
 		WorkflowState:               workflowStateToProto[r.WorkflowState],
@@ -287,6 +288,7 @@ func WorkflowConfigFromProto(p *boundflowv1.WorkflowConfig) domain.WorkflowConfi
 		Triggerable:          p.Triggerable,
 		InvokeMode:           invokeModeFromProto(p.InvokeMode),
 		MaxQueueDepth:        p.MaxQueueDepth,
+		Resumable:            p.Resumable,
 	}
 }
 

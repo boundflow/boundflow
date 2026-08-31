@@ -36,6 +36,7 @@ type WorkflowConfig struct {
 	Triggerable          bool
 	InvokeMode           InvokeMode
 	MaxQueueDepth        int32
+	Resumable            bool
 }
 
 type WorkflowState string

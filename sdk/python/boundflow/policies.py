@@ -6,7 +6,7 @@ Pydantic models with snake_case fields and typed action constructors.
 from __future__ import annotations
 
 from enum import Enum
-from typing import Annotated, Literal, Union
+from typing import Annotated, Any, Literal, Union
 
 from pydantic import BaseModel, Field
 
@@ -34,7 +34,14 @@ class ToolFailureLimit(BaseModel):
 
 
 class RuntimePolicy(BaseModel):
-    """Hard caps enforced SDK-side during the agent loop."""
+    """Caps that travel with the operation, enforced worker-side during the agent loop.
+
+    The split is the contract: every field below is enforced by this SDK, and nothing in
+    `custom` is enforced by anything. `custom` carries limits only the caller can apply —
+    a harness's own vocabulary, or a rule your handler enforces itself — so they are
+    declared, stored and readable in one place rather than living in whatever code
+    happened to construct the agent.
+    """
 
     max_llm_calls: int = 0
     max_cost_usd: float = 0
@@ -43,6 +50,10 @@ class RuntimePolicy(BaseModel):
     tool_call_limits: list[ToolCallLimit] = Field(default_factory=list)
     tool_failure_limits: list[ToolFailureLimit] = Field(default_factory=list)
     model: str | None = None
+    # Opaque to BoundFlow: stored, shipped with the operation, and handed back via
+    # ctx.policy() — never validated or enforced. Nothing here binds unless the caller
+    # makes it bind, which is the whole contract.
+    custom: dict[str, Any] = Field(default_factory=dict)
 
 
 # ── Agent lifecycle policy (reacts to prior-run metrics) ─────────────────────

@@ -8,7 +8,10 @@ jsonb, enforced here); only the metric snapshots use fixed proto field names
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
+
+from pydantic import ValidationError
 
 from .policies import (
     AgentMetric,
@@ -22,6 +25,8 @@ from .policies import (
     ToolCallLimit,
     ToolFailureLimit,
 )
+
+log = logging.getLogger("boundflow.lifecycle")
 
 
 @dataclass
@@ -37,27 +42,42 @@ class InvocationSnapshot:
 
 
 def load_runtime_policy(node: dict | None) -> RuntimePolicy:
+    """Parse the runtime-policy JSON the server hands back.
+
+    Validates the node as a whole rather than field by field. It used to be the latter,
+    which meant a policy field the customer set travelled the whole way here and was then
+    silently dropped for not being on the list — the failure mode being that a limit you
+    wrote is simply not enforced, with nothing to see anywhere.
+
+    Individual malformed entries are dropped instead of failing the operation, since the
+    server stores this opaquely and never validates it. Each one is logged: a rule that
+    isn't there is exactly what you don't want to discover from an audit later.
+    """
     if not node:
         return RuntimePolicy()
-    limits = [
-        ToolCallLimit(tool=l["tool"], max_calls=l.get("max_calls", 0))
-        for l in node.get("tool_call_limits", [])
-        if l.get("tool")
-    ]
-    failure_limits = [
-        ToolFailureLimit(tool=l["tool"], max_failures=l.get("max_failures", 0))
-        for l in node.get("tool_failure_limits", [])
-        if l.get("tool")
-    ]
-    return RuntimePolicy(
-        max_llm_calls=node.get("max_llm_calls", 0),
-        max_cost_usd=node.get("max_cost_usd", 0),
-        max_tokens_per_call=node.get("max_tokens_per_call", 0),
-        max_call_seconds=node.get("max_call_seconds", 0),
-        tool_call_limits=limits,
-        tool_failure_limits=failure_limits,
-        model=node.get("model"),
-    )
+    try:
+        return RuntimePolicy.model_validate(node)
+    except ValidationError:
+        pass
+    kept = {k: v for k, v in node.items() if not isinstance(v, list)}
+    for field, entries in ((k, v) for k, v in node.items() if isinstance(v, list)):
+        good = []
+        for entry in entries:
+            try:
+                RuntimePolicy.model_validate({**kept, field: [*good, entry]})
+            except ValidationError:
+                log.warning("dropping malformed %s entry from runtime policy: %r",
+                            field, entry)
+                continue
+            good.append(entry)
+        kept[field] = good
+    try:
+        return RuntimePolicy.model_validate(kept)
+    except ValidationError:
+        # Something scalar is wrong (a string where a number belongs), and there's no
+        # entry to drop. Refusing to guess: an unenforceable policy is not an empty one.
+        log.error("unusable runtime policy, failing the operation: %r", node)
+        raise
 
 
 def load_lifecycle_rules(state_node: dict | None) -> list[AgentRule]:

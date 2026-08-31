@@ -306,6 +306,11 @@ def _wrap_schema(props: dict | None) -> dict:
     return {"type": "object", "properties": props or {}}
 
 
+def tool_limit_message(tool: str, cap: int) -> str:
+    """What the model is told when a per-tool cap is spent. Shared so the two
+    enforcement paths (this loop, and governed tools in a customer-driven loop)
+    can't drift apart."""
+    return f"Call limit reached for '{tool}' (max {cap}). Do not call it again."
 
 
 class Orchestrator:
@@ -316,84 +321,66 @@ class Orchestrator:
         """Run the agentic loop to completion. The model may call allowed tools
         freely and calls submit_result when done. If a policy limit is hit first,
         the *last* allowed call is forced to submit_result; if the model still
-        doesn't comply, raises AgentPolicyLimitExceeded."""
+        doesn't comply, raises AgentPolicyLimitExceeded.
+
+        Enforcement — caps, cost, per-tool limits, spans — lives in AgentGovernor,
+        the same core that governs harnesses BoundFlow doesn't drive. This loop is
+        just BoundFlow's own harness on top of it."""
+        from .governed import AgentGovernor
+
+        gov = AgentGovernor(cfg.objective, cfg.policy, cfg.model, cfg.pricing,
+                            can_finalize=True)
+
         callbacks = {t.name: t for t in cfg.tools}
         tools = [ToolSpec(t.name, t.description or t.name, _wrap_schema(t.input_schema)) for t in cfg.tools]
         tools.append(ToolSpec(SUBMIT_RESULT, "Call this when done to submit your final result.",
                               _wrap_schema(cfg.output_schema)))
 
         messages = [Message("user", [TextBlock(_user_content(cfg))])]
-        llm_calls = 0
-        cost = 0.0
-        tokens = 0
-        max_llm_calls = cfg.policy.max_llm_calls
-        max_tokens = cfg.policy.max_tokens_per_call or 4096  # 0 = unset → default
-        call_counts: dict[str, int] = {}
-        failure_counts: dict[str, int] = {}
-        tool_limits = {l.tool: l.max_calls for l in cfg.policy.tool_call_limits}
-        tool_failure_limits = {l.tool: l.max_failures for l in cfg.policy.tool_failure_limits}
-        spans: list[Span] = []  # ordered LLM + tool spans, captured for the run trace
 
-        log.debug("run_step start: objective=%s model=%s max_llm_calls=%s tool_limits=%s",
-                  cfg.objective, cfg.model, max_llm_calls, tool_limits)
+        log.debug("run_step start: objective=%s model=%s policy=%s",
+                  cfg.objective, cfg.model, cfg.policy)
 
         while True:
-            # Force the last allowed call to submit_result.
-            limit_reached = max_llm_calls > 0 and llm_calls >= max_llm_calls - 1
+            # Raises once the caps are spent; `finalize` marks the last allowed call.
+            call = gov.begin_call()
+
             req = LlmRequest(
-                model=cfg.model,
-                max_tokens=max_tokens,
+                model=call.model,
+                max_tokens=call.max_tokens,
                 cache=cfg.cache,
                 system=cfg.system_prompt + "\n\nWhen you have completed your objective, call submit_result.",
                 messages=messages,
                 tools=tools,
-                forced_tool=SUBMIT_RESULT if limit_reached else None,
+                forced_tool=SUBMIT_RESULT if call.finalize else None,
             )
-            log.debug("llm_call #%d forced_tool=%s", llm_calls + 1, req.forced_tool)
-            _llm_start = now_ms()
+            log.debug("llm_call #%d forced_tool=%s", gov.llm_calls + 1, req.forced_tool)
+            _input_messages = _gen_ai_input_messages(req)  # snapshot as-sent, before the reply
             try:
-                if cfg.policy.max_call_seconds > 0:
-                    resp = await asyncio.wait_for(self._client.complete(req), timeout=cfg.policy.max_call_seconds)
+                if call.timeout_seconds > 0:
+                    resp = await asyncio.wait_for(self._client.complete(req),
+                                                  timeout=call.timeout_seconds)
                 else:
                     resp = await self._client.complete(req)
             except asyncio.TimeoutError:
                 raise AgentCallTimeout(
-                    f"LLM call exceeded max_call_seconds={cfg.policy.max_call_seconds}") from None
-            _llm_end = now_ms()
-            _input_messages = _gen_ai_input_messages(req)  # snapshot as-sent, before appending the reply
+                    f"LLM call exceeded max_call_seconds={call.timeout_seconds}") from None
 
-            llm_calls += 1
-            call_cost = _estimate_cost(resp.usage, cfg.model, cfg.pricing)
-            cost += call_cost
-            tokens += resp.usage.total_tokens()
             messages.append(Message("assistant", resp.content))
-
-            spans.append(Span(
-                kind=SPAN_KIND_LLM, name=f"{GEN_AI_OP_CHAT} {cfg.model}", start_ms=_llm_start, end_ms=_llm_end,
-                input=_input_messages,
-                output=[_gen_ai_message(ROLE_ASSISTANT, resp.content)],
-                attributes={
-                    GEN_AI_OPERATION_NAME: GEN_AI_OP_CHAT,
-                    GEN_AI_SYSTEM: _gen_ai_system(cfg.model),
-                    GEN_AI_REQUEST_MODEL: cfg.model,
-                    GEN_AI_REQUEST_MAX_TOKENS: max_tokens,
-                    GEN_AI_USAGE_INPUT_TOKENS: resp.usage.input_tokens,
-                    GEN_AI_USAGE_OUTPUT_TOKENS: resp.usage.output_tokens,
-                    GEN_AI_USAGE_CACHE_CREATION_INPUT_TOKENS: resp.usage.cache_creation_input_tokens,
-                    GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS: resp.usage.cache_read_input_tokens,
-                    GEN_AI_RESPONSE_FINISH_REASONS: [resp.stop_reason],
-                    BF_COST_USD: call_cost,
-                },
-            ))
+            call.record(
+                resp.usage,
+                input_messages=_input_messages,
+                output_message=_gen_ai_message(ROLE_ASSISTANT, resp.content),
+                extra_attributes={GEN_AI_RESPONSE_FINISH_REASONS: [resp.stop_reason]},
+            )
 
             if resp.stop_reason == "end_turn":
-                if limit_reached:
-                    # Already forced to submit_result and still didn't comply
-                    # (or got truncated — anthropic_client.py maps max_tokens to
-                    # end_turn). Raise instead of granting another call.
+                if call.finalize:
+                    # Already forced to submit_result and still didn't comply (or got
+                    # truncated — anthropic_client.py maps max_tokens to end_turn).
                     raise AgentPolicyLimitExceeded(
                         "model did not call submit_result on the forced finalize call "
-                        f"(llm_calls={llm_calls}, max_llm_calls={cfg.policy.max_llm_calls})")
+                        f"(llm_calls={gov.llm_calls}, max_llm_calls={cfg.policy.max_llm_calls})")
                 messages.append(Message("user", [TextBlock("Please call submit_result with your findings.")]))
                 continue
             if resp.stop_reason != "tool_use":
@@ -405,60 +392,37 @@ class Orchestrator:
                     continue
 
                 if block.name == SUBMIT_RESULT:
-                    log.debug("submit_result: llm_calls=%d call_counts=%s", llm_calls, call_counts)
-                    return StepResult(block.input, llm_calls, cost, tokens,
-                                      call_counts, failure_counts, cfg.model, spans)
+                    log.debug("submit_result: llm_calls=%d calls_per_tool=%s",
+                              gov.llm_calls, gov.calls_per_tool)
+                    return StepResult(block.input, gov.llm_calls, gov.cost_usd, gov.tokens_used,
+                                      dict(gov.calls_per_tool), dict(gov.tool_failure_counts),
+                                      cfg.model, gov.spans)
 
                 if block.name not in callbacks:
                     tool_results.append(ToolResultBlock(block.id, f"Unknown callback: {block.name}", is_error=True))
                     continue
 
-                # Absent is the only "no cap": an explicit 0 blocks, so a spent
-                # remaining-budget of 0 doesn't read as unlimited.
-                cap = tool_limits.get(block.name)
-                current_count = call_counts.get(block.name, 0)
-                if cap is not None and current_count >= cap:
-                    log.debug("tool_limit hit: tool=%s count=%d cap=%d", block.name, current_count, cap)
-                    tool_results.append(ToolResultBlock(
-                        block.id, f"Call limit reached for '{block.name}' (max {cap}). Do not call it again.",
-                        is_error=True))
+                tool_call = gov.begin_tool_call(
+                    block.name, call_id=block.id,
+                    description=callbacks[block.name].description or block.name)
+                if tool_call.denied:
+                    tool_results.append(ToolResultBlock(block.id, tool_call.denial_message, is_error=True))
                     continue
-                call_counts[block.name] = current_count + 1
-                log.debug("tool_call: tool=%s count_after=%d cap=%s", block.name, current_count + 1,
-                          "unlimited" if cap is None else cap)
 
-                _tool_start = now_ms()
-                _tool_attrs = {
-                    GEN_AI_OPERATION_NAME: GEN_AI_OP_EXECUTE_TOOL,
-                    GEN_AI_TOOL_NAME: block.name,
-                    GEN_AI_TOOL_CALL_ID: block.id,
-                    GEN_AI_TOOL_DESCRIPTION: callbacks[block.name].description or block.name,
-                }
                 try:
                     out = await callbacks[block.name].handler(block.input)
                 except Exception as ex:  # noqa: BLE001 — report tool failure to the model
-                    failures = failure_counts.get(block.name, 0) + 1
-                    failure_counts[block.name] = failures
-                    spans.append(Span(kind=SPAN_KIND_TOOL, name=block.name, start_ms=_tool_start, end_ms=now_ms(),
-                                      input=block.input, error=str(ex), attributes=_tool_attrs))
-                    # Here rather than before the next call, so the run stops when the
-                    # cap is crossed, not when the model retries.
-                    failure_cap = tool_failure_limits.get(block.name)
-                    if failure_cap is not None and failures > failure_cap:
-                        raise ToolFailureLimitExceeded(block.name, failures, failure_cap) from ex
+                    # record() raises ToolFailureLimitExceeded once the cap is crossed.
+                    tool_call.record(input=block.input, error=ex)
                     tool_results.append(ToolResultBlock(block.id, str(ex), is_error=True))
                     continue
 
-                spans.append(Span(kind=SPAN_KIND_TOOL, name=block.name, start_ms=_tool_start, end_ms=now_ms(),
-                                  input=block.input, output=out, attributes=_tool_attrs))
+                tool_call.record(input=block.input, output=out)
                 import json
                 tool_results.append(ToolResultBlock(block.id, json.dumps(out) if out is not None else "{}"))
 
             if tool_results:
                 messages.append(Message("user", tool_results))
-
-            if cfg.policy.max_cost_usd > 0 and cost > cfg.policy.max_cost_usd:
-                max_llm_calls = llm_calls + 1  # force submit_result on the next call
 
 
 def _user_content(cfg: AgentStepConfig) -> str:

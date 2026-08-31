@@ -3,7 +3,7 @@
 import typer
 
 from boundflow.cli._client import configure
-from boundflow.cli._output import set_json
+from boundflow.cli.output import set_json
 from boundflow.cli.commands import audit, policies, pricing, tenants, workflows
 
 app = typer.Typer(

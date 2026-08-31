@@ -537,6 +537,53 @@ func (r *JobRepo) UpdateJob(ctx context.Context, workflowID string, ownerID stri
 	return tag.RowsAffected() == 1, nil
 }
 
+// RequeueJob makes a job claimable again after the worker running it died, for a
+// workflow whose config says that is safe. `pending` with no owner is exactly what
+// AcquireJob looks for, so nothing else has to change.
+//
+// maxAttempts is enforced in the statement rather than by the caller: checking after
+// the update would leave an exhausted job briefly claimable, and a worker could start
+// an operation that is about to have its job row deleted.
+//
+// Returns the attempt count, always at least 1. 0 means the job wasn't requeued —
+// either it is gone or it has no attempts left.
+func (r *JobRepo) RequeueJob(ctx context.Context, workflowID string, requestID string, maxAttempts int) (int, error) {
+	var attempts int
+	err := r.pool.QueryRow(ctx,
+		`UPDATE jobs
+		 SET status = 'pending', owner = NULL, lease_expires_at = NULL,
+		     attempts = attempts + 1
+		 WHERE workflow_id = $1 AND request_id = $2 AND attempts < $3
+		 RETURNING attempts`,
+		workflowID, requestID, maxAttempts,
+	).Scan(&attempts)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("requeue job: %w", err)
+	}
+	return attempts, nil
+}
+
+// UpdateJobMetrics writes the running metrics of an operation that is still going, so
+// a worker that dies loses at most what it spent since the last report.
+func (r *JobRepo) UpdateJobMetrics(ctx context.Context, workflowID string, ownerID string, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics) (bool, error) {
+	agentMetricsJSON, err := json.Marshal(agentMetrics)
+	if err != nil {
+		return false, fmt.Errorf("marshal agent metrics: %w", err)
+	}
+	tag, err := r.pool.Exec(ctx,
+		`UPDATE jobs SET agent_metrics = $3
+		 WHERE workflow_id = $1 AND owner = $2`,
+		workflowID, ownerID, agentMetricsJSON,
+	)
+	if err != nil {
+		return false, fmt.Errorf("update job metrics: %w", err)
+	}
+	return tag.RowsAffected() == 1, nil
+}
+
 func (r *JobRepo) UpdateJobWithMetrics(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, currentAtomicOperation string, operationTimeoutSeconds int, delaySeconds int, jobContext map[string]any, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
 	contextJSON, err := json.Marshal(jobContext)
 	if err != nil {

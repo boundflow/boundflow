@@ -7,7 +7,7 @@ from typing import List, Optional
 import typer
 
 from boundflow.cli._client import cp_call
-from boundflow.cli._output import error, output, success
+from boundflow.cli.output import error, output, success
 from boundflow.policies import AgentRule, RuntimePolicy, ToolCallLimit, WorkflowRule
 
 app = typer.Typer(help="Manage agent and workflow policies.")
@@ -38,6 +38,22 @@ def _load_json(file: Optional[Path], inline: Optional[str]) -> list:
     raise typer.Exit(1)
 
 
+def _parse_custom(raw: Optional[str]) -> dict:
+    """--custom takes a JSON object. Anything else is a mistake worth stopping for: these
+    caps are never validated downstream, so a malformed one would just quietly not exist."""
+    if not raw:
+        return {}
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError as e:
+        error(f"--custom must be valid JSON: {e}")
+        raise typer.Exit(1)
+    if not isinstance(parsed, dict):
+        error("--custom must be a JSON object.")
+        raise typer.Exit(1)
+    return parsed
+
+
 @app.command("runtime")
 def runtime_set(
     workflow_id: str = typer.Argument(..., help="Workflow ID"),
@@ -47,6 +63,7 @@ def runtime_set(
     max_cost_usd: Optional[float] = typer.Option(None, "--max-cost-usd", help="Max cost in USD per run"),
     max_tokens_per_call: Optional[int] = typer.Option(None, "--max-tokens-per-call", help="Max tokens per LLM call"),
     tool_limit: List[str] = typer.Option([], "--tool-limit", help="Per-tool call limit as TOOL:MAX (repeatable)"),
+    custom: Optional[str] = typer.Option(None, "--custom", help="JSON object of caps BoundFlow stores but does not enforce"),
     file: Optional[Path] = typer.Option(None, "--file", help="JSON file with a RuntimePolicy object (overrides all flags)"),
 ):
     """Set the runtime (hard cap) policy for an agent."""
@@ -60,6 +77,7 @@ def runtime_set(
             max_cost_usd=max_cost_usd or 0.0,
             max_tokens_per_call=max_tokens_per_call or 0,
             tool_call_limits=limits,
+            custom=_parse_custom(custom),
         )
     cp_call(lambda cp: cp.set_agent_runtime_policy(workflow_id, agent_name, policy))
     success(f"Runtime policy set on {workflow_id} / {agent_name}.")
