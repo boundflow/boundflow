@@ -37,6 +37,27 @@ def console(boundflow_api_key):
     return Console(SERVER_ADDRESS, boundflow_api_key)
 
 
+@pytest.fixture(autouse=True)
+async def _cleanup(boundflow_api_key):
+    """Delete what a test created.
+
+    These run against a shared local stack that someone is also using by hand, so
+    leaving a workflow per test behind makes the fleet unreadable within a couple of
+    runs. Deletion is best-effort: a test that already deleted its own workflow, or
+    left one mid-suspension, shouldn't fail here.
+    """
+    async with ControlPlaneClient(SERVER_ADDRESS, api_key=boundflow_api_key) as cp:
+        before = {w.id for w in await cp.list_workflows()}
+    yield
+    async with ControlPlaneClient(SERVER_ADDRESS, api_key=boundflow_api_key) as cp:
+        for w in await cp.list_workflows():
+            if w.id not in before:
+                try:
+                    await cp.delete_workflow(w.id)
+                except Exception:
+                    pass
+
+
 @asynccontextmanager
 async def console_client(console: Console):
     """An httpx client over the console, sharing this test's event loop.
