@@ -304,8 +304,8 @@ def page(title: str, body: str, *, server: str, error: str = "",
               else "<span class='dim'>&nbsp;</span>")
     keys = (
         "<span><kbd>j</kbd>/<kbd>k</kbd> move</span><span><kbd>enter</kbd> open</span>"
-        "<span><kbd>/</kbd> filter</span><span><kbd>g</kbd> fleet</span>"
-        if filterable else "<span><kbd>g</kbd> fleet</span>"
+        f"<span><kbd>/</kbd> filter</span><span><kbd>g</kbd> {escape(lb.fleet)}</span>"
+        if filterable else f"<span><kbd>g</kbd> {escape(lb.fleet)}</span>"
     )
     return (
         "<!doctype html><html><head><meta charset='utf-8'>"
