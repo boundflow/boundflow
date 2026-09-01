@@ -293,6 +293,18 @@ def test_the_keyboard_hint_uses_the_console_s_word_for_the_fleet():
     assert "</kbd> fleet</span>" not in body
 
 
+def test_every_table_calls_a_run_what_the_labels_call_it():
+    """The audit table headed its run column by hand, so a console that renames the
+    run said task in the run table and run in the audit below it."""
+    from boundflow.ui import Labels
+
+    console = Console("http://localhost:50051", "key", Labels(run="task", runs="tasks"))
+    console._cp = FakeCP([_wf("w1")])
+    body = TestClient(build_app(console)).get("/workflows/w1").text
+
+    assert ">run<" not in body
+
+
 def test_labels_cannot_rename_what_the_control_plane_returns():
     """The stored values are what appear in the CLI, the API and the audit log. A
     console word that exists nowhere else makes an operator's report unsearchable."""

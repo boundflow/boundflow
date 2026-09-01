@@ -515,7 +515,7 @@ def audit_table(records: list[Any], lb: Labels = DEFAULT) -> str:
             esc(getattr(r, "actor", "") or "—"),
             full,
         ])
-    return table(["when", "kind", "run", "actor", "what"], rows,
+    return table(["occurred", "event", lb.run, "actor", "detail"], rows,
                  empty="Nothing recorded yet.")
 
 
