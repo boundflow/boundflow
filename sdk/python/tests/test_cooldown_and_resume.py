@@ -77,8 +77,10 @@ async def test_workflow_resumes_after_cooldown_expires(cp, api_key):
             in_cooldown = await cp.get_workflow(workflow.id)
             assert in_cooldown.cooldown_until is not None, \
                 "cooldown_until should be set while the workflow is cooling down"
-            remaining = (in_cooldown.cooldown_until
-                         - datetime.now(timezone.utc)).total_seconds()
+            # The client returns naive UTC throughout (Timestamp.ToDatetime()), so
+            # compare against a naive UTC now rather than an aware one.
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            remaining = (in_cooldown.cooldown_until - now).total_seconds()
             assert 0 < remaining <= COOLDOWN_SECONDS + 5, \
                 f"cooldown_until is {remaining:.1f}s away, expected <= {COOLDOWN_SECONDS}s"
 
