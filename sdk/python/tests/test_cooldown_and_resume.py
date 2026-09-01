@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from datetime import datetime, timezone
 
 import pytest
 
@@ -70,12 +71,27 @@ async def test_workflow_resumes_after_cooldown_expires(cp, api_key):
             await wait_for_completion(cp, request_id)
             await wait_for_workflow_state(cp, workflow.id, WorkflowState.COOLDOWN)
 
+            # cooldown_until is loaded from the column on every read but used to be
+            # dropped in WorkflowToProto, so a cooldown reached the customer explained
+            # but never timed.
+            in_cooldown = await cp.get_workflow(workflow.id)
+            assert in_cooldown.cooldown_until is not None, \
+                "cooldown_until should be set while the workflow is cooling down"
+            # The client returns naive UTC throughout (Timestamp.ToDatetime()), so
+            # compare against a naive UTC now rather than an aware one.
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            remaining = (in_cooldown.cooldown_until - now).total_seconds()
+            assert 0 < remaining <= COOLDOWN_SECONDS + 5, \
+                f"cooldown_until is {remaining:.1f}s away, expected <= {COOLDOWN_SECONDS}s"
+
             cooldown_entered_at = time.monotonic()
             await wait_for_workflow_state(cp, workflow.id, WorkflowState.ACTIVE, timeout=60)
             elapsed = time.monotonic() - cooldown_entered_at
 
-            state = (await cp.get_workflow(workflow.id)).workflow_state
-            assert state == WorkflowState.ACTIVE
+            resumed = await cp.get_workflow(workflow.id)
+            assert resumed.workflow_state == WorkflowState.ACTIVE
+            # Cleared on the way out; it only means anything in cooldown.
+            assert resumed.cooldown_until is None
             assert elapsed >= COOLDOWN_SECONDS, \
                 f"Cooldown lasted {elapsed:.1f}s but was configured for {COOLDOWN_SECONDS}s"
         finally:

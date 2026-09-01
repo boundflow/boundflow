@@ -41,3 +41,9 @@ def cp_call(fn):
     except Exception as exc:
         report_error(str(exc))
         raise typer.Exit(1)
+
+
+def resolved() -> tuple[str, str]:
+    """The server address and API key the root callback settled on, for commands that
+    manage their own connection rather than going through cp_call."""
+    return _server, _api_key

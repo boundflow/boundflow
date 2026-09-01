@@ -41,6 +41,10 @@ dev = [
     # langgraph for a bare ReAct loop, deepagents for an opinionated harness.
     "langgraph>=0.2",
     "deepagents>=0.7",
+    "starlette>=0.37",
+    "uvicorn>=0.30",
+    "python-multipart>=0.0.9",
+    "httpx",
     "opentelemetry-sdk",
     "opentelemetry-exporter-otlp",
 ]
@@ -48,6 +52,12 @@ dev = [
 # (boundflow.langchain_client.LangChainLlmClient).
 langchain = [
     "langchain-core>=0.3",
+]
+# Optional: the local operator console (`boundflow ui`).
+ui = [
+    "starlette>=0.37",
+    "uvicorn>=0.30",
+    "python-multipart>=0.0.9",
 ]
 # Optional: export run traces as OpenTelemetry spans (OTelTraceSink). The core
 # trace capture has no OTel dependency; install this only if you use that sink.

@@ -2,6 +2,7 @@ package convert_test
 
 import (
 	"testing"
+	"time"
 
 	boundflowv1 "github.com/boundflow/boundflow/gen/boundflow/v1"
 	"github.com/boundflow/boundflow/internal/convert"
@@ -107,4 +108,36 @@ func TestTenantToProto(t *testing.T) {
 	if pb.TenantGroupId == nil || *pb.TenantGroupId != "group-1" {
 		t.Errorf("expected tenant_group_id group-1, got %v", pb.TenantGroupId)
 	}
+}
+
+// A workflow's cooldown_until is loaded from the column on every read and was being
+// dropped in WorkflowToProto, so a cooldown reached the customer explained but never
+// timed. Same failure as a new enum value missing from its map: correct everywhere
+// except the one place anyone can see it.
+func TestWorkflowToProtoCarriesCooldownUntil(t *testing.T) {
+	until := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+
+	t.Run("set in cooldown", func(t *testing.T) {
+		w := convert.WorkflowToProto(&domain.Workflow{
+			ID:            "wf-1",
+			WorkflowState: domain.WorkflowStateCooldown,
+			CooldownUntil: &until,
+		})
+		if w.CooldownUntil == nil {
+			t.Fatal("expected cooldown_until on the wire")
+		}
+		if got := w.CooldownUntil.AsTime(); !got.Equal(until) {
+			t.Errorf("expected %v, got %v", until, got)
+		}
+	})
+
+	t.Run("unset in every other state", func(t *testing.T) {
+		w := convert.WorkflowToProto(&domain.Workflow{
+			ID:            "wf-1",
+			WorkflowState: domain.WorkflowStateActive,
+		})
+		if w.CooldownUntil != nil {
+			t.Errorf("expected no cooldown_until, got %v", w.CooldownUntil.AsTime())
+		}
+	})
 }

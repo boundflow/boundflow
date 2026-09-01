@@ -98,4 +98,7 @@ message Workflow {
   string last_policy_decision_request_id = 15;
   // The operator hold currently on the workflow; unset when it is not suspended.
   Suspension suspension = 16;
+  // When a cooldown lifts, for a workflow a lifecycle policy put in WORKFLOW_STATE_COOLDOWN.
+  // Unset in every other state. Without it a cooldown can be explained but not timed.
+  google.protobuf.Timestamp cooldown_until = 17;
 }
