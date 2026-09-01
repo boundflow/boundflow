@@ -48,28 +48,3 @@ boundflow --server https://boundflow.example.com:443 ui
 
 Creating workflows, editing config and setting policy stay in the CLI, where a policy
 is JSON you can review and commit rather than a form.
-
-## Renaming the console's words
-
-A product built on BoundFlow can call things whatever its own users call them:
-
-```python
-from boundflow.ui import Labels, serve
-
-serve(server, api_key, labels=Labels(
-    brand="Acme", tagline="agent control",
-    workflow="agent", workflows="agents",
-    lifecycle="runtime state", fleet="Agents", inbox="Needs review",
-))
-```
-
-`Labels` covers the console's own wording — the brand, the sidebar entries, the
-section headings, the column titles. It deliberately cannot rename the values the
-control plane returns: `awaiting_approval`, `cooldown`, `interrupted`, or a workflow
-type. Those same strings appear in the CLI, the API and the audit log, so a
-console-only rename gives an operator a word that exists nowhere else — they report
-an agent stuck in "Needs sign-off" and nobody can find it in any query or log.
-
-`boundflow.ui` also exports `render`, `views`, `Console` and `build_app`, so a
-console that needs more than different words can keep the rendering and mount its
-own routes.
