@@ -23,9 +23,11 @@ class Labels:
     brand: str = "BoundFlow"
     tagline: str = "local operator console"
 
-    # What the governed thing is called, and its two state columns.
+    # What the governed thing is called, and its two state columns. `workflow` heads
+    # the id column, `workflow_type` the type beside it.
     workflow: str = "workflow"
     workflows: str = "workflows"
+    workflow_type: str = "type"
     lifecycle: str = "lifecycle"
     state: str = "state"
 

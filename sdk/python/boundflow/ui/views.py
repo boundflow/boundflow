@@ -83,7 +83,7 @@ def fleet_table(workflows: list[WorkflowInfo], lb: Labels = DEFAULT, *,
     ]
     headers = [
         _header_link(lb.workflow, "workflow", sort, desc, base),
-        _header_link("type", "type", sort, desc, base),
+        _header_link(lb.workflow_type, "type", sort, desc, base),
         _header_link(lb.lifecycle, "lifecycle", sort, desc, base),
         _header_link(lb.state, "state", sort, desc, base),
         _header_link("version", "version", sort, desc, base),
@@ -454,7 +454,8 @@ def deleted_page(gone: list[WorkflowInfo], lb: Labels = DEFAULT) -> str:
         for w in gone
     ]
     return (f"<h2>{esc(lb.deleted)} ({len(gone)})</h2>"
-            + table([lb.workflow, "type", lb.lifecycle, "deletion requested", "tenant"],
+            + table([lb.workflow, lb.workflow_type, lb.lifecycle,
+                     "deletion requested", "tenant"],
                     rows, empty=lb.empty_deleted))
 
 
