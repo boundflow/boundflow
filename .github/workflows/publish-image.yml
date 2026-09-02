@@ -1,7 +1,11 @@
 name: Publish backend image
 
 # Builds the BoundFlow backend image and pushes it to GitHub Container Registry
-# (ghcr.io/<owner>/boundflow). Runs on version tags (v*) and on manual dispatch.
+# (ghcr.io/<owner>/boundflow), tagged with the release version, for anyone
+# self-hosting a pinned version. Runs on version tags (v*) and on manual dispatch.
+#
+# BoundFlow's own cloud tracks main instead and is rolled by deploy-test.yml, which
+# publishes sha-tagged images of its own.
 on:
   push:
     tags: ["v*"]

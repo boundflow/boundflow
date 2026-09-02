@@ -1,0 +1,81 @@
+name: Publish SDK pre-release
+
+# Publishes a PEP 440 dev release from main on every green Tests run, so the SDK
+# tracks the server the cloud environment is already running.
+#
+# `pip install boundflow` still resolves to the newest *stable* release and is
+# unaffected by this. Only `pip install --pre boundflow` picks up the dev stream, so
+# a customer who wants stability never sees these, and the playground gets main with
+# one command. Tags keep meaning what they meant: a deliberate stable release.
+#
+# The version is computed here rather than read from pyproject.toml — a dev build
+# must not claim to be the stable version it was branched from, and bumping the file
+# on every merge would be a commit per merge. See docs/deployment.md.
+on:
+  workflow_run:
+    workflows: ["Tests"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-publish:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write   # Trusted Publishing; no API token stored
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0    # dev number counts commits since the last tag
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compute the dev version
+        id: ver
+        working-directory: sdk/python
+        run: |
+          set -euo pipefail
+          BASE=$(grep -m1 '^version' pyproject.toml | cut -d'"' -f2)
+          # Dev builds are numbered against the *next* minor, not the released one:
+          # PEP 440 sorts 0.6.0.dev3 BEFORE 0.6.0, so dev builds off the current
+          # version would lose to the stable release and `--pre` would never see them.
+          NEXT=$(python -c 'import sys; a,b,_=sys.argv[1].split(".")[:3]; print(f"{a}.{int(b)+1}.0")' "$BASE")
+          # Monotonic within a base: PyPI rejects a version it has already seen, and
+          # will not accept a re-upload even after a delete.
+          N=$(git rev-list --count "v${BASE}..HEAD" 2>/dev/null || git rev-list --count HEAD)
+          echo "version=${NEXT}.dev${N}" >> "$GITHUB_OUTPUT"
+          echo "publishing ${NEXT}.dev${N} (stable is ${BASE})"
+
+      - name: Stamp the version
+        working-directory: sdk/python
+        run: |
+          python - <<'PY'
+          import pathlib, re, os
+          p = pathlib.Path("pyproject.toml")
+          v = os.environ["V"]
+          p.write_text(re.sub(r'(?m)^version = ".*"$', f'version = "{v}"', p.read_text(), count=1))
+          PY
+        env:
+          V: ${{ steps.ver.outputs.version }}
+
+      - name: Build wheel + sdist
+        working-directory: sdk/python
+        run: |
+          python -m pip install --upgrade build
+          python -m build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: sdk/python/dist
+          # A re-run, or a merge that lands while another is publishing, should not
+          # fail the workflow over a version that is already up.
+          skip-existing: true

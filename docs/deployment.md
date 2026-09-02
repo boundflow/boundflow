@@ -95,3 +95,84 @@ boundflow.example.com {
     reverse_proxy h2c://server:50051
 }
 ```
+
+## Continuous deployment (BoundFlow's own test cloud)
+
+This section describes how *we* run the shared test environment. It isn't required
+for self-hosting.
+
+Every green `Tests` run on `main` builds an image, runs migrations, and rolls the
+three container apps. Nothing is tagged and no version is bumped — a tag still means
+a deliberate stable SDK release, and nothing else.
+
+Deploying continuously also keeps the server ahead of every published SDK, which is
+the only safe direction: a client calling an RPC its server lacks fails, while a
+server ahead of its client is invisible.
+
+### Why migrations run as a job
+
+The database has public network access disabled and sits on a delegated subnet, so a
+CI runner cannot reach it. Migrations run as a Container Apps *job* inside the same
+managed environment, sharing the apps' connection-string secret. The deploy fails
+closed: if the migration doesn't succeed, the apps stay on the previous image rather
+than starting a binary against a schema it doesn't match.
+
+Create the job once:
+
+```bash
+RG=boundflow_test
+ENV=$(az containerapp show -n boundflow-server-test -g $RG \
+        --query properties.managedEnvironmentId -o tsv)
+CONN=$(az containerapp secret show -n boundflow-server-test -g $RG \
+        --secret-name boundflow-app-db-conn --query value -o tsv)
+
+az containerapp job create \
+  -n boundflow-migrate-test -g $RG --environment "$ENV" \
+  --trigger-type Manual --replica-timeout 600 --replica-retry-limit 0 \
+  --image ghcr.io/boundflow/boundflow:latest \
+  --cpu 0.5 --memory 1Gi \
+  --args "-mode=migrate" \
+  --secrets "boundflow-app-db-conn=$CONN" \
+  --env-vars "BOUNDFLOW_DATABASE_URL=secretref:boundflow-app-db-conn" \
+             "BOUNDFLOW_NUM_PARTITIONS=10"
+```
+
+`BOUNDFLOW_NUM_PARTITIONS` is required even in migrate mode, and must match what the
+scheduler runs with.
+
+### Azure credentials for CI
+
+The workflow authenticates with a federated credential — no secret is stored.
+
+```bash
+APP_ID=$(az ad app create --display-name boundflow-ci --query appId -o tsv)
+az ad sp create --id "$APP_ID"
+az role assignment create --assignee "$APP_ID" --role Contributor \
+  --scope /subscriptions/<subscription-id>/resourceGroups/boundflow_test
+
+az ad app federated-credential create --id "$APP_ID" --parameters '{
+  "name": "main",
+  "issuer": "https://token.actions.githubusercontent.com",
+  "subject": "repo:boundflow/boundflow:environment:test-cloud",
+  "audiences": ["api://AzureADTokenExchange"]
+}'
+```
+
+Then set `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` and `AZURE_SUBSCRIPTION_ID` as
+repository *variables*, and create a `test-cloud` environment (the `subject` above
+must match it).
+
+### The SDK tracks main too
+
+Every green `main` also publishes a PEP 440 dev release, numbered against the *next*
+minor — `0.7.0.dev12` while `0.6.0` is the stable release. Dev releases sort before
+the version they name and after the previous stable one, so:
+
+```bash
+pip install boundflow          # newest stable — unaffected by merges
+pip install --pre boundflow    # whatever main is running
+```
+
+Nothing pushes an update to anyone's machine, so this makes main *available* rather
+than applied. The console is part of the SDK and runs on the operator's machine, so
+someone on the stable release sees the console from that release, not from main.

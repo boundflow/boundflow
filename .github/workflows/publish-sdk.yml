@@ -1,8 +1,11 @@
 name: Publish SDK to PyPI
 
-# Builds the boundflow wheel + sdist and publishes to PyPI. Runs on the same
-# version tags (v*) as the backend image, so the SDK and backend release in
-# lockstep. Also runs on manual dispatch.
+# Builds the boundflow wheel + sdist and publishes a *stable* release to PyPI, on a
+# version tag. `publish-sdk-dev.yml` publishes pre-releases from main continuously;
+# this is the deliberate one that `pip install boundflow` resolves to.
+#
+# The backend image is published on the same v* tag for anyone self-hosting a pinned
+# version. BoundFlow's own cloud does not wait for a tag — see deploy-test.yml.
 #
 # Uses PyPI Trusted Publishing (OIDC) — no API token to store. One-time setup:
 # on PyPI, add a trusted publisher for this repo with
