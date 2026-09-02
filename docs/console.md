@@ -32,6 +32,10 @@ control that applies to the state it is in — suspend, resume, activate (releas
 lifecycle-policy pause), resolve (clearing a platform interruption), abandon queued
 runs, or delete.
 
+Its **Policies** section shows the workflow's armed lifecycle rules and every agent
+with its runtime and lifecycle policy — including agents with nothing armed, since
+"no caps on this agent" is worth seeing on a governance screen.
+
 A workflow that isn't scheduling says why: held by an operator, stopped by a
 lifecycle policy (with the metric, threshold and value that crossed, and when a
 cooldown lifts), interrupted by a platform failure, or never activated.

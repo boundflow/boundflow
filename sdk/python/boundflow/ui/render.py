@@ -140,7 +140,7 @@ a{color:inherit;text-decoration:none}
 .wrap{display:grid;grid-template-columns:190px 1fr;min-height:100vh}
 aside{background:var(--panel);border-right:1px solid var(--line);padding:14px 0;
       display:flex;flex-direction:column}
-aside .brand{padding:0 16px 14px;font-size:14px;font-weight:700;letter-spacing:.06em;
+aside .brand{padding:0 16px 14px;font-size:15px;font-weight:700;letter-spacing:.06em;
              color:var(--acc);text-transform:uppercase}
 aside nav a{display:flex;justify-content:space-between;padding:6px 16px;color:var(--dim)}
 aside nav a:hover{background:var(--sel);color:var(--fg)}
@@ -152,15 +152,15 @@ aside .foot{margin-top:auto;padding:12px 16px 0;border-top:1px solid var(--line)
 main{display:flex;flex-direction:column;min-width:0}
 .bar{display:flex;align-items:center;gap:10px;padding:9px 16px;
      border-bottom:1px solid var(--line);background:var(--panel)}
-.bar .ctx{color:var(--acc);font-weight:600;white-space:nowrap}
+.bar .ctx{color:var(--acc);font-weight:700;font-size:14px;white-space:nowrap}
 .bar input{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:3px;
            color:var(--fg);font:inherit;padding:4px 8px;min-width:0}
 .bar input::placeholder{color:var(--dim)}
 .body{padding:14px 16px;overflow:auto;flex:1}
-h2{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--dim);
-   margin:18px 0 8px;font-weight:600}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--fg);
+   margin:26px 0 10px;font-weight:700}
 h2:first-child{margin-top:0}
-h3{font-size:13px;margin:14px 0 4px;font-weight:600}
+h3{font-size:13px;margin:16px 0 6px;font-weight:600}
 table{border-collapse:collapse;width:100%}
 th a{color:inherit}
 th a:hover{color:var(--acc)}
@@ -176,6 +176,12 @@ tbody tr.cur{background:var(--sel);box-shadow:inset 2px 0 0 var(--acc)}
 .pill.good{color:var(--good)}.pill.bad{color:var(--bad)}
 .pill.warn{color:var(--warn)}.pill.info{color:var(--info)}
 .muted,.dim{color:var(--dim)}
+.chip{display:inline-block;padding:1px 7px;margin:1px 3px 1px 0;border-radius:2px;
+  background:var(--sel);border:1px solid var(--line);font-size:11px;white-space:nowrap}
+.act{color:var(--acc);font-weight:600}
+strong.sub{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--fg);margin-bottom:9px;font-weight:700}
+.card td{white-space:normal}
 .card{background:var(--panel);border:1px solid var(--line);
       border-left:2px solid var(--warn);padding:12px 14px;margin-bottom:10px}
 dl{display:grid;grid-template-columns:minmax(110px,auto) 1fr;gap:3px 18px;margin:0}

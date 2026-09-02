@@ -141,3 +141,42 @@ func TestWorkflowToProtoCarriesCooldownUntil(t *testing.T) {
 		}
 	})
 }
+
+// An agent that has run but never had a policy set must render as empty structs
+// rather than nil, so a caller can tell "no policy armed" from "no such agent" —
+// which is an absent row, not an empty one.
+func TestAgentStateToProtoDistinguishesUnarmedFromAbsent(t *testing.T) {
+	updated := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
+
+	t.Run("armed", func(t *testing.T) {
+		a, err := convert.AgentStateToProto(&domain.AgentState{
+			AgentName:     "responder",
+			RuntimePolicy: map[string]any{"max_llm_calls": float64(4)},
+			UpdatedAt:     updated,
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got := a.RuntimePolicy.Fields["max_llm_calls"].GetNumberValue(); got != 4 {
+			t.Errorf("expected max_llm_calls 4, got %v", got)
+		}
+		if !a.UpdatedAt.AsTime().Equal(updated) {
+			t.Errorf("expected %v, got %v", updated, a.UpdatedAt.AsTime())
+		}
+	})
+
+	t.Run("unarmed", func(t *testing.T) {
+		a, err := convert.AgentStateToProto(&domain.AgentState{
+			AgentName: "summarizer", UpdatedAt: updated,
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if a.RuntimePolicy == nil || a.LifecyclePolicy == nil {
+			t.Fatal("policies must be empty structs, not nil")
+		}
+		if len(a.RuntimePolicy.Fields) != 0 || len(a.LifecyclePolicy.Fields) != 0 {
+			t.Error("expected empty policies")
+		}
+	})
+}

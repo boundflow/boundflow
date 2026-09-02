@@ -1,6 +1,7 @@
 package convert
 
 import (
+	"fmt"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -309,4 +310,24 @@ func invokeModeToProto(m domain.InvokeMode) boundflowv1.InvokeMode {
 		return boundflowv1.InvokeMode_INVOKE_MODE_QUEUE
 	}
 	return boundflowv1.InvokeMode_INVOKE_MODE_COALESCE
+}
+
+// AgentStateToProto renders one agent's armed policies. Both policies are optional —
+// an agent that has run but never had a policy set has empty structs, not nil, so a
+// caller can tell "no policy armed" from "no such agent" (which is an absent row).
+func AgentStateToProto(a *domain.AgentState) (*boundflowv1.Agent, error) {
+	runtime, err := structpb.NewStruct(a.RuntimePolicy)
+	if err != nil {
+		return nil, fmt.Errorf("encode runtime policy: %w", err)
+	}
+	lifecycle, err := structpb.NewStruct(a.LifecyclePolicy)
+	if err != nil {
+		return nil, fmt.Errorf("encode lifecycle policy: %w", err)
+	}
+	return &boundflowv1.Agent{
+		AgentName:       a.AgentName,
+		RuntimePolicy:   runtime,
+		LifecyclePolicy: lifecycle,
+		UpdatedAt:       timestamppb.New(a.UpdatedAt),
+	}, nil
 }

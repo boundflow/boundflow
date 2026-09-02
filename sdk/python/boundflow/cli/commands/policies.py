@@ -83,6 +83,26 @@ def runtime_set(
     success(f"Runtime policy set on {workflow_id} / {agent_name}.")
 
 
+@app.command("agents")
+def list_agents(
+    workflow_id: str = typer.Argument(..., help="Workflow ID"),
+):
+    """List a workflow's agents and their armed policies.
+
+    Every other agent command needs a name; this is where the names come from.
+    """
+    agents = cp_call(lambda cp: cp.list_agents(workflow_id))
+    output([
+        {
+            "agent_name": a.agent_name,
+            "runtime_policy": a.runtime_policy or {},
+            "lifecycle_policy": a.lifecycle_policy or {},
+            "updated_at": a.updated_at,
+        }
+        for a in agents
+    ])
+
+
 @app.command("get-runtime")
 def runtime_get(
     workflow_id: str = typer.Argument(..., help="Workflow ID"),

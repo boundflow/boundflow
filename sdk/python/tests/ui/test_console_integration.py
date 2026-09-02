@@ -530,3 +530,52 @@ async def test_cooldown_until_reaches_the_console(console, boundflow_api_key):
             body = (await c.get(f"/workflows/{wf.id}")).text
         assert "Cooling down" in body
         assert "Scheduling resumes" in body
+
+
+async def test_list_agents_discovers_agents_and_their_armed_policies(
+        console, boundflow_api_key):
+    """Every other agent RPC takes a name the caller is assumed to know, which only
+    works for whoever wrote the workflow. Setting a policy creates the agent_state
+    row, so this needs no worker.
+    """
+    from boundflow import RuntimePolicy
+
+    async with control_plane(boundflow_api_key) as cp:
+        wf = await _tenant_and_workflow(cp, unique("ui_agents"))
+        assert await cp.list_agents(wf.id) == []      # nothing has run or been armed
+
+        await cp.set_agent_runtime_policy(wf.id, "responder",
+                                          RuntimePolicy(max_llm_calls=4))
+        await cp.set_agent_runtime_policy(wf.id, "summarizer",
+                                          RuntimePolicy(max_cost_usd=1.5))
+
+        agents = await cp.list_agents(wf.id)
+        assert [a.agent_name for a in agents] == ["responder", "summarizer"]  # sorted
+        # snake_case: MessageToDict camelCases proto field names, but a Struct's
+        # contents are literal keys and the server stores the SDK's own JSON.
+        assert agents[0].runtime_policy["max_llm_calls"] == 4
+        assert agents[1].runtime_policy["max_cost_usd"] == 1.5
+        assert agents[0].lifecycle_policy == {}      # none armed, not absent
+
+        async with console_client(console) as c:
+            body = (await c.get(f"/workflows/{wf.id}")).text
+        assert "Policies" in body
+        assert "responder" in body and "summarizer" in body
+
+
+async def test_the_workflow_lifecycle_policy_is_shown_in_the_console(
+        console, boundflow_api_key):
+    """The console could say a policy had paused a workflow without showing the rule."""
+    from boundflow import WorkflowMetric, WorkflowRule
+    from boundflow.policies import Cooldown
+
+    async with control_plane(boundflow_api_key) as cp:
+        wf = await _tenant_and_workflow(cp, unique("ui_wfpolicy"))
+        await cp.set_workflow_lifecycle_policy(wf.id, [
+            WorkflowRule(metric=WorkflowMetric.COST, threshold=5.0,
+                         action=Cooldown(window=10, seconds=120)),
+        ])
+        async with console_client(console) as c:
+            body = (await c.get(f"/workflows/{wf.id}")).text
+    assert "Workflow lifecycle" in body
+    assert "cost" in body

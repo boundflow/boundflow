@@ -248,21 +248,26 @@ def build_app(console: Console):
             return failed(request, console.labels.workflow.capitalize(), exc)
         # Every panel is optional: a workflow with a broken metrics read still has
         # to render, because the page is how an operator finds out what is wrong.
-        runs, metrics, audit, policies = await asyncio.gather(
+        runs, metrics, audit, policies, wf_policy, agents = await asyncio.gather(
             console.cp.list_workflow_runs(wid),
             console.cp.get_workflow_metrics(wid),
             console.cp.get_audit_log(wid),
             console.cp.get_workflow_policy_audit(wid),
+            console.cp.get_workflow_lifecycle_policy(wid),
+            console.cp.list_agents(wid),
             return_exceptions=True,
         )
         for name, value in (("runs", runs), ("metrics", metrics),
-                            ("audit", audit), ("policy audit", policies)):
+                            ("audit", audit), ("policy audit", policies),
+                            ("lifecycle policy", wf_policy), ("agents", agents)):
             if isinstance(value, BaseException):
                 log.warning("could not load %s for %s", name, wid, exc_info=value)
         runs = [] if isinstance(runs, BaseException) else runs
         metrics = None if isinstance(metrics, BaseException) else metrics
         audit = [] if isinstance(audit, BaseException) else audit
         policies = [] if isinstance(policies, BaseException) else policies
+        wf_policy = [] if isinstance(wf_policy, BaseException) else wf_policy
+        agents = [] if isinstance(agents, BaseException) else agents
 
         # The decision that put the workflow in its current state, so the callout can
         # say what crossed rather than only that something did.
@@ -270,7 +275,8 @@ def build_app(console: Console):
             (p for p in policies
              if p.request_id == workflow.last_policy_decision_request_id), None)
         return render(wid, views.workflow_detail(workflow, runs, metrics,
-                                                 console.labels, audit, decision),
+                                                 console.labels, audit, decision,
+                                                 wf_policy, agents),
                       request, current="", filterable=False)
 
     async def act(request, fn):
