@@ -47,10 +47,12 @@ def _wf(wid, *, lifecycle=LifecycleState.ACTIVE, state=WorkflowState.ACTIVE,
 class FakeCP:
     """Records calls; returns whatever the test set up."""
 
-    def __init__(self, workflows, audit=None):
+    def __init__(self, workflows, audit=None, agents=None, workflow_policy=None):
         self._workflows = {w.id: w for w in workflows}
         self.calls: list[tuple] = []
         self.audit = audit or []
+        self.agents = agents or []
+        self.workflow_policy = workflow_policy or []
 
     async def list_workflows(self):
         # Mirrors the real light view: gate detail is only on get_workflow.
@@ -75,6 +77,12 @@ class FakeCP:
     async def get_workflow_policy_audit(self, wid):
         return [r for r in self.audit if type(r).__name__ == "PolicyActionRecord"]
 
+    async def get_workflow_lifecycle_policy(self, wid):
+        return self.workflow_policy
+
+    async def list_agents(self, wid):
+        return self.agents
+
     async def approve_workflow(self, wid, aid, actor="", reason=""):
         self.calls.append(("approve", wid, aid, actor, reason))
 
@@ -93,9 +101,9 @@ class FakeCP:
         self.calls.append(("resume", wid, sid))
 
 
-def client(workflows, audit=None):
+def client(workflows, audit=None, agents=None, workflow_policy=None):
     console = Console("http://localhost:50051", "key")
-    cp = FakeCP(workflows, audit)
+    cp = FakeCP(workflows, audit, agents, workflow_policy)
     console._cp = cp
     # console._cp is already set, and TestClient only runs the lifespan inside a
     # `with` block, so the fake survives.
@@ -904,3 +912,179 @@ def test_cooldown_until_reaches_the_page_and_is_named_in_the_callout():
 
     c, _ = client([cooling])
     assert "cooldown until" in c.get("/workflows/w1").text.lower()
+
+
+# ── Policies ─────────────────────────────────────────────────────────────────
+# The console could report that a lifecycle policy had paused a workflow without
+# ever showing the rule that did it, and had no way to reach agent policies at all
+# because every agent RPC needed a name it had no way to discover.
+
+def _agent(name="responder", runtime=None, lifecycle=None):
+    from boundflow.control_plane import Agent
+    return Agent(agent_name=name, runtime_policy=runtime or {},
+                 lifecycle_policy=lifecycle or {}, updated_at=NOW)
+
+
+def test_the_armed_workflow_policy_is_shown():
+    from boundflow.policies import Cooldown, WorkflowMetric, WorkflowRule
+
+    rule = WorkflowRule(metric=WorkflowMetric.COST, threshold=5.0,
+                        action=Cooldown(window=10, seconds=120))
+    c, _ = client([_wf("w1")], workflow_policy=[rule])
+    body = c.get("/workflows/w1").text
+
+    assert "Policies" in body
+    assert "Workflow lifecycle" in body
+    assert "cost" in body
+    assert "5" in body
+
+
+def test_agents_are_listed_with_their_armed_policies():
+    c, _ = client([_wf("w1")], agents=[
+        _agent("responder", runtime={"max_llm_calls": 4, "max_cost_usd": 2.5,
+                                     "model": "claude-haiku-4-5"}),
+        _agent("summarizer"),
+    ])
+    body = c.get("/workflows/w1").text
+
+    assert "responder" in body
+    # Chips soften the underscores for reading; the field is still recognisable,
+    # unlike renaming a stored value.
+    assert "max llm calls" in body and "claude-haiku-4-5" in body
+    assert "cost ≤ $2.50" in body                # thresholds carry their unit
+    # An agent with nothing armed still appears — "no caps" is worth seeing on a
+    # governance screen, and it's the case you'd most want to notice.
+    assert "summarizer" in body
+    assert "none armed" in body
+
+
+def test_a_workflow_with_no_agents_says_so():
+    c, _ = client([_wf("w1")])
+    body = c.get("/workflows/w1").text
+    assert "No agents have run yet." in body
+    assert "No policy armed." in body
+
+
+def test_the_detail_page_survives_the_policy_reads_failing():
+    """Both reads are allowed to fail; the page is how you find out what's wrong."""
+    c, cp = client([_wf("w1")])
+
+    async def boom(wid):
+        raise RuntimeError("policy service unavailable")
+
+    cp.get_workflow_lifecycle_policy = boom
+    cp.list_agents = boom
+    r = c.get("/workflows/w1")
+    assert r.status_code == 200
+    assert "Policies" in r.text
+
+
+def test_policy_actions_are_words_not_a_python_repr():
+    """These are dataclasses; letting them reach str() put `kind='cooldown'
+    window=10 seconds=1800` on the page."""
+    from boundflow.policies import Cooldown, Pause, SetVersion, WorkflowMetric, WorkflowRule
+
+    body = views.policies_section([
+        WorkflowRule(metric=WorkflowMetric.COST, threshold=5.0,
+                     action=Cooldown(window=10, seconds=1800)),
+        WorkflowRule(metric=WorkflowMetric.NUM_FAILURES, threshold=3,
+                     action=Pause(window=20)),
+        WorkflowRule(metric=WorkflowMetric.LATENCY, threshold=90,
+                     action=SetVersion(target=3)),
+    ], [])
+
+    assert "kind=" not in body and "seconds=" not in body
+    # The window is its own column, so the action says only what it does.
+    assert "cool down 30m" in body
+    assert "pause" in body
+    assert "roll back to version 3" in body
+    assert "10 runs" in body and "20 runs" in body
+
+
+def test_thresholds_carry_their_unit():
+    """A cost of 5 and a failure count of 5 are the same number on the wire."""
+    from boundflow.policies import Pause, WorkflowMetric, WorkflowRule
+
+    def rule(metric, threshold):
+        return views.policies_section(
+            [WorkflowRule(metric=metric, threshold=threshold, action=Pause(window=1))], [])
+
+    assert "$5.00" in rule(WorkflowMetric.COST, 5.0)
+    assert "90s" in rule(WorkflowMetric.LATENCY, 90)
+    assert "25%" in rule(WorkflowMetric.TOOL_FAILURE_RATE, 0.25)
+    assert "≥ 3" in rule(WorkflowMetric.NUM_FAILURES, 3)      # a count stays a count
+
+
+def test_unset_policy_fields_do_not_render_as_zero_caps():
+    """The server returns unset numeric fields as 0, which would otherwise read as
+    'max_cost_usd 0' — a cap of nothing rather than no cap."""
+    body = views.policies_section([], [_agent("a", runtime={
+        "max_llm_calls": 4, "max_cost_usd": 0.0, "max_call_seconds": 0, "custom": {},
+    })])
+    assert "max llm calls 4" in body
+    assert "max cost" not in body
+    assert "max call seconds" not in body
+
+
+def test_the_window_is_its_own_column_not_folded_into_the_action():
+    from boundflow.policies import Cooldown, WorkflowMetric, WorkflowRule
+
+    body = views.policies_section([
+        WorkflowRule(metric=WorkflowMetric.COST, threshold=5.0,
+                     action=Cooldown(window=10, seconds=1800))], [])
+    assert "<th>over</th>" in body
+    assert "10 runs" in body
+    assert "cool down 30m" in body
+    assert "over 10 runs" not in body        # not repeated inside the action
+
+
+def test_agent_lifecycle_rules_say_what_they_do():
+    """Summarising them as a count told an operator a rule existed without saying
+    what it did, which is the only thing worth knowing about a rule."""
+    body = views.policies_section([], [_agent("enricher", lifecycle={"rules": [
+        {"metric": "cost_usd", "op": ">=", "threshold": 1.0, "window": 5,
+         "action": {"field": "model", "value": "claude-haiku-4-5"}},
+        {"metric": "llm_calls", "op": ">=", "threshold": 30, "window": 10,
+         "action": {"field": "max_llm_calls", "value": 8}},
+    ]})])
+
+    assert "rules (" not in body                       # the old count
+    assert "&rarr;" not in body and "→" not in body    # columns, not punctuation
+    assert "cost_usd" in body and "$1.00" in body
+    assert "model = claude-haiku-4-5" in body
+    assert "max_llm_calls = 8" in body
+    assert "5 runs" in body and "10 runs" in body
+
+
+def test_agent_lifecycle_rules_stay_grouped_under_their_agent():
+    """list_agents sorts server-side and the view iterates in that order, so grouping
+    is currently true because two implementations agree. This pins it."""
+    body = views.policies_section([], [
+        _agent("alpha", lifecycle={"rules": [
+            {"metric": "cost_usd", "op": ">=", "threshold": 1.0, "window": 5,
+             "action": {"field": "model", "value": "m1"}},
+            {"metric": "llm_calls", "op": ">=", "threshold": 30, "window": 10,
+             "action": {"field": "max_llm_calls", "value": 8}},
+        ]}),
+        _agent("beta", lifecycle={"rules": [
+            {"metric": "tokens_used", "op": ">=", "threshold": 900, "window": 3,
+             "action": {"field": "max_tokens_per_call", "value": 512}},
+        ]}),
+    ])
+    # Both of alpha's rules precede beta's, and alpha's keep their armed order.
+    assert body.index("cost_usd") < body.index("llm_calls") < body.index("tokens_used")
+
+
+def test_a_section_heading_is_not_smaller_or_fainter_than_its_body():
+    """Uppercase and letterspacing already mark the register; shrinking and dimming
+    on top of that inverted the hierarchy — headings read as footnotes."""
+    from boundflow.ui.render import _CSS
+    import re
+
+    def rule(sel):
+        return re.search(rf"(?m)^{re.escape(sel)}\{{(.*?)\}}", _CSS, re.S).group(1)
+
+    body_px = int(re.search(r"font:(\d+)px", rule("body")).group(1))
+    h2 = rule("h2")
+    assert int(re.search(r"font-size:(\d+)px", h2).group(1)) >= body_px
+    assert "var(--dim)" not in h2

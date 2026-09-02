@@ -76,6 +76,23 @@ action before continuing. While parked, the workflow reports
 See [`sdk/python/boundflow/examples/approval_gate.py`](https://github.com/boundflow/boundflow/blob/main/sdk/python/boundflow/examples/approval_gate.py)
 for a runnable example.
 
+## Finding a workflow's agents
+
+Every agent policy call takes an agent name. To discover the names — which is what
+anyone operating a workflow they didn't write needs:
+
+```python
+for agent in await cp.list_agents(workflow_id):
+    print(agent.agent_name, agent.runtime_policy, agent.lifecycle_policy)
+```
+
+```bash
+boundflow policy agents <workflow-id>
+```
+
+An agent appears once it has run or had a policy set. An empty policy means none is
+armed, which is different from the agent not existing at all.
+
 ## Metrics
 
 Every run collects per-invocation metrics — cost, tokens, LLM calls, and per-tool
