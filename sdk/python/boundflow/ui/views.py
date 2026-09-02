@@ -519,9 +519,144 @@ def audit_table(records: list[Any], lb: Labels = DEFAULT) -> str:
                  empty="Nothing recorded yet.")
 
 
+def _duration(seconds: int) -> str:
+    if seconds % 3600 == 0 and seconds >= 3600:
+        return f"{seconds // 3600}h"
+    if seconds % 60 == 0 and seconds >= 60:
+        return f"{seconds // 60}m"
+    return f"{seconds}s"
+
+
+def _threshold(metric: str, value: Any) -> str:
+    """Thresholds are bare numbers on the wire; a cost of 5 and a count of 5 read the
+    same without their unit."""
+    metric = fmt(metric)
+    if metric == "cost":
+        return f"${float(value):,.2f}"
+    if metric == "latency":
+        return _duration(int(float(value)))
+    if metric == "tool_failure_rate":
+        return f"{float(value) * 100:g}%"
+    return fmt(value)
+
+
+def _action(action: Any) -> str:
+    """A workflow policy action, in words. The window is a column of its own, so it
+    isn't repeated here.
+
+    These are dataclasses, so letting them fall through to str() put a Python repr —
+    `kind='cooldown' window=10 seconds=1800` — on the page.
+    """
+    kind = fmt(getattr(action, "kind", action))
+    if kind == "cooldown":
+        return f"cool down {_duration(getattr(action, 'seconds', 0))}"
+    if kind == "pause":
+        return "pause"
+    if kind == "set_version":
+        return f"roll back to version {fmt(getattr(action, 'target', ''))}"
+    return kind
+
+
+def _window(n: Any) -> str:
+    n = int(n or 0)
+    if not n:
+        return "—"
+    return f"{n} run" if n == 1 else f"{n} runs"
+
+
+def _agent_rule_rows(agents: list[Any]) -> list[list[str]]:
+    """Agent adaptive rules, one row each, in the same columns as the workflow rules.
+
+    These arrive as plain dicts, since the server stores the policy opaquely.
+    """
+    rows = []
+    for a in agents:
+        for r in (a.lifecycle_policy or {}).get("rules") or []:
+            metric = fmt(r.get("metric"))
+            action = r.get("action") or {}
+            target = (f"{fmt(action.get('field'))} = {fmt(action.get('value'))}"
+                      if isinstance(action, dict) else fmt(action))
+            rows.append([
+                f'<span class="mono">{esc(a.agent_name)}</span>',
+                f'<span class="chip">{esc(metric)}</span>',
+                f'{esc(fmt(r.get("op") or "≥"))} '
+                f'{esc(_threshold(metric.replace("_usd", ""), r.get("threshold", 0)))}',
+                esc(_window(r.get("window"))),
+                f'<span class="act">{esc(target)}</span>',
+            ])
+    return rows
+
+
+def _chips(policy: dict) -> str:
+    """An agent's caps as chips rather than a run-on of key: value pairs."""
+    if not policy:
+        return '<span class="muted">none armed</span>'
+    out = []
+    for k, v in sorted(policy.items()):
+        if v in (0, 0.0, "", None, [], {}):
+            continue          # unset fields come back as zeroes, not absences
+        label = str(k).replace("_", " ")
+        if k == "max_cost_usd":
+            text = f"cost ≤ ${float(v):,.2f}"
+        elif k == "model":
+            text = fmt(v)
+        elif isinstance(v, (list, dict)):
+            text = f"{label} ({len(v)})"
+        else:
+            text = f"{label} {fmt(v)}"
+        out.append(f'<span class="chip">{esc(text)}</span>')
+    return " ".join(out) or '<span class="muted">none armed</span>'
+
+
+def policies_section(workflow_policy: Any, agents: list[Any],
+                     lb: Labels = DEFAULT) -> str:
+    """What is actually armed on this workflow and its agents.
+
+    The console could say a lifecycle policy had paused a workflow without ever
+    showing the rule that did it. Agents are listed even when nothing is armed,
+    because "this agent has no caps" is itself worth seeing on a governance screen —
+    and it's the row you'd most want to catch.
+    """
+    rules = workflow_policy or []
+    if rules:
+        wf_rows = [
+            [f'<span class="chip">{esc(fmt(getattr(r, "metric", "")))}</span>',
+             f'≥ {_threshold(getattr(r, "metric", ""), getattr(r, "threshold", 0))}',
+             esc(_window(getattr(getattr(r, "action", None), "window", 0))),
+             esc(getattr(r, "tool", "") or "—"),
+             f'<span class="act">{esc(_action(getattr(r, "action", None)))}</span>']
+            for r in rules
+        ]
+        wf = table(["when", "crosses", "over", "tool", "then"], wf_rows)
+    else:
+        wf = f'<p class="muted">{esc(lb.empty_policies)}</p>'
+
+    if agents:
+        caps = table(
+            ["agent", "caps", "updated"],
+            [[f'<span class="mono">{esc(a.agent_name)}</span>',
+              _chips(a.runtime_policy), esc(a.updated_at)] for a in agents],
+        )
+        rule_rows = _agent_rule_rows(agents)
+        rules_tbl = table(["agent", "when", "crosses", "over", "then"], rule_rows,
+                          empty="No adaptive rules armed.")
+    else:
+        caps = '<p class="muted">No agents have run yet.</p>'
+        rules_tbl = caps
+
+    return (
+        f"<h2>{esc(lb.policies)}</h2>"
+        f'<div class="card"><strong class="sub">Workflow lifecycle</strong>{wf}</div>'
+        f'<div class="card"><strong class="sub">Agent runtime caps</strong>{caps}</div>'
+        f'<div class="card"><strong class="sub">Agent lifecycle rules</strong>'
+        f'{rules_tbl}</div>'
+    )
+
+
 def workflow_detail(w: WorkflowInfo, runs: list[Any], metrics: Any,
                     lb: Labels = DEFAULT, audit: list[Any] | None = None,
-                    policy: Any = None) -> str:
+                    policy: Any = None, workflow_policy: Any = None,
+                    agents: list[Any] | None = None) -> str:
     gates = approval_form(w) + input_form(w)
     gates_section = f"<h2>{esc(lb.inbox)}</h2>{gates}" if gates else ""
     return (
@@ -531,6 +666,7 @@ def workflow_detail(w: WorkflowInfo, runs: list[Any], metrics: Any,
         f"{status_callout(w, lb, policy)}"
         f"{gates_section}"
         f'<div class="card">{detail_rows(w, skip=("pending_approval", "pending_input"))}</div>'
+        f"{policies_section(workflow_policy, agents or [], lb)}"
         f"<h2>{esc(lb.metrics)} (version {esc(w.version)})</h2>"
         f"{metrics_cards(metrics, lb)}"
         f"<h2>{esc(lb.runs).capitalize()}</h2>{runs_table(runs, lb)}"

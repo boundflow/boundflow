@@ -37,6 +37,7 @@ service WorkflowService {
   rpc GetWorkflowLifecyclePolicy(GetWorkflowLifecyclePolicyRequest) returns (GetWorkflowLifecyclePolicyResponse);
   rpc GetAgentRuntimePolicy(GetAgentRuntimePolicyRequest) returns (GetAgentRuntimePolicyResponse);
   rpc GetAgentLifecyclePolicy(GetAgentLifecyclePolicyRequest) returns (GetAgentLifecyclePolicyResponse);
+  rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse);
   rpc ApproveWorkflow(ApproveWorkflowRequest) returns (ApproveWorkflowResponse);
   rpc RejectWorkflow(RejectWorkflowRequest) returns (RejectWorkflowResponse);
   rpc SubmitInput(SubmitInputRequest) returns (SubmitInputResponse);
@@ -234,6 +235,24 @@ message GetWorkflowLifecyclePolicyRequest {
 message GetWorkflowLifecyclePolicyResponse {
   // The armed workflow-lifecycle policy; empty rules if none is set.
   WorkflowLifecyclePolicy lifecycle_policy = 1;
+}
+
+// ListAgents answers "which agents does this workflow have", which every other agent
+// RPC assumes you already know. Without it an agent's policy is only reachable by
+// someone who wrote the workflow and remembers the name they gave it.
+message ListAgentsRequest {
+  string workflow_id = 1;
+}
+message ListAgentsResponse {
+  repeated Agent agents = 1;
+}
+// One agent the server knows about. A row exists once an agent has run or had a
+// policy set, so an empty policy means "none armed" rather than "no such agent".
+message Agent {
+  string agent_name = 1;
+  google.protobuf.Struct runtime_policy = 2;
+  google.protobuf.Struct lifecycle_policy = 3;
+  google.protobuf.Timestamp updated_at = 4;
 }
 
 message GetAgentRuntimePolicyRequest {

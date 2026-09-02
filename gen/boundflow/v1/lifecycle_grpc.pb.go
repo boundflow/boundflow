@@ -34,6 +34,7 @@ const (
 	WorkflowService_GetWorkflowLifecyclePolicy_FullMethodName = "/boundflow.v1.WorkflowService/GetWorkflowLifecyclePolicy"
 	WorkflowService_GetAgentRuntimePolicy_FullMethodName      = "/boundflow.v1.WorkflowService/GetAgentRuntimePolicy"
 	WorkflowService_GetAgentLifecyclePolicy_FullMethodName    = "/boundflow.v1.WorkflowService/GetAgentLifecyclePolicy"
+	WorkflowService_ListAgents_FullMethodName                 = "/boundflow.v1.WorkflowService/ListAgents"
 	WorkflowService_ApproveWorkflow_FullMethodName            = "/boundflow.v1.WorkflowService/ApproveWorkflow"
 	WorkflowService_RejectWorkflow_FullMethodName             = "/boundflow.v1.WorkflowService/RejectWorkflow"
 	WorkflowService_SubmitInput_FullMethodName                = "/boundflow.v1.WorkflowService/SubmitInput"
@@ -80,6 +81,7 @@ type WorkflowServiceClient interface {
 	GetWorkflowLifecyclePolicy(ctx context.Context, in *GetWorkflowLifecyclePolicyRequest, opts ...grpc.CallOption) (*GetWorkflowLifecyclePolicyResponse, error)
 	GetAgentRuntimePolicy(ctx context.Context, in *GetAgentRuntimePolicyRequest, opts ...grpc.CallOption) (*GetAgentRuntimePolicyResponse, error)
 	GetAgentLifecyclePolicy(ctx context.Context, in *GetAgentLifecyclePolicyRequest, opts ...grpc.CallOption) (*GetAgentLifecyclePolicyResponse, error)
+	ListAgents(ctx context.Context, in *ListAgentsRequest, opts ...grpc.CallOption) (*ListAgentsResponse, error)
 	ApproveWorkflow(ctx context.Context, in *ApproveWorkflowRequest, opts ...grpc.CallOption) (*ApproveWorkflowResponse, error)
 	RejectWorkflow(ctx context.Context, in *RejectWorkflowRequest, opts ...grpc.CallOption) (*RejectWorkflowResponse, error)
 	SubmitInput(ctx context.Context, in *SubmitInputRequest, opts ...grpc.CallOption) (*SubmitInputResponse, error)
@@ -251,6 +253,16 @@ func (c *workflowServiceClient) GetAgentLifecyclePolicy(ctx context.Context, in 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetAgentLifecyclePolicyResponse)
 	err := c.cc.Invoke(ctx, WorkflowService_GetAgentLifecyclePolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *workflowServiceClient) ListAgents(ctx context.Context, in *ListAgentsRequest, opts ...grpc.CallOption) (*ListAgentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAgentsResponse)
+	err := c.cc.Invoke(ctx, WorkflowService_ListAgents_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -436,6 +448,7 @@ type WorkflowServiceServer interface {
 	GetWorkflowLifecyclePolicy(context.Context, *GetWorkflowLifecyclePolicyRequest) (*GetWorkflowLifecyclePolicyResponse, error)
 	GetAgentRuntimePolicy(context.Context, *GetAgentRuntimePolicyRequest) (*GetAgentRuntimePolicyResponse, error)
 	GetAgentLifecyclePolicy(context.Context, *GetAgentLifecyclePolicyRequest) (*GetAgentLifecyclePolicyResponse, error)
+	ListAgents(context.Context, *ListAgentsRequest) (*ListAgentsResponse, error)
 	ApproveWorkflow(context.Context, *ApproveWorkflowRequest) (*ApproveWorkflowResponse, error)
 	RejectWorkflow(context.Context, *RejectWorkflowRequest) (*RejectWorkflowResponse, error)
 	SubmitInput(context.Context, *SubmitInputRequest) (*SubmitInputResponse, error)
@@ -507,6 +520,9 @@ func (UnimplementedWorkflowServiceServer) GetAgentRuntimePolicy(context.Context,
 }
 func (UnimplementedWorkflowServiceServer) GetAgentLifecyclePolicy(context.Context, *GetAgentLifecyclePolicyRequest) (*GetAgentLifecyclePolicyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAgentLifecyclePolicy not implemented")
+}
+func (UnimplementedWorkflowServiceServer) ListAgents(context.Context, *ListAgentsRequest) (*ListAgentsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListAgents not implemented")
 }
 func (UnimplementedWorkflowServiceServer) ApproveWorkflow(context.Context, *ApproveWorkflowRequest) (*ApproveWorkflowResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ApproveWorkflow not implemented")
@@ -840,6 +856,24 @@ func _WorkflowService_GetAgentLifecyclePolicy_Handler(srv interface{}, ctx conte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WorkflowServiceServer).GetAgentLifecyclePolicy(ctx, req.(*GetAgentLifecyclePolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WorkflowService_ListAgents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAgentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorkflowServiceServer).ListAgents(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorkflowService_ListAgents_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorkflowServiceServer).ListAgents(ctx, req.(*ListAgentsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1180,6 +1214,10 @@ var WorkflowService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetAgentLifecyclePolicy",
 			Handler:    _WorkflowService_GetAgentLifecyclePolicy_Handler,
+		},
+		{
+			MethodName: "ListAgents",
+			Handler:    _WorkflowService_ListAgents_Handler,
 		},
 		{
 			MethodName: "ApproveWorkflow",

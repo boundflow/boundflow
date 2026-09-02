@@ -470,6 +470,28 @@ func (h *WorkflowServiceHandler) GetWorkflowLifecyclePolicy(ctx context.Context,
 	}, nil
 }
 
+func (h *WorkflowServiceHandler) ListAgents(ctx context.Context, req *boundflowv1.ListAgentsRequest) (*boundflowv1.ListAgentsResponse, error) {
+	if req.WorkflowId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")
+	}
+	if err := h.checkWorkflowOwner(ctx, req.WorkflowId); err != nil {
+		return nil, err
+	}
+	agents, err := h.svc.ListAgents(ctx, req.WorkflowId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "list agents: %v", err)
+	}
+	out := make([]*boundflowv1.Agent, 0, len(agents))
+	for _, a := range agents {
+		p, err := convert.AgentStateToProto(a)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "encode agent %s: %v", a.AgentName, err)
+		}
+		out = append(out, p)
+	}
+	return &boundflowv1.ListAgentsResponse{Agents: out}, nil
+}
+
 func (h *WorkflowServiceHandler) GetAgentRuntimePolicy(ctx context.Context, req *boundflowv1.GetAgentRuntimePolicyRequest) (*boundflowv1.GetAgentRuntimePolicyResponse, error) {
 	if req.WorkflowId == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "workflow_id is required")

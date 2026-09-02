@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"log/slog"
+	"sort"
 	"strconv"
 	"time"
 
@@ -525,6 +526,23 @@ func (s *LifecycleService) GetWorkflowLifecyclePolicy(ctx context.Context, workf
 		return domain.WorkflowLifecyclePolicy{}, err
 	}
 	return wf.LifecyclePolicy, nil
+}
+
+// ListAgents returns every agent the server knows about for a workflow, sorted by
+// name. A row exists once an agent has run or had a policy set, so this is the set an
+// operator can actually act on — the other agent getters all require a name the caller
+// is assumed to already have.
+func (s *LifecycleService) ListAgents(ctx context.Context, workflowID string) ([]*domain.AgentState, error) {
+	states, err := s.agentStates.GetAllForWorkflow(ctx, workflowID)
+	if err != nil {
+		return nil, fmt.Errorf("list agents: %w", err)
+	}
+	out := make([]*domain.AgentState, 0, len(states))
+	for _, st := range states {
+		out = append(out, st)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].AgentName < out[j].AgentName })
+	return out, nil
 }
 
 // GetAgentRuntimePolicy returns the armed runtime policy for one agent (nil if the

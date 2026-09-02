@@ -365,6 +365,20 @@ class InputAuditRecord:
 
 
 @dataclass
+class Agent:
+    """One agent the server knows about, from `list_agents`.
+
+    A row exists once an agent has run or had a policy set, so an empty policy means
+    none is armed — not that the agent is unknown. Policies are dicts rather than
+    typed objects because the server stores them opaquely.
+    """
+    agent_name: str
+    runtime_policy: dict
+    lifecycle_policy: dict
+    updated_at: datetime | None
+
+
+@dataclass
 class PolicyActionRecord:
     """One workflow-lifecycle policy firing. Self-describing: the rule that fired
     (identified by content), the value that crossed, and the prior state."""
@@ -982,6 +996,25 @@ class ControlPlaneClient:
             lc.GetWorkflowLifecyclePolicyRequest(workflow_id=workflow_id),
             metadata=self._metadata)
         return [_workflow_rule_from_proto(r) for r in resp.lifecycle_policy.rules]
+
+    async def list_agents(self, workflow_id: str) -> list[Agent]:
+        """Every agent the server knows about for a workflow, sorted by name.
+
+        The other agent getters all take an agent_name the caller is assumed to
+        already know, which only works for whoever wrote the workflow. This is how
+        anyone else discovers them.
+        """
+        resp = await self._lc.ListAgents(
+            lc.ListAgentsRequest(workflow_id=workflow_id), metadata=self._metadata)
+        return [
+            Agent(
+                agent_name=a.agent_name,
+                runtime_policy=MessageToDict(a.runtime_policy),
+                lifecycle_policy=MessageToDict(a.lifecycle_policy),
+                updated_at=_ts(a, "updated_at"),
+            )
+            for a in resp.agents
+        ]
 
     async def get_agent_runtime_policy(self, workflow_id: str, agent_name: str) -> dict:
         """The armed runtime policy (hard caps + model override) for one agent, as a dict.

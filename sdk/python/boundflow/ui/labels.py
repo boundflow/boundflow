@@ -44,6 +44,7 @@ class Labels:
     deleted: str = "Deleted"
     metrics: str = "Metrics"
     audit: str = "Audit"
+    policies: str = "Policies"
     abandon: str = "Abandon queued runs"
     danger: str = "Delete"
 
@@ -52,6 +53,7 @@ class Labels:
     empty_fleet: str = "No workflows yet."
     empty_runs: str = "No runs yet."
     empty_holds: str = "Nothing is held."
+    empty_policies: str = "No policy armed."
     empty_deleted: str = "Nothing deleted."
 
 
