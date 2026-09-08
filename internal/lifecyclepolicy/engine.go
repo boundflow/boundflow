@@ -103,12 +103,13 @@ func (e *LifecyclePolicyEngine) ResolvePolicy(rollingMetrics *[]domain.WorkflowI
 				}
 			}
 
-			if len(observed) < rule.Window {
-				e.log.Debug("insufficient observed metrics for rule window, skipping", "have", len(observed), "need", rule.Window, "metric", rule.Metric)
-				continue
+			// Window is a lookback cap, not a quorum. These thresholds are absolute
+			// counts, so the sum is monotone: once it crosses, more runs cannot
+			// un-cross it, and waiting for a full window only ever misses.
+			lastN := observed
+			if len(lastN) > rule.Window {
+				lastN = lastN[len(lastN)-rule.Window:]
 			}
-
-			lastN := observed[len(observed)-rule.Window:]
 			total := 0.0
 
 			for _, metric := range lastN {

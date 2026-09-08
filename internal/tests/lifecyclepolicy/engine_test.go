@@ -113,13 +113,25 @@ func TestResolvePolicy_MetricNotEmittedInLastRun_Skips(t *testing.T) {
 	}
 }
 
-func TestResolvePolicy_InsufficientWindow_Skips(t *testing.T) {
-	rolling := []domain.WorkflowInvocationSnapshot{{Failures: ip(9)}} // only 1 observed
+// A short history is not a reason to withhold a crossed threshold: the sum is a
+// count, so more runs could only raise it.
+func TestResolvePolicy_FiresBeforeTheWindowIsFull(t *testing.T) {
+	rolling := []domain.WorkflowInvocationSnapshot{{Failures: ip(9)}} // 1 run, window 3
+	updated, gs := resolve(rolling, []domain.WorkflowLifecyclePolicyRule{
+		cooldownRule(domain.WorkflowMetricNumFailures, 1, 3, 60),
+	}, nil)
+	if !updated || gs.Cooldown != 60 {
+		t.Fatalf("expected 9 failures to cross a threshold of 1, got updated=%v cooldown=%d", updated, gs.Cooldown)
+	}
+}
+
+func TestResolvePolicy_ShortHistoryBelowThresholdStillSkips(t *testing.T) {
+	rolling := []domain.WorkflowInvocationSnapshot{{Failures: ip(1)}}
 	updated, _ := resolve(rolling, []domain.WorkflowLifecyclePolicyRule{
-		cooldownRule(domain.WorkflowMetricNumFailures, 1, 3, 60), // needs window 3
+		cooldownRule(domain.WorkflowMetricNumFailures, 5, 3, 60),
 	}, nil)
 	if updated {
-		t.Fatal("expected skip: fewer observed snapshots than window")
+		t.Fatal("expected skip: 1 failure does not reach a threshold of 5")
 	}
 }
 
@@ -252,17 +264,33 @@ func TestResolvePolicy_WindowCountsRuns_NotOccurrences(t *testing.T) {
 	}
 }
 
-func TestResolvePolicy_AbsentZerosShrinkTheWindow(t *testing.T) {
-	runs := make([]domain.WorkflowInvocationSnapshot, 10)
-	runs[2].ApprovalRejections = ip(1)
-	runs[6].ApprovalRejections = ip(1)
-	runs[9].ApprovalRejections = ip(1)
+// Without those zeros the window still holds 3 entries, but they are drawn from
+// the whole history rather than the last 3 runs — so the rule sums a span it was
+// never asked about and fires on runs that are no longer recent.
+func TestResolvePolicy_AbsentZerosStretchTheWindowAcrossHistory(t *testing.T) {
+	withZeros := make([]domain.WorkflowInvocationSnapshot, 10)
+	for i := range withZeros {
+		withZeros[i] = domain.WorkflowInvocationSnapshot{ApprovalRejections: ip(0)}
+	}
+	withZeros[2].ApprovalRejections = ip(1)
+	withZeros[6].ApprovalRejections = ip(1)
+	withZeros[9].ApprovalRejections = ip(1)
 
-	updated, _ := resolve(runs,
-		[]domain.WorkflowLifecyclePolicyRule{
-			pauseRule(domain.WorkflowMetricApprovalRejections, 3, 10),
-		}, nil)
-	if updated {
-		t.Fatal("expected the rule to be skipped: only 3 runs carry the metric, window is 10")
+	rule := []domain.WorkflowLifecyclePolicyRule{
+		pauseRule(domain.WorkflowMetricApprovalRejections, 3, 3),
+	}
+
+	// The last 3 runs carry 1 rejection between them.
+	if updated, _ := resolve(withZeros, rule, nil); updated {
+		t.Fatal("expected no fire: the last 3 runs hold 1 rejection, threshold is 3")
+	}
+
+	withoutZeros := make([]domain.WorkflowInvocationSnapshot, 10)
+	withoutZeros[2].ApprovalRejections = ip(1)
+	withoutZeros[6].ApprovalRejections = ip(1)
+	withoutZeros[9].ApprovalRejections = ip(1)
+
+	if updated, _ := resolve(withoutZeros, rule, nil); !updated {
+		t.Fatal("expected the stretched window to fire, which is the bug the zeros fix")
 	}
 }

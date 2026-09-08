@@ -144,14 +144,22 @@ class WorkflowMetric(str, Enum):
 
 
 class Pause(BaseModel):
-    """Workflow-lifecycle action: pause the workflow, holding new runs until resumed."""
+    """Workflow-lifecycle action: pause the workflow, holding new runs until resumed.
+
+    `window` is how far back to look, in runs — not a minimum. A workflow with fewer
+    runs than that is evaluated on the runs it has.
+    """
 
     kind: Literal["pause"] = "pause"
     window: int
 
 
 class Cooldown(BaseModel):
-    """Workflow-lifecycle action: pause the workflow, then auto-resume after `seconds`."""
+    """Workflow-lifecycle action: pause the workflow, then auto-resume after `seconds`.
+
+    `window` is how far back to look, in runs — not a minimum. A workflow with fewer
+    runs than that is evaluated on the runs it has.
+    """
 
     kind: Literal["cooldown"] = "cooldown"
     window: int
