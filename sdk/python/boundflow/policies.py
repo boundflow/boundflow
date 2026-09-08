@@ -148,6 +148,10 @@ class Pause(BaseModel):
 
     `window` is how far back to look, in runs — not a minimum. A workflow with fewer
     runs than that is evaluated on the runs it has.
+
+    Resuming does not clear what already fired the rule: those runs stay in the window
+    until they age out, so a workflow can pause again on the same evidence. Keep the
+    window short enough that it ages out quickly — it bounds how long that lasts.
     """
 
     kind: Literal["pause"] = "pause"
@@ -159,6 +163,10 @@ class Cooldown(BaseModel):
 
     `window` is how far back to look, in runs — not a minimum. A workflow with fewer
     runs than that is evaluated on the runs it has.
+
+    The auto-resume does not clear what already fired the rule: those runs stay in the
+    window until they age out, so a workflow can re-enter cooldown on the same evidence.
+    Keep the window short enough that it ages out quickly — it bounds how long that lasts.
     """
 
     kind: Literal["cooldown"] = "cooldown"
