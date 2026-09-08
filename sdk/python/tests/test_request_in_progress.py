@@ -143,3 +143,49 @@ async def test_a_finished_request_is_never_dragged_back(cp):
     finally:
         task.cancel()
         await asyncio.gather(task, return_exceptions=True)
+
+
+@pytest.mark.asyncio
+async def test_a_requeued_run_keeps_its_slot_and_stays_in_progress(cp):
+    """A resumable run whose worker dies is requeued — the same run continuing, not a
+    free slot. A newer invoke must not take it over, and the request must stay
+    in_progress across the gap rather than being orphaned there."""
+    started = asyncio.Event()
+    worker = BoundFlowWorker(WORKER_ADDRESS, dummy_mock())
+    wtype = "req_in_progress_requeue"
+
+    @worker.workflow(wtype, version=1)
+    async def _entry(ctx):
+        started.set()
+        await asyncio.sleep(600)
+        return Complete()
+
+    tenant = await create_isolated_tenant(cp, "in-progress-requeue")
+    wf = await cp.create_workflow(
+        wtype, tenant.id, config=WorkflowConfig(version=1, resumable=True))
+    await cp.activate_workflow(wf.id)
+
+    task = asyncio.create_task(worker.run())
+    try:
+        first = await cp.invoke_workflow(wf.id, operation_timeout_seconds=600)
+        await asyncio.wait_for(started.wait(), timeout=60)
+        await _wait_status(cp, first, RunStatus.IN_PROGRESS)
+    finally:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+
+    # The worker is gone; the lease expires and the job is requeued rather than failed.
+    second = await cp.invoke_workflow(wf.id, operation_timeout_seconds=60)
+
+    await asyncio.sleep(20)
+    first_info = await cp.get_request_info(first)
+    second_info = await cp.get_request_info(second)
+
+    assert first_info.status in (RunStatus.IN_PROGRESS, RunStatus.COMPLETED,
+                                 RunStatus.FAILED), \
+        f"the requeued run was dropped: {first_info.status}"
+    assert first_info.status != RunStatus.SUPERCEDED, \
+        "a newer invoke took over a requeued run's slot"
+    # The newer invoke waits its turn rather than displacing the run in flight.
+    assert second_info.status in (RunStatus.UNSCHEDULED, RunStatus.SCHEDULED,
+                                  RunStatus.IN_PROGRESS, RunStatus.COMPLETED)

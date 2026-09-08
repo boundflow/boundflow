@@ -160,7 +160,7 @@ type SchedulerRepository interface {
 	// SweepRequestsInProgress does the same for any request the direct call missed, scoped to
 	// a partition. Returns the ids advanced.
 	SweepRequestsInProgress(ctx context.Context, partitionID string) ([]string, error)
-	// SupercedeOlderRequests marks all unscheduled or scheduled requests for the given workflow
+	// SupercedeOlderRequests marks every older non-terminal request for the given workflow
 	// whose version is strictly less than version as superceded.
 	SupercedeOlderRequests(ctx context.Context, workflowID string, version int64) error
 	// DeleteTerminalJob deletes the job for the given workflow only if the request ID matches
