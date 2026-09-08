@@ -229,3 +229,40 @@ func TestMetricEmitted(t *testing.T) {
 		}
 	}
 }
+
+// A rule's window counts runs, which only holds if every run reports the metric.
+// Sparse metrics — failures, approval rejections — are zero on most runs, so a run
+// that omits its zero is dropped from the window entirely and the rule silently
+// under-fires. See HandleAgentMetrics, which records those zeros explicitly.
+func TestResolvePolicy_WindowCountsRuns_NotOccurrences(t *testing.T) {
+	runs := make([]domain.WorkflowInvocationSnapshot, 10)
+	for i := range runs {
+		runs[i] = domain.WorkflowInvocationSnapshot{ApprovalRejections: ip(0)}
+	}
+	runs[2].ApprovalRejections = ip(1)
+	runs[6].ApprovalRejections = ip(1)
+	runs[9].ApprovalRejections = ip(1)
+
+	updated, gs := resolve(runs,
+		[]domain.WorkflowLifecyclePolicyRule{
+			pauseRule(domain.WorkflowMetricApprovalRejections, 3, 10),
+		}, nil)
+	if !updated || gs.State != domain.WorkflowStatePaused {
+		t.Fatalf("expected 3 rejections across 10 runs to pause, got updated=%v state=%v", updated, gs.State)
+	}
+}
+
+func TestResolvePolicy_AbsentZerosShrinkTheWindow(t *testing.T) {
+	runs := make([]domain.WorkflowInvocationSnapshot, 10)
+	runs[2].ApprovalRejections = ip(1)
+	runs[6].ApprovalRejections = ip(1)
+	runs[9].ApprovalRejections = ip(1)
+
+	updated, _ := resolve(runs,
+		[]domain.WorkflowLifecyclePolicyRule{
+			pauseRule(domain.WorkflowMetricApprovalRejections, 3, 10),
+		}, nil)
+	if updated {
+		t.Fatal("expected the rule to be skipped: only 3 runs carry the metric, window is 10")
+	}
+}

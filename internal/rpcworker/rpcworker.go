@@ -499,6 +499,18 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 							}
 						}(workflowID, job.RequestID)
 
+						// A resolved gate makes rejections measurable for this run; an
+						// ungated run has none to report, which is what nil means here.
+						// Incremented, not set: a run can gate more than once.
+						recordGateOutcome := func(rejected bool) {
+							if job.WorkflowMetrics.ApprovalRejections == nil {
+								job.WorkflowMetrics.ApprovalRejections = new(int)
+							}
+							if rejected {
+								*job.WorkflowMetrics.ApprovalRejections++
+							}
+						}
+
 						resolveBranch := func(branch domain.ApprovalBranch, label string) bool {
 							if branch.Next != nil {
 								ctx := branch.Next.Context
@@ -579,12 +591,11 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 						var shouldLaunch bool
 						switch job.Status {
 						case domain.JobStatusApproved:
+							recordGateOutcome(false)
 							shouldLaunch = resolveBranch(job.JobMetadata.ApprovalGate.OnApprove, "on_approve")
 						case domain.JobStatusRejected:
-							// Explicit rejection, or a timeout the scheduler already resolved
-							// to rejected. Record the approval rejection so workflow lifecycle
-							// policies can act on it.
-							job.WorkflowMetrics.ApprovalRejections++
+							// Explicit rejection, or a timeout the scheduler already resolved to rejected.
+							recordGateOutcome(true)
 							shouldLaunch = resolveBranch(job.JobMetadata.ApprovalGate.OnReject, "on_reject")
 						case domain.JobStatusAnswered:
 							shouldLaunch = resolveInputBranch(job.JobMetadata.InputGate.OnAnswer, job.InputAnswer, "on_answer")

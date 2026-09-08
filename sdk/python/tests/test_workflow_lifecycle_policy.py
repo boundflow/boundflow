@@ -382,3 +382,54 @@ async def test_workflow_enters_cooldown_after_tool_failures(cp, api_key):
             assert state == WorkflowState.COOLDOWN
         finally:
             await cp.delete_workflow(workflow.id)
+
+
+async def test_rejection_window_counts_runs_not_rejections(cp):
+    """A window of 2 means the last 2 runs, including ones that rejected nothing.
+
+    Clean runs used to record no rejection count at all rather than a zero, so the
+    engine read them as "not measured" and dropped them from the window. A rule
+    windowed over 2 runs then needed 2 rejecting runs, and under-fired forever on a
+    workflow that mostly behaves.
+    """
+    captured: list[ApprovalRequest] = []
+
+    worker = BoundFlowWorker(WORKER_ADDRESS, dummy_mock())
+
+    @worker.workflow("rejection_window", version=1)
+    async def _entry(ctx):
+        return AwaitApproval(on_approve=Complete(), on_reject=Complete(), timeout=60)
+
+    @worker.on_approval_requested
+    async def _on_approval(request: ApprovalRequest):
+        captured.append(request)
+
+    async with run_worker(worker):
+        tenant = await create_isolated_tenant(cp, "rejection-window")
+        workflow = await cp.create_workflow("rejection_window", tenant.id,
+                                            config=WorkflowConfig(version=1))
+        try:
+            await cp.set_workflow_lifecycle_policy(workflow.id, [
+                WorkflowRule(
+                    metric=WorkflowMetric.APPROVAL_REJECTIONS,
+                    threshold=1,
+                    action=Pause(window=2),
+                )
+            ])
+            await cp.activate_workflow(workflow.id)
+
+            # A clean run first: it must still occupy a slot in the window.
+            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_lifecycle_state(cp, workflow.id, LifecycleState.AWAITING_APPROVAL)
+            await cp.approve_workflow(workflow.id, captured[0].approval_id)
+            await wait_for_workflow_state(cp, workflow.id, WorkflowState.ACTIVE)
+
+            await cp.invoke_workflow(workflow.id, operation_timeout_seconds=30)
+            await wait_for_lifecycle_state(cp, workflow.id, LifecycleState.AWAITING_APPROVAL)
+            assert len(captured) == 2
+            await cp.reject_workflow(workflow.id, captured[1].approval_id)
+
+            state = await wait_for_workflow_state(cp, workflow.id, WorkflowState.PAUSED)
+            assert state == WorkflowState.PAUSED
+        finally:
+            await cp.delete_workflow(workflow.id)
