@@ -222,3 +222,83 @@ func TestHandleAgentMetrics_TrimsAgentHistoryToWindow(t *testing.T) {
 		t.Errorf("expected newest entry to be run-new, got %s", got)
 	}
 }
+
+// --- HandleAgentMetrics: sparse metrics record zero, not absence ---
+
+func TestHandleAgentMetrics_CleanRunRecordsExplicitZeros(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	versionMetricsRepo := mocks.NewMockVersionMetricsRepository(ctrl)
+	agentStateRepo := mocks.NewMockAgentStateRepository(ctrl)
+	metricsRepo := mocks.NewMockMetricsRepository(ctrl)
+	h := metrics.NewMetricsHandler(nil, agentStateRepo, versionMetricsRepo, metricsRepo, discardLogger)
+
+	wf := &domain.Workflow{ID: "wf-1", CurrentWorkflowVersion: 1, CurrentVersion: 1}
+
+	versionMetricsRepo.EXPECT().GetCurrentVersionMetrics(gomock.Any(), "wf-1", 1).
+		Return(&domain.WorkflowVersionMetrics{ToolFailureCounts: map[string]int{}}, nil)
+	agentStateRepo.EXPECT().GetAllForWorkflow(gomock.Any(), "wf-1").
+		Return(map[string]*domain.AgentState{}, nil)
+
+	var captured []domain.WorkflowInvocationSnapshot
+	metricsRepo.EXPECT().
+		EmitMetrics(gomock.Any(), "wf-1", int64(1), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, _ int64, rolling []domain.WorkflowInvocationSnapshot, _ *domain.WorkflowVersionMetrics, _ map[string][]domain.AgentInvocationSnapshot) (bool, error) {
+			captured = rolling
+			return true, nil
+		})
+
+	err, _ := h.HandleAgentMetrics(context.Background(), "run-clean",
+		map[string]*boundflowv1.AgentInvocationMetrics{}, domain.WorkflowJobMetrics{}, wf)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(captured) != 1 {
+		t.Fatalf("expected 1 snapshot, got %d", len(captured))
+	}
+	got := captured[0]
+	// A nil here reads as "not measured this run" and drops the run from every
+	// windowed rule on that metric.
+	if got.Failures == nil || *got.Failures != 0 {
+		t.Errorf("expected failures recorded as 0, got %v", got.Failures)
+	}
+	if got.ApprovalRejections == nil || *got.ApprovalRejections != 0 {
+		t.Errorf("expected approval rejections recorded as 0, got %v", got.ApprovalRejections)
+	}
+}
+
+func TestHandleAgentMetrics_ZerosDoNotMoveVersionTotals(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	versionMetricsRepo := mocks.NewMockVersionMetricsRepository(ctrl)
+	agentStateRepo := mocks.NewMockAgentStateRepository(ctrl)
+	metricsRepo := mocks.NewMockMetricsRepository(ctrl)
+	h := metrics.NewMetricsHandler(nil, agentStateRepo, versionMetricsRepo, metricsRepo, discardLogger)
+
+	wf := &domain.Workflow{ID: "wf-1", CurrentWorkflowVersion: 1, CurrentVersion: 1}
+
+	versionMetricsRepo.EXPECT().GetCurrentVersionMetrics(gomock.Any(), "wf-1", 1).
+		Return(&domain.WorkflowVersionMetrics{
+			TotalFailures:           3,
+			TotalApprovalRejections: 2,
+			ToolFailureCounts:       map[string]int{},
+		}, nil)
+	agentStateRepo.EXPECT().GetAllForWorkflow(gomock.Any(), "wf-1").
+		Return(map[string]*domain.AgentState{}, nil)
+
+	var captured *domain.WorkflowVersionMetrics
+	metricsRepo.EXPECT().
+		EmitMetrics(gomock.Any(), "wf-1", int64(1), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, _ int64, _ []domain.WorkflowInvocationSnapshot, vm *domain.WorkflowVersionMetrics, _ map[string][]domain.AgentInvocationSnapshot) (bool, error) {
+			captured = vm
+			return true, nil
+		})
+
+	err, _ := h.HandleAgentMetrics(context.Background(), "run-clean",
+		map[string]*boundflowv1.AgentInvocationMetrics{}, domain.WorkflowJobMetrics{}, wf)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if captured.TotalFailures != 3 || captured.TotalApprovalRejections != 2 {
+		t.Errorf("expected totals untouched (3/2), got %d/%d",
+			captured.TotalFailures, captured.TotalApprovalRejections)
+	}
+}

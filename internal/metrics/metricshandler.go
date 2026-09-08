@@ -109,15 +109,13 @@ func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, requestID strin
 
 	// Fold workflow-level metrics into the run snapshot + version totals.
 	// Failures are customer-reported (ctx.MarkFailed); approval rejections are recorded
-	// server-side by the rpcworker when a gate is rejected or times out.
-	if workflowMetrics.Failures > 0 {
-		versionMetrics.TotalFailures += workflowMetrics.Failures
-		m.accInt(&snapshot.Failures, workflowMetrics.Failures)
-	}
-	if workflowMetrics.ApprovalRejections > 0 {
-		versionMetrics.TotalApprovalRejections += workflowMetrics.ApprovalRejections
-		m.accInt(&snapshot.ApprovalRejections, workflowMetrics.ApprovalRejections)
-	}
+	// server-side by the rpcworker when a gate is rejected or times out. Both are known
+	// for every run, so a zero is recorded rather than left absent: the policy engine
+	// reads a nil as "not measured this run" and drops the run from a rule's window.
+	versionMetrics.TotalFailures += workflowMetrics.Failures
+	m.accInt(&snapshot.Failures, workflowMetrics.Failures)
+	versionMetrics.TotalApprovalRejections += workflowMetrics.ApprovalRejections
+	m.accInt(&snapshot.ApprovalRejections, workflowMetrics.ApprovalRejections)
 
 	// Collect the updated histories for only the agents touched this run.
 	agentMetrics := make(map[string][]domain.AgentInvocationSnapshot, len(invocationMetrics))
