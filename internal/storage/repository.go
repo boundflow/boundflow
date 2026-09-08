@@ -155,6 +155,11 @@ type SchedulerRepository interface {
 	// workflow's lifecycle (scheduled/blocked/invoking/awaiting_approval), the safety net for
 	// lost direct writes. Returns the reconciled workflow ids.
 	ReconcileWorkflowLifecycles(ctx context.Context, partitionID string, blockedAfterSecs int) ([]string, error)
+	// MarkRequestInProgress advances one request out of 'scheduled' once its job has started.
+	MarkRequestInProgress(ctx context.Context, requestID string) error
+	// SweepRequestsInProgress does the same for any request the direct call missed, scoped to
+	// a partition. Returns the ids advanced.
+	SweepRequestsInProgress(ctx context.Context, partitionID string) ([]string, error)
 	// SupercedeOlderRequests marks all unscheduled or scheduled requests for the given workflow
 	// whose version is strictly less than version as superceded.
 	SupercedeOlderRequests(ctx context.Context, workflowID string, version int64) error

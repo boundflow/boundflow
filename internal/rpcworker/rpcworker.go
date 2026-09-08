@@ -24,6 +24,7 @@ type RequestScheduler interface {
 	CompleteRequest(ctx context.Context, req string, workflowID string, version int64, requestType domain.CustomerRequestType, outcome domain.RunOutcome, reason string, result map[string]any) (bool, error)
 	FailRequest(ctx context.Context, req string, workflowID string, version int64, reason string) (bool, error)
 	MarkInvoking(ctx context.Context, workflowID string) error
+	MarkRequestInProgress(ctx context.Context, requestID string) error
 	MarkAwaitingApproval(ctx context.Context, workflowID string) error
 	MarkAwaitingInput(ctx context.Context, workflowID string) error
 }
@@ -461,6 +462,12 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 						}
 
 						log.Info("job acquired", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "operation", job.CurrentAtomicOperation)
+
+						// The run has started; the request should stop saying it is queued.
+						// Best-effort — the scheduler sweeps for any lost write.
+						if err := s.scheduler.MarkRequestInProgress(stream.Context(), job.RequestID); err != nil {
+							log.Warn("failed to mark request in progress, sweep will catch it", "request_id", job.RequestID, "error", err)
+						}
 
 						// periodically re-up the lease
 						go func(workflowID *string, requestID string) {

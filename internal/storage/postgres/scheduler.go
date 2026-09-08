@@ -385,6 +385,59 @@ func (r *SchedulerRepo) ReconcileWorkflowLifecycles(ctx context.Context, partiti
 	return ids, nil
 }
 
+// MarkRequestInProgress advances one request out of 'scheduled' once its job has
+// started. Guarded on 'scheduled' so a claim racing a completion can't drag a
+// terminal request backwards.
+func (r *SchedulerRepo) MarkRequestInProgress(ctx context.Context, requestID string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE customer_requests
+		 SET status = 'in_progress'
+		 WHERE id = $1
+		   AND status = 'scheduled'`,
+		requestID,
+	)
+	if err != nil {
+		return fmt.Errorf("mark request in progress: %w", err)
+	}
+	return nil
+}
+
+// SweepRequestsInProgress is the safety net for MarkRequestInProgress: any request
+// still 'scheduled' whose job has moved past 'pending'. 'pending' is the job-side
+// equivalent of 'scheduled' (queued, unclaimed), and the two terminal statuses are
+// owned by the complete/fail sweeps — everything between them is a live run.
+//
+// Listing what is *not* in progress rather than what is means a job status added
+// later counts as running until someone says otherwise, which is the safer default.
+func (r *SchedulerRepo) SweepRequestsInProgress(ctx context.Context, partitionID string) ([]string, error) {
+	rows, err := r.pool.Query(ctx,
+		`UPDATE customer_requests cr
+		 SET status = 'in_progress'
+		 FROM jobs j
+		 JOIN workflows w ON w.id = j.workflow_id
+		 WHERE cr.id = j.request_id
+		   AND cr.status = 'scheduled'
+		   AND j.status NOT IN ('pending', 'completed', 'failed')
+		   AND w.scheduler_partition_id = $1
+		 RETURNING cr.id`,
+		partitionID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("sweep requests in progress: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan swept request id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
 func (r *SchedulerRepo) SupercedeOlderRequests(ctx context.Context, workflowID string, version int64) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE customer_requests

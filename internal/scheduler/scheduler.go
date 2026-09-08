@@ -134,7 +134,7 @@ func (s *Scheduler) runPartition(ctx context.Context, partition *domain.Schedule
 			s.log.Debug("tick", "partition_id", partition.ID)
 
 			var wg sync.WaitGroup
-			wg.Add(4)
+			wg.Add(5)
 			go func() {
 				defer wg.Done()
 				s.failJobs(ctx, partition.ID)
@@ -237,6 +237,23 @@ func (s *Scheduler) markOrphanedJobsFailed(ctx context.Context, partitionID stri
 
 // blockedAfterSecs: how long a run may sit unowned before it's reported blocked. TODO: config.
 const blockedAfterSecs = 60
+
+// MarkRequestInProgress advances a request once its job has started. Best-effort, like
+// the workflow-lifecycle marks beside it: sweepRequestsInProgress catches a lost write.
+func (s *Scheduler) MarkRequestInProgress(ctx context.Context, requestID string) error {
+	return s.scheduler.MarkRequestInProgress(ctx, requestID)
+}
+
+func (s *Scheduler) sweepRequestsInProgress(ctx context.Context, partitionID string) {
+	advanced, err := s.scheduler.SweepRequestsInProgress(ctx, partitionID)
+	if err != nil {
+		s.log.Error("failed to sweep requests in progress", "partition_id", partitionID, "error", err)
+		return
+	}
+	if len(advanced) > 0 {
+		s.log.Info("advanced requests to in progress", "partition_id", partitionID, "count", len(advanced))
+	}
+}
 
 func (s *Scheduler) reconcileWorkflowLifecycles(ctx context.Context, partitionID string) {
 	reconciled, err := s.scheduler.ReconcileWorkflowLifecycles(ctx, partitionID, blockedAfterSecs)

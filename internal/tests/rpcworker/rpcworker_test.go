@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"sync"
 	"testing"
 	"time"
 
@@ -99,6 +100,8 @@ func updateMsg(opID string, status boundflowv1.OperationStatus) *boundflowv1.Wor
 type mockScheduler struct {
 	completeCh chan string
 	failCh     chan string
+	mu         sync.Mutex
+	inProgress []string
 }
 
 func newMockScheduler() *mockScheduler {
@@ -120,6 +123,19 @@ func (m *mockScheduler) FailRequest(_ context.Context, req string, _ string, _ i
 
 func (m *mockScheduler) MarkInvoking(_ context.Context, _ string) error {
 	return nil
+}
+
+func (m *mockScheduler) MarkRequestInProgress(_ context.Context, requestID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.inProgress = append(m.inProgress, requestID)
+	return nil
+}
+
+func (m *mockScheduler) markedInProgress() []string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return append([]string(nil), m.inProgress...)
 }
 
 func (m *mockScheduler) MarkAwaitingApproval(_ context.Context, _ string) error {
