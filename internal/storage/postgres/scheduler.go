@@ -108,9 +108,8 @@ func (r *SchedulerRepo) GetTopUnscheduledRequests(ctx context.Context, partition
 
 // UpsertJobAndSchedule writes or overwrites the job for the workflow associated with requestID,
 // but only if the request's version is strictly higher than the job currently in the table
-// and that job is still pending and unattempted. A requeued job is also pending, but it is
-// the same run continuing after its worker died — taking its slot would silently drop a run
-// that `resumable` promised to finish, so attempts distinguishes the two. Atomically marks the request as scheduled if written.
+// and that job is still pending and unattempted. Atomically marks the request as scheduled
+// if written.
 // The write is additionally guarded on the workflow's current_version still equaling
 // expectedCurrentVersion — the run the caller validated against — so a stale validation
 // (a newer run completed in between) results in written=false rather than scheduling.
