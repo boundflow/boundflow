@@ -111,7 +111,7 @@ func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, requestID strin
 	// reads a nil as "not measured this run" and drops the run from that metric's
 	// window, so a zero is only withheld where the metric genuinely did not apply.
 	// Failures are customer-reported (ctx.MarkFailed); approval rejections are recorded
-	// server-side by the rpcworker when a gate is rejected or times out.
+	// server-side by the rpcworker when a gate resolves.
 	versionMetrics.TotalFailures += workflowMetrics.Failures
 	m.accInt(&snapshot.Failures, workflowMetrics.Failures)
 	if workflowMetrics.ApprovalRejections != nil {
