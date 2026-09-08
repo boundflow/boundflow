@@ -406,12 +406,15 @@ func (r *SchedulerRepo) MarkRequestInProgress(ctx context.Context, requestID str
 }
 
 // SweepRequestsInProgress is the safety net for MarkRequestInProgress: any request
-// still 'scheduled' whose job has moved past 'pending'. 'pending' is the job-side
-// equivalent of 'scheduled' (queued, unclaimed), and the two terminal statuses are
-// owned by the complete/fail sweeps — everything between them is a live run.
+// still 'scheduled' whose job has started. 'pending' is the job-side equivalent of
+// 'scheduled' (queued, unclaimed) and the two terminal statuses belong to the
+// complete/fail sweeps, so everything between them is a live run.
 //
-// Listing what is *not* in progress rather than what is means a job status added
-// later counts as running until someone says otherwise, which is the safer default.
+// A requeued job is back at 'pending' but has started — attempts says which, and its
+// slot is protected by the same field in UpsertJobAndSchedule.
+//
+// Naming what is not in progress rather than what is means a job status added later
+// counts as running until someone says otherwise, which is the safer default.
 func (r *SchedulerRepo) SweepRequestsInProgress(ctx context.Context, partitionID string) ([]string, error) {
 	rows, err := r.pool.Query(ctx,
 		`UPDATE customer_requests cr
@@ -420,7 +423,8 @@ func (r *SchedulerRepo) SweepRequestsInProgress(ctx context.Context, partitionID
 		 JOIN workflows w ON w.id = j.workflow_id
 		 WHERE cr.id = j.request_id
 		   AND cr.status = 'scheduled'
-		   AND j.status NOT IN ('pending', 'completed', 'failed')
+		   AND j.status NOT IN ('completed', 'failed')
+		   AND (j.status <> 'pending' OR j.attempts > 0)
 		   AND w.scheduler_partition_id = $1
 		 RETURNING cr.id`,
 		partitionID,

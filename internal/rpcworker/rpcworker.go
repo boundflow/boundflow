@@ -463,12 +463,6 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 
 						log.Info("job acquired", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "operation", job.CurrentAtomicOperation)
 
-						// The run has started; the request should stop saying it is queued.
-						// Best-effort — the scheduler sweeps for any lost write.
-						if err := s.scheduler.MarkRequestInProgress(stream.Context(), job.RequestID); err != nil {
-							log.Warn("failed to mark request in progress, sweep will catch it", "request_id", job.RequestID, "error", err)
-						}
-
 						// periodically re-up the lease
 						go func(workflowID *string, requestID string) {
 							ticker := time.NewTicker(leaseWake)
@@ -644,6 +638,12 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 						// stream drop doesn't cancel it; the sweep reconciles if lost.
 						if err := s.scheduler.MarkInvoking(context.Background(), job.WorkflowID); err != nil {
 							log.Warn("failed to mark workflow invoking, sweep will reconcile", "workflow_id", job.WorkflowID, "error", err)
+						}
+						// Only once the job is past 'pending'. A request that says in_progress
+						// then always has a job behind it: the slot can no longer be taken, so
+						// it cannot be left non-terminal with nothing to finish it.
+						if err := s.scheduler.MarkRequestInProgress(context.Background(), job.RequestID); err != nil {
+							log.Warn("failed to mark request in progress, sweep will reconcile", "request_id", job.RequestID, "error", err)
 						}
 						log.Info("sending LaunchOperation to client", "request_id", job.RequestID, "operation", job.CurrentAtomicOperation)
 						err = stream.Send(&boundflowv1.ServerCommand{
