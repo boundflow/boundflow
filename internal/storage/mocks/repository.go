@@ -806,6 +806,20 @@ func (mr *MockSchedulerRepositoryMockRecorder) GetTopUnscheduledRequests(ctx, pa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTopUnscheduledRequests", reflect.TypeOf((*MockSchedulerRepository)(nil).GetTopUnscheduledRequests), ctx, partitionID)
 }
 
+// MarkRequestInProgress mocks base method.
+func (m *MockSchedulerRepository) MarkRequestInProgress(ctx context.Context, requestID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkRequestInProgress", ctx, requestID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MarkRequestInProgress indicates an expected call of MarkRequestInProgress.
+func (mr *MockSchedulerRepositoryMockRecorder) MarkRequestInProgress(ctx, requestID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkRequestInProgress", reflect.TypeOf((*MockSchedulerRepository)(nil).MarkRequestInProgress), ctx, requestID)
+}
+
 // MarkWorkflowAwaitingApproval mocks base method.
 func (m *MockSchedulerRepository) MarkWorkflowAwaitingApproval(ctx context.Context, workflowID string) error {
 	m.ctrl.T.Helper()
@@ -889,6 +903,21 @@ func (m *MockSchedulerRepository) SupercedeOlderRequests(ctx context.Context, wo
 func (mr *MockSchedulerRepositoryMockRecorder) SupercedeOlderRequests(ctx, workflowID, version any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SupercedeOlderRequests", reflect.TypeOf((*MockSchedulerRepository)(nil).SupercedeOlderRequests), ctx, workflowID, version)
+}
+
+// SweepRequestsInProgress mocks base method.
+func (m *MockSchedulerRepository) SweepRequestsInProgress(ctx context.Context, partitionID string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SweepRequestsInProgress", ctx, partitionID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SweepRequestsInProgress indicates an expected call of SweepRequestsInProgress.
+func (mr *MockSchedulerRepositoryMockRecorder) SweepRequestsInProgress(ctx, partitionID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SweepRequestsInProgress", reflect.TypeOf((*MockSchedulerRepository)(nil).SweepRequestsInProgress), ctx, partitionID)
 }
 
 // UpsertJobAndSchedule mocks base method.

@@ -108,7 +108,8 @@ func (r *SchedulerRepo) GetTopUnscheduledRequests(ctx context.Context, partition
 
 // UpsertJobAndSchedule writes or overwrites the job for the workflow associated with requestID,
 // but only if the request's version is strictly higher than the job currently in the table
-// (and that job is still pending). Atomically marks the request as scheduled if written.
+// and that job is still pending and unattempted. Atomically marks the request as scheduled
+// if written.
 // The write is additionally guarded on the workflow's current_version still equaling
 // expectedCurrentVersion — the run the caller validated against — so a stale validation
 // (a newer run completed in between) results in written=false rather than scheduling.
@@ -151,6 +152,7 @@ func (r *SchedulerRepo) UpsertJobAndSchedule(ctx context.Context, requestID stri
 
 		         WHERE jobs.version < EXCLUDED.version
 		           AND jobs.status = 'pending'
+		           AND jobs.attempts = 0
 		           AND $7 <> 'queue'
 		     RETURNING workflow_id, request_id
 		 )
@@ -383,6 +385,63 @@ func (r *SchedulerRepo) ReconcileWorkflowLifecycles(ctx context.Context, partiti
 		ids = append(ids, id)
 	}
 	return ids, nil
+}
+
+// MarkRequestInProgress advances one request out of 'scheduled' once its job has
+// started. Guarded on 'scheduled' so a claim racing a completion can't drag a
+// terminal request backwards.
+func (r *SchedulerRepo) MarkRequestInProgress(ctx context.Context, requestID string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE customer_requests
+		 SET status = 'in_progress'
+		 WHERE id = $1
+		   AND status = 'scheduled'`,
+		requestID,
+	)
+	if err != nil {
+		return fmt.Errorf("mark request in progress: %w", err)
+	}
+	return nil
+}
+
+// SweepRequestsInProgress is the safety net for MarkRequestInProgress: any request
+// still 'scheduled' whose job has started. 'pending' is the job-side equivalent of
+// 'scheduled' (queued, unclaimed) and the two terminal statuses belong to the
+// complete/fail sweeps, so everything between them is a live run.
+//
+// A requeued job is back at 'pending' but has started — attempts says which, and its
+// slot is protected by the same field in UpsertJobAndSchedule.
+//
+// Naming what is not in progress rather than what is means a job status added later
+// counts as running until someone says otherwise, which is the safer default.
+func (r *SchedulerRepo) SweepRequestsInProgress(ctx context.Context, partitionID string) ([]string, error) {
+	rows, err := r.pool.Query(ctx,
+		`UPDATE customer_requests cr
+		 SET status = 'in_progress'
+		 FROM jobs j
+		 JOIN workflows w ON w.id = j.workflow_id
+		 WHERE cr.id = j.request_id
+		   AND cr.status = 'scheduled'
+		   AND j.status NOT IN ('completed', 'failed')
+		   AND (j.status <> 'pending' OR j.attempts > 0)
+		   AND w.scheduler_partition_id = $1
+		 RETURNING cr.id`,
+		partitionID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("sweep requests in progress: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan swept request id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
 }
 
 func (r *SchedulerRepo) SupercedeOlderRequests(ctx context.Context, workflowID string, version int64) error {

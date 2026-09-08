@@ -96,10 +96,10 @@ func newTestScheduler(ctrl *gomock.Controller) (
 
 // testCustomerRequest is a minimal CustomerRequest used across ScheduleRequest tests.
 var testCustomerRequest = &domain.CustomerRequest{
-	ID:                 "req-1",
-	WorkflowID: "workflow-1",
-	RequestType:        domain.CustomerRequestTypeInvoke,
-	RequestInfo:        map[string]any{"correlationId": "corr-1", "operationTimeoutSeconds": float64(30), "initialVersion": float64(1)},
+	ID:          "req-1",
+	WorkflowID:  "workflow-1",
+	RequestType: domain.CustomerRequestTypeInvoke,
+	RequestInfo: map[string]any{"correlationId": "corr-1", "operationTimeoutSeconds": float64(30), "initialVersion": float64(1)},
 }
 
 func TestScheduleRequest_WrittenSupercedes(t *testing.T) {
@@ -271,7 +271,6 @@ func TestCompleteRequest_Create_TransitionsToActive(t *testing.T) {
 		t.Error("expected applied=true")
 	}
 }
-
 
 func TestCompleteRequest_VersionSkipped_ReturnsFalse(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -556,5 +555,33 @@ func TestScheduleRequest_UnresolvedVersionIsRefused(t *testing.T) {
 
 	if err := s.ScheduleRequest(context.Background(), "req-1"); err == nil {
 		t.Fatal("expected a workflow with an unresolved version to be refused, got nil error")
+	}
+}
+
+// A request only says 'scheduled' while its job is queued and unclaimed. Once the job
+// starts, the direct call from the worker advances it; the sweep is what makes that
+// best-effort call safe to lose.
+func TestMarkRequestInProgress_DelegatesToRepo(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	s, _, schedulerRepo, _, _, _ := newTestScheduler(ctrl)
+	schedulerRepo.EXPECT().MarkRequestInProgress(gomock.Any(), "req-1").Return(nil)
+
+	if err := s.MarkRequestInProgress(context.Background(), "req-1"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestMarkRequestInProgress_ErrorSurfaces(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	s, _, schedulerRepo, _, _, _ := newTestScheduler(ctrl)
+	schedulerRepo.EXPECT().MarkRequestInProgress(gomock.Any(), "req-1").
+		Return(errors.New("boom"))
+
+	if err := s.MarkRequestInProgress(context.Background(), "req-1"); err == nil {
+		t.Fatal("expected the error to reach the caller so it can be logged")
 	}
 }

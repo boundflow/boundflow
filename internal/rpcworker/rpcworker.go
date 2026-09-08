@@ -24,6 +24,7 @@ type RequestScheduler interface {
 	CompleteRequest(ctx context.Context, req string, workflowID string, version int64, requestType domain.CustomerRequestType, outcome domain.RunOutcome, reason string, result map[string]any) (bool, error)
 	FailRequest(ctx context.Context, req string, workflowID string, version int64, reason string) (bool, error)
 	MarkInvoking(ctx context.Context, workflowID string) error
+	MarkRequestInProgress(ctx context.Context, requestID string) error
 	MarkAwaitingApproval(ctx context.Context, workflowID string) error
 	MarkAwaitingInput(ctx context.Context, workflowID string) error
 }
@@ -637,6 +638,12 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 						// stream drop doesn't cancel it; the sweep reconciles if lost.
 						if err := s.scheduler.MarkInvoking(context.Background(), job.WorkflowID); err != nil {
 							log.Warn("failed to mark workflow invoking, sweep will reconcile", "workflow_id", job.WorkflowID, "error", err)
+						}
+						// Only once the job is past 'pending'. A request that says in_progress
+						// then always has a job behind it: the slot can no longer be taken, so
+						// it cannot be left non-terminal with nothing to finish it.
+						if err := s.scheduler.MarkRequestInProgress(context.Background(), job.RequestID); err != nil {
+							log.Warn("failed to mark request in progress, sweep will reconcile", "request_id", job.RequestID, "error", err)
 						}
 						log.Info("sending LaunchOperation to client", "request_id", job.RequestID, "operation", job.CurrentAtomicOperation)
 						err = stream.Send(&boundflowv1.ServerCommand{
