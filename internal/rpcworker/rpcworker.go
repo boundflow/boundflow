@@ -198,6 +198,11 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 		} else if result.ApprovalGate != nil {
 			log.Info("operation requires approval, parking job", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "approval_id", result.ApprovalGate.ApprovalId)
 
+			// The run is now gated, so rejections are measurable for it.
+			if job.WorkflowMetrics.ApprovalRejections == nil {
+				job.WorkflowMetrics.ApprovalRejections = new(int)
+			}
+
 			buildBranch := func(next *boundflowv1.AtomicOperation, result *structpb.Struct) domain.ApprovalBranch {
 				if next != nil {
 					return domain.ApprovalBranch{
@@ -584,7 +589,10 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 							// Explicit rejection, or a timeout the scheduler already resolved
 							// to rejected. Record the approval rejection so workflow lifecycle
 							// policies can act on it.
-							job.WorkflowMetrics.ApprovalRejections++
+							if job.WorkflowMetrics.ApprovalRejections == nil {
+								job.WorkflowMetrics.ApprovalRejections = new(int)
+							}
+							*job.WorkflowMetrics.ApprovalRejections++
 							shouldLaunch = resolveBranch(job.JobMetadata.ApprovalGate.OnReject, "on_reject")
 						case domain.JobStatusAnswered:
 							shouldLaunch = resolveInputBranch(job.JobMetadata.InputGate.OnAnswer, job.InputAnswer, "on_answer")

@@ -107,15 +107,17 @@ func (m *MetricsHandler) HandleAgentMetrics(ctx context.Context, requestID strin
 		}
 	}
 
-	// Fold workflow-level metrics into the run snapshot + version totals.
+	// Fold workflow-level metrics into the run snapshot + version totals. The engine
+	// reads a nil as "not measured this run" and drops the run from that metric's
+	// window, so a zero is only withheld where the metric genuinely did not apply.
 	// Failures are customer-reported (ctx.MarkFailed); approval rejections are recorded
-	// server-side by the rpcworker when a gate is rejected or times out. Both are known
-	// for every run, so a zero is recorded rather than left absent: the policy engine
-	// reads a nil as "not measured this run" and drops the run from a rule's window.
+	// server-side by the rpcworker when a gate is rejected or times out.
 	versionMetrics.TotalFailures += workflowMetrics.Failures
 	m.accInt(&snapshot.Failures, workflowMetrics.Failures)
-	versionMetrics.TotalApprovalRejections += workflowMetrics.ApprovalRejections
-	m.accInt(&snapshot.ApprovalRejections, workflowMetrics.ApprovalRejections)
+	if workflowMetrics.ApprovalRejections != nil {
+		versionMetrics.TotalApprovalRejections += *workflowMetrics.ApprovalRejections
+		m.accInt(&snapshot.ApprovalRejections, *workflowMetrics.ApprovalRejections)
+	}
 
 	// Collect the updated histories for only the agents touched this run.
 	agentMetrics := make(map[string][]domain.AgentInvocationSnapshot, len(invocationMetrics))
@@ -241,7 +243,9 @@ func (m *MetricsHandler) MergeAgentMetrics(opMetrics map[string]*boundflowv1.Age
 // MergeWorkflowMetrics sums the operation's workflow-level metrics into the job accumulator.
 func (m *MetricsHandler) MergeWorkflowMetrics(opMetrics domain.WorkflowJobMetrics, jobMetrics *domain.WorkflowJobMetrics) {
 	jobMetrics.Failures += opMetrics.Failures
-	jobMetrics.ApprovalRejections += opMetrics.ApprovalRejections
+	if opMetrics.ApprovalRejections != nil {
+		m.accInt(&jobMetrics.ApprovalRejections, *opMetrics.ApprovalRejections)
+	}
 }
 
 // addF64 sums src into *dst. If src is nil it's a no-op; if *dst is nil the value is carried over fresh.

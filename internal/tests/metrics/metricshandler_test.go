@@ -16,6 +16,7 @@ import (
 )
 
 func i32(v int32) *int32     { return &v }
+func ip(v int) *int          { return &v }
 func f64(v float64) *float64 { return &v }
 
 var discardLogger = slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -223,9 +224,11 @@ func TestHandleAgentMetrics_TrimsAgentHistoryToWindow(t *testing.T) {
 	}
 }
 
-// --- HandleAgentMetrics: sparse metrics record zero, not absence ---
+// --- HandleAgentMetrics: what a run records when nothing went wrong ---
 
-func TestHandleAgentMetrics_CleanRunRecordsExplicitZeros(t *testing.T) {
+// captureSnapshot runs a single clean run through the handler and returns its snapshot.
+func captureSnapshot(t *testing.T, wm domain.WorkflowJobMetrics) domain.WorkflowInvocationSnapshot {
+	t.Helper()
 	ctrl := gomock.NewController(t)
 	versionMetricsRepo := mocks.NewMockVersionMetricsRepository(ctrl)
 	agentStateRepo := mocks.NewMockAgentStateRepository(ctrl)
@@ -248,21 +251,33 @@ func TestHandleAgentMetrics_CleanRunRecordsExplicitZeros(t *testing.T) {
 		})
 
 	err, _ := h.HandleAgentMetrics(context.Background(), "run-clean",
-		map[string]*boundflowv1.AgentInvocationMetrics{}, domain.WorkflowJobMetrics{}, wf)
+		map[string]*boundflowv1.AgentInvocationMetrics{}, wm, wf)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(captured) != 1 {
 		t.Fatalf("expected 1 snapshot, got %d", len(captured))
 	}
-	got := captured[0]
-	// A nil here reads as "not measured this run" and drops the run from every
-	// windowed rule on that metric.
+	return captured[0]
+}
+
+// A nil reads as "not measured this run" and drops the run from that metric's window.
+func TestHandleAgentMetrics_UngatedCleanRun(t *testing.T) {
+	got := captureSnapshot(t, domain.WorkflowJobMetrics{})
+
 	if got.Failures == nil || *got.Failures != 0 {
 		t.Errorf("expected failures recorded as 0, got %v", got.Failures)
 	}
+	if got.ApprovalRejections != nil {
+		t.Errorf("expected rejections left nil on an ungated run, got %d", *got.ApprovalRejections)
+	}
+}
+
+func TestHandleAgentMetrics_GatedRunThatWasApproved(t *testing.T) {
+	got := captureSnapshot(t, domain.WorkflowJobMetrics{ApprovalRejections: ip(0)})
+
 	if got.ApprovalRejections == nil || *got.ApprovalRejections != 0 {
-		t.Errorf("expected approval rejections recorded as 0, got %v", got.ApprovalRejections)
+		t.Errorf("expected an approved gate recorded as 0, got %v", got.ApprovalRejections)
 	}
 }
 

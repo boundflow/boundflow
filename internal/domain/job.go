@@ -91,9 +91,11 @@ type FailedJob struct {
 
 // WorkflowJobMetrics holds workflow-level metrics accumulated across a job's operations.
 // Serialized as JSONB in the jobs table (workflow_metrics column).
+// ApprovalRejections is nil until a gate opens: an ungated run had no chance to be
+// rejected. Failures is unconditional — every run can fail.
 type WorkflowJobMetrics struct {
-	Failures           int `json:"failures"`
-	ApprovalRejections int `json:"approval_rejections"`
+	Failures           int  `json:"failures"`
+	ApprovalRejections *int `json:"approval_rejections,omitempty"`
 }
 
 // OperationMetadata holds server-internal state for the current job operation.
