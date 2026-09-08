@@ -151,6 +151,10 @@ func (s *Scheduler) runPartition(ctx context.Context, partition *domain.Schedule
 				defer wg.Done()
 				s.markOrphanedJobsFailed(ctx, partition.ID)
 			}()
+			go func() {
+				defer wg.Done()
+				s.sweepRequestsInProgress(ctx, partition.ID)
+			}()
 			wg.Wait()
 			s.scheduleJobs(ctx, partition.ID)
 
