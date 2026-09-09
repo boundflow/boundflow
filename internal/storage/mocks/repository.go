@@ -976,6 +976,21 @@ func (mr *MockJobRepositoryMockRecorder) AcquireJob(ctx, workflowID, ownerID, le
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AcquireJob", reflect.TypeOf((*MockJobRepository)(nil).AcquireJob), ctx, workflowID, ownerID, leaseDuration, tenantGroupID)
 }
 
+// ClaimFailedJob mocks base method.
+func (m *MockJobRepository) ClaimFailedJob(ctx context.Context, workflowID, requestID string, expectedAttempts int) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClaimFailedJob", ctx, workflowID, requestID, expectedAttempts)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ClaimFailedJob indicates an expected call of ClaimFailedJob.
+func (mr *MockJobRepositoryMockRecorder) ClaimFailedJob(ctx, workflowID, requestID, expectedAttempts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClaimFailedJob", reflect.TypeOf((*MockJobRepository)(nil).ClaimFailedJob), ctx, workflowID, requestID, expectedAttempts)
+}
+
 // GetAvailableJob mocks base method.
 func (m *MockJobRepository) GetAvailableJob(ctx context.Context, tenantGroupID string, workflowTypes []string, workflowVersions []int32) (*string, error) {
 	m.ctrl.T.Helper()
@@ -1098,18 +1113,18 @@ func (mr *MockJobRepositoryMockRecorder) RenewJobLease(ctx, workflowID, ownerID,
 }
 
 // RequeueJob mocks base method.
-func (m *MockJobRepository) RequeueJob(ctx context.Context, workflowID, requestID string, maxAttempts int) (int, error) {
+func (m *MockJobRepository) RequeueJob(ctx context.Context, workflowID, requestID string, expectedAttempts int) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RequeueJob", ctx, workflowID, requestID, maxAttempts)
-	ret0, _ := ret[0].(int)
+	ret := m.ctrl.Call(m, "RequeueJob", ctx, workflowID, requestID, expectedAttempts)
+	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RequeueJob indicates an expected call of RequeueJob.
-func (mr *MockJobRepositoryMockRecorder) RequeueJob(ctx, workflowID, requestID, maxAttempts any) *gomock.Call {
+func (mr *MockJobRepositoryMockRecorder) RequeueJob(ctx, workflowID, requestID, expectedAttempts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequeueJob", reflect.TypeOf((*MockJobRepository)(nil).RequeueJob), ctx, workflowID, requestID, maxAttempts)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequeueJob", reflect.TypeOf((*MockJobRepository)(nil).RequeueJob), ctx, workflowID, requestID, expectedAttempts)
 }
 
 // ResolveApproval mocks base method.

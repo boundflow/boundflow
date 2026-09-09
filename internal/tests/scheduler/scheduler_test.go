@@ -79,6 +79,10 @@ func newTestScheduler(ctrl *gomock.Controller) (
 	// care about metrics don't need to set it up. The no-op metrics/resolver doubles below
 	// keep the post-completion metric+policy steps inert.
 	jobs.EXPECT().GetJobMetrics(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, domain.WorkflowJobMetrics{}, nil).AnyTimes()
+	// FailRequest claims the failure before anything else; tests that care about the
+	// claim itself use newTestSchedulerWithMetrics, which has no default.
+	jobs.EXPECT().ClaimFailedJob(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(true, nil).AnyTimes()
 	// Default workflow passes validateWorkflowState (active + metrics resolved up to current run).
 	workflow.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Workflow{
 		ID:                     "workflow-1",
@@ -336,7 +340,7 @@ func TestFailRequest_AppliesFailedState(t *testing.T) {
 		FailRequest(gomock.Any(), "req-1", gomock.Any()).
 		Return(&domain.CustomerRequest{ID: "req-1"}, nil)
 
-	applied, err := s.FailRequest(context.Background(), "req-1", "workflow-1", 2, "")
+	applied, err := s.FailRequest(context.Background(), "req-1", "workflow-1", 2, "", 0)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -361,7 +365,7 @@ func TestFailRequest_VersionSkipped_ReturnsFalse(t *testing.T) {
 		FailRequest(gomock.Any(), "req-1", gomock.Any()).
 		Return(&domain.CustomerRequest{ID: "req-1"}, nil)
 
-	applied, err := s.FailRequest(context.Background(), "req-1", "workflow-1", 1, "")
+	applied, err := s.FailRequest(context.Background(), "req-1", "workflow-1", 1, "", 0)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -386,7 +390,7 @@ func TestFailRequest_RepoError(t *testing.T) {
 		FailRequest(gomock.Any(), "req-1", gomock.Any()).
 		Return(nil, errors.New("db error"))
 
-	if _, err := s.FailRequest(context.Background(), "req-1", "workflow-1", 1, ""); err == nil {
+	if _, err := s.FailRequest(context.Background(), "req-1", "workflow-1", 1, "", 0); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }
@@ -399,6 +403,7 @@ func TestFailRequest_RecordsMetricsBeforeDeletingJob(t *testing.T) {
 	s, _, schedulerRepo, requests, workflow, jobs := newTestSchedulerWithMetrics(ctrl, recorder)
 
 	workflow.EXPECT().Get(gomock.Any(), "workflow-1").Return(resumableWorkflow(false), nil).AnyTimes()
+	jobs.EXPECT().ClaimFailedJob(gomock.Any(), "workflow-1", "req-1", 0).Return(true, nil)
 	cost := 1.25
 	jobs.EXPECT().GetJobMetrics(gomock.Any(), "workflow-1", "req-1").
 		Return(map[string]*boundflowv1.AgentInvocationMetrics{"operator": {CostUsd: &cost}},
@@ -410,7 +415,7 @@ func TestFailRequest_RecordsMetricsBeforeDeletingJob(t *testing.T) {
 	requests.EXPECT().FailRequest(gomock.Any(), "req-1", gomock.Any()).
 		Return(&domain.CustomerRequest{ID: "req-1"}, nil)
 
-	if _, err := s.FailRequest(context.Background(), "req-1", "workflow-1", 2, ""); err != nil {
+	if _, err := s.FailRequest(context.Background(), "req-1", "workflow-1", 2, "", 0); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(recorder.requests) != 1 || recorder.requests[0] != "req-1" {
@@ -424,7 +429,9 @@ func TestFailRequest_RecordsMetricsBeforeDeletingJob(t *testing.T) {
 func TestFailRequest_VersionSkipped_DoesNotRecordMetrics(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	recorder := &recordingMetricsHandler{}
-	s, _, schedulerRepo, requests, workflow, _ := newTestSchedulerWithMetrics(ctrl, recorder)
+	s, _, schedulerRepo, requests, workflow, jobs := newTestSchedulerWithMetrics(ctrl, recorder)
+
+	jobs.EXPECT().ClaimFailedJob(gomock.Any(), "workflow-1", "req-1", 0).Return(true, nil)
 
 	workflow.EXPECT().Get(gomock.Any(), "workflow-1").Return(resumableWorkflow(false), nil).AnyTimes()
 	workflow.EXPECT().
@@ -434,7 +441,7 @@ func TestFailRequest_VersionSkipped_DoesNotRecordMetrics(t *testing.T) {
 	requests.EXPECT().FailRequest(gomock.Any(), "req-1", gomock.Any()).
 		Return(&domain.CustomerRequest{ID: "req-1"}, nil)
 
-	if _, err := s.FailRequest(context.Background(), "req-1", "workflow-1", 1, ""); err != nil {
+	if _, err := s.FailRequest(context.Background(), "req-1", "workflow-1", 1, "", 0); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(recorder.requests) != 0 {
@@ -464,11 +471,11 @@ func TestFailRequest_ResumableRequeuesInsteadOfInterrupting(t *testing.T) {
 	s, _, _, _, workflow, jobs := newTestSchedulerWithMetrics(ctrl, recorder)
 
 	workflow.EXPECT().Get(gomock.Any(), "workflow-1").Return(resumableWorkflow(true), nil)
-	jobs.EXPECT().RequeueJob(gomock.Any(), "workflow-1", "req-1", gomock.Any()).Return(1, nil)
+	jobs.EXPECT().RequeueJob(gomock.Any(), "workflow-1", "req-1", 0).Return(true, nil)
 	// No ApplyFailedJob, DeleteTerminalJob or requests.FailRequest: gomock fails the
 	// test if any of them are called.
 
-	applied, err := s.FailRequest(context.Background(), "req-1", "workflow-1", 2, "")
+	applied, err := s.FailRequest(context.Background(), "req-1", "workflow-1", 2, "", 0)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -490,8 +497,8 @@ func TestFailRequest_ResumableOutOfAttemptsInterrupts(t *testing.T) {
 	s, _, schedulerRepo, requests, workflow, jobs := newTestSchedulerWithMetrics(ctrl, recorder)
 
 	workflow.EXPECT().Get(gomock.Any(), "workflow-1").Return(resumableWorkflow(true), nil).AnyTimes()
-	// Out of attempts: the statement guards it, so the job was left untouched.
-	jobs.EXPECT().RequeueJob(gomock.Any(), "workflow-1", "req-1", gomock.Any()).Return(0, nil)
+	// Out of attempts: RequeueJob is never called, it goes straight to teardown.
+	jobs.EXPECT().ClaimFailedJob(gomock.Any(), "workflow-1", "req-1", 10_000).Return(true, nil)
 	jobs.EXPECT().GetJobMetrics(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil, domain.WorkflowJobMetrics{}, nil)
 	workflow.EXPECT().
@@ -501,7 +508,59 @@ func TestFailRequest_ResumableOutOfAttemptsInterrupts(t *testing.T) {
 	requests.EXPECT().FailRequest(gomock.Any(), "req-1", gomock.Any()).
 		Return(&domain.CustomerRequest{ID: "req-1"}, nil)
 
-	if _, err := s.FailRequest(context.Background(), "req-1", "workflow-1", 2, ""); err != nil {
+	// Well past any plausible cap.
+	if _, err := s.FailRequest(context.Background(), "req-1", "workflow-1", 2, "", 10_000); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// Two schedulers can briefly overlap on a partition. The one whose claim misses has
+// lost the race, not run out of road: the run belongs to whoever won, so it must leave
+// the workflow and the request alone rather than interrupt a run that is continuing.
+func TestFailRequest_ClaimLost_TouchesNothing(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	recorder := &recordingMetricsHandler{}
+	s, _, _, _, workflow, jobs := newTestSchedulerWithMetrics(ctrl, recorder)
+
+	workflow.EXPECT().Get(gomock.Any(), "workflow-1").Return(resumableWorkflow(true), nil)
+	jobs.EXPECT().RequeueJob(gomock.Any(), "workflow-1", "req-1", 3).Return(false, nil)
+	jobs.EXPECT().ClaimFailedJob(gomock.Any(), "workflow-1", "req-1", 3).Return(false, nil)
+	// No ApplyFailedJob, DeleteTerminalJob or requests.FailRequest.
+
+	applied, err := s.FailRequest(context.Background(), "req-1", "workflow-1", 2, "", 3)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if applied {
+		t.Error("expected applied=false: the winner owns this run now")
+	}
+	if len(recorder.requests) != 0 {
+		t.Errorf("expected no metrics promoted, got %v", recorder.requests)
+	}
+}
+
+// terminal_failed is a one-way door. A retrier that arrives after a failer claimed the
+// row asks for a requeue and is told no; it must finish the teardown rather than treat
+// the refusal as someone else's problem, or a crash mid-teardown would strand the run.
+func TestFailRequest_RequeueRefusedOnClaimedFailure_TearsDown(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	recorder := &recordingMetricsHandler{}
+	s, _, schedulerRepo, requests, workflow, jobs := newTestSchedulerWithMetrics(ctrl, recorder)
+
+	workflow.EXPECT().Get(gomock.Any(), "workflow-1").Return(resumableWorkflow(true), nil).AnyTimes()
+	// Asked to requeue, but the row is already claimed for teardown.
+	jobs.EXPECT().RequeueJob(gomock.Any(), "workflow-1", "req-1", 0).Return(false, nil)
+	jobs.EXPECT().ClaimFailedJob(gomock.Any(), "workflow-1", "req-1", 0).Return(true, nil)
+	jobs.EXPECT().GetJobMetrics(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, domain.WorkflowJobMetrics{}, nil)
+	workflow.EXPECT().
+		ApplyFailedJob(gomock.Any(), "workflow-1", "req-1", domain.LifecycleStateInterrupted, domain.WorkflowStateDisabled, int64(2)).
+		Return(true, nil)
+	schedulerRepo.EXPECT().DeleteTerminalJob(gomock.Any(), "workflow-1", "req-1").Return(true, nil)
+	requests.EXPECT().FailRequest(gomock.Any(), "req-1", gomock.Any()).
+		Return(&domain.CustomerRequest{ID: "req-1"}, nil)
+
+	if _, err := s.FailRequest(context.Background(), "req-1", "workflow-1", 2, "", 0); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -513,6 +572,7 @@ func TestFailRequest_NonResumableNeverRequeues(t *testing.T) {
 	s, _, schedulerRepo, requests, workflow, jobs := newTestSchedulerWithMetrics(ctrl, recorder)
 
 	workflow.EXPECT().Get(gomock.Any(), "workflow-1").Return(resumableWorkflow(false), nil).AnyTimes()
+	jobs.EXPECT().ClaimFailedJob(gomock.Any(), "workflow-1", "req-1", 0).Return(true, nil)
 	jobs.EXPECT().GetJobMetrics(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil, domain.WorkflowJobMetrics{}, nil)
 	workflow.EXPECT().ApplyFailedJob(gomock.Any(), "workflow-1", "req-1", gomock.Any(), gomock.Any(), int64(2)).
@@ -522,7 +582,7 @@ func TestFailRequest_NonResumableNeverRequeues(t *testing.T) {
 		Return(&domain.CustomerRequest{ID: "req-1"}, nil)
 	// RequeueJob must not be called at all.
 
-	if _, err := s.FailRequest(context.Background(), "req-1", "workflow-1", 2, ""); err != nil {
+	if _, err := s.FailRequest(context.Background(), "req-1", "workflow-1", 2, "", 0); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

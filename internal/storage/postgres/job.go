@@ -61,7 +61,7 @@ func (r *JobRepo) AcquireJob(ctx context.Context, workflowID string, ownerID str
 		           job_type, workflow_type, timeout_seconds, workflow_version, agent_metrics, workflow_metrics,
 		           job_metadata, approval_id, approval_timeout_at, approval_reason,
 		           input_id, input_timeout_at, input_answer,
-		           owner, lease_expires_at, abandon_requested_at, created_at`,
+		           attempts, owner, lease_expires_at, abandon_requested_at, created_at`,
 		workflowID, ownerID, leaseDuration.String(), tenantGroupID,
 	).Scan(
 		&job.WorkflowID, &job.RequestID, &job.Version,
@@ -69,7 +69,7 @@ func (r *JobRepo) AcquireJob(ctx context.Context, workflowID string, ownerID str
 		&job.JobType, &job.WorkflowType, &job.RuntimeParams.OperationTimeoutSeconds, &job.WorkflowVersion, &agentMetricsJSON, &workflowMetricsJSON,
 		&jobMetadataJSON, &job.ApprovalID, &job.ApprovalTimeoutAt, &job.ApprovalReason,
 		&job.InputID, &job.InputTimeoutAt, &inputAnswerJSON,
-		&job.Owner, &job.LeaseExpiresAt, &job.AbandonRequestedAt, &job.CreatedAt,
+		&job.Attempts, &job.Owner, &job.LeaseExpiresAt, &job.AbandonRequestedAt, &job.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -537,33 +537,41 @@ func (r *JobRepo) UpdateJob(ctx context.Context, workflowID string, ownerID stri
 	return tag.RowsAffected() == 1, nil
 }
 
-// RequeueJob makes a job claimable again after the worker running it died, for a
-// workflow whose config says that is safe. `pending` with no owner is exactly what
-// AcquireJob looks for, so nothing else has to change.
-//
-// maxAttempts is enforced in the statement rather than by the caller: checking after
-// the update would leave an exhausted job briefly claimable, and a worker could start
-// an operation that is about to have its job row deleted.
-//
-// Returns the attempt count, always at least 1. 0 means the job wasn't requeued —
-// either it is gone or it has no attempts left.
-func (r *JobRepo) RequeueJob(ctx context.Context, workflowID string, requestID string, maxAttempts int) (int, error) {
-	var attempts int
-	err := r.pool.QueryRow(ctx,
+// RequeueJob hands a failed run to another worker, for a workflow whose config says
+// that is safe. Guarded on the failure the caller read: a scheduler that lost a race
+// must not clear the owner under a live worker, or end a later failure than its own.
+func (r *JobRepo) RequeueJob(ctx context.Context, workflowID string, requestID string, expectedAttempts int) (bool, error) {
+	tag, err := r.pool.Exec(ctx,
 		`UPDATE jobs
 		 SET status = 'pending', owner = NULL, lease_expires_at = NULL,
 		     attempts = attempts + 1
-		 WHERE workflow_id = $1 AND request_id = $2 AND attempts < $3
-		 RETURNING attempts`,
-		workflowID, requestID, maxAttempts,
-	).Scan(&attempts)
+		 WHERE workflow_id = $1 AND request_id = $2
+		   AND status = 'failed'
+		   AND attempts = $3`,
+		workflowID, requestID, expectedAttempts,
+	)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return 0, nil
-		}
-		return 0, fmt.Errorf("requeue job: %w", err)
+		return false, fmt.Errorf("requeue job: %w", err)
 	}
-	return attempts, nil
+	return tag.RowsAffected() == 1, nil
+}
+
+// ClaimFailedJob marks a failure as this caller's to tear down; a retrier can no
+// longer take it back. Matching a row already terminal_failed is deliberate: it
+// reports the row as claimed, which is how a crash mid-teardown gets finished.
+func (r *JobRepo) ClaimFailedJob(ctx context.Context, workflowID string, requestID string, expectedAttempts int) (bool, error) {
+	tag, err := r.pool.Exec(ctx,
+		`UPDATE jobs
+		 SET status = 'terminal_failed'
+		 WHERE workflow_id = $1 AND request_id = $2
+		   AND status IN ('failed', 'terminal_failed')
+		   AND attempts = $3`,
+		workflowID, requestID, expectedAttempts,
+	)
+	if err != nil {
+		return false, fmt.Errorf("claim failed job: %w", err)
+	}
+	return tag.RowsAffected() == 1, nil
 }
 
 // UpdateJobMetrics writes the running metrics of an operation that is still going, so

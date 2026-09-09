@@ -206,11 +206,11 @@ func (r *SchedulerRepo) GetCompletedJobs(ctx context.Context, partitionID string
 
 func (r *SchedulerRepo) GetFailedJobs(ctx context.Context, partitionID string) ([]domain.FailedJob, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT j.request_id, j.workflow_id, j.version, j.failure_reason
+		`SELECT j.request_id, j.workflow_id, j.version, j.failure_reason, j.attempts
 		 FROM jobs j
 		 JOIN workflows ri ON j.workflow_id = ri.id
 		 WHERE ri.scheduler_partition_id = $1
-		   AND j.status = 'failed'`,
+		   AND j.status IN ('failed', 'terminal_failed')`,
 		partitionID,
 	)
 	if err != nil {
@@ -221,7 +221,7 @@ func (r *SchedulerRepo) GetFailedJobs(ctx context.Context, partitionID string) (
 	var jobs []domain.FailedJob
 	for rows.Next() {
 		var j domain.FailedJob
-		if err := rows.Scan(&j.RequestID, &j.WorkflowID, &j.Version, &j.FailureReason); err != nil {
+		if err := rows.Scan(&j.RequestID, &j.WorkflowID, &j.Version, &j.FailureReason, &j.Attempts); err != nil {
 			return nil, fmt.Errorf("scan failed job: %w", err)
 		}
 		jobs = append(jobs, j)
@@ -234,7 +234,7 @@ func (r *SchedulerRepo) DeleteTerminalJob(ctx context.Context, workflowID string
 		`DELETE FROM jobs
 		 WHERE workflow_id = $1
 		   AND request_id = $2
-		   AND status IN ('completed', 'failed')`,
+		   AND status IN ('completed', 'failed', 'terminal_failed')`,
 		workflowID, requestID,
 	)
 	if err != nil {

@@ -116,7 +116,7 @@ func (m *mockScheduler) CompleteRequest(_ context.Context, req string, _ string,
 	return true, nil
 }
 
-func (m *mockScheduler) FailRequest(_ context.Context, req string, _ string, _ int64, _ string) (bool, error) {
+func (m *mockScheduler) FailRequest(_ context.Context, req string, _ string, _ int64, _ string, _ int) (bool, error) {
 	m.failCh <- req
 	return true, nil
 }

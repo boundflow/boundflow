@@ -288,7 +288,7 @@ func (s *Scheduler) failJobs(ctx context.Context, partitionID string) error {
 		wg.Add(1)
 		go func(job domain.FailedJob) {
 			defer wg.Done()
-			if _, err := s.FailRequest(ctx, job.RequestID, job.WorkflowID, job.Version, job.FailureReason); err != nil {
+			if _, err := s.FailRequest(ctx, job.RequestID, job.WorkflowID, job.Version, job.FailureReason, job.Attempts); err != nil {
 				s.log.Error("failed to process failed request", "request_id", job.RequestID, "error", err)
 			}
 		}(job)
@@ -301,25 +301,6 @@ func (s *Scheduler) failJobs(ctx context.Context, partitionID string) error {
 // failed. A failed request is always a platform interruption (the worker was lost, an
 // internal error occurred, etc.); customer-domain failures complete instead.
 const interruptedReason = "the run was interrupted before it could complete (platform failure)"
-
-// requeueJob makes the job claimable again so another worker continues the run.
-// At-least-once: the operation re-runs, which is why it is opt-in config.
-// Reports whether to leave the workflow alone — false means interrupt it.
-func (s *Scheduler) requeueJob(ctx context.Context, req string, workflowID string) bool {
-	attempts, err := s.jobs.RequeueJob(ctx, workflowID, req, maxJobAttempts)
-	if err != nil {
-		// The job is untouched and still failed, so the next sweep brings it back here.
-		s.log.Error("failed to requeue job, leaving it for the next sweep", "request_id", req, "workflow_id", workflowID, "error", err)
-		return true
-	}
-	if attempts == 0 {
-		// Gone, or out of attempts; either way the job was left alone.
-		s.log.Warn("job not requeued, interrupting", "request_id", req, "workflow_id", workflowID, "max_attempts", maxJobAttempts)
-		return false
-	}
-	s.log.Info("resumable job requeued for another worker", "request_id", req, "workflow_id", workflowID, "attempt", attempts)
-	return true
-}
 
 // recordInterruptedMetrics promotes an interrupted run's metrics before the job row
 // carrying them is deleted. Best-effort: the run is already failing.
@@ -344,7 +325,7 @@ func (s *Scheduler) recordInterruptedMetrics(ctx context.Context, req string, wo
 	}
 }
 
-func (s *Scheduler) FailRequest(ctx context.Context, req string, workflowID string, version int64, reason string) (bool, error) {
+func (s *Scheduler) FailRequest(ctx context.Context, req string, workflowID string, version int64, reason string, attempts int) (bool, error) {
 	s.log.Debug("marking request as failed", "request_id", req)
 
 	if reason == "" {
@@ -358,10 +339,34 @@ func (s *Scheduler) FailRequest(ctx context.Context, req string, workflowID stri
 		s.log.Error("failed to read workflow while failing request", "request_id", req, "workflow_id", workflowID, "error", err)
 	}
 
-	// Before anything terminal: a resumable workflow hands the run to another worker
-	// instead. Metrics stay on the job row — promoting them here would record a run
-	// that hasn't finished, and record it again when it does.
-	if workflow != nil && workflow.WorkflowConfig.Resumable && s.requeueJob(ctx, req, workflowID) {
+	// Settle who acts on this failure before anything touches the workflow or the
+	// request: a resumable workflow with attempts left hands the run to another worker,
+	// and whoever loses does neither. Metrics stay on the job row for a requeue —
+	// promoting them would record a run that hasn't finished, and again when it does.
+	if workflow != nil && workflow.WorkflowConfig.Resumable {
+		if attempts >= maxJobAttempts {
+			s.log.Warn("job out of attempts, interrupting", "request_id", req, "workflow_id", workflowID, "attempts", attempts, "max_attempts", maxJobAttempts)
+		} else {
+			requeued, err := s.jobs.RequeueJob(ctx, workflowID, req, attempts)
+			if err != nil {
+				// Untouched and still failed, so the next sweep brings it back here.
+				s.log.Error("failed to requeue job, leaving it for the next sweep", "request_id", req, "workflow_id", workflowID, "error", err)
+				return false, nil
+			}
+			if requeued {
+				s.log.Info("resumable job requeued for another worker", "request_id", req, "workflow_id", workflowID, "attempt", attempts+1)
+				return false, nil
+			}
+		}
+	}
+
+	owned, err := s.jobs.ClaimFailedJob(ctx, workflowID, req, attempts)
+	if err != nil {
+		s.log.Error("failed to claim failed job, leaving it for the next sweep", "request_id", req, "workflow_id", workflowID, "error", err)
+		return false, nil
+	}
+	if !owned {
+		s.log.Info("failed job already moved on, leaving it alone", "request_id", req, "workflow_id", workflowID, "expected_attempts", attempts)
 		return false, nil
 	}
 
