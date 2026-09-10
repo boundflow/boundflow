@@ -332,18 +332,18 @@ func (s *Scheduler) FailRequest(ctx context.Context, req string, workflowID stri
 		reason = interruptedReason
 	}
 
-	// Read once for both the resumable check and the metrics below. On error, fall
-	// through and interrupt: failing closed is the safe direction.
+	// Read once for both the resumable check and the metrics below.
 	workflow, err := s.workflow.Get(ctx, workflowID)
 	if err != nil {
-		s.log.Error("failed to read workflow while failing request", "request_id", req, "workflow_id", workflowID, "error", err)
+		s.log.Error("failed to read workflow while failing request, leaving it for the next sweep", "request_id", req, "workflow_id", workflowID, "error", err)
+		return false, nil
 	}
 
 	// Settle who acts on this failure before anything touches the workflow or the
 	// request: a resumable workflow with attempts left hands the run to another worker,
 	// and whoever loses does neither. Metrics stay on the job row for a requeue —
 	// promoting them would record a run that hasn't finished, and again when it does.
-	if workflow != nil && workflow.WorkflowConfig.Resumable {
+	if workflow.WorkflowConfig.Resumable {
 		if attempts >= maxJobAttempts {
 			s.log.Warn("job out of attempts, interrupting", "request_id", req, "workflow_id", workflowID, "attempts", attempts, "max_attempts", maxJobAttempts)
 		} else {

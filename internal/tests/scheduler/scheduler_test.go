@@ -514,6 +514,28 @@ func TestFailRequest_ResumableOutOfAttemptsInterrupts(t *testing.T) {
 	}
 }
 
+// A read that failed can't say whether the run is resumable, and claiming it for
+// teardown is one-way — so a transient error must not end a run that had retries left.
+func TestFailRequest_WorkflowReadError_TouchesNothing(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	recorder := &recordingMetricsHandler{}
+	s, _, _, _, workflow, _ := newTestSchedulerWithMetrics(ctrl, recorder)
+
+	workflow.EXPECT().Get(gomock.Any(), "workflow-1").Return(nil, errors.New("boom"))
+	// No RequeueJob, ClaimFailedJob, ApplyFailedJob, DeleteTerminalJob or FailRequest.
+
+	applied, err := s.FailRequest(context.Background(), "req-1", "workflow-1", 2, "", 0)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if applied {
+		t.Error("expected applied=false: nothing was decided")
+	}
+	if len(recorder.requests) != 0 {
+		t.Errorf("expected no metrics promoted, got %v", recorder.requests)
+	}
+}
+
 // Two schedulers can briefly overlap on a partition. The one whose claim misses has
 // lost the race, not run out of road: the run belongs to whoever won, so it must leave
 // the workflow and the request alone rather than interrupt a run that is continuing.
