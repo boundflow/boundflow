@@ -21,6 +21,9 @@ const (
 	JobStatusInputTimedOut    JobStatus = "input_timed_out"
 	JobStatusCompleted        JobStatus = "completed"
 	JobStatusFailed           JobStatus = "failed"
+	// JobStatusTerminalFailed is a failure a scheduler has claimed for teardown. Still
+	// swept, so a crash mid-teardown is finished rather than stranding the run.
+	JobStatusTerminalFailed JobStatus = "terminal_failed"
 )
 
 type Job struct {
@@ -41,8 +44,11 @@ type Job struct {
 	// ResultType is the customer-facing run result, set when the job completes; the
 	// completeJobs sweeper transfers it to the request's run_outcome. FailureReason is
 	// its human-readable detail.
-	ResultType     RunOutcome
-	FailureReason  string
+	ResultType    RunOutcome
+	FailureReason string
+	// Attempts is how many times this job has been requeued, and the token a caller
+	// holds to act on the failure it read.
+	Attempts       int
 	Owner          *string
 	LeaseExpiresAt *time.Time
 	// Set when a suspension asked for this run to be stopped rather than drained.
@@ -87,6 +93,8 @@ type FailedJob struct {
 	WorkflowID    string
 	Version       int64
 	FailureReason string
+	// Attempts as of the read that saw this failure.
+	Attempts int
 }
 
 // WorkflowJobMetrics holds workflow-level metrics accumulated across a job's operations.

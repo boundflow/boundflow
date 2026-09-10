@@ -22,7 +22,7 @@ import (
 
 type RequestScheduler interface {
 	CompleteRequest(ctx context.Context, req string, workflowID string, version int64, requestType domain.CustomerRequestType, outcome domain.RunOutcome, reason string, result map[string]any) (bool, error)
-	FailRequest(ctx context.Context, req string, workflowID string, version int64, reason string) (bool, error)
+	FailRequest(ctx context.Context, req string, workflowID string, version int64, reason string, attempts int) (bool, error)
 	MarkInvoking(ctx context.Context, workflowID string) error
 	MarkRequestInProgress(ctx context.Context, requestID string) error
 	MarkAwaitingApproval(ctx context.Context, workflowID string) error
@@ -350,7 +350,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 			log.Error("failed to mark job failed", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "error", err)
 		} else if updated {
 			log.Info("job failed, notifying scheduler", "request_id", job.RequestID, "workflow_id", job.WorkflowID)
-			s.scheduler.FailRequest(ctx, job.RequestID, job.WorkflowID, job.Version, reason)
+			s.scheduler.FailRequest(ctx, job.RequestID, job.WorkflowID, job.Version, reason, job.Attempts)
 		}
 
 		// consider returning error for ownership failure, for now the return isnt used for anything
