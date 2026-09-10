@@ -194,9 +194,9 @@ type JobRepository interface {
 	// UpdateJobStatus updates the status of a job only if ownerID is the current owner.
 	// Returns false if the ownership check failed (job taken by another worker or released).
 	UpdateJobStatus(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus) (bool, error)
-	// UpdateJobStatusWithReason is UpdateJobStatus plus a write of the failure reason,
-	// so a platform interruption's cause is durable on the job for the failJobs sweeper.
-	UpdateJobStatusWithReason(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, failureReason string) (bool, error)
+	// FailJobWithMetrics marks the job failed, carrying the metrics accumulated since
+	// the last write: an interrupted run promotes them from this row.
+	FailJobWithMetrics(ctx context.Context, workflowID string, ownerID string, failureReason string, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error)
 	// UpdateJobStatusWithMetrics is UpdateJobStatus plus an atomic write of the accumulated
 	// per-agent and workflow-level metrics, plus the run's published result (nil if the
 	// workflow didn't call Complete(result=...)). Used when finalizing a job.
@@ -244,10 +244,10 @@ type JobRepository interface {
 	// expired more than gracePeriodSeconds ago to failed, scoped to the given partition.
 	// Returns the number of jobs marked failed.
 	MarkOrphanedJobsFailed(ctx context.Context, partitionID string, gracePeriodSeconds int) (int, error)
-	// SetJobDispatched transitions a job to 'dispatched' before the Launch command
-	// is sent to the SDK worker. Only succeeds if ownerID holds the job.
-	// Returns false if the ownership check failed.
-	SetJobDispatched(ctx context.Context, workflowID string, ownerID string) (bool, error)
+	// DispatchJob transitions a job to 'dispatched' before the Launch command is sent,
+	// writing the operation it is dispatching so the row describes the run rather than
+	// the worker's memory. Only succeeds if ownerID holds the job.
+	DispatchJob(ctx context.Context, workflowID string, ownerID string, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error)
 	// ReleaseJob clears the owner and lease on a job, only if currently owned by ownerID.
 	ReleaseJob(ctx context.Context, workflowID string, ownerID string) error
 	// SweepExpiredApprovals atomically resolves the partition's approval gates whose

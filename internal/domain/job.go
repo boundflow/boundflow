@@ -106,6 +106,10 @@ type WorkflowJobMetrics struct {
 	ApprovalRejections *int `json:"approval_rejections,omitempty"`
 }
 
+// IsZero reports whether nothing has been recorded. Comparable by construction: a map
+// or slice field added later breaks the build here rather than being silently skipped.
+func (m WorkflowJobMetrics) IsZero() bool { return m == WorkflowJobMetrics{} }
+
 // OperationMetadata holds server-internal state for the current job operation.
 // Serialized as JSONB in the jobs table.
 type JobMetadata struct {

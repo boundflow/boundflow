@@ -310,7 +310,10 @@ func (s *Scheduler) recordInterruptedMetrics(ctx context.Context, req string, wo
 		s.log.Error("failed to read job metrics for interrupted run", "request_id", req, "workflow_id", workflowID, "error", err)
 		return
 	}
-	if len(metrics) == 0 {
+
+	// Workflow-level metrics stand on their own: a run with no agents can still
+	// have failures and gate rejections.
+	if len(metrics) == 0 && workflowMetrics.IsZero() {
 		return
 	}
 	// Read after the transition, as CompleteRequest does: EmitMetrics gates on the
