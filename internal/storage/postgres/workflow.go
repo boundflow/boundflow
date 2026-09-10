@@ -29,7 +29,9 @@ func (r *WorkflowRepo) Create(ctx context.Context, instance *domain.Workflow) er
 		return fmt.Errorf("marshal lifecycle policy: %w", err)
 	}
 
-	tag, err := r.pool.Exec(ctx,
+	// created_at is left to the column default and read back, so the row and the
+	// response agree and neither depends on the caller remembering to set it.
+	err = r.pool.QueryRow(ctx,
 		`WITH reserved AS (
 		     UPDATE tenants SET workflow_count = workflow_count + 1
 		     WHERE id = $1 AND deleted_at IS NULL
@@ -40,9 +42,10 @@ func (r *WorkflowRepo) Create(ctx context.Context, instance *domain.Workflow) er
 		    current_workflow_version, invoke_timeout_seconds, repeat_every_seconds, triggerable,
 		    invoke_mode, max_queue_depth, resumable,
 		    lifecycle_state, workflow_state, lifecycle_policy, scheduler_partition_id,
-		    last_completed_request_at, created_at)
-		 SELECT $2, $1, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
-		 WHERE EXISTS (SELECT 1 FROM reserved)`,
+		    last_completed_request_at)
+		 SELECT $2, $1, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
+		 WHERE EXISTS (SELECT 1 FROM reserved)
+		 RETURNING created_at`,
 		instance.TenantID, instance.ID, instance.WorkflowType,
 		instance.CurrentWorkflowVersion,
 		instance.WorkflowConfig.InvokeTimeoutSeconds,
@@ -51,12 +54,10 @@ func (r *WorkflowRepo) Create(ctx context.Context, instance *domain.Workflow) er
 		string(instance.WorkflowConfig.InvokeMode), instance.WorkflowConfig.MaxQueueDepth,
 		instance.WorkflowConfig.Resumable,
 		instance.Lifecycle.State, instance.WorkflowState, lifecyclePolicyJSON, instance.SchedulerPartitionID,
-		instance.Lifecycle.LastCompletedRequestAt, instance.CreatedAt,
-	)
-	if err != nil {
-		return handleError(err, "workflow instance")
-	}
-	if tag.RowsAffected() == 0 {
+		instance.Lifecycle.LastCompletedRequestAt,
+	).Scan(&instance.CreatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// The tenant guard in `reserved` failed, so nothing was inserted.
 		var deletedAt *time.Time
 		lookupErr := r.pool.QueryRow(ctx, `SELECT deleted_at FROM tenants WHERE id = $1`, instance.TenantID).Scan(&deletedAt)
 		if errors.Is(lookupErr, pgx.ErrNoRows) {
@@ -66,6 +67,9 @@ func (r *WorkflowRepo) Create(ctx context.Context, instance *domain.Workflow) er
 			return fmt.Errorf("lookup tenant for create workflow: %w", lookupErr)
 		}
 		return storage.ErrTenantDeleted
+	}
+	if err != nil {
+		return handleError(err, "workflow instance")
 	}
 	return nil
 }
