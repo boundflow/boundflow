@@ -150,22 +150,40 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 		}
 	}
 
+	// thisOp is the newest snapshot the client has sent for the operation in flight.
+	// Every report is that operation's running total, not a delta, so a newer one
+	// replaces its predecessor rather than adding to it. Reset at dispatch.
+	var thisOp map[string]*boundflowv1.AgentInvocationMetrics
+
+	// recordSnapshot takes whatever the client last reported, however the operation
+	// ended: a failed one has spent just as much as a successful one.
+	recordSnapshot := func(result *boundflowv1.AtomicOperationResult) {
+		if result != nil && len(result.AgentStateUpdates) > 0 {
+			thisOp = result.AgentStateUpdates
+		}
+	}
+
+	// agentMetrics is what every write of this job should persist: the total committed
+	// when the job was acquired, plus whatever the operation has spent since. Deep
+	// cloned because MergeAgentMetrics sums in place through the pointers.
+	agentMetrics := func(job *domain.Job) map[string]*boundflowv1.AgentInvocationMetrics {
+		merged := make(map[string]*boundflowv1.AgentInvocationMetrics, len(job.AgentMetrics))
+		for agent, m := range job.AgentMetrics {
+			merged[agent] = proto.Clone(m).(*boundflowv1.AgentInvocationMetrics)
+		}
+		s.metrics.MergeAgentMetrics(thisOp, &merged)
+		return merged
+	}
+
 	// recordInterim persists metrics reported while the operation is still running, so a
 	// worker that dies loses one model call's spend rather than the whole operation's.
 	recordInterim := func(job *domain.Job, result *boundflowv1.AtomicOperationResult) error {
 		if result == nil || len(result.AgentStateUpdates) == 0 {
 			return nil
 		}
-		// Each report is the operation's running total, so it merges into a copy of the
-		// committed baseline. Cloned deeply: MergeAgentMetrics sums in place through the
-		// pointers, and a shallow copy would grow the baseline with every report.
-		inflight := make(map[string]*boundflowv1.AgentInvocationMetrics, len(job.AgentMetrics))
-		for agent, m := range job.AgentMetrics {
-			inflight[agent] = proto.Clone(m).(*boundflowv1.AgentInvocationMetrics)
-		}
-		s.metrics.MergeAgentMetrics(result.AgentStateUpdates, &inflight)
+		recordSnapshot(result)
 
-		owned, err := s.jobs.UpdateJobMetrics(context.Background(), job.WorkflowID, sessionID, inflight)
+		owned, err := s.jobs.UpdateJobMetrics(context.Background(), job.WorkflowID, sessionID, agentMetrics(job))
 		if err != nil {
 			return err
 		}
@@ -179,7 +197,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 		ctx := context.Background() // request completion doesnt depend on stream context
 		defer cancelLeaseIfExists(cancelLease)
 
-		s.metrics.MergeAgentMetrics(result.AgentStateUpdates, &job.AgentMetrics)
+		recordSnapshot(result)
 		if result.WorkflowMetrics != nil {
 			s.metrics.MergeWorkflowMetrics(
 				domain.WorkflowJobMetrics{Failures: int(result.WorkflowMetrics.GetFailures())},
@@ -190,7 +208,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 		if result.NextOperation != nil {
 			log.Info("operation completed with next operation, advancing job", "request_id", job.RequestID, "next_operation", result.NextOperation.Name)
 			_, err := s.jobs.UpdateJobWithMetrics(ctx, job.WorkflowID, sessionID, domain.JobStatusAwaitingNext,
-				result.NextOperation.Name, int(result.NextOperation.TimeoutSeconds), int(result.NextOperation.DelaySeconds), result.NextOperation.Context.AsMap(), job.AgentMetrics, job.WorkflowMetrics)
+				result.NextOperation.Name, int(result.NextOperation.TimeoutSeconds), int(result.NextOperation.DelaySeconds), result.NextOperation.Context.AsMap(), agentMetrics(job), job.WorkflowMetrics)
 
 			if err != nil {
 				return err
@@ -229,7 +247,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 
 			// opened_at + timeout_at are stamped server-side (DB now()) inside ParkForApproval.
 			parked, err := s.jobs.ParkForApproval(ctx, job.WorkflowID, sessionID, result.ApprovalGate.ApprovalId, int(result.ApprovalGate.TimeoutSeconds),
-				result.ApprovalGate.Justification, approvalMetadata, jobMetadata, job.AgentMetrics, job.WorkflowMetrics)
+				result.ApprovalGate.Justification, approvalMetadata, jobMetadata, agentMetrics(job), job.WorkflowMetrics)
 			if err != nil {
 				log.Error("failed to park job for approval", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "error", err)
 				return err
@@ -274,7 +292,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 
 			// opened_at + timeout_at are stamped server-side (DB now()) inside ParkForInput.
 			parked, err := s.jobs.ParkForInput(ctx, job.WorkflowID, sessionID, result.InputGate.InputId, int(result.InputGate.TimeoutSeconds),
-				result.InputGate.Prompt, inputMetadata, jobMetadata, job.AgentMetrics, job.WorkflowMetrics)
+				result.InputGate.Prompt, inputMetadata, jobMetadata, agentMetrics(job), job.WorkflowMetrics)
 			if err != nil {
 				log.Error("failed to park job for input", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "error", err)
 				return err
@@ -300,7 +318,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 			if result.Result != nil {
 				publishedResult = result.Result.AsMap()
 			}
-			updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.WorkflowID, sessionID, domain.JobStatusCompleted, outcome, reason, publishedResult, job.AgentMetrics, job.WorkflowMetrics)
+			updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.WorkflowID, sessionID, domain.JobStatusCompleted, outcome, reason, publishedResult, agentMetrics(job), job.WorkflowMetrics)
 			if err != nil {
 				log.Error("failed to mark job completed", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "error", err)
 				return err
@@ -345,7 +363,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 		ctx := context.Background()
 		defer cancelLeaseIfExists(cancelLease)
 
-		updated, err := s.jobs.UpdateJobStatusWithReason(ctx, job.WorkflowID, sessionID, domain.JobStatusFailed, reason)
+		updated, err := s.jobs.FailJobWithMetrics(ctx, job.WorkflowID, sessionID, reason, agentMetrics(job), job.WorkflowMetrics)
 		if err != nil {
 			log.Error("failed to mark job failed", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "error", err)
 		} else if updated {
@@ -365,7 +383,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 		defer cancelLeaseIfExists(cancelLease)
 
 		job.WorkflowMetrics.Failures++
-		updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.WorkflowID, sessionID, domain.JobStatusCompleted, outcome, reason, nil, job.AgentMetrics, job.WorkflowMetrics)
+		updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.WorkflowID, sessionID, domain.JobStatusCompleted, outcome, reason, nil, agentMetrics(job), job.WorkflowMetrics)
 		if err != nil {
 			log.Error("failed to soft-fail job", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "error", err)
 			return
@@ -383,7 +401,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 
 		const reason = "stopped by workflow suspension"
 		updated, err := s.jobs.UpdateJobStatusWithMetrics(ctx, job.WorkflowID, sessionID, domain.JobStatusCompleted,
-			domain.RunOutcomeSuspended, reason, nil, job.AgentMetrics, job.WorkflowMetrics)
+			domain.RunOutcomeSuspended, reason, nil, agentMetrics(job), job.WorkflowMetrics)
 		if err != nil {
 			log.Error("failed to complete suspended job", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "error", err)
 			return
@@ -460,6 +478,9 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 								continue
 							}
 						}
+
+						// job.AgentMetrics is this operation's baseline, so nothing is spent yet.
+						thisOp = nil
 
 						log.Info("job acquired", "request_id", job.RequestID, "workflow_id", job.WorkflowID, "operation", job.CurrentAtomicOperation)
 
@@ -630,7 +651,11 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 							}
 						}
 
-						dispatched, err := s.jobs.SetJobDispatched(stream.Context(), job.WorkflowID, sessionID)
+						// Writes what it is dispatching, not just the status: a gate resume
+						// resolved that into memory only.
+						dispatched, err := s.jobs.DispatchJob(stream.Context(), job.WorkflowID, sessionID,
+							job.CurrentAtomicOperation, job.RuntimeParams.OperationTimeoutSeconds,
+							job.Context, agentMetrics(job), job.WorkflowMetrics)
 						if err != nil {
 							log.Error("failed to mark job dispatched", "request_id", job.RequestID, "error", err)
 							return err
@@ -675,9 +700,9 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 						})
 						if err != nil {
 							log.Error("failed to send LaunchOperation", "request_id", job.RequestID, "error", err)
-							// Send errored, so the client never got the op: restore the pre-dispatch
-							// status so it's re-picked, instead of failing.
-							if _, uerr := s.jobs.UpdateJobStatus(context.Background(), job.WorkflowID, sessionID, job.Status); uerr != nil {
+							// The client never got the op, so re-queue rather than fail. Pending,
+							// not the old status: re-resolving a gate would double-count it.
+							if _, uerr := s.jobs.UpdateJobStatus(context.Background(), job.WorkflowID, sessionID, domain.JobStatusPending); uerr != nil {
 								log.Error("failed to reset dispatched job, relying on sweeper", "request_id", job.RequestID, "error", uerr)
 							}
 							return err
@@ -751,6 +776,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 							failOperation(cancelLease, currentJob, "")
 							return errors.New("protocol error") // protocol error
 						}
+						recordSnapshot(update.Update.Result)
 						if update.Update.OperationId != currentJob.RequestID {
 							log.Warn("wrong operation id while busy", "expected", currentJob.RequestID, "got", update.Update.OperationId)
 							failOperation(cancelLease, currentJob, "")
@@ -826,6 +852,7 @@ func (s *RpcWorker) WorkerSession(stream grpc.BidiStreamingServer[boundflowv1.Wo
 							failOperation(cancelLease, currentJob, "")
 							return errors.New("wrong operation id")
 						}
+						recordSnapshot(ack.Update.Result)
 						switch ack.Update.Result.Status {
 						case boundflowv1.OperationStatus_OPERATION_STATUS_COMPLETED:
 							log.Info("operation completed despite cancel request", "request_id", currentJob.RequestID)

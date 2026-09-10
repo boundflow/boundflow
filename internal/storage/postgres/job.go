@@ -131,14 +131,25 @@ func (r *JobRepo) UpdateJobStatus(ctx context.Context, workflowID string, ownerI
 	return tag.RowsAffected() == 1, nil
 }
 
-func (r *JobRepo) UpdateJobStatusWithReason(ctx context.Context, workflowID string, ownerID string, status domain.JobStatus, failureReason string) (bool, error) {
+// FailJobWithMetrics marks the job failed, carrying the metrics accumulated since the
+// last write: an interrupted run promotes them from this row.
+func (r *JobRepo) FailJobWithMetrics(ctx context.Context, workflowID string, ownerID string, failureReason string, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
+	agentMetricsJSON, err := json.Marshal(agentMetrics)
+	if err != nil {
+		return false, fmt.Errorf("marshal agent metrics: %w", err)
+	}
+	workflowMetricsJSON, err := json.Marshal(workflowMetrics)
+	if err != nil {
+		return false, fmt.Errorf("marshal workflow metrics: %w", err)
+	}
 	tag, err := r.pool.Exec(ctx,
-		`UPDATE jobs SET status = $3, failure_reason = $4
+		`UPDATE jobs SET status = $3, failure_reason = $4,
+		     agent_metrics = $5, workflow_metrics = $6
 		 WHERE workflow_id = $1 AND owner = $2`,
-		workflowID, ownerID, status, failureReason,
+		workflowID, ownerID, domain.JobStatusFailed, failureReason, agentMetricsJSON, workflowMetricsJSON,
 	)
 	if err != nil {
-		return false, fmt.Errorf("update job status with reason: %w", err)
+		return false, fmt.Errorf("fail job with metrics: %w", err)
 	}
 	return tag.RowsAffected() == 1, nil
 }
@@ -490,15 +501,36 @@ func (r *JobRepo) MarkOrphanedJobsFailed(ctx context.Context, partitionID string
 	return int(tag.RowsAffected()), nil
 }
 
-func (r *JobRepo) SetJobDispatched(ctx context.Context, workflowID string, ownerID string) (bool, error) {
+// DispatchJob marks the job dispatched and writes the operation it is dispatching. A
+// gate resume resolves that into memory only, and parking emptied the row, so without
+// it a requeue mid-operation comes back with no operation and a zero timeout.
+func (r *JobRepo) DispatchJob(ctx context.Context, workflowID string, ownerID string, currentAtomicOperation string, operationTimeoutSeconds int, jobContext map[string]any, agentMetrics map[string]*boundflowv1.AgentInvocationMetrics, workflowMetrics domain.WorkflowJobMetrics) (bool, error) {
+	contextJSON, err := json.Marshal(jobContext)
+	if err != nil {
+		return false, fmt.Errorf("marshal job context: %w", err)
+	}
+	agentMetricsJSON, err := json.Marshal(agentMetrics)
+	if err != nil {
+		return false, fmt.Errorf("marshal agent metrics: %w", err)
+	}
+	workflowMetricsJSON, err := json.Marshal(workflowMetrics)
+	if err != nil {
+		return false, fmt.Errorf("marshal workflow metrics: %w", err)
+	}
 	tag, err := r.pool.Exec(ctx,
 		`UPDATE jobs
-		 SET status = 'dispatched'
+		 SET status = 'dispatched', current_atomic_operation = $3, timeout_seconds = $4,
+		     context = $5, agent_metrics = $6, workflow_metrics = $7,
+		     approval_id = NULL, approval_timeout_at = NULL, approval_justification = '',
+		     approval_metadata = NULL, approval_reason = '',
+		     input_id = NULL, input_timeout_at = NULL, input_prompt = '',
+		     input_metadata = NULL, input_answer = NULL,
+		     job_metadata = '{}'
 		 WHERE workflow_id = $1 AND owner = $2 AND status != 'dispatched'`,
-		workflowID, ownerID,
+		workflowID, ownerID, currentAtomicOperation, operationTimeoutSeconds, contextJSON, agentMetricsJSON, workflowMetricsJSON,
 	)
 	if err != nil {
-		return false, fmt.Errorf("set job dispatched: %w", err)
+		return false, fmt.Errorf("dispatch job: %w", err)
 	}
 	return tag.RowsAffected() == 1, nil
 }
