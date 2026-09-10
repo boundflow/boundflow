@@ -44,6 +44,9 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          # arm64 for Apple Silicon and Graviton: with only amd64 in the index, Docker
+          # on those hosts finds no image for its platform and refuses to pull.
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

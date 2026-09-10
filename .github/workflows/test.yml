@@ -45,10 +45,21 @@ jobs:
       - run: go test ./...
 
   python:
-    name: Python SDK (integration)
+    name: Python SDK (integration)${{ matrix.suffix }}
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            suffix: ""
+          # Native arm64: `compose up --build` builds the image for arm64 and runs
+          # this suite against it, the only check of that image before a release
+          # publishes it.
+          - runner: ubuntu-24.04-arm
+            suffix: " (arm64)"
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
@@ -102,6 +113,6 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: backend-logs-python-${{ github.run_id }}-${{ github.run_attempt }}
+          name: backend-logs-python-${{ matrix.runner }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: backend-logs.txt
           retention-days: 14
