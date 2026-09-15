@@ -382,3 +382,37 @@ async def test_real_multistep_tool_calling_through_the_adapter(cp, api_key):
             assert lookups, "expected the agent to call the lookup tool (multi-step round-trip)"
         finally:
             await cp.delete_workflow(wf.id)
+
+
+async def test_a_model_without_max_tokens_is_capped_through_its_own_field():
+    """Ollama's ChatOllama declares `num_predict`, not `max_tokens`, and its client
+    rejects both as call arguments. Binding `max_tokens` failed every Ollama call, so
+    the cap is set on the model's own field and nothing extra reaches the client."""
+    from langchain_core.language_models.chat_models import BaseChatModel
+    from langchain_core.messages import AIMessage
+    from langchain_core.outputs import ChatGeneration, ChatResult
+
+    seen: list[dict] = []
+
+    class NumPredictChat(BaseChatModel):
+        num_predict: int | None = None
+
+        @property
+        def _llm_type(self) -> str:
+            return "num-predict-fake"
+
+        def bind_tools(self, tools, **kw):
+            return self
+
+        def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+            raise NotImplementedError
+
+        async def _agenerate(self, messages, stop=None, run_manager=None, **kwargs):
+            seen.append({"num_predict": self.num_predict, "kwargs": dict(kwargs)})
+            msg = AIMessage(content="ok", usage_metadata=_usage())
+            return ChatResult(generations=[ChatGeneration(message=msg)])
+
+    await LangChainLlmClient(NumPredictChat()).complete(_req(max_tokens=512))
+
+    assert seen[-1]["num_predict"] == 512
+    assert "max_tokens" not in seen[-1]["kwargs"]

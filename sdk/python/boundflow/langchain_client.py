@@ -32,8 +32,10 @@ Requirements and caveats:
   *no* usage fails loud as a `PlatformError` — BoundFlow won't run uncosted and
   escape its cost caps. Major providers (Anthropic, OpenAI, Google, Bedrock)
   report usage; verify yours does before relying on cost-based policies.
-- The `max_tokens_per_call` cap is passed via `.bind(max_tokens=...)`, honored by
-  providers that take a `max_tokens` param (most do).
+- The `max_tokens_per_call` cap is set through the parameter each model class takes:
+  `.bind(max_tokens=...)` where the class declares `max_tokens` (Anthropic, OpenAI),
+  and its own field otherwise (`num_predict` for Ollama, `max_output_tokens`,
+  `max_new_tokens`).
 - Prompt caching (`request.cache`) is not plumbed through — there's no
   provider-agnostic caching API in LangChain — so it's left to the model.
 
@@ -148,16 +150,16 @@ class LangChainLlmClient:
 
     async def complete(self, request: LlmRequest) -> LlmResponse:
         model = self._resolve(request.model)
+        # Capped before tools are bound: a class-level cap has to go on the model
+        # itself, not on the binding bind_tools returns.
+        if request.max_tokens:
+            model = _with_output_cap(model, request.max_tokens)
         if request.tools:
             if request.forced_tool:
                 model = model.bind_tools(_to_openai_tools(request),
                                          tool_choice=request.forced_tool)
             else:
                 model = model.bind_tools(_to_openai_tools(request))
-        # Per-call token cap (max_tokens_per_call policy); .bind() merges into the
-        # RunnableBinding from bind_tools, so it composes with the tools.
-        if request.max_tokens:
-            model = model.bind(max_tokens=request.max_tokens)
 
         msg = await model.ainvoke(_to_lc_messages(request))
 
@@ -315,7 +317,7 @@ def _build_governed_cls():
 
             model = self._resolve(call.model)
             if call.max_tokens:
-                model = model.bind(max_tokens=call.max_tokens)
+                model = _with_output_cap(model, call.max_tokens)
 
             # The last call policy allows: make the terminator the only option, so
             # the agent finishes with a structured answer instead of being cut off.
@@ -472,6 +474,24 @@ def _returned_error(output) -> str | None:
     if getattr(output, "status", None) == "error":
         return text[:200]
     return None
+
+
+
+# Where a model class takes its output-token cap, when it isn't `max_tokens`. It has to
+# be the class's own field: a call-time argument is handed straight to the provider's
+# client, and Ollama's rejects `max_tokens` — and `num_predict` too, which it only
+# takes inside `options`.
+_OUTPUT_CAP_FIELDS = ("max_output_tokens", "num_predict", "max_new_tokens")
+
+
+def _with_output_cap(model, n: int):
+    """`model` limited to `n` output tokens, through the parameter its class takes."""
+    fields = getattr(type(model), "model_fields", {})
+    if "max_tokens" not in fields:
+        for name in _OUTPUT_CAP_FIELDS:
+            if name in fields:
+                return model.model_copy(update={name: n})
+    return model.bind(max_tokens=n)
 
 
 def _build_governed_tool_cls():
