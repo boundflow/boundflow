@@ -767,3 +767,29 @@ async def test_governed_model_caps_a_model_that_declares_max_tokens_through_that
 
     assert seen[-1]["max_tokens"] == 555
     assert "max_tokens" not in seen[-1]["kwargs"]
+
+
+async def test_the_last_call_offers_only_the_finalizer_through_the_models_bind_tools(
+        search_tool):
+    """Ollama's client rejects `tool_choice` as a call argument, so forcing the
+    finalizer that way crashed every run that spent its cap. A model with
+    `bind_tools` gets the forcing through it, and is offered only the finalizer, so
+    one that ignores `tool_choice`, as Ollama's does, still can't reach another tool."""
+    from langchain_core.utils.function_calling import convert_to_openai_tool
+
+    class IgnoresToolChoice(FakeChat):
+        def bind_tools(self, tools, tool_choice=None, **kw):
+            return self.bind(tools=[convert_to_openai_tool(t) for t in tools], **kw)
+
+    tool, _ = search_tool
+    gov = _governor(RuntimePolicy(max_llm_calls=1))
+    inner = IgnoresToolChoice(calls=[], tool_name="submit_result")
+    tools = _wrap_with_schema(gov, [tool], {"answer": {"type": "string"}})
+    assert gov.can_finalize
+
+    await GovernedChatModel(governor=gov, chat_model=inner).bind_tools(tools).ainvoke(
+        [HumanMessage(content="go")])
+
+    last = inner.calls[-1]
+    assert "tool_choice" not in last, "passed as a call argument, which Ollama rejects"
+    assert [t["function"]["name"] for t in last["tools"]] == ["submit_result"]

@@ -321,7 +321,7 @@ def _build_governed_cls():
             # The last call policy allows: make the terminator the only option, so
             # the agent finishes with a structured answer instead of being cut off.
             if call.finalize and self.governor.finalize_tool:
-                kwargs = {**kwargs, "tool_choice": self.governor.finalize_tool}
+                kwargs = _finalizer_kwargs(model, kwargs, self.governor.finalize_tool)
 
             # On record before the call: a crash mid-call is then remembered as
             # having spent the worst case rather than nothing.
@@ -492,6 +492,34 @@ def _with_output_cap(model, n: int):
         if name in fields:
             return model.model_copy(update={name: n})
     return model.bind(max_tokens=n)
+
+
+
+def _tool_name(tool) -> str | None:
+    """A bound tool's name, whichever shape the provider formatted it into."""
+    if isinstance(tool, dict):
+        return tool.get("name") or (tool.get("function") or {}).get("name")
+    return getattr(tool, "name", None)
+
+
+def _finalizer_kwargs(model, kwargs: dict, name: str) -> dict:
+    """Call kwargs for the last permitted call: only the finalizer on offer, and
+    forced where the provider can force it.
+
+    `tool_choice` goes through the model's own `bind_tools`, which translates it
+    where the provider supports forcing and ignores it where it doesn't. Ollama's
+    client rejects it as a call argument, so passing it that way crashed every run
+    that spent its cap. Offering only the finalizer is what still narrows the ending
+    on a provider that can't force. A model without `bind_tools` gets `tool_choice`
+    as a call argument, as before."""
+    tools = kwargs.get("tools") or []
+    only = [t for t in tools if _tool_name(t) == name] or tools
+    rest = {k: v for k, v in kwargs.items() if k not in ("tools", "tool_choice")}
+    try:
+        bound = model.bind_tools(only, tool_choice=name)
+    except NotImplementedError:
+        return {**rest, "tools": only, "tool_choice": name}
+    return {**rest, **(getattr(bound, "kwargs", None) or {"tools": only})}
 
 
 def _build_governed_tool_cls():
