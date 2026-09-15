@@ -32,10 +32,9 @@ Requirements and caveats:
   *no* usage fails loud as a `PlatformError` — BoundFlow won't run uncosted and
   escape its cost caps. Major providers (Anthropic, OpenAI, Google, Bedrock)
   report usage; verify yours does before relying on cost-based policies.
-- The `max_tokens_per_call` cap is set through the parameter each model class takes:
-  `.bind(max_tokens=...)` where the class declares `max_tokens` (Anthropic, OpenAI),
-  and its own field otherwise (`num_predict` for Ollama, `max_output_tokens`,
-  `max_new_tokens`).
+- The `max_tokens_per_call` cap is set on the field the model class declares for it:
+  `max_tokens` (Anthropic, OpenAI), `num_predict` (Ollama), `max_output_tokens` or
+  `max_new_tokens`. A class that declares none gets `max_tokens` bound per call.
 - Prompt caching (`request.cache`) is not plumbed through — there's no
   provider-agnostic caching API in LangChain — so it's left to the model.
 
@@ -477,20 +476,21 @@ def _returned_error(output) -> str | None:
 
 
 
-# Where a model class takes its output-token cap, when it isn't `max_tokens`. It has to
-# be the class's own field: a call-time argument is handed straight to the provider's
-# client, and Ollama's rejects `max_tokens` — and `num_predict` too, which it only
-# takes inside `options`.
-_OUTPUT_CAP_FIELDS = ("max_output_tokens", "num_predict", "max_new_tokens")
+# The field a model class takes its output-token cap in. It has to be the class's own
+# field: a call-time argument is handed straight to the provider's client, and Ollama's
+# rejects `max_tokens` — and `num_predict` too, which it only takes inside `options`.
+_OUTPUT_CAP_FIELDS = ("max_tokens", "max_output_tokens", "num_predict", "max_new_tokens")
 
 
 def _with_output_cap(model, n: int):
-    """`model` limited to `n` output tokens, through the parameter its class takes."""
+    """`model` limited to `n` output tokens, through the field its class declares.
+
+    A class that declares none of them — a custom model, a test fake — keeps the old
+    behaviour and gets `max_tokens` bound per call."""
     fields = getattr(type(model), "model_fields", {})
-    if "max_tokens" not in fields:
-        for name in _OUTPUT_CAP_FIELDS:
-            if name in fields:
-                return model.model_copy(update={name: n})
+    for name in _OUTPUT_CAP_FIELDS:
+        if name in fields:
+            return model.model_copy(update={name: n})
     return model.bind(max_tokens=n)
 
 

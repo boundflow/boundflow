@@ -737,3 +737,33 @@ async def test_governed_model_caps_a_model_without_max_tokens_through_its_own_fi
 
     assert seen[-1]["num_predict"] == 555
     assert "max_tokens" not in seen[-1]["kwargs"]
+
+
+async def test_governed_model_caps_a_model_that_declares_max_tokens_through_that_field():
+    """Anthropic's and OpenAI's classes declare `max_tokens`. The cap is set on that
+    field like any other, rather than passed as a call argument the provider's
+    client may or may not accept."""
+    seen: list[dict] = []
+
+    class MaxTokensChat(BaseChatModel):
+        max_tokens: int | None = None
+
+        @property
+        def _llm_type(self) -> str:
+            return "max-tokens-fake"
+
+        def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+            raise NotImplementedError
+
+        async def _agenerate(self, messages, stop=None, run_manager=None, **kwargs):
+            seen.append({"max_tokens": self.max_tokens, "kwargs": dict(kwargs)})
+            msg = AIMessage(content="ok", usage_metadata={
+                "input_tokens": 10, "output_tokens": 5, "total_tokens": 15})
+            return ChatResult(generations=[ChatGeneration(message=msg)])
+
+    gov = _governor(RuntimePolicy(max_tokens_per_call=555))
+    await GovernedChatModel(governor=gov, chat_model=MaxTokensChat()).ainvoke(
+        [HumanMessage(content="hi")])
+
+    assert seen[-1]["max_tokens"] == 555
+    assert "max_tokens" not in seen[-1]["kwargs"]
