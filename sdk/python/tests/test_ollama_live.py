@@ -56,3 +56,32 @@ async def test_the_llm_client_caps_an_ollama_call_with_tools_bound():
     ))
 
     assert response.usage.output_tokens <= CAP
+
+
+async def test_a_spent_cap_ends_an_ollama_run_instead_of_crashing_it():
+    """The last permitted call forces the finalizer. Ollama can't force a tool, and
+    `tool_choice` passed as a call argument crashed the run. Offered only the
+    finalizer, the model can't reach any other tool."""
+    from langchain_core.messages import HumanMessage
+    from langchain_core.tools import tool
+    from langchain_ollama import ChatOllama
+
+    from boundflow.langchain_client import GovernedChatModel
+
+    @tool
+    def search(query: str) -> str:
+        """Search the web for more information."""
+        return "results"
+
+    @tool
+    def submit_result(answer: str) -> str:
+        """Finish the task with the final answer."""
+        return answer
+
+    gov = AgentGovernor("responder", RuntimePolicy(max_llm_calls=1), MODEL, {})
+    gov.register_finalizer("submit_result")
+    model = GovernedChatModel(governor=gov, chat_model=ChatOllama(model=MODEL))
+    msg = await model.bind_tools([search, submit_result]).ainvoke(
+        [HumanMessage(content="Look up the capital of France, then answer.")])
+
+    assert all(c["name"] == "submit_result" for c in msg.tool_calls), msg.tool_calls
