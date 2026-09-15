@@ -707,3 +707,89 @@ async def test_a_policy_denial_is_still_not_counted():
     await governed_tools(gov, [inner])[0].ainvoke({})
 
     assert gov.tool_failure_counts == {}
+
+
+async def test_governed_model_caps_a_model_without_max_tokens_through_its_own_field():
+    """The path Charter's agent loop takes. A model that declares `num_predict` rather
+    than `max_tokens` — Ollama's — gets the policy cap on that field, and no
+    `max_tokens` argument, which its client refuses."""
+    seen: list[dict] = []
+
+    class NumPredictChat(BaseChatModel):
+        num_predict: int | None = None
+
+        @property
+        def _llm_type(self) -> str:
+            return "num-predict-fake"
+
+        def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+            raise NotImplementedError
+
+        async def _agenerate(self, messages, stop=None, run_manager=None, **kwargs):
+            seen.append({"num_predict": self.num_predict, "kwargs": dict(kwargs)})
+            msg = AIMessage(content="ok", usage_metadata={
+                "input_tokens": 10, "output_tokens": 5, "total_tokens": 15})
+            return ChatResult(generations=[ChatGeneration(message=msg)])
+
+    gov = _governor(RuntimePolicy(max_tokens_per_call=555))
+    await GovernedChatModel(governor=gov, chat_model=NumPredictChat()).ainvoke(
+        [HumanMessage(content="hi")])
+
+    assert seen[-1]["num_predict"] == 555
+    assert "max_tokens" not in seen[-1]["kwargs"]
+
+
+async def test_governed_model_caps_a_model_that_declares_max_tokens_through_that_field():
+    """Anthropic's and OpenAI's classes declare `max_tokens`. The cap is set on that
+    field like any other, rather than passed as a call argument the provider's
+    client may or may not accept."""
+    seen: list[dict] = []
+
+    class MaxTokensChat(BaseChatModel):
+        max_tokens: int | None = None
+
+        @property
+        def _llm_type(self) -> str:
+            return "max-tokens-fake"
+
+        def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+            raise NotImplementedError
+
+        async def _agenerate(self, messages, stop=None, run_manager=None, **kwargs):
+            seen.append({"max_tokens": self.max_tokens, "kwargs": dict(kwargs)})
+            msg = AIMessage(content="ok", usage_metadata={
+                "input_tokens": 10, "output_tokens": 5, "total_tokens": 15})
+            return ChatResult(generations=[ChatGeneration(message=msg)])
+
+    gov = _governor(RuntimePolicy(max_tokens_per_call=555))
+    await GovernedChatModel(governor=gov, chat_model=MaxTokensChat()).ainvoke(
+        [HumanMessage(content="hi")])
+
+    assert seen[-1]["max_tokens"] == 555
+    assert "max_tokens" not in seen[-1]["kwargs"]
+
+
+async def test_the_last_call_offers_only_the_finalizer_through_the_models_bind_tools(
+        search_tool):
+    """Ollama's client rejects `tool_choice` as a call argument, so forcing the
+    finalizer that way crashed every run that spent its cap. A model with
+    `bind_tools` gets the forcing through it, and is offered only the finalizer, so
+    one that ignores `tool_choice`, as Ollama's does, still can't reach another tool."""
+    from langchain_core.utils.function_calling import convert_to_openai_tool
+
+    class IgnoresToolChoice(FakeChat):
+        def bind_tools(self, tools, tool_choice=None, **kw):
+            return self.bind(tools=[convert_to_openai_tool(t) for t in tools], **kw)
+
+    tool, _ = search_tool
+    gov = _governor(RuntimePolicy(max_llm_calls=1))
+    inner = IgnoresToolChoice(calls=[], tool_name="submit_result")
+    tools = _wrap_with_schema(gov, [tool], {"answer": {"type": "string"}})
+    assert gov.can_finalize
+
+    await GovernedChatModel(governor=gov, chat_model=inner).bind_tools(tools).ainvoke(
+        [HumanMessage(content="go")])
+
+    last = inner.calls[-1]
+    assert "tool_choice" not in last, "passed as a call argument, which Ollama rejects"
+    assert [t["function"]["name"] for t in last["tools"]] == ["submit_result"]

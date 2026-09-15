@@ -44,6 +44,42 @@ jobs:
       - run: go vet ./...
       - run: go test ./...
 
+  ollama:
+    name: Python SDK (Ollama)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    services:
+      ollama:
+        image: ollama/ollama:0.34.0
+        ports:
+          - 11434:11434
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Wait for Ollama
+        run: timeout 60 bash -c 'until curl -sf localhost:11434/api/version; do sleep 1; done'
+
+      # Tiny on purpose: what's under test is that a call goes through capped and
+      # metered, not what the model says.
+      - name: Pull the model
+        run: |
+          curl -sf localhost:11434/api/pull -d '{"model": "qwen2.5:0.5b", "stream": false}'
+
+      - name: Install SDK + langchain-ollama
+        working-directory: sdk/python
+        run: pip install -e ".[dev]" "langchain-ollama>=0.2"
+
+      - name: Run the Ollama tests
+        working-directory: sdk/python
+        env:
+          OLLAMA_TEST_MODEL: qwen2.5:0.5b
+        run: python -m pytest tests/test_ollama_live.py -v
+
   python:
     name: Python SDK (integration)${{ matrix.suffix }}
     needs: changes

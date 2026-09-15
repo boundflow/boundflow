@@ -32,8 +32,9 @@ Requirements and caveats:
   *no* usage fails loud as a `PlatformError` — BoundFlow won't run uncosted and
   escape its cost caps. Major providers (Anthropic, OpenAI, Google, Bedrock)
   report usage; verify yours does before relying on cost-based policies.
-- The `max_tokens_per_call` cap is passed via `.bind(max_tokens=...)`, honored by
-  providers that take a `max_tokens` param (most do).
+- The `max_tokens_per_call` cap is set on the field the model class declares for it:
+  `max_tokens` (Anthropic, OpenAI), `num_predict` (Ollama), `max_output_tokens` or
+  `max_new_tokens`. A class that declares none gets `max_tokens` bound per call.
 - Prompt caching (`request.cache`) is not plumbed through — there's no
   provider-agnostic caching API in LangChain — so it's left to the model.
 
@@ -148,16 +149,16 @@ class LangChainLlmClient:
 
     async def complete(self, request: LlmRequest) -> LlmResponse:
         model = self._resolve(request.model)
+        # Capped before tools are bound: a class-level cap has to go on the model
+        # itself, not on the binding bind_tools returns.
+        if request.max_tokens:
+            model = _with_output_cap(model, request.max_tokens)
         if request.tools:
             if request.forced_tool:
                 model = model.bind_tools(_to_openai_tools(request),
                                          tool_choice=request.forced_tool)
             else:
                 model = model.bind_tools(_to_openai_tools(request))
-        # Per-call token cap (max_tokens_per_call policy); .bind() merges into the
-        # RunnableBinding from bind_tools, so it composes with the tools.
-        if request.max_tokens:
-            model = model.bind(max_tokens=request.max_tokens)
 
         msg = await model.ainvoke(_to_lc_messages(request))
 
@@ -315,12 +316,12 @@ def _build_governed_cls():
 
             model = self._resolve(call.model)
             if call.max_tokens:
-                model = model.bind(max_tokens=call.max_tokens)
+                model = _with_output_cap(model, call.max_tokens)
 
             # The last call policy allows: make the terminator the only option, so
             # the agent finishes with a structured answer instead of being cut off.
             if call.finalize and self.governor.finalize_tool:
-                kwargs = {**kwargs, "tool_choice": self.governor.finalize_tool}
+                kwargs = _finalizer_kwargs(model, kwargs, self.governor.finalize_tool)
 
             # On record before the call: a crash mid-call is then remembered as
             # having spent the worst case rather than nothing.
@@ -472,6 +473,53 @@ def _returned_error(output) -> str | None:
     if getattr(output, "status", None) == "error":
         return text[:200]
     return None
+
+
+
+# The field a model class takes its output-token cap in. It has to be the class's own
+# field: a call-time argument is handed straight to the provider's client, and Ollama's
+# rejects `max_tokens` — and `num_predict` too, which it only takes inside `options`.
+_OUTPUT_CAP_FIELDS = ("max_tokens", "max_output_tokens", "num_predict", "max_new_tokens")
+
+
+def _with_output_cap(model, n: int):
+    """`model` limited to `n` output tokens, through the field its class declares.
+
+    A class that declares none of them — a custom model, a test fake — keeps the old
+    behaviour and gets `max_tokens` bound per call."""
+    fields = getattr(type(model), "model_fields", {})
+    for name in _OUTPUT_CAP_FIELDS:
+        if name in fields:
+            return model.model_copy(update={name: n})
+    return model.bind(max_tokens=n)
+
+
+
+def _tool_name(tool) -> str | None:
+    """A bound tool's name, whichever shape the provider formatted it into."""
+    if isinstance(tool, dict):
+        return tool.get("name") or (tool.get("function") or {}).get("name")
+    return getattr(tool, "name", None)
+
+
+def _finalizer_kwargs(model, kwargs: dict, name: str) -> dict:
+    """Call kwargs for the last permitted call: only the finalizer on offer, and
+    forced where the provider can force it.
+
+    `tool_choice` goes through the model's own `bind_tools`, which translates it
+    where the provider supports forcing and ignores it where it doesn't. Ollama's
+    client rejects it as a call argument, so passing it that way crashed every run
+    that spent its cap. Offering only the finalizer is what still narrows the ending
+    on a provider that can't force. A model without `bind_tools` gets `tool_choice`
+    as a call argument, as before."""
+    tools = kwargs.get("tools") or []
+    only = [t for t in tools if _tool_name(t) == name] or tools
+    rest = {k: v for k, v in kwargs.items() if k not in ("tools", "tool_choice")}
+    try:
+        bound = model.bind_tools(only, tool_choice=name)
+    except NotImplementedError:
+        return {**rest, "tools": only, "tool_choice": name}
+    return {**rest, **(getattr(bound, "kwargs", None) or {"tools": only})}
 
 
 def _build_governed_tool_cls():
